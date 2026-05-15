@@ -1776,25 +1776,30 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
             if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
         } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
+            // Zabezpečiť, že initialData nie je null
+            if (!initialData) {
+                initialData = {};
+            }
+    
             // Inicializovať selectedCategory s existujúcou kategóriou tímu
             setSelectedCategory(initialData._category || initialData.category || '');
             if (initialData.teamName === undefined) initialData.teamName = '';
-            
+    
             // Inicializovať vybraný typ dopravy a čas príchodu
             setSelectedArrivalType(initialData.arrival?.type || '');
             setArrivalTime(initialData.arrival?.time || '');
-    
+            
             // Inicializovať vybraný typ ubytovania
             setSelectedAccommodationType(initialData.accommodation?.type || '');
     
             // DÔLEŽITÉ: Zabezpečiť, že packageDetails nie je null
-            if (initialData.packageDetails === null || initialData.packageDetails === undefined) {
+            if (!initialData.packageDetails) {
                 initialData.packageDetails = {};
             }
-    
+            
             // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
             setSelectedPackageName(initialData.packageDetails?.name || '');
-            
+    
             // Inicializovať teamTshirts...
             const initialTshirts = (initialData.tshirts || [])
                 .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0)
@@ -1837,7 +1842,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen, isConfirmDeleteTeamOpen]); // Pridané isConfirmDeleteTeamOpen do závislostí
 
     React.useEffect(() => {
-        if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0) {
+        if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0 && localEditedData) {
             const currentPackageName = localEditedData.packageDetails?.name;
             if (currentPackageName && currentPackageName !== selectedPackageName) {
                 setSelectedPackageName(currentPackageName);
@@ -1845,7 +1850,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 setSelectedPackageName('');
             }
         }
-    }, [localEditedData.packageDetails?.name, packages, title, selectedPackageName]);
+    }, [localEditedData?.packageDetails?.name, packages, title, selectedPackageName, localEditedData]);
 
     if (!isOpen) return null;
 
@@ -2465,7 +2470,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             'select',
                             {
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedPackageName,
+                                value: selectedPackageName || '', // Zabezpečiť, že nie je undefined
                                 onChange: (e) => {
                                     const newPackageName = e.target.value;
                                     setSelectedPackageName(newPackageName);
@@ -3485,12 +3490,7 @@ const calculateVolunteerTshirtSummary = () => {
 
             setUserProfileData(userData);
             setError('');
-
-            if (typeof window.updateMenuItemsVisibility === 'function') {
-                window.updateMenuItemsVisibility(userData.role);
-            } else {
-                console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
-            }
+              
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
