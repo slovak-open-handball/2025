@@ -1157,11 +1157,11 @@ const MapApp = ({ userProfileData }) => {
             window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
             return;
         }
-
+    
         const oldName = selectedPlace.name;
         const newName = editName.trim();
         let totalTransferredTeams = 0;
-
+    
         const updates = {
             name: newName,
             type: editType,
@@ -1187,7 +1187,7 @@ const MapApp = ({ userProfileData }) => {
                 return;
             }
         }
-
+    
         if (editType === 'sportova_hala' && tournamentDates.days.length > 0) {
             const prices = {};
             tournamentDates.days.forEach(date => {
@@ -1236,6 +1236,7 @@ const MapApp = ({ userProfileData }) => {
                     const teams = userData.teams || {};
                     let userTransferredCount = 0;
                     let needsUpdate = false;
+                    // Opravené: definujeme updatedTeams na základe teams
                     const updatedTeams = { ...teams };
                     
                     for (const category in teams) {
@@ -1274,7 +1275,7 @@ const MapApp = ({ userProfileData }) => {
                 
                 for (const update of userUpdates) {
                     await updateDoc(doc(window.db, 'users', update.userId), {
-                        teams: updatedTeams
+                        teams: update.teams  // Opravené: používame update.teams namiesto updatedTeams
                     });
                     console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z '${oldName}' na '${newName}'`);
                 }
@@ -1358,7 +1359,7 @@ const MapApp = ({ userProfileData }) => {
             } else {
                 updates.capacity = null;
             }
-
+    
             updates.note = editNote.trim() || null;
     
             const placeRef = doc(window.db, 'places', selectedPlace.id);
