@@ -1278,6 +1278,12 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'note'
     ]);
 
+    // Kľúče/časti cesty, ktoré sa majú úplne ignorovať pri generovaní notifikácií
+    const ignoredPathPatterns = new Set([
+        'meals',           // Ignorovať celú meals časť
+        'packageDetails.meals'  // Ignorovať aj plnú cestu
+    ]);
+
     const normalizeValueForComparison = (value, path) => {
         if (value === null || value === undefined) return '';
 
@@ -1296,17 +1302,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 return formatDateFn(value);
             }
             return String(value);
-        }
-
-        // ─── ŠPECIÁLNE SPRACOVANIE PRE MEALS (stravovanie) ────────────────
-        // Ak ide o cestu obsahujúcu 'meals', vrátime zjednodušenú indikáciu
-        if (lowerPath.includes('meals')) {
-            // Zistíme, či došlo k nejakej zmene v stravovaní
-            const hasChanges = JSON.stringify(value) !== JSON.stringify(original?.[path] || {});
-            if (hasChanges) {
-                return '';
-            }
-            return '';
         }
 
         // ─── Zvyšok pôvodnej logiky ──────────────────────────────────────
@@ -1328,11 +1323,24 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         return String(value);
     };
 
+    // Kontrola, či má byť daná cesta ignorovaná
+    const shouldIgnorePath = (path) => {
+        for (const pattern of ignoredPathPatterns) {
+            if (path.includes(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
         const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+            
+            // Ignorovať ak je kľúč v universallyIgnoredKeys alebo cesta obsahuje ignorovaný vzor
             if (universallyIgnoredKeys.has(key)) continue;
+            if (shouldIgnorePath(currentPath)) continue;
 
             const origValue = origObj ? origObj[key] : undefined;
             const updValue = updObj ? updObj[key] : undefined;
