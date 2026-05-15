@@ -1705,6 +1705,40 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         fetchTeamDataForSelects();
     }, [db, title]);
 
+    // Pridajte tento useEffect do DataEditModal komponentu (napr. za ostatné useEffecty)
+    React.useEffect(() => {
+        if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0 && selectedAccommodationType) {
+            // Získame všetky balíky dostupné pre aktuálny typ ubytovania
+            const allPackages = packages || [];
+            const availablePackagesForCurrentType = allPackages.filter(pkg => {
+                if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                    return true;
+                }
+                if (selectedAccommodationType === 'bez ubytovania') {
+                    return pkg.accommodationTypes.includes('bez ubytovania');
+                }
+                return pkg.accommodationTypes.includes(selectedAccommodationType);
+            });
+        
+            // Kontrola, či aktuálne vybraný balík je dostupný
+            const isCurrentPackageAvailable = selectedPackageName && availablePackagesForCurrentType.some(pkg => pkg.name === selectedPackageName);
+            
+            if (!isCurrentPackageAvailable && availablePackagesForCurrentType.length > 0) {
+                // Ak nie je dostupný a existujú dostupné balíky, vyberieme prvý
+                const firstAvailablePackage = availablePackagesForCurrentType[0];
+                setSelectedPackageName(firstAvailablePackage.name);
+                const { id, ...packageDataToSave } = firstAvailablePackage;
+                handleChange('packageDetails', packageDataToSave);
+                console.log(`useEffect: Automaticky vybraný balík ${firstAvailablePackage.name} pre typ ubytovania ${selectedAccommodationType}`);
+            } else if (!isCurrentPackageAvailable && availablePackagesForCurrentType.length === 0) {
+                // Žiadne dostupné balíky, vyčistíme
+                setSelectedPackageName('');
+                handleChange('packageDetails', null);
+                console.log(`useEffect: Žiadny balík nie je dostupný pre typ ubytovania ${selectedAccommodationType}`);
+            }
+        }
+    }, [packages, selectedAccommodationType, title]);
+
     React.useEffect(() => {
         // Fetch user's role from window.globalUserProfileData safely
         let currentUserRole = '';
@@ -2449,6 +2483,39 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     setSelectedAccommodationType(newValue);
                                     handleChange('accommodation', { type: newValue });
                                     handleChange('accommodation.type', newValue);
+                                    
+                                    // --- NOVÁ LOGIKA: Po zmene typu ubytovania vyberieme vhodný balík ---
+                                    // Získame všetky balíky dostupné pre nový typ ubytovania
+                                    const allPackages = packages || [];
+                                    const availablePackagesForNewType = allPackages.filter(pkg => {
+                                        if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                                            return true;
+                                        }
+                                        if (newValue === 'bez ubytovania') {
+                                            return pkg.accommodationTypes.includes('bez ubytovania');
+                                        }
+                                        return pkg.accommodationTypes.includes(newValue);
+                                    });
+                    
+                                    // Ak je aktuálne vybraný balík stále dostupný, ponecháme ho
+                                    const currentPackageStillAvailable = selectedPackageName && availablePackagesForNewType.some(pkg => pkg.name === selectedPackageName);
+                                    
+                                    if (currentPackageStillAvailable) {
+                                        // Aktuálny balík je stále dostupný, nič nemeníme
+                                        console.log("Aktuálny balík je stále dostupný pre nový typ ubytovania");
+                                    } else if (availablePackagesForNewType.length > 0) {
+                                        // Vyberieme prvý dostupný balík
+                                        const firstAvailablePackage = availablePackagesForNewType[0];
+                                        setSelectedPackageName(firstAvailablePackage.name);
+                                        const { id, ...packageDataToSave } = firstAvailablePackage;
+                                        handleChange('packageDetails', packageDataToSave);
+                                        console.log(`Automaticky vybraný balík: ${firstAvailablePackage.name} pre typ ubytovania: ${newValue}`);
+                                    } else {
+                                        // Žiadny balík nie je dostupný, vyčistíme
+                                        setSelectedPackageName('');
+                                        handleChange('packageDetails', null);
+                                        console.log(`Žiadny balík nie je dostupný pre typ ubytovania: ${newValue}`);
+                                    }
                                 },
                                 disabled: !isSavable
                             },
