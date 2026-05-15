@@ -1282,24 +1282,31 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         if (value === null || value === undefined) return '';
 
         // ─── ŠPECIÁLNE SPRACOVANIE DÁTUMOV ───────────────────────────────
-        // Ak obsahuje "dateofbirth" alebo "registrationdate" v ceste → formátujeme
         const lowerPath = path.toLowerCase();
         const isDateField = 
             lowerPath.includes('dateofbirth') || 
             lowerPath.includes('registrationdate') ||
-            lowerPath.includes('date'); // prípadne iné dátumové polia
+            lowerPath.includes('date');
 
         if (isDateField) {
-            // Firebase Timestamp
             if (value && typeof value.toDate === 'function') {
-                return formatDateFn(value.toDate());           // ← tu používame DD.MM.RRRR
+                return formatDateFn(value.toDate());
             }
-            // Plain string YYYY-MM-DD
             if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                return formatDateFn(value);                    // ← tu používame DD.MM.RRRR
+                return formatDateFn(value);
             }
-            // Iný formát → ponecháme ako string
             return String(value);
+        }
+
+        // ─── ŠPECIÁLNE SPRACOVANIE PRE MEALS (stravovanie) ────────────────
+        // Ak ide o cestu obsahujúcu 'meals', vrátime zjednodušenú indikáciu
+        if (lowerPath.includes('meals')) {
+            // Zistíme, či došlo k nejakej zmene v stravovaní
+            const hasChanges = JSON.stringify(value) !== JSON.stringify(original?.[path] || {});
+            if (hasChanges) {
+                return '';
+            }
+            return '';
         }
 
         // ─── Zvyšok pôvodnej logiky ──────────────────────────────────────
