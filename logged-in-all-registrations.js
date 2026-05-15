@@ -3731,6 +3731,7 @@ const openFilterModal = (column) => {
         { value: 'club', label: 'Klub' },
         { value: 'admin', label: 'Administrátor' },
         { value: 'volunteer', label: 'Dobrovoľník' },
+        { value: 'hall', label: 'Hala' },
         { value: 'referee', label: 'Rozhodca' }
       ];
       setUniqueColumnValues(roleValues);
