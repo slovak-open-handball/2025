@@ -2470,24 +2470,42 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             'select',
                             {
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedPackageName || '', // Zabezpečiť, že nie je undefined
+                                value: selectedPackageName || '',
                                 onChange: (e) => {
                                     const newPackageName = e.target.value;
                                     setSelectedPackageName(newPackageName);
-                                    // Nájdite celý objekt balíka na základe vybranej hodnoty
                                     const selectedPackage = packages.find(pkg => pkg.name === newPackageName);
                                     if (selectedPackage) {
-                                        // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
                                         const { id, ...packageDataToSave } = selectedPackage;
                                         handleChange('packageDetails', packageDataToSave);
                                     } else {
-                                        handleChange('packageDetails', null); // Ak balík nebol nájdený
+                                        handleChange('packageDetails', null);
                                     }
                                 },
                                 disabled: !isSavable
                             },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                            // ... rest of options
+                            // Filtrujeme balíky podľa vybraného typu ubytovania
+                            (() => {
+                                const allPackages = packages || [];
+                                const filteredPackages = allPackages.filter(pkg => {
+                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                                        return true;
+                                    }
+                                    if (selectedAccommodationType === 'bez ubytovania') {
+                                        return pkg.accommodationTypes.includes('bez ubytovania');
+                                    }
+                                    return pkg.accommodationTypes.includes(selectedAccommodationType);
+                                });
+                                return filteredPackages
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                                    .map(pkg => 
+                                        React.createElement('option', { 
+                                            key: pkg.id || pkg.name, 
+                                            value: pkg.name 
+                                        }, pkg.name)
+                                    );
+                            })()
                         )
                     )
                 );
