@@ -7346,21 +7346,229 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     // Zistíme, či má zápas kategóriu
                                     const hasCategory = match.categoryName && match.categoryName !== 'Neznáma kategória';
                                     
+                                    // Získanie farieb ubytovní pre tímy (rovnako ako v spriradených zápasoch)
+                                    const accommodationsMap = window.__teamAccommodationsMap || new Map();
+                                    let homeTeamColor = '#f3f4f6';
+                                    let awayTeamColor = '#f3f4f6';
+                                    let homeTextColor = '#000000';
+                                    let awayTextColor = '#000000';
+                                    
+                                    const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+                                    const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+                                    
+                                    if (homeAccommodationName) {
+                                        const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                                        if (accommodation) {
+                                            homeTeamColor = accommodation.headerColor;
+                                            homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                        }
+                                    }
+                                    if (awayAccommodationName) {
+                                        const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                                        if (accommodation) {
+                                            awayTeamColor = accommodation.headerColor;
+                                            awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                        }
+                                    }
+                                    
+                                    // Kategória farba pre písmeno
+                                    let categoryColor = '#f3f4f6';
+                                    if (match.categoryName) {
+                                        const foundCategory = categories.find(c => c.name === match.categoryName);
+                                        if (foundCategory && foundCategory.drawColor) {
+                                            categoryColor = foundCategory.drawColor;
+                                        }
+                                    }
+                                    
+                                    // Zistenie, či ide o špeciálny zápas
+                                    const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
+                                    
+                                    let specialMatchText = '';
+                                    if (match.isPlacementMatch && match.placementRank) {
+                                        specialMatchText = `o ${match.placementRank}. miesto`;
+                                    } else if (match.matchType && !match.isPlacementMatch) {
+                                        let matchTypeText = match.matchType;
+                                        const lastChar = matchTypeText.charAt(matchTypeText.length - 1);
+                                        if (lastChar >= 'A' && lastChar <= 'Z') {
+                                            matchTypeText = matchTypeText.substring(0, matchTypeText.length - 1).trim();
+                                        }
+                                        specialMatchText = matchTypeText;
+                                    }
+                                    
+                                    // Extrahovanie písmena a čísla pre identifikátory
+                                    const extractLetterAndNumber = (identifier) => {
+                                        if (!identifier) return { letter: '', number: '' };
+                                        
+                                        const parts = identifier.split(' ');
+                                        const lastPart = parts[parts.length - 1];
+                                        
+                                        let letter = '';
+                                        let number = '';
+                                        
+                                        for (let i = 0; i < lastPart.length; i++) {
+                                            const char = lastPart[i];
+                                            if (char >= '0' && char <= '9') {
+                                                letter = lastPart.substring(0, i);
+                                                number = lastPart.substring(i);
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (number === '') {
+                                            letter = lastPart;
+                                        }
+                                        
+                                        return { letter: letter, number: number };
+                                    };
+                                    
+                                    const homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
+                                    const awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
+                                    
+                                    const combinedNumbers = homeExtracted.number && awayExtracted.number 
+                                        ? homeExtracted.number + '-' + awayExtracted.number 
+                                        : (homeExtracted.number || awayExtracted.number || '');
+                                    
+                                    const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
+                                    const letterToShow = lettersAreSame ? homeExtracted.letter : '';
+                                    
                                     return React.createElement(
                                         'div',
                                         { 
                                             key: match.id,
-                                            className: 'bg-white p-3 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group cursor-pointer',
+                                            className: 'bg-white p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match',
                                             style: { 
                                                 width: '100%'
                                             },
-                                            onClick: () => handleMatchCardClick(match)
+                                            onClick: () => handleMatchCardClick(match),
+                                            title: 'Kliknite pre úpravu zápasu'
                                         },
-                                        // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
+                                        // Rovnaká štruktúra ako spriradený zápas, BEZ stĺpca pre čas (prvý stĺpec je vynechaný)
+                                        React.createElement(
+                                            'div', 
+                                            { 
+                                                className: 'grid items-start text-xs',
+                                                style: { 
+                                                    gridTemplateColumns: '200px 10px 200px 10px 50px 30px',
+                                                    width: '100%'
+                                                }
+                                            },
+                                            // Domáci tím (prvý stĺpec namiesto času)
+                                            React.createElement(
+                                                'div', 
+                                                { 
+                                                    className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
+                                                    style: { textAlign: 'center' }
+                                                },
+                                                React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                        style: { color: homeTextColor },
+                                                        title: homeName 
+                                                    },
+                                                    homeName
+                                                )
+                                            ),
+                                            // Stĺpec pre farbu domáceho tímu
+                                            React.createElement(
+                                                'div', 
+                                                { 
+                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                    style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
+                                                },
+                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                            ),
+                                            // Hosťovský tím
+                                            React.createElement(
+                                                'div', 
+                                                { 
+                                                    className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
+                                                    style: { textAlign: 'center' }
+                                                },
+                                                React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                        style: { color: awayTextColor },
+                                                        title: awayName 
+                                                    },
+                                                    awayName
+                                                )
+                                            ),
+                                            // Stĺpec pre farbu hosťovského tímu
+                                            React.createElement(
+                                                'div', 
+                                                { 
+                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                    style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
+                                                },
+                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                            ),
+                                            // Kombinované čísla (homeNumber-awayNumber)
+                                            !isSpecialMatch && React.createElement(
+                                                React.Fragment,
+                                                null,
+                                                React.createElement(
+                                                    'div', 
+                                                    { 
+                                                        className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
+                                                        style: { textAlign: 'center', backgroundColor: 'transparent' }
+                                                    },
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full'
+                                                        },
+                                                        combinedNumbers
+                                                    )
+                                                ),
+                                                // Písmeno (ak je rovnaké pre oba tímy)
+                                                React.createElement(
+                                                    'div', 
+                                                    { 
+                                                        className: 'px-2 py-1 flex items-center justify-center',
+                                                        style: { textAlign: 'center', backgroundColor: categoryColor, fontWeight: 'bold', borderRadius: '4px' }
+                                                    },
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'text-black font-bold text-xs truncate block w-full',
+                                                            style: { color: '#000', textShadow: 'none' }
+                                                        },
+                                                        letterToShow || ''
+                                                    )
+                                                )
+                                            ),
+                                            // Špeciálny zápas (o umiestnenie alebo pavúk) - zaberá 2 stĺpce
+                                            isSpecialMatch && React.createElement(
+                                                'div', 
+                                                { 
+                                                    className: 'px-3 py-1 flex items-center justify-center',
+                                                    style: { 
+                                                        textAlign: 'center',
+                                                        backgroundColor: categoryColor,
+                                                        fontWeight: 'bold',
+                                                        borderRadius: '4px',
+                                                        gridColumn: 'span 2',
+                                                        whiteSpace: 'nowrap',
+                                                        wordBreak: 'keep-all'
+                                                    }
+                                                },
+                                                React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: 'text-black font-bold text-[10px] block w-full',
+                                                        style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
+                                                    },
+                                                    specialMatchText
+                                                )
+                                            )
+                                        ),
+                                        
+                                        // Tlačidlá pre admina
                                         userProfileData?.role === 'admin' && React.createElement(
                                             'div',
-                                            { className: 'absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10' },
-                                            // Modré tlačidlo pre výmenu (pre nepriradené zápasy)
+                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                             React.createElement(
                                                 'button',
                                                 {
@@ -7373,7 +7581,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                             ),
-                                            // Červené tlačidlo pre zmazanie - ZOBRAZÍ SA LEN AK NIE JE PAVÚKOVÝ ZÁPAS
                                             !match.matchType && React.createElement(
                                                 'button',
                                                 {
@@ -7388,138 +7595,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
-                                        // Rovnaká štruktúra ako spriradený zápas, BEZ stĺpca pre čas
-                                        React.createElement(
-                                            'div', 
-                                            { 
-                                                className: 'grid items-start text-xs',
-                                                style: { 
-                                                    gridTemplateColumns: '200px 10px 200px 10px 50px 30px',
-                                                    width: '100%'
-                                                }
-                                            },
-                                            // Domáci tím
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center' }
-                                                },
-                                                React.createElement(
-                                                    'span',
-                                                    { 
-                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        title: homeName 
-                                                    },
-                                                    homeName
-                                                )
-                                            ),
-                                            // Stĺpec pre farbu domáceho (ak je k dispozícii)
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center', width: '10px', height: '100%' }
-                                                },
-                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
-                                            ),
-                                            // Hosťovský tím
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center' }
-                                                },
-                                                React.createElement(
-                                                    'span',
-                                                    { 
-                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        title: awayName 
-                                                    },
-                                                    awayName
-                                                )
-                                            ),
-                                            // Stĺpec pre farbu hosťovského
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center', width: '10px', height: '100%' }
-                                                },
-                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
-                                            ),
-                                            // Kombinované čísla (homePureId-awayPureId)
-                                            !match.isPlacementMatch && React.createElement(
-                                                React.Fragment,
-                                                null,
-                                                React.createElement(
-                                                    'div', 
-                                                    { 
-                                                        className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                        style: { textAlign: 'center', backgroundColor: 'transparent' }
-                                                    },
-                                                    React.createElement(
-                                                        'span',
-                                                        { 
-                                                            className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full'
-                                                        },
-                                                        `${homePureId}-${awayPureId}`
-                                                    )
-                                                ),
-                                                // Písmeno (ak je rovnaké pre oba tímy)
-                                                React.createElement(
-                                                    'div', 
-                                                    { 
-                                                        className: 'px-2 py-0 flex items-center justify-center',
-                                                        style: { textAlign: 'center', fontWeight: 'bold', borderRadius: '4px' }
-                                                    },
-                                                    React.createElement(
-                                                        'span',
-                                                        { 
-                                                            className: 'text-black font-bold text-xs truncate block w-full'
-                                                        },
-                                                        ''
-                                                    )
-                                                )
-                                            ),
-                                            // Špeciálny zápas (o umiestnenie alebo pavúk)
-                                            match.isPlacementMatch && React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-3 py-0 flex items-center justify-center',
-                                                    colSpan: 2,
-                                                    style: { 
-                                                        textAlign: 'center',
-                                                        fontWeight: 'bold',
-                                                        borderRadius: '4px',
-                                                        gridColumn: 'span 2',
-                                                        whiteSpace: 'nowrap',
-                                                        wordBreak: 'keep-all',
-                                                        minWidth: '80px',
-                                                        maxWidth: 'none'
-                                                    }
-                                                },
-                                                React.createElement(
-                                                    'span',
-                                                    { 
-                                                        className: 'text-black font-bold text-[10px] block w-full',
-                                                        style: { whiteSpace: 'nowrap', wordBreak: 'keep-all' }
-                                                    },
-                                                    match.isPlacementMatch && match.placementRank 
-                                                        ? `o ${match.placementRank}. miesto`
-                                                        : (match.matchType || '')
-                                                )
-                                            )
-                                        ),
-                                        
-                                        // Skupina (ak existuje)
+                                        // Skupina (rovnaké zobrazenie ako v spriradených zápasoch)
                                         match.groupName && React.createElement(
                                             'div',
-                                            { className: 'mt-1 text-xs text-gray-500 flex items-center' },
+                                            { className: 'mt-1 text-xs text-gray-500 flex items-center px-2 pb-1' },
                                             React.createElement(
                                                 'span',
-                                                { className: 'px-2 py-0.5 bg-gray-100 rounded-full' },
+                                                { className: 'px-2 py-0.5 bg-gray-100 rounded-full text-[10px]' },
                                                 match.groupName
+                                            ),
+                                            isAdvancedGroup && React.createElement(
+                                                'span',
+                                                { className: 'ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px]' },
+                                                'Nadstavbová'
                                             )
                                         )
                                     );
