@@ -3064,6 +3064,8 @@ const translateRole = (role) => {
       return 'Administrátor';
     case 'volunteer':
       return 'Dobrovoľník';
+    case 'hall':
+      return 'Hala';
     case 'referee':
       return 'Rozhodca';
     default:
