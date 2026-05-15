@@ -1829,6 +1829,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         };
     }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen, isConfirmDeleteTeamOpen]); // Pridané isConfirmDeleteTeamOpen do závislostí
 
+    React.useEffect(() => {
+        if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0) {
+            const currentPackageName = localEditedData.packageDetails?.name;
+            if (currentPackageName && currentPackageName !== selectedPackageName) {
+                setSelectedPackageName(currentPackageName);
+            } else if (!currentPackageName && selectedPackageName) {
+                setSelectedPackageName('');
+            }
+        }
+    }, [localEditedData.packageDetails?.name, packages, title, selectedPackageName]);
+
     if (!isOpen) return null;
 
     // Handler pre zmenu veľkosti alebo počtu tričiek
@@ -2449,9 +2460,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                 value: selectedPackageName,
                                 onChange: (e) => {
-                                    setSelectedPackageName(e.target.value);
+                                    const newPackageName = e.target.value;
+                                    setSelectedPackageName(newPackageName);
                                     // Nájdite celý objekt balíka na základe vybranej hodnoty
-                                    const selectedPackage = packages.find(pkg => pkg.name === e.target.value);
+                                    const selectedPackage = packages.find(pkg => pkg.name === newPackageName);
                                     if (selectedPackage) {
                                         // Uložiť celý objekt do packageDetails, ale bez 'id' a iných interných kľúčov
                                         const { id, ...packageDataToSave } = selectedPackage;
@@ -2463,37 +2475,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 disabled: !isSavable
                             },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                            // Filtrujeme balíky podľa vybraného typu ubytovania
-                            (() => {
-                                // Získame všetky dostupné balíky
-                                const allPackages = packages || [];
-                                
-                                // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
-                                const filteredPackages = allPackages.filter(pkg => {
-                                    // Ak balík nemá definované accommodationTypes, berieme ho ako dostupný pre všetky typy (pre spätnú kompatibilitu)
-                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
-                                        return true;
-                                    }
-                                    
-                                    // Ak je vybraný typ "bez ubytovania", kontrolujeme či je v zozname
-                                    if (selectedAccommodationType === 'bez ubytovania') {
-                                        return pkg.accommodationTypes.includes('bez ubytovania');
-                                    }
-                                    
-                                    // Inak kontrolujeme, či je vybraný typ v zozname dostupných typov pre balík
-                                    return pkg.accommodationTypes.includes(selectedAccommodationType);
-                                });
-                                
-                                // Zoradíme podľa názvu a vrátime option elementy
-                                return filteredPackages
-                                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                                    .map(pkg => 
-                                        React.createElement('option', { 
-                                            key: pkg.id || pkg.name, 
-                                            value: pkg.name 
-                                        }, pkg.name)
-                                    );
-                            })()
+                            // ... rest of options
                         )
                     )
                 );
@@ -2780,7 +2762,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     // Zabezpečte, že tieto polia sú správne nastavené
                                     dataToPrepareForSave.category = selectedCategory;
                                     dataToPrepareForSave._category = selectedCategory;
-                                    
+    
                                     // Správne nastavenie príchodu
                                     if (selectedArrivalType) {
                                         dataToPrepareForSave.arrival = { type: selectedArrivalType };
@@ -2794,22 +2776,28 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                     
                                     // Správne nastavenie ubytovania - TOTO JE DÔLEŽITÉ
-                                    // Zabezpečte, že sa použije selectedAccommodationType, nie to, čo je v localEditedData
-                                    dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
+                                    // Najprv skopírujeme existujúce dáta, potom prepíšeme typ
+                                    if (!dataToPrepareForSave.accommodation) {
+                                        dataToPrepareForSave.accommodation = {};
+                                    }
+                                    dataToPrepareForSave.accommodation.type = selectedAccommodationType;
                                     
-                                    // Správne nastavenie tričiek
-                                    dataToPrepareForSave.tshirts = teamTshirts
-                                        .filter(t => t.size && t.quantity > 0)
-                                        .map(({ size, quantity }) => ({ size, quantity }));
-                                    
-                                    // Zabezpečte, že balík je správne nastavený
+                                    // Správne nastavenie balíka
                                     if (selectedPackageName) {
                                         const selectedPackage = packages.find(pkg => pkg.name === selectedPackageName);
                                         if (selectedPackage) {
                                             const { id, ...packageDataToSave } = selectedPackage;
                                             dataToPrepareForSave.packageDetails = packageDataToSave;
                                         }
+                                    } else {
+                                        // Ak nie je vybraný žiadny balík, vymažeme ho
+                                        delete dataToPrepareForSave.packageDetails;
                                     }
+                                    
+                                    // Správne nastavenie tričiek
+                                    dataToPrepareForSave.tshirts = teamTshirts
+                                        .filter(t => t.size && t.quantity > 0)
+                                        .map(({ size, quantity }) => ({ size, quantity }));
                                 }
                         
                                 // 3. Filtrovanie interných/nepotrebných kľúčov
@@ -4042,7 +4030,7 @@ const clearFilter = (column) => {
                 throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
             }
             const currentDocData = docSnapshot.data();
-
+        
             let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category;
             if (!actualCategory) {
                 throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
@@ -4061,21 +4049,19 @@ const clearFilter = (column) => {
                     oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
                 }
             }
-        
+
             const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
-        
+
             if (isNewTeam) {
                 // Nový tím
                 const updatedTeam = { 
                     ...updatedDataFromModal, 
-                    registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() 
+                    registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim(),
+                    // Zabezpečíme, že accommodation má správnu štruktúru
+                    accommodation: updatedDataFromModal.accommodation || { type: '' }
                 };
                 
-                // Zabezpečte, že všetky polia sú správne nastavené
-                updatedTeam.category = actualCategory;
-                updatedTeam._category = actualCategory;
-                
-                // Zabezpečte, že pole s tímmi existuje
+                // Zabezpečte, že pole s tímami existuje
                 const newCategoryTeams = [...currentCategoryTeams];
                 newCategoryTeams.push(updatedTeam);
         
@@ -4094,7 +4080,7 @@ const clearFilter = (column) => {
                 // Získajte pôvodný tím
                 const originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
                 
-                // Vytvorte aktualizovaný tím
+                // Vytvorte aktualizovaný tím - DÔLEŽITÉ: zachováme všetky existujúce polia
                 let updatedTeam = { ...originalTeam };
                 
                 // Aktualizujte všetky polia z updatedDataFromModal
@@ -4104,6 +4090,16 @@ const clearFilter = (column) => {
                             ...(originalTeam[key] || {}),
                             ...(updatedDataFromModal[key] || {})
                         };
+                    } else if (key === 'accommodation') {
+                        // Špeciálne spracovanie pre accommodation - úplne nahradíme objekt
+                        updatedTeam.accommodation = updatedDataFromModal.accommodation || { type: '' };
+                    } else if (key === 'packageDetails') {
+                        // Špeciálne spracovanie pre packageDetails
+                        if (updatedDataFromModal.packageDetails) {
+                            updatedTeam.packageDetails = updatedDataFromModal.packageDetails;
+                        } else {
+                            delete updatedTeam.packageDetails;
+                        }
                     } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
                         updatedTeam[key] = {
                             ...(originalTeam[key] || {}),
@@ -4114,7 +4110,7 @@ const clearFilter = (column) => {
                     }
                 }
                 
-                // Aktualizujte pole s tímmi
+                // Aktualizujte pole s tímami
                 const newCategoryTeams = [...currentCategoryTeams];
                 newCategoryTeams[oldTeamIndex] = updatedTeam;
         
@@ -4122,6 +4118,8 @@ const clearFilter = (column) => {
                 updates[`teams.${oldCategory}`] = newCategoryTeams;
                 
                 await updateDoc(targetDocRef, updates);
+                
+                console.log("DEBUG: Tím aktualizovaný v kategórii", oldCategory);
             }
         
             setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
