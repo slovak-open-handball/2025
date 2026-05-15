@@ -1291,10 +1291,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     // Mapovanie názvov pre lepšie zobrazenie v notifikáciách
     const getBetterLabel = (path, originalLabel) => {
         if (path === 'packageDetails.price') {
-            return 'cena balíka';
-        }
-        if (path === 'packageDetails.accommodationTypes' || path === 'accommodationTypes') {
-            return 'typ ubytovania';
+            return 'Cena balíka';
         }
         return originalLabel;
     };
