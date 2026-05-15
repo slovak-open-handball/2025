@@ -1285,8 +1285,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'meals',
         'packageDetails.meals',
         'packageDetails.createdAt',
-        'packageDetails.updatedAt',
-        'accommodation'
+        'packageDetails.updatedAt'
     ]);
 
     // Mapovanie názvov pre lepšie zobrazenie v notifikáciách
