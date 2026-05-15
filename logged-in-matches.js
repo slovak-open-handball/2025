@@ -7245,7 +7245,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     // ĽAVÝ STĹPEC - Zoznam nepriradených zápasov
                     filteredUnassignedMatches.length > 0 && React.createElement(
                         'div',
-                        { className: 'lg:w-1/4 bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full' },
+                        { className: 'w-[695px] bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full flex-shrink-0' }
                         
                         // Hlavička s nadpisom a tlačidlami
                         React.createElement(
@@ -7598,7 +7598,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                        // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - vždy zobrazí všetky dni)
                        React.createElement(
                            'div',
-                           { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-3/4' : 'lg:w-full'} flex flex-col` },
+                           { className: 'flex-1 flex flex-col' }
                            (() => {
                                // Zistíme, či je aktívny filter
                                const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
