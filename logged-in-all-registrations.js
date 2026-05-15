@@ -1280,9 +1280,19 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     // Kľúče/časti cesty, ktoré sa majú úplne ignorovať pri generovaní notifikácií
     const ignoredPathPatterns = new Set([
-        'meals',           // Ignorovať celú meals časť
-        'packageDetails.meals'  // Ignorovať aj plnú cestu
+        'meals',                    // Ignorovať celú meals časť
+        'packageDetails.meals',     // Ignorovať aj plnú cestu
+        'packageDetails.createdAt', // Ignorovať createdAt
+        'packageDetails.updatedAt'  // Ignorovať updatedAt
     ]);
+
+    // Mapovanie názvov pre lepšie zobrazenie v notifikáciách
+    const getBetterLabel = (path, originalLabel) => {
+        if (path === 'packageDetails.price') {
+            return 'cena balíka';
+        }
+        return originalLabel;
+    };
 
     const normalizeValueForComparison = (value, path) => {
         if (value === null || value === undefined) return '';
@@ -1378,8 +1388,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             const valueB = normalizeValueForComparison(updValue, currentPath);
 
             if (valueA !== valueB) {
-                const label = formatLabel(currentPath);
-                let changeDescription = `Zmena ${label}: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                const originalLabel = formatLabel(currentPath);
+                const betterLabel = getBetterLabel(currentPath, originalLabel);
+                let changeDescription = `Zmena ${betterLabel}: z '${valueA || '-'}' na '${valueB || '-'}'`;
                 if (!changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
