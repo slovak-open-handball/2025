@@ -1364,6 +1364,20 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             // Ignorovať ak je kľúč v universallyIgnoredKeys alebo cesta obsahuje ignorovaný vzor
             if (universallyIgnoredKeys.has(key)) continue;
             if (shouldIgnorePath(currentPath)) continue;
+            
+            // ŠPECIÁLNE SPRACOVANIE PRE accommodation - spracujeme len ako celok, nie jeho časti
+            if (key === 'accommodation') {
+                const origAccommodation = origObj?.accommodation;
+                const updAccommodation = updObj?.accommodation;
+                
+                const origAccType = origAccommodation?.type || 'bez ubytovania';
+                const updAccType = updAccommodation?.type || 'bez ubytovania';
+                
+                if (origAccType !== updAccType) {
+                    changes.push(`Zmena Typ ubytovania: z '${origAccType}' na '${updAccType}'`);
+                }
+                continue; // Preskočíme ďalšie spracovanie vnorených kľúčov accommodation
+            }
 
             const origValue = origObj ? origObj[key] : undefined;
             const updValue = updObj ? updObj[key] : undefined;
