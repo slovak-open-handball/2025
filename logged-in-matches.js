@@ -7350,8 +7350,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                     let homeTeamColor = '#f3f4f6';
                                     let awayTeamColor = '#f3f4f6';
-                                    let homeTextColor = '#000000';
-                                    let awayTextColor = '#000000';
                                     
                                     const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                     const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
@@ -7360,14 +7358,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                                         if (accommodation) {
                                             homeTeamColor = accommodation.headerColor;
-                                            homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
                                         }
                                     }
                                     if (awayAccommodationName) {
                                         const accommodation = accommodations.find(a => a.name === awayAccommodationName);
                                         if (accommodation) {
                                             awayTeamColor = accommodation.headerColor;
-                                            awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
                                         }
                                     }
                                     
@@ -7463,7 +7459,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'span',
                                                     { 
                                                         className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        style: { color: homeTextColor },
+                                                        style: { color: '#000000' }, // FARBA: VŽDY ČIERNA
                                                         title: homeName 
                                                     },
                                                     homeName
@@ -7489,7 +7485,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'span',
                                                     { 
                                                         className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        style: { color: awayTextColor },
+                                                        style: { color: '#000000' }, // FARBA: VŽDY ČIERNA
                                                         title: awayName 
                                                     },
                                                     awayName
@@ -7592,22 +7588,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     title: 'Zmazať zápas'
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                            )
-                                        ),
-                                        
-                                        // Skupina (rovnaké zobrazenie ako v spriradených zápasoch)
-                                        match.groupName && React.createElement(
-                                            'div',
-                                            { className: 'mt-1 text-xs text-gray-500 flex items-center px-2 pb-1' },
-                                            React.createElement(
-                                                'span',
-                                                { className: 'px-2 py-0.5 bg-gray-100 rounded-full text-[10px]' },
-                                                match.groupName
-                                            ),
-                                            isAdvancedGroup && React.createElement(
-                                                'span',
-                                                { className: 'ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px]' },
-                                                'Nadstavbová'
                                             )
                                         )
                                     );
