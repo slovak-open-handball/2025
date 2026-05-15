@@ -7245,7 +7245,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     // ĽAVÝ STĹPEC - Zoznam nepriradených zápasov
                     filteredUnassignedMatches.length > 0 && React.createElement(
                         'div',
-                        { className: 'w-[500px] bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full flex-shrink-0' },
+                        { className: 'w-[550px] bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full flex-shrink-0' },
                         
                         // Hlavička s nadpisom a tlačidlami
                         React.createElement(
