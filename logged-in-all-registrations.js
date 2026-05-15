@@ -2422,9 +2422,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                 value: selectedAccommodationType,
                                 onChange: (e) => {
-                                    setSelectedAccommodationType(e.target.value);
-                                    // Toto je kľúčové - aktualizujeme aj localEditedData
-                                    handleChange('accommodation.type', e.target.value);
+                                    const newValue = e.target.value;
+                                    setSelectedAccommodationType(newValue);
+                                    handleChange('accommodation', { type: newValue });
+                                    handleChange('accommodation.type', newValue);
                                 },
                                 disabled: !isSavable
                             },
