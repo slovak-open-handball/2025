@@ -1291,6 +1291,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         if (path === 'packageDetails.price') {
             return 'cena balíka';
         }
+        if (path === 'packageDetails.accommodationTypes' || path === 'accommodationTypes') {
+            return 'typ ubytovania';
+        }
         return originalLabel;
     };
 
@@ -1324,11 +1327,19 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             }
             if (value.type) return value.type;
             if (value.name) return value.name;
+            // Špeciálne spracovanie pre accommodationTypes (pole)
+            if (path === 'packageDetails.accommodationTypes' && Array.isArray(value)) {
+                return value.join(', ');
+            }
             try {
                 return JSON.stringify(value);
             } catch (e) {
                 return '[OBJECT_ERROR]';
             }
+        }
+        // Špeciálne spracovanie pre accommodationTypes (ak je to pole)
+        if (Array.isArray(value) && (path === 'packageDetails.accommodationTypes' || path === 'accommodationTypes')) {
+            return value.join(', ');
         }
         return String(value);
     };
