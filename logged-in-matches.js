@@ -7446,9 +7446,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                     style: {
                         position: 'absolute',
                         top: '10px',
-                        left: '56px',
-                        width: '60px',
-                        height: '60px',
+                        left: '54px',
+                        width: '54px',
+                        height: '54px',
                         pointerEvents: 'none',
                         zIndex: 80
                     }
@@ -7457,8 +7457,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '-2px',
-                        left: '-2px',
+                        top: '-1px',
+                        left: '-1px',
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#22c55e',
@@ -7471,8 +7471,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '2px',
-                        left: '2px',
+                        top: '1px',
+                        left: '1px',
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#ef4444',
