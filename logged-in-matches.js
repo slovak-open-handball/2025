@@ -7341,24 +7341,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                     height: '64px'
                 }
             },
-            // Hlavný kruhový kontajner - border je na rodičovi
+            // Zelená polovica (horná ľavá)
             React.createElement(
                 'div',
                 {
-                    className: 'relative w-full h-full rounded-full overflow-hidden',
+                    className: 'absolute rounded-full overflow-hidden',
                     style: {
+                        width: '64px',
+                        height: '64px',
+                        clipPath: 'polygon(0 0, 100% 0, 0 100%)',
                         border: hasCompletedMatch ? '2px solid #22c55e' : 'none',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        top: 0,
+                        left: 0
                     }
                 },
-                // Prvá polovica - Zelená (Generovať)
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700')} transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
-                        style: { 
-                            clipPath: 'polygon(0 0, 100% 0, 0 100%)', // Diagonálne rozdelenie - horná ľavá časť
-                        },
+                        className: `w-full h-full ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700')} transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         onClick: hasCompletedMatch ? undefined : () => setIsGenerationTypeModalOpen(true),
                         disabled: generationInProgress || hasCompletedMatch,
                     },
@@ -7387,15 +7388,27 @@ const AddMatchesApp = ({ userProfileData }) => {
                             }
                         )
                     )
-                ),
-                // Druhá polovica - Červená (Zmazať)
+                )
+            ),
+            // Červená polovica (dolná pravá)
+            React.createElement(
+                'div',
+                {
+                    className: 'absolute rounded-full overflow-hidden',
+                    style: {
+                        width: '64px',
+                        height: '64px',
+                        clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                        border: hasCompletedMatch ? '2px solid #ef4444' : 'none',
+                        boxSizing: 'border-box',
+                        top: 0,
+                        left: 0
+                    }
+                },
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700')} transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
-                        style: { 
-                            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie - dolná pravá časť
-                        },
+                        className: `w-full h-full ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700')} transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         onClick: hasCompletedMatch ? undefined : () => setIsDeleteMatchesModalOpen(true),
                         disabled: generationInProgress || hasCompletedMatch,
                     },
