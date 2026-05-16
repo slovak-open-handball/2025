@@ -7381,8 +7381,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 className: `fa-solid fa-plus text-2xl ${hasCompletedMatch ? 'text-green-600' : 'text-white'}`,
                                 style: {
                                     position: 'absolute',
-                                    top: '35%',
-                                    left: '35%',
+                                    top: '30%',
+                                    left: '30%',
                                     transform: 'translate(-50%, -50%)'
                                 }
                             }
@@ -7430,8 +7430,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 className: `fa-solid fa-minus text-2xl ${hasCompletedMatch ? 'text-red-600' : 'text-white'}`,
                                 style: {
                                     position: 'absolute',
-                                    bottom: '35%',
-                                    right: '35%',
+                                    bottom: '30%',
+                                    right: '30%',
                                     transform: 'translate(50%, 50%)'
                                 }
                             }
