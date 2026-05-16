@@ -7438,6 +7438,49 @@ const AddMatchesApp = ({ userProfileData }) => {
                         )
                     )
                 )
+            ),
+            // Diagonálne čiary - zelená a červená
+            !hasCompletedMatch && React.createElement(
+                'div',
+                {
+                    style: {
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '64px',
+                        height: '64px',
+                        pointerEvents: 'none',
+                        zIndex: 10
+                    }
+                },
+                // Zelená čiara (cez celú uhlopriečku, posunutá o 2px hore a doľava)
+                React.createElement('div', {
+                    style: {
+                        position: 'absolute',
+                        top: '-2px',
+                        left: '-2px',
+                        width: 'calc(100% + 4px)',
+                        height: '2px',
+                        backgroundColor: '#22c55e',
+                        transform: 'rotate(45deg)',
+                        transformOrigin: 'top left',
+                        borderRadius: '2px'
+                    }
+                }),
+                // Červená čiara (cez celú uhlopriečku, posunutá o 2px dole a doprava)
+                React.createElement('div', {
+                    style: {
+                        position: 'absolute',
+                        top: '2px',
+                        left: '2px',
+                        width: 'calc(100% + 4px)',
+                        height: '2px',
+                        backgroundColor: '#ef4444',
+                        transform: 'rotate(45deg)',
+                        transformOrigin: 'top left',
+                        borderRadius: '2px'
+                    }
+                })
             )
         ),
                 
