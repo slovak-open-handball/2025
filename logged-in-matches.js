@@ -8199,12 +8199,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        React.createElement(
                                                            'div',
                                                            {
-                                                               className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100 cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors',
-                                                               onClick: (e) => {
+                                                               className: `flex items-center justify-between mb-2 pb-1 border-b border-gray-100 ${
+                                                                   hasCompletedMatch ? 'cursor-default' : 'cursor-pointer hover:bg-blue-50'
+                                                               } p-2 -m-2 rounded transition-colors`,
+                                                               onClick: hasCompletedMatch ? undefined : (e) => {
                                                                    e.stopPropagation();
                                                                    handleHallDayHeaderClick(hall, date, dateStr);
                                                                },
-                                                               title: 'Kliknite pre nastavenie času začiatku prvého zápasu',
+                                                               title: hasCompletedMatch ? 'Nie je možné nastaviť čas, pretože už existuje ukončený zápas v systéme.' : 'Kliknite pre nastavenie času začiatku prvého zápasu',
                                                                style: { width: '100%' }
                                                            },
                                                            React.createElement(
