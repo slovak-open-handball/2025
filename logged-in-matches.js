@@ -7350,7 +7350,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         width: '64px',
                         height: '64px',
                         clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                        border: hasCompletedMatch ? '4px solid #22c55e' : 'none',
+                        border: hasCompletedMatch ? '4px solid #16a34a' : 'none',
                         boxSizing: 'border-box',
                         top: 0,
                         left: 0
@@ -7461,7 +7461,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         left: 0,
                         width: 'calc(100% + 8px)',
                         height: '4px',
-                        backgroundColor: '#22c55e',
+                        backgroundColor: '#16a34a',
                         transform: 'rotate(135deg)',
                         transformOrigin: 'top left',
                         borderRadius: '4px'
