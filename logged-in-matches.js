@@ -4166,7 +4166,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [maxDayCardHeight, setMaxDayCardHeight] = useState(0);
     const [maxHeightsByDate, setMaxHeightsByDate] = useState({});
     const [heightsCalculated, setHeightsCalculated] = useState(false);
-
+    const [hasCompletedMatch, setHasCompletedMatch] = useState(false);
 
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
@@ -5125,6 +5125,11 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [filtersInitialized, setFiltersInitialized] = useState(false);
 
     useEffect(() => {
+        const completedExists = matches.some(match => match.status === 'completed');
+        setHasCompletedMatch(completedExists);
+    }, [matches]);
+
+    useEffect(() => {
         if (matches.length > 0 && sportHalls.length > 0 && !loading) {
             setHeightsCalculated(false);
             measureDayCardsHeights();
@@ -5398,6 +5403,11 @@ const AddMatchesApp = ({ userProfileData }) => {
     const handleAssignMatch = async (assignment) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+
+        if (hasCompletedMatch) {
+            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
             return;
         }
     
@@ -7750,8 +7760,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
-                                        // Tlačidlá pre admina
-                                        userProfileData?.role === 'admin' && React.createElement(
+                                        // Tlačidlá pre admina (iba ak NEEXISTUJE ukončený zápas)
+                                        !hasCompletedMatch && userProfileData?.role === 'admin' && React.createElement(
                                             'div',
                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                             React.createElement(
@@ -8070,7 +8080,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            }, 'Športová hala'),
                                                            
                                                            // Tlačidlá pre admina
-                                                           userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
+                                                           userProfileData?.role === 'admin' && hasAnyMatch && !hasCompletedMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
                                                                React.createElement(
@@ -8164,13 +8174,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        'div',
                                                        {
                                                            key: index,
-                                                           className: 'day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
+                                                           className: `day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day ${
+                                                               hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
+                                                           }`,
                                                            style: {
                                                                width: '100%',
                                                                minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto'
                                                            },
                                                            'data-card-id': cardId,
-                                                           'data-date-key': dateKey
+                                                           'data-date-key': dateKey,
+                                                           // Odstránime onClick, ak existuje ukončený zápas
+                                                           onClick: hasCompletedMatch ? undefined : (e) => {
+                                                               e.stopPropagation();
+                                                               handleHallDayHeaderClick(hall, date, dateStr);
+                                                           },
+                                                           title: hasCompletedMatch ? '' : 'Kliknite pre nastavenie času začiatku prvého zápasu'
                                                        },
                                                        // Hlavička dňa (nezmenená)
                                                        React.createElement(
@@ -8208,7 +8226,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                })()
                                                            ),
                                                            // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
-                                                           !isEmpty && userProfileData?.role === 'admin' && React.createElement(
+                                                           !isEmpty && userProfileData?.role === 'admin' && !hasCompletedMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
                                                                React.createElement(
@@ -8540,13 +8558,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            React.createElement(
                                                                                'div',
                                                                                {
-                                                                                   key: 'match-' + match.id,
-                                                                                   className: 'p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match bg-white cursor-pointer',
-                                                                                   style: { 
-                                                                                       width: '100%',
-                                                                                       backgroundColor: 'white'
-                                                                                   }
-                                                                               },
+                                                                                    key: 'match-' + match.id,
+                                                                                    className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match bg-white ${
+                                                                                        hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
+                                                                                    }`,
+                                                                                    style: { 
+                                                                                        width: '100%',
+                                                                                        backgroundColor: 'white'
+                                                                                    }
+                                                                                },
                                                                                React.createElement(
                                                                                    'div', 
                                                                                    { 
@@ -8680,7 +8700,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        )
                                                                                    )
                                                                                ),
-                                                                               userProfileData?.role === 'admin' ? React.createElement(
+                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
                                                                                    'div',
                                                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                                                                    React.createElement(
