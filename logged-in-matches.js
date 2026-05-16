@@ -7453,7 +7453,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         zIndex: 80
                     }
                 },
-                // Zelená čiara (cez celú uhlopriečku, posunutá o 2px hore a doľava)
+                // Zelená čiara 
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
@@ -7467,12 +7467,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                         borderRadius: '4px'
                     }
                 }),
-                // Červená čiara (cez celú uhlopriečku, posunutá o 2px dole a doprava)
+                // Červená čiara 
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '2px',
-                        left: '2px',
+                        top: '3px',
+                        left: '3px',
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#ef4444',
