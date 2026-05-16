@@ -7640,7 +7640,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 width: '100%'
                                             },
                                             onClick: () => handleMatchCardClick(match),
-                                            title: 'Kliknite pre úpravu zápasu'
+                                            title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu'
                                         },
                                         // Rovnaká štruktúra ako spriradený zápas, BEZ stĺpca pre čas (prvý stĺpec je vynechaný)
                                         React.createElement(
@@ -8591,7 +8591,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            e.stopPropagation();
                                                                                            handleMatchCardClick(match);
                                                                                        },
-                                                                                       title: 'Kliknite pre úpravu zápasu'
+                                                                                       title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu'
                                                                                    },
                                                                                    React.createElement(
                                                                                        'div', 
