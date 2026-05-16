@@ -7446,7 +7446,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     style: {
                         position: 'absolute',
                         top: 0,
-                        left: 0,
+                        left: '64px',
                         width: '64px',
                         height: '64px',
                         pointerEvents: 'none',
@@ -7464,7 +7464,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         backgroundColor: '#22c55e',
                         transform: 'rotate(135deg)',
                         transformOrigin: 'top left',
-                        borderRadius: '2px'
+                        borderRadius: '4px'
                     }
                 }),
                 // Červená čiara (cez celú uhlopriečku, posunutá o 2px dole a doprava)
@@ -7478,7 +7478,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         backgroundColor: '#ef4444',
                         transform: 'rotate(135deg)',
                         transformOrigin: 'top left',
-                        borderRadius: '2px'
+                        borderRadius: '4px'
                     }
                 })
             )
