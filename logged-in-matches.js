@@ -5371,10 +5371,15 @@ const AddMatchesApp = ({ userProfileData }) => {
     }, []);
 
     const handleMatchCardClick = (match) => {
+        // Ak existuje ukončený zápas, neotvárame modálne okno
+        if (hasCompletedMatch) {
+            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
+            return;
+        }
         setSelectedMatchForAssign(match);
         setIsAssignModalOpen(true);
     };
-
+    
     const handleUnassignMatch = async (match) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -8401,7 +8406,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        )
                                                                                                    )
                                                                                                ),
-                                                                                               userProfileData?.role === 'admin' ? React.createElement(
+                                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
                                                                                                    'div',
                                                                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
                                                                                                    React.createElement(
@@ -8834,7 +8839,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        )
                                                                                                    )
                                                                                                ),
-                                                                                               userProfileData?.role === 'admin' ? React.createElement(
+                                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
                                                                                                    'div',
                                                                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
                                                                                                    React.createElement(
@@ -8896,7 +8901,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    });
 
-                                                                   if (hasUnassignedMatches && sortedMatches.length > 0 && userProfileData?.role === 'admin') {
+                                                                   if (hasUnassignedMatches && sortedMatches.length > 0 && userProfileData?.role === 'admin' && !hasCompletedMatch) {
                                                                        const lastMatch = sortedMatches[sortedMatches.length - 1];
                                                                        if (lastMatch && lastMatch.scheduledTime) {
                                                                            try {
