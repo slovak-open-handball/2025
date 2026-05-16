@@ -7350,7 +7350,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         width: '64px',
                         height: '64px',
                         clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                        border: hasCompletedMatch ? '2px solid #22c55e' : 'none',
+                        border: hasCompletedMatch ? '4px solid #22c55e' : 'none',
                         boxSizing: 'border-box',
                         top: 0,
                         left: 0
@@ -7399,7 +7399,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         width: '64px',
                         height: '64px',
                         clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                        border: hasCompletedMatch ? '2px solid #ef4444' : 'none',
+                        border: hasCompletedMatch ? '4px solid #ef4444' : 'none',
                         boxSizing: 'border-box',
                         top: 0,
                         left: 0
