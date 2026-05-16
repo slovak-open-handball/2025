@@ -8188,7 +8188,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            },
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey,
-                                                           // Odstránime onClick, ak existuje ukončený zápas
                                                            onClick: hasCompletedMatch ? undefined : (e) => {
                                                                e.stopPropagation();
                                                                handleHallDayHeaderClick(hall, date, dateStr);
