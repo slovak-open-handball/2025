@@ -4180,11 +4180,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return saved === 'true';
     });
 
-    const hasAnyCompletedMatch = useMemo(() => {
-        if (!matches || matches.length === 0) return false;
-        return matches.some(match => match.status === 'completed');
-    }, [matches]);
-
     const measureDayCardsHeights = () => {
         setTimeout(() => {
             const dayCards = document.querySelectorAll('.day-card-measure');
@@ -7620,18 +7615,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     
                                     const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                     const letterToShow = lettersAreSame ? homeExtracted.letter : '';
-                                    const isMatchEditable = !hasAnyCompletedMatch;
                                     
                                     return React.createElement(
                                         'div',
                                         { 
                                             key: match.id,
-                                            className: `bg-white p-0 rounded border border-gray-200 transition-all relative group/match ${isMatchEditable ? 'hover:border-blue-400 hover:shadow-sm cursor-pointer' : 'border-gray-200'}`,
+                                            className: 'bg-white p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match cursor-pointer',
                                             style: { 
                                                 width: '100%'
                                             },
-                                            onClick: isMatchEditable ? () => handleMatchCardClick(match) : undefined,
-                                            title: isMatchEditable ? 'Kliknite pre úpravu zápasu' : 'Zápas nie je možné upravovať (existuje ukončený zápas)'
+                                            onClick: () => handleMatchCardClick(match),
+                                            title: 'Kliknite pre úpravu zápasu'
                                         },
                                         // Rovnaká štruktúra ako spriradený zápas, BEZ stĺpca pre čas (prvý stĺpec je vynechaný)
                                         React.createElement(
@@ -7757,7 +7751,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Tlačidlá pre admina
-                                        userProfileData?.role === 'admin' && isMatchEditable && React.createElement(
+                                        userProfileData?.role === 'admin' && React.createElement(
                                             'div',
                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                             React.createElement(
@@ -8076,7 +8070,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            }, 'Športová hala'),
                                                            
                                                            // Tlačidlá pre admina
-                                                           userProfileData?.role === 'admin' && hasAnyMatch && !hasAnyCompletedMatch && React.createElement(
+                                                           userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
                                                                React.createElement(
@@ -8214,7 +8208,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                })()
                                                            ),
                                                            // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
-                                                           !isEmpty && userProfileData?.role === 'admin' && !hasAnyCompletedMatch && React.createElement(
+                                                           !isEmpty && userProfileData?.role === 'admin' && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
                                                                React.createElement(
@@ -8547,16 +8541,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                'div',
                                                                                {
                                                                                    key: 'match-' + match.id,
-                                                                                   className: `p-0 rounded border border-gray-200 transition-all relative group/match bg-white ${isMatchEditable ? 'hover:border-blue-400 hover:shadow-sm cursor-pointer' : 'border-gray-200'}`,
+                                                                                   className: 'p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match bg-white cursor-pointer',
                                                                                    style: { 
                                                                                        width: '100%',
                                                                                        backgroundColor: 'white'
-                                                                                   },
-                                                                                   onClick: isMatchEditable ? function(e) {
-                                                                                        e.stopPropagation();
-                                                                                        handleMatchCardClick(match);
-                                                                                    } : undefined,
-                                                                                    title: isMatchEditable ? 'Kliknite pre úpravu zápasu' : 'Zápas nie je možné upravovať (existuje ukončený zápas)'
+                                                                                   }
                                                                                },
                                                                                React.createElement(
                                                                                    'div', 
@@ -8691,7 +8680,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        )
                                                                                    )
                                                                                ),
-                                                                               userProfileData?.role === 'admin' && isMatchEditable && React.createElement(
+                                                                               userProfileData?.role === 'admin' ? React.createElement(
                                                                                    'div',
                                                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                                                                    React.createElement(
