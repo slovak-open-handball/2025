@@ -7354,7 +7354,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         className: `absolute inset-0 ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700')} text-green-600 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)', // Diagonálne rozdelenie - horná ľavá časť
-                            border: hasCompletedMatch ? '2px solid #22c55e' : 'none'
+                            border: 'none'
                         },
                         onClick: hasCompletedMatch ? undefined : () => setIsGenerationTypeModalOpen(true),
                         disabled: generationInProgress || hasCompletedMatch,
@@ -7392,7 +7392,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         className: `absolute inset-0 ${hasCompletedMatch ? 'bg-white cursor-not-allowed' : (generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700')} text-red-600 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie - dolná pravá časť
-                            border: hasCompletedMatch ? '2px solid #ef4444' : 'none'
+                            border: 'none'
                         },
                         onClick: hasCompletedMatch ? undefined : () => setIsDeleteMatchesModalOpen(true),
                         disabled: generationInProgress || hasCompletedMatch,
