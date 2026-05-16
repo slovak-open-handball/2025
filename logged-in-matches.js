@@ -5373,7 +5373,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const handleMatchCardClick = (match) => {
         // Ak existuje ukončený zápas, neotvárame modálne okno
         if (hasCompletedMatch) {
-            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
+//            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
             return;
         }
         setSelectedMatchForAssign(match);
@@ -5412,7 +5412,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         if (hasCompletedMatch) {
-            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
+//            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
             return;
         }
     
