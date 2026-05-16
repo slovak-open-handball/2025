@@ -7458,7 +7458,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     style: {
                         position: 'absolute',
                         top: 0,
-                        left: 0',
+                        left: 0,
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#22c55e',
