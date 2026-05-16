@@ -8179,7 +8179,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        'div',
                                                        {
                                                            key: index,
-                                                           className: `day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day ${
+                                                           className: `day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 ${
+                                                               hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
+                                                           } transition-all group/day ${
                                                                hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
                                                            }`,
                                                            style: {
@@ -8355,7 +8357,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                'div',
                                                                                                {
                                                                                                    key: `gap-before-first-${firstMatch.id}`,
-                                                                                                   className: 'p-0 rounded border border-dashed border-amber-400 hover:border-amber-500 transition-all relative group/gap',
+                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                   } transition-all relative group/gap`,
                                                                                                    style: { 
                                                                                                        width: '100%',
                                                                                                        backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
@@ -8565,7 +8569,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                'div',
                                                                                {
                                                                                     key: 'match-' + match.id,
-                                                                                    className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match bg-white ${
+                                                                                    className: `p-0 rounded border border-gray-200 ${
+                                                                                        hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
+                                                                                    } transition-all relative group/match bg-white ${
                                                                                         hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
                                                                                     }`,
                                                                                     style: { 
@@ -8792,7 +8798,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                'div',
                                                                                                {
                                                                                                    key: `gap-${currentMatch.id}-${nextMatch.id}`,
-                                                                                                   className: 'p-0 rounded border border-dashed border-amber-400 hover:border-amber-500 transition-all relative group/gap',
+                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                   } transition-all relative group/gap`,
                                                                                                    style: { 
                                                                                                        width: '100%',
                                                                                                        backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
