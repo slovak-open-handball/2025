@@ -7446,9 +7446,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                     style: {
                         position: 'absolute',
                         top: 0,
-                        left: '56px',
-                        width: '56px',
-                        height: '56px',
+                        left: '60px',
+                        width: '60px',
+                        height: '60px',
                         pointerEvents: 'none',
                         zIndex: 80
                     }
