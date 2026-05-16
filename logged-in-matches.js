@@ -2686,16 +2686,21 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const datesLoaded = loadAvailableDates();
             console.log('Dátumy načítané okamžite:', datesLoaded);
             
-            // 1. Predvyplnenie haly - priorita: existujúci zápas > filter
+            // 1. Predvyplnenie haly - priorita: existujúci zápas > filter > window.__pendingAssignFilters
             if (match.hallId) {
                 setSelectedHallId(match.hallId);
                 console.log('Nastavujem halu z existujúceho zápasu:', match.hallId);
             } else if (initialFilters?.hallId) {
                 setSelectedHallId(initialFilters.hallId);
                 console.log('Nastavujem halu z filtra:', initialFilters.hallId);
+            } else if (window.__pendingAssignFilters?.hallId) {
+                setSelectedHallId(window.__pendingAssignFilters.hallId);
+                console.log('Nastavujem halu z pendingAssignFilters:', window.__pendingAssignFilters.hallId);
+                // Vyčistíme po použití
+                delete window.__pendingAssignFilters;
             }
             
-            // 2. Predvyplnenie dátumu - priorita: existujúci zápas > filter
+            // 2. Predvyplnenie dátumu - priorita: existujúci zápas > filter > window.__pendingAssignFilters
             if (match.scheduledTime) {
                 try {
                     const date = match.scheduledTime.toDate();
@@ -2734,6 +2739,20 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 } else {
                     console.log('Filter dátum', initialFilters.day, 'nie je v dostupných dátumoch');
                 }
+            } else if (window.__pendingAssignFilters?.day) {
+                const dateExists = availableDates.some(date => {
+                    const dateStr = getLocalDateStr(date);
+                    return dateStr === window.__pendingAssignFilters.day;
+                });
+                
+                if (dateExists) {
+                    setSelectedDate(window.__pendingAssignFilters.day);
+                    console.log('Nastavujem dátum z pendingAssignFilters:', window.__pendingAssignFilters.day);
+                    // Vyčistíme po použití (už sme vyčistili vyššie, ale pre istotu)
+                    if (window.__pendingAssignFilters) delete window.__pendingAssignFilters;
+                } else if (availableDates.length === 0) {
+                    setShouldSetDateFromFilter(true);
+                }
             }
             
             setInitialized(true);
@@ -2752,6 +2771,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setSuggestedTime(null);
             setShouldSetDateFromFilter(false);
             setAvailableDates([]); // Resetujeme dátumy
+            // Vyčistíme pendingAssignFilters pri zatvorení
+            if (window.__pendingAssignFilters) delete window.__pendingAssignFilters;
         }
     }, [isOpen, match, initialFilters]);
 
@@ -8883,10 +8904,32 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        'div',
                                                                                        {
                                                                                            key: 'add-match-button',
-                                                                                           className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add',
+                                                                                           className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
                                                                                            style: { 
                                                                                                width: '100%',
                                                                                                backgroundColor: '#f0fdf4'
+                                                                                           },
+                                                                                           // Kliknutie na celý riadok otvorí modálne okno pre priradenie zápasu
+                                                                                           onClick: function(e) {
+                                                                                               e.stopPropagation();
+                                                                                               // Vytvoríme dummy match objekt pre modálne okno AssignMatchModal
+                                                                                               const dummyMatch = {
+                                                                                                   id: null,
+                                                                                                   homeTeamIdentifier: '',
+                                                                                                   awayTeamIdentifier: '',
+                                                                                                   categoryName: '',
+                                                                                                   groupName: '',
+                                                                                                   hallId: null,
+                                                                                                   scheduledTime: null,
+                                                                                                   status: 'pending'
+                                                                                               };
+                                                                                               setSelectedMatchForAssign(dummyMatch);
+                                                                                               // Nastavíme initialFilters pre modálne okno
+                                                                                               window.__pendingAssignFilters = {
+                                                                                                   hallId: hallId,
+                                                                                                   day: dateStr
+                                                                                               };
+                                                                                               setIsAssignModalOpen(true);
                                                                                            }
                                                                                        },
                                                                                        React.createElement(
@@ -8930,6 +8973,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                )
                                                                                            )
                                                                                        ),
+                                                                                       // Tlačidlo "+" vpravo - otvorí rovnaké modálne okno
                                                                                        React.createElement(
                                                                                            'div',
                                                                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
@@ -8939,17 +8983,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                                                    onClick: function(e) {
                                                                                                        e.stopPropagation();
-                                                                                                       // Otvoríme modálne okno "Priradiť zápas" (nie do voľného času)
-                                                                                                       // Použijeme rovnaké modálne okno ale s prázdnymi parametrami pre break
-                                                                                                       setSelectedBreakForAssign({
+                                                                                                       // Vytvoríme dummy match objekt pre modálne okno AssignMatchModal
+                                                                                                       const dummyMatch = {
+                                                                                                           id: null,
+                                                                                                           homeTeamIdentifier: '',
+                                                                                                           awayTeamIdentifier: '',
+                                                                                                           categoryName: '',
+                                                                                                           groupName: '',
+                                                                                                           hallId: null,
+                                                                                                           scheduledTime: null,
+                                                                                                           status: 'pending'
+                                                                                                       };
+                                                                                                       setSelectedMatchForAssign(dummyMatch);
+                                                                                                       // Nastavíme initialFilters pre modálne okno
+                                                                                                       window.__pendingAssignFilters = {
                                                                                                            hallId: hallId,
-                                                                                                           date: dateStr,
-                                                                                                           breakStartTime: endTimeStr,
-                                                                                                           breakEndTime: null,
-                                                                                                           breakDuration: 0,
-                                                                                                           availableMatches: filteredUnassignedMatches
-                                                                                                       });
-                                                                                                       setIsAssignToBreakModalOpen(true);
+                                                                                                           day: dateStr
+                                                                                                       };
+                                                                                                       setIsAssignModalOpen(true);
                                                                                                    },
                                                                                                    title: 'Priradiť zápas'
                                                                                                },
