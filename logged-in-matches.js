@@ -2322,7 +2322,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                             } ${!fitsInBreak ? 'opacity-50 cursor-not-allowed' : ''}`,
-                            onClick: () => fitsInBreak && setSelectedMatchId(match.id)
+                            onClick: () => fitsInBreak && setSelectedMatchId(match.id),
+                            style: !fitsInBreak ? { cursor: 'not-allowed' } : {}
                         },
                         // ROVNAKÁ ŠTRUKTÚRA AKO V "Nepriradené zápasy"
                         React.createElement(
