@@ -7457,10 +7457,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '-1px',
-                        left: '-1px',
-                        width: 'calc(100% + 6px)',
-                        height: '2px',
+                        top: '-2px',
+                        left: '-2px',
+                        width: 'calc(100% + 8px)',
+                        height: '4px',
                         backgroundColor: '#22c55e',
                         transform: 'rotate(135deg)',
                         transformOrigin: 'top left',
@@ -7471,10 +7471,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '1px',
-                        left: '1px',
-                        width: 'calc(100% + 6px)',
-                        height: '2px',
+                        top: '2px',
+                        left: '2px',
+                        width: 'calc(100% + 8px)',
+                        height: '4px',
                         backgroundColor: '#ef4444',
                         transform: 'rotate(135deg)',
                         transformOrigin: 'top left',
