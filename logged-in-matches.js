@@ -7457,8 +7457,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '-1px',
-                        left: '-1px',
+                        top: '1px',
+                        left: '1px',
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#22c55e',
@@ -7471,8 +7471,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
-                        top: '2px',
-                        left: '2px',
+                        top: '4px',
+                        left: '4px',
                         width: 'calc(100% + 8px)',
                         height: '4px',
                         backgroundColor: '#ef4444',
