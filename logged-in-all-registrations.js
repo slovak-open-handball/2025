@@ -4760,6 +4760,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
     switch (value) {
       case 'club':
         return 'Klub';
+      case 'hall':
+        return 'Hala';
       case 'admin':
         return 'Administrátor';
       case 'volunteer':
