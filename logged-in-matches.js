@@ -7440,7 +7440,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 )
             ),
             // Diagonálne čiary - zelená a červená
-            !hasCompletedMatch && React.createElement(
+            hasCompletedMatch && React.createElement(
                 'div',
                 {
                     style: {
