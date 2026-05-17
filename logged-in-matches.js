@@ -8352,7 +8352,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            }`,
                                                            style: {
                                                                width: '100%',
-                                                               minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto'
+                                                               minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto',
+                                                               cursor: 'default'
                                                            },
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey,
