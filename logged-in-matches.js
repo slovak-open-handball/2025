@@ -5701,6 +5701,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         const currentTime = currentMatch.scheduledTime.toDate();
         const currentStartMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+        const currentDateStr = getLocalDateStr(currentTime);
         
         // Získame kategóriu aktuálneho zápasu pre výpočet dĺžky
         const currentCategory = categories.find(c => c.name === currentMatch.categoryName);
@@ -5730,6 +5731,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (!isSameTeam) continue;
             
             const otherTime = otherMatch.scheduledTime.toDate();
+            const otherDateStr = getLocalDateStr(otherTime);
+            
+            // AK JE TO INÝ DEŇ - NIE JE KONFLIKT (PRESKOČÍME)
+            if (currentDateStr !== otherDateStr) {
+                continue;
+            }
+            
             const otherStartMinutes = otherTime.getHours() * 60 + otherTime.getMinutes();
             
             // Získame kategóriu druhého zápasu
@@ -5752,44 +5760,38 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (currentMatch.hallId !== otherMatch.hallId) {
                 // Ak sú časy prekrývajúce sa (zápasy v rovnakom čase na rôznych miestach)
                 if (currentStartMinutes < otherEndWithBreak && otherStartMinutes < currentEndWithBreak) {
-                    return true; // KONFLIKT - rovnaký čas v rôznych halách
+                    return true; // KONFLIKT - rovnaký čas v rôznych halách v TEN ISTÝ DEŇ
                 }
                 
                 // Ak je medzi zápasmi menej ako štandardná prestávka
                 const gap = Math.abs(currentStartMinutes - otherStartMinutes);
                 if (gap < standardBreak && gap > 0) {
-                    return true; // KONFLIKT - príliš blízko seba v rôznych halách
+                    return true; // KONFLIKT - príliš blízko seba v rôznych halách v TEN ISTÝ DEŇ
                 }
             }
             
             // ROVNAKÁ HALA - kontrola, či nasleduje hneď po sebe s malou prestávkou
             if (currentMatch.hallId === otherMatch.hallId) {
-                // Ten istý deň? Skontrolujeme dátum
-                const currentDateStr = getLocalDateStr(currentTime);
-                const otherDateStr = getLocalDateStr(otherTime);
-                
-                if (currentDateStr === otherDateStr) {
-                    // Zápasy v rovnaký deň v rovnakej hale
-                    // Kontrola, či jeden začína hneď po skončení druhého (alebo sa prekrývajú)
-                    if (currentStartMinutes < otherStartMinutes) {
-                        // Aktuálny je skôr, druhý neskôr
-                        if (otherStartMinutes < currentEndWithBreak) {
-                            return true; // KONFLIKT - prekrývanie alebo žiadna pauza
-                        }
-                        // Pauza medzi zápasmi je menšia ako štandardná prestávka
-                        const gap = otherStartMinutes - currentEndWithBreak;
-                        if (gap < standardBreak && gap >= 0) {
-                            return true; // KONFLIKT - príliš krátka pauza
-                        }
-                    } else {
-                        // Aktuálny je neskôr, druhý skôr
-                        if (currentStartMinutes < otherEndWithBreak) {
-                            return true; // KONFLIKT - prekrývanie
-                        }
-                        const gap = currentStartMinutes - otherEndWithBreak;
-                        if (gap < standardBreak && gap >= 0) {
-                            return true; // KONFLIKT - príliš krátka pauza
-                        }
+                // Zápasy v rovnaký deň v rovnakej hale
+                // Kontrola, či jeden začína hneď po skončení druhého (alebo sa prekrývajú)
+                if (currentStartMinutes < otherStartMinutes) {
+                    // Aktuálny je skôr, druhý neskôr
+                    if (otherStartMinutes < currentEndWithBreak) {
+                        return true; // KONFLIKT - prekrývanie alebo žiadna pauza
+                    }
+                    // Pauza medzi zápasmi je menšia ako štandardná prestávka
+                    const gap = otherStartMinutes - currentEndWithBreak;
+                    if (gap < standardBreak && gap >= 0) {
+                        return true; // KONFLIKT - príliš krátka pauza
+                    }
+                } else {
+                    // Aktuálny je neskôr, druhý skôr
+                    if (currentStartMinutes < otherEndWithBreak) {
+                        return true; // KONFLIKT - prekrývanie
+                    }
+                    const gap = currentStartMinutes - otherEndWithBreak;
+                    if (gap < standardBreak && gap >= 0) {
+                        return true; // KONFLIKT - príliš krátka pauza
                     }
                 }
             }
