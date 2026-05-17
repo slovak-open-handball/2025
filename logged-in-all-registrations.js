@@ -253,7 +253,7 @@ function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDial
 }
 
 // FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
-function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
+function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues, allUsers }) {
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
     
     // Vypočítať počet výskytov pre každú hodnotu
