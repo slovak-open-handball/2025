@@ -2856,6 +2856,10 @@ function getTeamNameFromDatabase(displayId) {
 // OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
 // ============================================================
 
+// ============================================================
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - podporuje IDENTIFIKÁTORY Z PAVÚKA AJ ZÁKLADNÉ SKUPINY
+// ============================================================
+
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
@@ -2874,12 +2878,31 @@ function getTeamNameByDisplayId(displayId) {
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
-    // Kontrola, či posledná časť obsahuje číslicu
+    // 🔥 KONTROLA: Je to identifikátor z PAVÚKA (WSF, LSF, WQF, W8F, W16F)?
+    const spiderPatterns = ['WSF', 'LSF', 'WQF', 'W8F', 'W16F'];
+    let isSpiderIdentifier = false;
+    let spiderType = null;
+    
+    for (const pattern of spiderPatterns) {
+        if (lastPart.startsWith(pattern)) {
+            isSpiderIdentifier = true;
+            spiderType = pattern;
+            break;
+        }
+    }
+    
+    // 🔥 AK IDE O PAVÚKOVÝ IDENTIFIKÁTOR - VRÁTIME PÔVODNÝ NÁZOV (nie je čo mapovať)
+    if (isSpiderIdentifier) {
+        log(`🕷️ Pavúkový identifikátor (nemapuje sa): "${displayId}" → ponechávam "${displayId}"`);
+        return displayId;  // Pavúkové identifikátory sa nemenia
+    }
+    
+    // Kontrola, či posledná časť obsahuje číslicu (pre základné skupiny)
     if (!/\d/.test(lastPart)) {
         return null;
     }
     
-    // Extrahovanie poradia a písmena skupiny
+    // Extrahovanie poradia a písmena skupiny (pre základné skupiny)
     let order = null;
     let groupLetter = null;
     
@@ -2904,7 +2927,7 @@ function getTeamNameByDisplayId(displayId) {
     const fullGroupName = `skupina ${groupLetter}`;
     log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${order}`);
     
-    // 🔥 POUŽIJTE getGroupTypeSync CEZ window.matchTracker
+    // Získame typ skupiny
     const groupType = window.matchTracker?.getGroupTypeSync?.(category, fullGroupName);
     const isAdvancedGroup = (groupType === 'nadstavbová skupina');
     
