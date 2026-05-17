@@ -5694,16 +5694,116 @@ const AddMatchesApp = ({ userProfileData }) => {
             default:
                 return teamName;
         }
-    };
+    };    
 
-    // Nahraďte existujúcu funkciu getMatchesForHallAndDay touto:
+    const checkTeamConflicts = (teamIdentifier, currentMatch, allMatches, categories) => {
+        if (!teamIdentifier || !currentMatch || !currentMatch.scheduledTime) return false;
+        
+        const currentTime = currentMatch.scheduledTime.toDate();
+        const currentStartMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+        
+        // Získame kategóriu aktuálneho zápasu pre výpočet dĺžky
+        const currentCategory = categories.find(c => c.name === currentMatch.categoryName);
+        let currentMatchDuration = 0;
+        let standardBreak = 5; // štandardná prestávka medzi zápasmi
+        
+        if (currentCategory) {
+            const periods = currentCategory.periods || 2;
+            const periodDuration = currentCategory.periodDuration || 20;
+            const breakDuration = currentCategory.breakDuration || 2;
+            currentMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            standardBreak = currentCategory.matchBreak || 5;
+        }
+        
+        // Koniec aktuálneho zápasu (vrátane prestávky)
+        const currentEndWithBreak = currentStartMinutes + currentMatchDuration + standardBreak;
+        
+        // Prejdeme všetky ostatné zápasy toho istého tímu
+        for (const otherMatch of allMatches) {
+            if (otherMatch.id === currentMatch.id) continue;
+            if (!otherMatch.scheduledTime) continue;
+            
+            // Kontrola, či ide o ten istý tím (domáci alebo hosť)
+            const isSameTeam = (otherMatch.homeTeamIdentifier === teamIdentifier || 
+                                otherMatch.awayTeamIdentifier === teamIdentifier);
+            
+            if (!isSameTeam) continue;
+            
+            const otherTime = otherMatch.scheduledTime.toDate();
+            const otherStartMinutes = otherTime.getHours() * 60 + otherTime.getMinutes();
+            
+            // Získame kategóriu druhého zápasu
+            const otherCategory = categories.find(c => c.name === otherMatch.categoryName);
+            let otherMatchDuration = 0;
+            let otherStandardBreak = 5;
+            
+            if (otherCategory) {
+                const periods = otherCategory.periods || 2;
+                const periodDuration = otherCategory.periodDuration || 20;
+                const breakDuration = otherCategory.breakDuration || 2;
+                otherMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                otherStandardBreak = otherCategory.matchBreak || 5;
+            }
+            
+            // Koniec druhého zápasu (vrátane prestávky)
+            const otherEndWithBreak = otherStartMinutes + otherMatchDuration + otherStandardBreak;
+            
+            // RÔZNE HALY - kontrola prekrývania časov
+            if (currentMatch.hallId !== otherMatch.hallId) {
+                // Ak sú časy prekrývajúce sa (zápasy v rovnakom čase na rôznych miestach)
+                if (currentStartMinutes < otherEndWithBreak && otherStartMinutes < currentEndWithBreak) {
+                    return true; // KONFLIKT - rovnaký čas v rôznych halách
+                }
+                
+                // Ak je medzi zápasmi menej ako štandardná prestávka
+                const gap = Math.abs(currentStartMinutes - otherStartMinutes);
+                if (gap < standardBreak && gap > 0) {
+                    return true; // KONFLIKT - príliš blízko seba v rôznych halách
+                }
+            }
+            
+            // ROVNAKÁ HALA - kontrola, či nasleduje hneď po sebe s malou prestávkou
+            if (currentMatch.hallId === otherMatch.hallId) {
+                // Ten istý deň? Skontrolujeme dátum
+                const currentDateStr = getLocalDateStr(currentTime);
+                const otherDateStr = getLocalDateStr(otherTime);
+                
+                if (currentDateStr === otherDateStr) {
+                    // Zápasy v rovnaký deň v rovnakej hale
+                    // Kontrola, či jeden začína hneď po skončení druhého (alebo sa prekrývajú)
+                    if (currentStartMinutes < otherStartMinutes) {
+                        // Aktuálny je skôr, druhý neskôr
+                        if (otherStartMinutes < currentEndWithBreak) {
+                            return true; // KONFLIKT - prekrývanie alebo žiadna pauza
+                        }
+                        // Pauza medzi zápasmi je menšia ako štandardná prestávka
+                        const gap = otherStartMinutes - currentEndWithBreak;
+                        if (gap < standardBreak && gap >= 0) {
+                            return true; // KONFLIKT - príliš krátka pauza
+                        }
+                    } else {
+                        // Aktuálny je neskôr, druhý skôr
+                        if (currentStartMinutes < otherEndWithBreak) {
+                            return true; // KONFLIKT - prekrývanie
+                        }
+                        const gap = currentStartMinutes - otherEndWithBreak;
+                        if (gap < standardBreak && gap >= 0) {
+                            return true; // KONFLIKT - príliš krátka pauza
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
+    };
+    
+    // UPRAVENÁ funkcia getMatchesForHallAndDay - pridáme informáciu o konfliktných tímoch
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
-
-        // Formátujeme dátum pre porovnanie
+    
         const dateStr = getLocalDateStr(date);
-
-        // Najprv získame všetky zápasy pre túto halu a deň
+    
         const hallDayMatches = matches.filter(match => {
             if (!match.hallId || !match.scheduledTime) return false;
             if (match.hallId !== hallId) return false;
@@ -5716,28 +5816,34 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return false;
             }
         });
-    
-        // Potom na ne aplikujeme filtre (okrem filtra haly, ten už je aplikovaný)
-        return hallDayMatches.filter(match => {
-            // Filter podľa kategórie
+        
+        // Filtrovanie podľa aktívnych filtrov
+        const filteredMatches = hallDayMatches.filter(match => {
             if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
                 return false;
             }
-        
-            // Filter podľa skupiny
             if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
                 return false;
             }
-            
-            // Filter podľa ID tímu - PRIDANÉ!
             if (selectedTeamIdFilter) {
-                // Zápas vyhovuje, ak sa vybrané ID zhoduje s domácim ALEBO hosťovským tímom
-                if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
+                if (match.homeTeamIdentifier !== selectedTeamIdFilter && 
+                    match.awayTeamIdentifier !== selectedTeamIdFilter) {
                     return false;
                 }
             }
-            
             return true;
+        });
+        
+        // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte
+        return filteredMatches.map(match => {
+            const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
+            const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
+            
+            return {
+                ...match,
+                homeTeamInConflict: homeInConflict,
+                awayTeamInConflict: awayInConflict
+            };
         });
     };
 
@@ -8670,12 +8776,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        'div', 
                                                                                        { 
                                                                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                           style: { textAlign: 'center' }
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               // PRIDANÉ: Červené podfarbenie a biela farba textu pre tímy v konflikte
+                                                                                               backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent',
+                                                                                               fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
+                                                                                           }
                                                                                        },
                                                                                        React.createElement(
                                                                                            'span',
                                                                                            { 
                                                                                                className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.homeTeamInConflict ? '#ffffff' : '#000000'  // Biela farba pre konfliktné tímy
+                                                                                               },
                                                                                                title: homeDisplay.name 
                                                                                            },
                                                                                            homeDisplay.name
@@ -8693,12 +8807,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        'div', 
                                                                                        { 
                                                                                            className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                           style: { textAlign: 'center' }
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               // PRIDANÉ: Červené podfarbenie a biela farba textu pre tímy v konflikte
+                                                                                               backgroundColor: match.awayTeamInConflict ? '#dc2626' : 'transparent',
+                                                                                               fontWeight: match.awayTeamInConflict ? 'bold' : 'normal'
+                                                                                           }
                                                                                        },
                                                                                        React.createElement(
                                                                                            'span',
                                                                                            { 
                                                                                                className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.awayTeamInConflict ? '#ffffff' : '#000000'  // Biela farba pre konfliktné tímy
+                                                                                               },
                                                                                                title: awayDisplay.name 
                                                                                            },
                                                                                            awayDisplay.name
