@@ -5215,41 +5215,55 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     // Zoradiť kategórie abecedne
                                     const sortedCategories = Array.from(categoryCounts.keys()).sort();
                                     
-                                    // Vytvoriť text pre zobrazenie kategórií a počtov
-                                    const categorySummaryText = sortedCategories
-                                        .map(cat => `${cat}: ${categoryCounts.get(cat)}×`)
-                                        .join(', ');
+                                    // Hlavný riadok súhrnu
+                                    const summaryRows = [];
                                     
-                                    return React.createElement(
-                                        'tr',
-                                        { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
-                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 1 }, 
-                                            React.createElement('span', { title: categorySummaryText }, 'Súhrn:')
-                                        ),
-                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 },
-                                            React.createElement('span', { title: categorySummaryText }, categorySummaryText)
-                                        ),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet hráčov' }, teamSummary.totalPlayers),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – ženy' }, teamSummary.totalWomenTeamMembers),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – muži' }, teamSummary.totalMenTeamMembers),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – ženy' }, teamSummary.totalWomenDrivers),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – muži' }, teamSummary.totalMenDrivers),
-                                        React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet osôb (hráči + realizačný tím + šoféri)' },
-                                            teamSummary.totalPlayers +
-                                            teamSummary.totalWomenTeamMembers +
-                                            teamSummary.totalMenTeamMembers +
-                                            teamSummary.totalWomenDrivers +
-                                            teamSummary.totalMenDrivers
-                                        ),
-                                        React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 6 }, 'Tričká:'),
-                                        (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS','XS','S','M','L','XL','XXL','XXXL']).map(size =>
-                                            React.createElement('td', {
-                                                key: `summary-tshirt-${size}`,
-                                                className: 'py-3 px-2 text-center cursor-default',
-                                                title: `Celkový počet tričiek veľkosti ${size}`
-                                            }, teamSummary.totalTshirtQuantities.get(size) || 0)
+                                    // Pridať hlavný riadok s nadpisom Súhrn
+                                    summaryRows.push(
+                                        React.createElement(
+                                            'tr',
+                                            { key: 'summary-header', className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
+                                            React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Súhrn:'),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet hráčov' }, teamSummary.totalPlayers),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – ženy' }, teamSummary.totalWomenTeamMembers),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – muži' }, teamSummary.totalMenTeamMembers),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – ženy' }, teamSummary.totalWomenDrivers),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – muži' }, teamSummary.totalMenDrivers),
+                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet osôb (hráči + realizačný tím + šoféri)' },
+                                                teamSummary.totalPlayers +
+                                                teamSummary.totalWomenTeamMembers +
+                                                teamSummary.totalMenTeamMembers +
+                                                teamSummary.totalWomenDrivers +
+                                                teamSummary.totalMenDrivers
+                                            ),
+                                            React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 6 }, 'Tričká:'),
+                                            (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS','XS','S','M','L','XL','XXL','XXXL']).map(size =>
+                                                React.createElement('td', {
+                                                    key: `summary-tshirt-${size}`,
+                                                    className: 'py-3 px-2 text-center cursor-default',
+                                                    title: `Celkový počet tričiek veľkosti ${size}`
+                                                }, teamSummary.totalTshirtQuantities.get(size) || 0)
+                                            )
                                         )
                                     );
+                                    
+                                    // Pridať riadky pre každú kategóriu
+                                    sortedCategories.forEach(category => {
+                                        const teamCount = categoryCounts.get(category);
+                                        summaryRows.push(
+                                            React.createElement(
+                                                'tr',
+                                                { key: `summary-category-${category}`, className: 'bg-gray-50 text-gray-700' },
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', colSpan: 3 }, 
+                                                    React.createElement('span', { className: 'font-medium' }, category)
+                                                ),
+                                                React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 1 }, `${teamCount} tímov`),
+                                                React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 12 }, '')
+                                            )
+                                        );
+                                    });
+                                    
+                                    return summaryRows;
                                 })()
                             )
                         ) : (
