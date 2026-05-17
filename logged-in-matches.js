@@ -2083,7 +2083,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
 };
 
 // Modálne okno pre priradenie/úpravu zápasu do haly - UPRAVENÉ ZOBRAZOVANIE
-const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText }) => {
+const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, accommodations, teamAccommodations }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -2170,6 +2170,29 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         if (!categoryName) return '#f3f4f6';
         const category = categories.find(c => c.name === categoryName);
         return category?.drawColor || '#f3f4f6';
+    };
+
+    // Funkcia na získanie farby ubytovne pre tím
+    const getTeamAccommodationColor = (teamIdentifier) => {
+        if (!teamAccommodations) return '#f3f4f6';
+        const accommodationName = teamAccommodations.get(teamIdentifier);
+        if (accommodationName && accommodations) {
+            const accommodation = accommodations.find(a => a.name === accommodationName);
+            if (accommodation && accommodation.headerColor) {
+                return accommodation.headerColor;
+            }
+        }
+        return '#f3f4f6';
+    };
+
+    // Výpočet dĺžky zápasu pre kategóriu
+    const getMatchDuration = (categoryName) => {
+        const category = categories?.find(c => c.name === categoryName);
+        if (!category) return 0;
+        const periods = category.periods || 2;
+        const periodDuration = category.periodDuration || 20;
+        const breakDuration = category.breakDuration || 2;
+        return (periodDuration + breakDuration) * periods - breakDuration;
     };
 
     return React.createElement(
@@ -2266,6 +2289,10 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     // Farba kategórie pre písmeno
                     const categoryColor = getCategoryColor(match.categoryName);
                     
+                    // Farby ubytovní pre tímy
+                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier);
+                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier);
+                    
                     // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
                     
@@ -2300,18 +2327,11 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         awayId = match.awayTeamIdentifier;
                     }
 
-                    // Výpočet dĺžky zápasu pre kontrolu
-                    const category = categories?.find(c => c.name === match.categoryName);
-                    let matchDuration = 0;
-                    if (category) {
-                        const periods = category.periods || 2;
-                        const periodDuration = category.periodDuration || 20;
-                        const breakDuration = category.breakDuration || 2;
-                        matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                    }
+                    // Dĺžka zápasu
+                    const matchDurationValue = getMatchDuration(match.categoryName);
 
                     // Kontrola, či sa zápas zmestí do voľného času
-                    const fitsInBreak = breakDuration === 0 || matchDuration <= breakDuration;
+                    const fitsInBreak = breakDuration === 0 || matchDurationValue <= breakDuration;
 
                     return React.createElement(
                         'div',
@@ -2325,13 +2345,13 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                             onClick: () => fitsInBreak && setSelectedMatchId(match.id),
                             style: !fitsInBreak ? { cursor: 'not-allowed' } : {}
                         },
-                        // ROVNAKÁ ŠTRUKTÚRA AKO V "Nepriradené zápasy"
+                        // ROVNAKÁ ŠTRUKTÚRA AKO V "Nepriradené zápasy" - TERAZ S DĹŽKOU ZÁPASU V ROVNAKOM RIADKU
                         React.createElement(
                             'div', 
                             { 
                                 className: 'grid items-start text-xs',
                                 style: { 
-                                    gridTemplateColumns: displayMode === 'both' ? '200px 10px 200px 10px 50px 30px' : '200px 200px 10px 50px 30px',
+                                    gridTemplateColumns: displayMode === 'both' ? '200px 10px 200px 10px 50px 30px 60px' : '200px 200px 10px 50px 30px 60px',
                                     width: '100%'
                                 }
                             },
@@ -2352,12 +2372,12 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     displayMode === 'both' ? homeName : homeDisplay
                                 )
                             ),
-                            // Stĺpec pre farbu domáceho tímu (ak je obojstranný režim)
-                            displayMode === 'both' && React.createElement(
+                            // Stĺpec pre farbu domáceho tímu
+                            React.createElement(
                                 'div', 
                                 { 
                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                    style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%' }
+                                    style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
                                 },
                                 React.createElement('div', { style: { width: '10px', height: '20px' } })
                             ),
@@ -2378,12 +2398,12 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     displayMode === 'both' ? awayName : awayDisplay
                                 )
                             ),
-                            // Stĺpec pre farbu hosťovského tímu (ak je obojstranný režim)
-                            displayMode === 'both' && React.createElement(
+                            // Stĺpec pre farbu hosťovského tímu
+                            React.createElement(
                                 'div', 
                                 { 
                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                    style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%' }
+                                    style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
                                 },
                                 React.createElement('div', { style: { width: '10px', height: '20px' } })
                             ),
@@ -2408,7 +2428,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 React.createElement(
                                     'div', 
                                     { 
-                                        className: 'px-2 py-1 flex items-center justify-center',
+                                        className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
                                         style: { textAlign: 'center', backgroundColor: categoryColor, fontWeight: 'bold', borderRadius: '4px' }
                                     },
                                     React.createElement(
@@ -2421,34 +2441,47 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     )
                                 )
                             ) : React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement(
+                                    'div', 
+                                    { 
+                                        className: 'px-3 py-1 flex items-center justify-center',
+                                        style: { 
+                                            textAlign: 'center',
+                                            backgroundColor: categoryColor,
+                                            fontWeight: 'bold',
+                                            borderRadius: '4px',
+                                            gridColumn: 'span 2',
+                                            whiteSpace: 'nowrap',
+                                            wordBreak: 'keep-all'
+                                        }
+                                    },
+                                    React.createElement(
+                                        'span',
+                                        { 
+                                            className: 'text-black font-bold text-[10px] block w-full',
+                                            style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
+                                        },
+                                        specialMatchText
+                                    )
+                                )
+                            ),
+                            // Dĺžka zápasu - TERAZ V ROVNAKOM RIADKU (posledný stĺpec)
+                            React.createElement(
                                 'div', 
                                 { 
-                                    className: 'px-3 py-1 flex items-center justify-center',
-                                    style: { 
-                                        textAlign: 'center',
-                                        backgroundColor: categoryColor,
-                                        fontWeight: 'bold',
-                                        borderRadius: '4px',
-                                        gridColumn: 'span 2',
-                                        whiteSpace: 'nowrap',
-                                        wordBreak: 'keep-all'
-                                    }
+                                    className: 'px-2 py-1 flex items-center justify-center',
+                                    style: { textAlign: 'center', whiteSpace: 'nowrap' }
                                 },
                                 React.createElement(
                                     'span',
                                     { 
-                                        className: 'text-black font-bold text-[10px] block w-full',
-                                        style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
+                                        className: 'text-gray-400 text-[10px] font-mono'
                                     },
-                                    specialMatchText
+                                    `${matchDurationValue} min`
                                 )
                             )
-                        ),
-                        // Informácia o dĺžke zápasu pod riadkom
-                        React.createElement(
-                            'div',
-                            { className: 'mt-1 text-right text-[10px] text-gray-400' },
-                            `${matchDuration} min`
                         )
                     );
                 })
@@ -7000,7 +7033,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             date: selectedBreakForAssign?.date,
             categories: categories,
             displayMode: displayMode,
-            getTeamDisplayText: getTeamDisplayText
+            getTeamDisplayText: getTeamDisplayText,
+            accommodations: accommodations,
+            teamAccommodations: teamAccommodations
         }),
         React.createElement(AssignMatchModal, {
             isOpen: isAssignModalOpen,
