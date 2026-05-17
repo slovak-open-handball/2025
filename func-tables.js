@@ -255,7 +255,7 @@ let isTeamNameReplacerInitialized = false;
     function compareTeams(teamA, teamB, groupMatches, sortingConditions) {
         // 1. Najprv porovnáme podľa bodov
         if (teamA.points !== teamB.points) {
-            return teamB.points - teamA.points; // Viac bodov = lepšie
+            return teamB.points - teamA.points;
         }
     
         // 2. Ak sú body rovnaké, použijeme nastavené kritériá
@@ -266,23 +266,24 @@ let isTeamNameReplacerInitialized = false;
                 
                 switch (parameter) {
                     case 'headToHead':
-                        // 🔥 SPRÁVNE ZÍSKANIE VZÁJOMNÉHO ZÁPASU (aj z prenesených)
                         const headToHeadResult = calculateHeadToHeadAdvanced(teamA, teamB, groupMatches);
                         
+                        log(`   📊 Vzájomný zápas ${teamA.name} vs ${teamB.name}: Výhry A=${headToHeadResult.teamAWins}, B=${headToHeadResult.teamBWins}, Skóre ${headToHeadResult.teamAScore}:${headToHeadResult.teamBScore}`);
+                        
                         if (headToHeadResult.teamAWins !== headToHeadResult.teamBWins) {
-                            // Kto má viac výhier, je lepší
                             if (direction === 'desc') {
                                 comparison = headToHeadResult.teamBWins - headToHeadResult.teamAWins;
                             } else {
                                 comparison = headToHeadResult.teamAWins - headToHeadResult.teamBWins;
                             }
+                            log(`      → Porovnanie podľa výhier: ${comparison}`);
                         } else if (headToHeadResult.teamAScore !== headToHeadResult.teamBScore) {
-                            // Pri rovnosti výhier, porovnávame skóre
                             if (direction === 'desc') {
                                 comparison = headToHeadResult.teamBScore - headToHeadResult.teamAScore;
                             } else {
                                 comparison = headToHeadResult.teamAScore - headToHeadResult.teamBScore;
                             }
+                            log(`      → Porovnanie podľa skóre: ${comparison}`);
                         }
                         break;
                     
@@ -349,29 +350,45 @@ let isTeamNameReplacerInitialized = false;
         let teamBWins = 0;
         let foundMatch = false;
         
-        // Odstránenie bielych znakov pre porovnanie
-        const cleanA = teamA.id?.trim() || teamA.name?.trim();
-        const cleanB = teamB.id?.trim() || teamB.name?.trim();
+        // Získame názvy tímov (nie ID, lebo v prenesených zápasoch sú názvy)
+        const teamAName = teamA.name?.trim() || teamA.id?.trim();
+        const teamBName = teamB.name?.trim() || teamB.id?.trim();
         
-        // 🔥 KROK 1: Hľadáme v zápasoch v skupine (aj v prenesených)
-        // groupMatches už obsahuje aj transferredMatches (v createAdvancedGroupTable)
+        if (!teamAName || !teamBName) {
+            log(`⚠️ calculateHeadToHeadAdvanced: chýba názov tímu pre porovnanie`);
+            return { teamAScore, teamBScore, teamAWins, teamBWins };
+        }
+        
+        log(`🔍 Hľadám vzájomný zápas medzi: "${teamAName}" a "${teamBName}"`);
+        
         for (const match of groupMatches) {
-            // Získame názvy tímov zo zápasu
-            let homeId = match.homeTeamIdentifier || match.homeTeamName;
-            let awayId = match.awayTeamIdentifier || match.awayTeamName;
+            // Získame názvy tímov zo zápasu (rôzne možné formáty)
+            let homeName = null;
+            let awayName = null;
             
-            // Ak sú to objekty, skúsime získať name/id
-            if (typeof homeId === 'object') homeId = homeId.name || homeId.id;
-            if (typeof awayId === 'object') awayId = awayId.name || awayId.id;
+            // Skúsime získať názov domáceho tímu
+            if (match.homeTeamName && typeof match.homeTeamName === 'string') {
+                homeName = match.homeTeamName.trim();
+            } else if (match.homeTeamIdentifier && typeof match.homeTeamIdentifier === 'string') {
+                homeName = match.homeTeamIdentifier.trim();
+            } else if (match.homeTeam && typeof match.homeTeam === 'string') {
+                homeName = match.homeTeam.trim();
+            }
             
-            if (!homeId || !awayId) continue;
+            // Skúsime získať názov hosťujúceho tímu
+            if (match.awayTeamName && typeof match.awayTeamName === 'string') {
+                awayName = match.awayTeamName.trim();
+            } else if (match.awayTeamIdentifier && typeof match.awayTeamIdentifier === 'string') {
+                awayName = match.awayTeamIdentifier.trim();
+            } else if (match.awayTeam && typeof match.awayTeam === 'string') {
+                awayName = match.awayTeam.trim();
+            }
             
-            const homeIdStr = String(homeId).trim();
-            const awayIdStr = String(awayId).trim();
+            if (!homeName || !awayName) continue;
             
-            // Kontrola, či ide o zápas medzi našimi tímami
-            const isMatchBetweenThem = (homeIdStr === cleanA && awayIdStr === cleanB) || 
-                                       (homeIdStr === cleanB && awayIdStr === cleanA);
+            // Kontrola, či ide o zápas medzi našimi tímami (porovnávame názvy)
+            const isMatchBetweenThem = (homeName === teamAName && awayName === teamBName) || 
+                                       (homeName === teamBName && awayName === teamAName);
             
             if (isMatchBetweenThem) {
                 foundMatch = true;
@@ -380,7 +397,6 @@ let isTeamNameReplacerInitialized = false;
                 let homeScore = 0, awayScore = 0;
                 
                 if (match.homeScore !== undefined && match.awayScore !== undefined) {
-                    // Už máme skóre priamo v objekte
                     homeScore = match.homeScore;
                     awayScore = match.awayScore;
                 } else if (match.finalScore && !match.forfeitResult) {
@@ -397,7 +413,7 @@ let isTeamNameReplacerInitialized = false;
                 }
                 
                 // Priradíme skóre správnym tímom
-                if (homeIdStr === cleanA) {
+                if (homeName === teamAName) {
                     teamAScore = homeScore;
                     teamBScore = awayScore;
                 } else {
@@ -409,22 +425,23 @@ let isTeamNameReplacerInitialized = false;
                 if (teamAScore > teamBScore) {
                     teamAWins = 1;
                     teamBWins = 0;
+                    log(`   ✅ ${teamAName} vyhral ${teamAScore}:${teamBScore}`);
                 } else if (teamBScore > teamAScore) {
                     teamAWins = 0;
                     teamBWins = 1;
+                    log(`   ✅ ${teamBName} vyhral ${teamBScore}:${teamAScore}`);
                 } else {
                     teamAWins = 0;
                     teamBWins = 0;
+                    log(`   🤝 Remíza ${teamAScore}:${teamBScore}`);
                 }
                 
-                // Našli sme zápas, môžeme skončiť
                 break;
             }
         }
         
-        // Ak sme nenašli žiadny zápas, vrátime nulové hodnoty
         if (!foundMatch) {
-            log(`⚠️ Nenašiel sa vzájomný zápas medzi ${teamA.name} a ${teamB.name}`);
+            log(`⚠️ Nenašiel sa vzájomný zápas medzi ${teamAName} a ${teamBName}`);
         }
         
         return { teamAScore, teamBScore, teamAWins, teamBWins };
