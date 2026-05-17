@@ -255,6 +255,62 @@ function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDial
 // FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
 function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
+    
+    // Vypočítať počet výskytov pre každú hodnotu
+    const getValueCounts = React.useMemo(() => {
+        if (!allUsers || !columnName) return new Map();
+        
+        const counts = new Map();
+        
+        allUsers.forEach(user => {
+            let userValue;
+            if (columnName === 'role') {
+                userValue = user.role;
+            } else if (columnName.includes('.')) {
+                const parts = columnName.split('.');
+                let nestedVal = user;
+                for (const part of parts) {
+                    nestedVal = nestedVal ? nestedVal[part] : undefined;
+                }
+                userValue = nestedVal;
+            } else {
+                userValue = user[columnName];
+            }
+            
+            if (userValue !== undefined && userValue !== null && userValue !== '') {
+                let valueKey;
+                if (columnName === 'role') {
+                    valueKey = userValue;
+                } else if (typeof userValue === 'boolean') {
+                    valueKey = userValue ? 'áno' : 'nie';
+                } else if (columnName === 'registrationDate') {
+                    let date;
+                    if (userValue && typeof userValue.toDate === 'function') {
+                        date = userValue.toDate();
+                    } else if (userValue && typeof userValue === 'object' && userValue.seconds !== undefined) {
+                        date = new Date(userValue.seconds * 1000 + (userValue.nanoseconds || 0) / 1000000);
+                    } else {
+                        return;
+                    }
+                    const options = {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    };
+                    valueKey = date.toLocaleString('sk-SK', options).toLowerCase();
+                } else {
+                    valueKey = String(userValue).toLowerCase();
+                }
+                
+                counts.set(valueKey, (counts.get(valueKey) || 0) + 1);
+            }
+        });
+        
+        return counts;
+    }, [allUsers, columnName]);
 
     React.useEffect(() => {
         setSelectedValues(initialFilterValues || []);
@@ -289,25 +345,52 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
         React.createElement(
             'div',
             { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
-            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, `Filter pre ${columnName}`),
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, `Filter pre ${columnName === 'role' ? 'rolu' : columnName}`),
             React.createElement(
                 'div',
                 { className: 'max-h-60 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
-                uniqueColumnValues.map((item, index) =>
-                    React.createElement(
+                uniqueColumnValues.map((item, index) => {
+                    // Získanie hodnoty a zobrazenia
+                    let valueToUse, displayText;
+                    let count = 0;
+                    
+                    if (columnName === 'role' && typeof item === 'object' && item.value) {
+                        valueToUse = item.value;
+                        displayText = item.label;
+                        count = getValueCounts.get(item.value) || 0;
+                    } else if (typeof item === 'object' && item.value) {
+                        valueToUse = item.value;
+                        displayText = item.label;
+                        count = getValueCounts.get(item.value) || 0;
+                    } else {
+                        valueToUse = item;
+                        displayText = item;
+                        count = getValueCounts.get(item) || 0;
+                    }
+                    
+                    return React.createElement(
                         'div',
-                        { key: index, className: 'flex items-center mb-2' },
-                        React.createElement('input', {
-                            type: 'checkbox',
-                            id: `filter-${columnName}-${index}`,
-                            value: item.value || item,
-                            checked: selectedValues.includes(item.value || item),
-                            onChange: () => handleCheckboxChange(item.value || item),
-                            className: 'mr-2'
-                        }),
-                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, item.label || item)
-                    )
-                )
+                        { key: index, className: 'flex items-center mb-2 justify-between' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center' },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                id: `filter-${columnName}-${index}`,
+                                value: valueToUse,
+                                checked: selectedValues.includes(valueToUse),
+                                onChange: () => handleCheckboxChange(valueToUse),
+                                className: 'mr-2'
+                            }),
+                            React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, displayText)
+                        ),
+                        React.createElement(
+                            'span',
+                            { className: 'text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full' },
+                            count
+                        )
+                    );
+                })
             ),
             React.createElement(
                 'div',
