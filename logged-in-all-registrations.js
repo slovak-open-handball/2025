@@ -5223,10 +5223,10 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                     return React.createElement(
                                         'tr',
                                         { className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
-                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 
+                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 1 }, 
                                             React.createElement('span', { title: categorySummaryText }, 'Súhrn:')
                                         ),
-                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 1 },
+                                        React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 },
                                             React.createElement('span', { title: categorySummaryText }, categorySummaryText)
                                         ),
                                         React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet hráčov' }, teamSummary.totalPlayers),
