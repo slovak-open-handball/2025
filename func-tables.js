@@ -3084,6 +3084,36 @@ function getTeamNameFromGroupTableInternal(identifier, category) {
     return null;
 }
 
+function getTeamNameFromGroupTable(identifier, category) {
+    if (!identifier || !category) return null;
+    
+    const match = identifier.match(/^(\d+)([A-Za-z]+)$|^([A-Za-z]+)(\d+)$/);
+    if (!match) return null;
+    
+    let order, groupLetter;
+    if (match[1] && match[2]) {
+        order = parseInt(match[1], 10);
+        groupLetter = match[2].toUpperCase();
+    } else if (match[3] && match[4]) {
+        groupLetter = match[3].toUpperCase();
+        order = parseInt(match[4], 10);
+    } else {
+        return null;
+    }
+    
+    const fullGroupName = `skupina ${groupLetter}`;
+    const groupTable = createGroupTable(category, fullGroupName);
+    
+    if (!groupTable || !groupTable.teams) return null;
+    
+    const teamIndex = order - 1;
+    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
+        return groupTable.teams[teamIndex].name;
+    }
+    
+    return null;
+}
+
 function clearCheckedGroupsCache() {
     checkedGroupsCache.clear();
     log('🗑️ Cache kontrolovaných skupín bola vymazaná');
