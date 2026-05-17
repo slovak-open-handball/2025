@@ -2853,7 +2853,7 @@ function getTeamNameFromDatabase(displayId) {
 
 // Hlavná funkcia - najprv cache, potom databáza
 // ============================================================
-// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - podpora pre pavúkové identifikátory
 // ============================================================
 
 function getTeamNameByDisplayId(displayId) {
@@ -2873,6 +2873,141 @@ function getTeamNameByDisplayId(displayId) {
     const lastPart = parts[parts.length - 1];
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
+    
+    // ============================================================
+    // KONTROLA PAVÚKOVÝCH IDENTIFIKÁTOROV
+    // ============================================================
+    // Formáty: WSF01, LSF02, WQF03, W8F04, W16F05
+    const spiderPattern = /^(W|L)(SF|QF|8F|16F)(\d{2})$/;
+    const spiderMatch = lastPart.match(spiderPattern);
+    
+    if (spiderMatch) {
+        const resultType = spiderMatch[1];  // 'W' = víťaz, 'L' = porazený
+        const matchStage = spiderMatch[2];  // 'SF', 'QF', '8F', '16F'
+        const matchNumber = parseInt(spiderMatch[3], 10);
+        
+        log(`🕷️ Rozpoznaný pavúkový identifikátor: ${displayId}`);
+        log(`   Typ: ${resultType === 'W' ? 'Víťaz' : 'Porazený'}, Kolo: ${matchStage}, Číslo: ${matchNumber}`);
+        
+        // Mapovanie stage na matchType
+        let matchType = '';
+        let position = null; // 'home' alebo 'away' pre daný zápas
+        
+        switch (matchStage) {
+            case 'SF': // Semifinále
+                if (matchNumber === 1) {
+                    matchType = 'semifinále 1';
+                } else if (matchNumber === 2) {
+                    matchType = 'semifinále 2';
+                } else {
+                    log(`❌ Neplatné číslo semifinále: ${matchNumber}`);
+                    return null;
+                }
+                break;
+            case 'QF': // Štvrťfinále
+                if (matchNumber >= 1 && matchNumber <= 4) {
+                    matchType = `štvrťfinále ${matchNumber}`;
+                } else {
+                    log(`❌ Neplatné číslo štvrťfinále: ${matchNumber}`);
+                    return null;
+                }
+                break;
+            case '8F': // Osemfinále
+                if (matchNumber >= 1 && matchNumber <= 8) {
+                    matchType = `osemfinále ${matchNumber}`;
+                } else {
+                    log(`❌ Neplatné číslo osemfinále: ${matchNumber}`);
+                    return null;
+                }
+                break;
+            case '16F': // Šestnásťfinále
+                if (matchNumber >= 1 && matchNumber <= 16) {
+                    matchType = `šestnásťfinále ${matchNumber}`;
+                } else {
+                    log(`❌ Neplatné číslo šestnásťfinále: ${matchNumber}`);
+                    return null;
+                }
+                break;
+            default:
+                log(`❌ Neznámy typ pavúkového kola: ${matchStage}`);
+                return null;
+        }
+        
+        // Nájdeme príslušný zápas v pavúku
+        const allMatches = window.matchTracker?.getAllMatches?.() || [];
+        const spiderMatchData = allMatches.find(m => 
+            m.categoryName === category && 
+            m.matchType === matchType
+        );
+        
+        if (!spiderMatchData) {
+            log(`❌ Nenašiel sa pavúkový zápas: ${category} - ${matchType}`);
+            return null;
+        }
+        
+        // Získame skóre zápasu
+        let homeScore = 0, awayScore = 0;
+        const events = window.matchTracker?.getEvents?.(spiderMatchData.id) || [];
+        
+        if (spiderMatchData.status === 'completed') {
+            if (spiderMatchData.finalScore && !spiderMatchData.forfeitResult) {
+                homeScore = spiderMatchData.finalScore.home || 0;
+                awayScore = spiderMatchData.finalScore.away || 0;
+            } else if (spiderMatchData.forfeitResult?.isForfeit) {
+                homeScore = spiderMatchData.forfeitResult.home || 0;
+                awayScore = spiderMatchData.forfeitResult.away || 0;
+            } else {
+                const score = getCurrentScoreFromEvents(events);
+                homeScore = score.home;
+                awayScore = score.away;
+            }
+        }
+        
+        // Určíme, ktorý tím potrebujeme (víťaz alebo porazený)
+        let requiredTeamId = null;
+        
+        if (resultType === 'W') {
+            // Víťaz zápasu
+            if (homeScore > awayScore) {
+                requiredTeamId = spiderMatchData.homeTeamIdentifier;
+            } else if (awayScore > homeScore) {
+                requiredTeamId = spiderMatchData.awayTeamIdentifier;
+            } else {
+                // Remíza - v play-off by nemala nastať
+                log(`⚠️ Zápas ${matchType} skončil remízou, neviem určiť víťaza`);
+                return null;
+            }
+        } else { // 'L' - Porazený
+            if (homeScore > awayScore) {
+                requiredTeamId = spiderMatchData.awayTeamIdentifier;
+            } else if (awayScore > homeScore) {
+                requiredTeamId = spiderMatchData.homeTeamIdentifier;
+            } else {
+                log(`⚠️ Zápas ${matchType} skončil remízou, neviem určiť porazeného`);
+                return null;
+            }
+        }
+        
+        if (!requiredTeamId || requiredTeamId === '---') {
+            log(`⚠️ ${resultType === 'W' ? 'Víťaz' : 'Porazený'} zápasu ${matchType} nie je určený (stav: ${spiderMatchData.status})`);
+            return null;
+        }
+        
+        log(`✅ Nájdený ${resultType === 'W' ? 'víťaz' : 'porazený'} zápasu ${matchType}: ${requiredTeamId}`);
+        
+        // Ak je requiredTeamId pavúkový identifikátor, rekurzívne ho rozlúskneme
+        if (requiredTeamId.match(spiderPattern)) {
+            log(`   🔄 Rekurzívne spracovanie: ${requiredTeamId}`);
+            return getTeamNameByDisplayId(requiredTeamId);
+        }
+        
+        // Inak získame názov tímu z tabuľky
+        return getTeamNameFromTable(requiredTeamId, category);
+    }
+    
+    // ============================================================
+    // PÔVODNÁ LOGIKA PRE BEŽNÉ IDENTIFIKÁTORY (A2, 2A)
+    // ============================================================
     
     // Kontrola, či posledná časť obsahuje číslicu
     if (!/\d/.test(lastPart)) {
@@ -2904,14 +3039,13 @@ function getTeamNameByDisplayId(displayId) {
     const fullGroupName = `skupina ${groupLetter}`;
     log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${order}`);
     
-    // 🔥 POUŽIJTE getGroupTypeSync CEZ window.matchTracker
+    // Získame typ skupiny
     const groupType = window.matchTracker?.getGroupTypeSync?.(category, fullGroupName);
     const isAdvancedGroup = (groupType === 'nadstavbová skupina');
     
     let groupTable = null;
     
     if (isAdvancedGroup) {
-        // Pre nadstavbovú skupinu použijeme createAdvancedGroupTable
         log(`📌 [${category} - ${fullGroupName}] JE NADSTAVBOVÁ, používam createAdvancedGroupTable()`);
         groupTable = window.matchTracker?.createAdvancedGroupTable(category, fullGroupName);
         
@@ -2931,7 +3065,6 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
     } else {
-        // Pre základnú skupinu použijeme pôvodnú logiku s kontrolou pripravenosti
         log(`📌 [${category} - ${fullGroupName}] je ZÁKLADNÁ skupina`);
         
         // Kontrola pripravenosti skupiny (100% odohraných zápasov)
@@ -2960,6 +3093,19 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
     }
+}
+
+// Pomocná funkcia na získanie názvu tímu z tabuľky podľa identifikátora
+function getTeamNameFromTable(teamIdentifier, category) {
+    if (!teamIdentifier || teamIdentifier === '---') return null;
+    
+    // Ak je to už názov tímu (neobsahuje číslicu a písmeno), vrátime ho
+    if (!/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(teamIdentifier)) {
+        return teamIdentifier;
+    }
+    
+    // Inak použijeme rekurziu (bezpečne, aby sme sa vyhli nekonečnej slučke)
+    return getTeamNameByDisplayId(teamIdentifier);
 }
 
 function clearCheckedGroupsCache() {
