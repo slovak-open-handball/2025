@@ -8356,10 +8356,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            },
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey,
-                                                           onClick: hasCompletedMatch ? undefined : (e) => {
-                                                               e.stopPropagation();
-                                                               handleHallDayHeaderClick(hall, date, dateStr);
-                                                           },
                                                            title: hasCompletedMatch ? '' : 'Kliknite pre nastavenie času začiatku prvého zápasu'
                                                        },
                                                        // Hlavička dňa (nezmenená)
