@@ -5121,9 +5121,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                     updatedBy: userProfileData?.email || 'unknown'
                 }
             }));
+
+            const [year, month, day] = selectedDateStrForHall.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            const formattedDate = formatDateWithDay(dateObj);
     
             window.showGlobalNotification(
-                `Čas začiatku pre ${selectedHallForDay.name} dňa ${selectedDateStrForHall} bol nastavený na ${startTime}`,
+                `Čas začiatku pre ${selectedHallForDay.name} dňa ${formattedDate} bol nastavený na ${startTime}`,
                 'success'
             );
         } catch (error) {
