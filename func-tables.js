@@ -2851,8 +2851,9 @@ function getTeamNameFromDatabase(displayId) {
     return null;
 }
 
+// Hlavná funkcia - najprv cache, potom databáza
 // ============================================================
-// FUNKCIA: getTeamNameByDisplayId - podporuje ZÁKLADNÉ SKUPINY aj PAVÚK
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
 // ============================================================
 
 function getTeamNameByDisplayId(displayId) {
@@ -2873,106 +2874,12 @@ function getTeamNameByDisplayId(displayId) {
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
-    // 🔥 KONTROLA: Je to identifikátor z PAVÚKA?
-    // Formát: WxxN alebo LxxN (W = winner, L = loser, xx = SF/QF/8F/16F, N = číslo)
-    const spiderMatch = lastPart.match(/^([WL])(SF|QF|8F|16F)(\d+)$/);
-    
-    if (spiderMatch) {
-        const winnerLoser = spiderMatch[1];  // 'W' alebo 'L'
-        const round = spiderMatch[2];        // 'SF', 'QF', '8F', '16F'
-        const matchNumber = parseInt(spiderMatch[3], 10);
-        
-        log(`🕷️ Pavúkový identifikátor: ${winnerLoser}${round}${matchNumber} v kategórii ${category}`);
-        
-        // Mapovanie round na matchType
-        let matchType = '';
-        switch (round) {
-            case 'SF': matchType = `semifinále ${matchNumber}`; break;
-            case 'QF': matchType = `štvrťfinále ${matchNumber}`; break;
-            case '8F': matchType = `osemfinále ${matchNumber}`; break;
-            case '16F': matchType = `šestnásťfinále ${matchNumber}`; break;
-            default: return null;
-        }
-        
-        // 🔥 POUŽIJEME matchesData z closure (dostupné v IIFE)
-        const matches = Object.values(matchesData);
-        const targetMatch = matches.find(m => 
-            m.categoryName === category && 
-            m.matchType === matchType
-        );
-        
-        if (!targetMatch) {
-            log(`❌ Nenašiel sa zápas typu ${matchType} v kategórii ${category}`);
-            return null;
-        }
-        
-        // Zápas ešte nie je dokončený
-        if (targetMatch.status !== 'completed') {
-            log(`⏳ Zápas ${matchType} ešte nie je dokončený (stav: ${targetMatch.status})`);
-            return null;
-        }
-        
-        // Získame skóre zápasu
-        let homeScore = 0, awayScore = 0;
-        
-        if (targetMatch.finalScore && !targetMatch.forfeitResult) {
-            homeScore = targetMatch.finalScore.home || 0;
-            awayScore = targetMatch.finalScore.away || 0;
-        } else if (targetMatch.forfeitResult?.isForfeit) {
-            homeScore = targetMatch.forfeitResult.home || 0;
-            awayScore = targetMatch.forfeitResult.away || 0;
-        } else {
-            const events = eventsData[targetMatch.id] || [];
-            const score = getCurrentScore(events);
-            homeScore = score.home;
-            awayScore = score.away;
-        }
-        
-        // Získame názvy tímov
-        let homeTeamName = targetMatch.homeTeamIdentifier;
-        let awayTeamName = targetMatch.awayTeamIdentifier;
-        
-        // Mapovanie identifikátorov tímov na názvy (ak sú to identifikátory základných skupín)
-        const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(homeTeamName);
-        if (looksLikeIdentifier) {
-            const mapped = getTeamNameFromGroupTableInternal(homeTeamName, category);
-            if (mapped) homeTeamName = mapped;
-        }
-        
-        const looksLikeIdentifierAway = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(awayTeamName);
-        if (looksLikeIdentifierAway) {
-            const mapped = getTeamNameFromGroupTableInternal(awayTeamName, category);
-            if (mapped) awayTeamName = mapped;
-        }
-        
-        // Určíme víťaza alebo porazeného
-        let resultTeamName = null;
-        
-        if (homeScore > awayScore) {
-            resultTeamName = winnerLoser === 'W' ? homeTeamName : awayTeamName;
-            log(`   📊 Výsledok: ${homeTeamName} ${homeScore}:${awayScore} ${awayTeamName} → ${winnerLoser === 'W' ? 'Víťaz' : 'Porazený'}: ${resultTeamName}`);
-        } else if (awayScore > homeScore) {
-            resultTeamName = winnerLoser === 'W' ? awayTeamName : homeTeamName;
-            log(`   📊 Výsledok: ${homeTeamName} ${homeScore}:${awayScore} ${awayTeamName} → ${winnerLoser === 'W' ? 'Víťaz' : 'Porazený'}: ${resultTeamName}`);
-        } else {
-            log(`⚠️ Zápas ${matchType} skončil remízou!`);
-            return null;
-        }
-        
-        log(`✅ ${winnerLoser === 'W' ? 'Víťaz' : 'Porazený'} zápasu ${matchType}: "${resultTeamName}"`);
-        return resultTeamName;
-    }
-    
-    // ============================================================
-    // PÔVODNÁ LOGIKA PRE ZÁKLADNÉ SKUPINY
-    // ============================================================
-    
-    // Kontrola, či posledná časť obsahuje číslicu (pre základné skupiny)
+    // Kontrola, či posledná časť obsahuje číslicu
     if (!/\d/.test(lastPart)) {
         return null;
     }
     
-    // Extrahovanie poradia a písmena skupiny (pre základné skupiny)
+    // Extrahovanie poradia a písmena skupiny
     let order = null;
     let groupLetter = null;
     
@@ -2997,15 +2904,16 @@ function getTeamNameByDisplayId(displayId) {
     const fullGroupName = `skupina ${groupLetter}`;
     log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${order}`);
     
-    // Získame typ skupiny
-    const groupType = getGroupTypeSync(category, fullGroupName);
+    // 🔥 POUŽIJTE getGroupTypeSync CEZ window.matchTracker
+    const groupType = window.matchTracker?.getGroupTypeSync?.(category, fullGroupName);
     const isAdvancedGroup = (groupType === 'nadstavbová skupina');
     
     let groupTable = null;
     
     if (isAdvancedGroup) {
+        // Pre nadstavbovú skupinu použijeme createAdvancedGroupTable
         log(`📌 [${category} - ${fullGroupName}] JE NADSTAVBOVÁ, používam createAdvancedGroupTable()`);
-        groupTable = createAdvancedGroupTable(category, fullGroupName);
+        groupTable = window.matchTracker?.createAdvancedGroupTable(category, fullGroupName);
         
         if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
             log(`❌ Nadstavbová tabuľka pre skupinu ${fullGroupName} neexistuje alebo je prázdna`);
@@ -3023,6 +2931,7 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
     } else {
+        // Pre základnú skupinu použijeme pôvodnú logiku s kontrolou pripravenosti
         log(`📌 [${category} - ${fullGroupName}] je ZÁKLADNÁ skupina`);
         
         // Kontrola pripravenosti skupiny (100% odohraných zápasov)
@@ -3033,7 +2942,7 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
         
-        groupTable = createGroupTable(category, fullGroupName);
+        groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
         
         if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
             log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
@@ -3051,67 +2960,6 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
     }
-}
-
-// Pomocná interná funkcia pre mapovanie z group table
-function getTeamNameFromGroupTableInternal(identifier, category) {
-    if (!identifier || !category) return null;
-    
-    const match = identifier.match(/^(\d+)([A-Za-z]+)$|^([A-Za-z]+)(\d+)$/);
-    if (!match) return null;
-    
-    let order, groupLetter;
-    if (match[1] && match[2]) {
-        order = parseInt(match[1], 10);
-        groupLetter = match[2].toUpperCase();
-    } else if (match[3] && match[4]) {
-        groupLetter = match[3].toUpperCase();
-        order = parseInt(match[4], 10);
-    } else {
-        return null;
-    }
-    
-    const fullGroupName = `skupina ${groupLetter}`;
-    const groupTable = createGroupTable(category, fullGroupName);
-    
-    if (!groupTable || !groupTable.teams) return null;
-    
-    const teamIndex = order - 1;
-    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-        return groupTable.teams[teamIndex].name;
-    }
-    
-    return null;
-}
-
-function getTeamNameFromGroupTable(identifier, category) {
-    if (!identifier || !category) return null;
-    
-    const match = identifier.match(/^(\d+)([A-Za-z]+)$|^([A-Za-z]+)(\d+)$/);
-    if (!match) return null;
-    
-    let order, groupLetter;
-    if (match[1] && match[2]) {
-        order = parseInt(match[1], 10);
-        groupLetter = match[2].toUpperCase();
-    } else if (match[3] && match[4]) {
-        groupLetter = match[3].toUpperCase();
-        order = parseInt(match[4], 10);
-    } else {
-        return null;
-    }
-    
-    const fullGroupName = `skupina ${groupLetter}`;
-    const groupTable = createGroupTable(category, fullGroupName);
-    
-    if (!groupTable || !groupTable.teams) return null;
-    
-    const teamIndex = order - 1;
-    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-        return groupTable.teams[teamIndex].name;
-    }
-    
-    return null;
 }
 
 function clearCheckedGroupsCache() {
