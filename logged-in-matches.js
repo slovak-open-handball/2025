@@ -8394,7 +8394,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            },
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey,
-                                                           title: hasCompletedMatch ? '' : 'Kliknite pre nastavenie času začiatku prvého zápasu'
                                                        },
                                                        // Hlavička dňa (nezmenená)
                                                        React.createElement(
