@@ -4976,7 +4976,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
         onApplyFilter: applyFilter,
         initialFilterValues: activeFilters[filterColumn] || [],
         onClearFilter: clearFilter,
-        uniqueColumnValues: uniqueColumnValues
+        uniqueColumnValues: uniqueColumnValues,
+        allUsers: allUsers
     }),
     // Removed ColumnVisibilityModal component rendering
     React.createElement(DataEditModal, {
