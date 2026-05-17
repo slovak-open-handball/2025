@@ -8778,20 +8778,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        { 
                                                                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                            style: { 
-                                                                                                textAlign: 'center',
-                                                                                                // PRIDANÉ: Červené podfarbenie a biela farba textu pre tímy v konflikte
-                                                                                                backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent',
-                                                                                                fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
-                                                                                            }
+                                                                                               textAlign: 'center',
+                                                                                               // PRIDANÉ: Červené podfarbenie a biela farba textu pre tímy v konflikte
+                                                                                               backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent'
+                                                                                           }
                                                                                        },
                                                                                        React.createElement(
                                                                                            'span',
                                                                                            { 
-                                                                                                className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                                                                style: { 
-                                                                                                    color: match.homeTeamInConflict ? '#ffffff' : '#000000'  // Biela farba pre konfliktné tímy
-                                                                                                },
-                                                                                                title: homeDisplay.name 
+                                                                                               className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.homeTeamInConflict ? '#ffffff' : '#000000',
+                                                                                                   fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
+                                                                                               },
+                                                                                               title: homeDisplay.name 
                                                                                            },
                                                                                            homeDisplay.name
                                                                                        )
@@ -8812,26 +8812,50 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    React.createElement(
                                                                                        'div', 
                                                                                        { 
-                                                                                           className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                           style: { textAlign: 'center' }
+                                                                                           className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { 
+                                                                                               textAlign: 'center', 
+                                                                                               backgroundColor: homeTeamColor, 
+                                                                                               width: '10px', 
+                                                                                               height: '100%' 
+                                                                                           }
                                                                                        },
-                                                                                       React.createElement(
-                                                                                             'span',
-                                                                                            { 
-                                                                                                className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                                                                style: { 
-                                                                                                    color: match.awayTeamInConflict ? '#ffffff' : '#000000'  // Biela farba pre konfliktné tímy
-                                                                                                },
-                                                                                                title: awayDisplay.name 
-                                                                                            },
-                                                                                           awayDisplay.name
-                                                                                       )
+                                                                                       React.createElement('div', { style: { width: '10px', height: '20px' } })
                                                                                    ),
                                                                                    React.createElement(
                                                                                        'div', 
                                                                                        { 
+                                                                                           className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               // PRIDANÉ: Červené podfarbenie a biela farba textu pre tímy v konflikte
+                                                                                               backgroundColor: match.awayTeamInConflict ? '#dc2626' : 'transparent'
+                                                                                           }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'span',
+                                                                                           { 
+                                                                                               className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.awayTeamInConflict ? '#ffffff' : '#000000',
+                                                                                                   fontWeight: match.awayTeamInConflict ? 'bold' : 'normal'
+                                                                                               },
+                                                                                               title: awayDisplay.name 
+                                                                                           },
+                                                                                           awayDisplay.name
+                                                                                       )
+                                                                                   ),                                                                                   
+                                                                                   // Stĺpec pre farbu ubytovne hosťovského tímu (10px široký stĺpec) - BEZ ČERVENÉHO PODFARBENIA
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
                                                                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                           style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
+                                                                                           style: { 
+                                                                                               textAlign: 'center', 
+                                                                                               backgroundColor: awayTeamColor, 
+                                                                                               width: '10px', 
+                                                                                               height: '100%' 
+                                                                                           }
                                                                                        },
                                                                                        React.createElement('div', { style: { width: '10px', height: '20px' } })
                                                                                    ),
