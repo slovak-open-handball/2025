@@ -974,16 +974,29 @@ let isTeamNameReplacerInitialized = false;
         // Získame všetky tímy v skupine
         const teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches);
         
-        // Mapovanie názvov tímov
+        // 🔥 VYPOČÍTAME PERCENTO DOKONČENOSTI
+        const totalMatches = allGroupMatches.length;
+        const completedMatches = completedGroupMatches.length;
+        const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
+        const isFullyCompleted = completionPercentage === 100;
+        
+        // 🔥 KRITICKÁ ZMENA: Mapovanie názvov tímov LEN AK JE SKUPINA 100% DOKONČENÁ
         const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
         
-        for (const team of teamsInGroup) {
-            if (looksLikeIdentifier(team.name)) {
-                const mappedName = window.matchTracker?.getTeamNameByDisplayIdSync?.(team.name) || getTeamNameByDisplayId(team.name);
-                if (mappedName && mappedName !== team.name) {
-                    team.name = mappedName;
+        if (isFullyCompleted) {
+            // Iba ak je 100%, mapujeme názvy
+            for (const team of teamsInGroup) {
+                if (looksLikeIdentifier(team.name)) {
+                    const mappedName = getTeamNameByDisplayId(team.name);
+                    if (mappedName && mappedName !== team.name) {
+                        log(`   🔄 Mapovanie tímu (100% skupina): "${team.name}" → "${mappedName}"`);
+                        team.name = mappedName;
+                    }
                 }
             }
+        } else {
+            log(`   ⏳ Skupina nie je 100% dokončená (${completionPercentage}%), názvy tímov NEBUDÚ mapované`);
+            // Necháme pôvodné identifikátory (U12 D A1, atď.)
         }
         
         // 🔥 VYTVORÍME NOVÉ POLE ZÁPASOV S MAPOVANÝMI NÁZVA MI PRE POROVNÁVANIE
@@ -999,14 +1012,15 @@ let isTeamNameReplacerInitialized = false;
             
             if (homeTeam && homeTeam.name) {
                 homeTeamName = homeTeam.name;
-            } else if (looksLikeIdentifier(homeTeamName)) {
+            } else if (looksLikeIdentifier(homeTeamName) && isFullyCompleted) {
+                // Mapujeme LEN ak je skupina 100% hotová
                 const mapped = getTeamNameByDisplayId(homeTeamName);
                 if (mapped) homeTeamName = mapped;
             }
             
             if (awayTeam && awayTeam.name) {
                 awayTeamName = awayTeam.name;
-            } else if (looksLikeIdentifier(awayTeamName)) {
+            } else if (looksLikeIdentifier(awayTeamName) && isFullyCompleted) {
                 const mapped = getTeamNameByDisplayId(awayTeamName);
                 if (mapped) awayTeamName = mapped;
             }
@@ -1093,10 +1107,6 @@ let isTeamNameReplacerInitialized = false;
             }
         });
         
-        const totalMatches = allGroupMatches.length;
-        const completedMatches = completedGroupMatches.length;
-        const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
-        
         // Vypočítame rozdiel skóre
         teamsInGroup.forEach(team => {
             team.goalDifference = team.goalsFor - team.goalsAgainst;
@@ -1117,14 +1127,14 @@ let isTeamNameReplacerInitialized = false;
             
             if (homeTeam && homeTeam.name) {
                 homeTeamName = homeTeam.name;
-            } else if (looksLikeIdentifier(homeTeamName)) {
+            } else if (looksLikeIdentifier(homeTeamName) && isFullyCompleted) {
                 const mapped = getTeamNameByDisplayId(homeTeamName);
                 if (mapped) homeTeamName = mapped;
             }
             
             if (awayTeam && awayTeam.name) {
                 awayTeamName = awayTeam.name;
-            } else if (looksLikeIdentifier(awayTeamName)) {
+            } else if (looksLikeIdentifier(awayTeamName) && isFullyCompleted) {
                 const mapped = getTeamNameByDisplayId(awayTeamName);
                 if (mapped) awayTeamName = mapped;
             }
@@ -1167,8 +1177,8 @@ let isTeamNameReplacerInitialized = false;
             completionPercentage: completionPercentage,
             transferredMatches: [],
             pointsForWin: pointsForWin,
-            // 🔥 PRIDÁME AJ PRE COMPARE TEAMS
-            allMatchesForComparison: mappedMatchesForComparison
+            allMatchesForComparison: mappedMatchesForComparison,
+            isFullyCompleted: isFullyCompleted  // 🔥 PRIDANÉ
         };
     }
 
