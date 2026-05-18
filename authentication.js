@@ -208,20 +208,31 @@ const handleAuthState = async () => {
                             else if (userProfileData.approved === true) {
                                 const currentPath = window.location.pathname;
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
-                                const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
-
-                                // Používateľ je prihlásený, ale len ak sa nachádza na prihlasovacej stránke
-                                if (currentPath.includes(loginPath)) {
+                                const loginPath = `${appBasePath}/login.html`;
+                                const readerDashboardPath = `${appBasePath}/index.html`; // Nová stránka pre readerov
+                            
+                                // ŠPECIÁLNE SPRÁVANIE PRE READER ROLU
+                                if (userProfileData.role === 'reader') {
+                                    console.log("AuthManager: Reader prihlásený - read-only prístup");
+                                    
+                                    // Ak je reader na prihlasovacej stránke, presmeruj ho na reader dashboard
+                                    if (currentPath.includes(loginPath)) {
+                                        window.location.href = readerDashboardPath;
+                                    }
+                                    // Reader nemôže pristupovať na stránky pre admina/hall
+                                    else if (blockedPages.some(page => currentPath.includes(page))) {
+                                        console.log("AuthManager: Reader sa pokúsil o prístup na zablokovanú stránku. Presmerovávam na reader dashboard.");
+                                        window.location.href = readerDashboardPath;
+                                    }
+                                }
+                                // Pôvodná logika pre admin a hall
+                                else if (currentPath.includes(loginPath)) {
                                     console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                // Kontrola prístupu na stránky prístupné len pre admina pre používateľov, ktorí nie sú admin
                                 else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
                                     console.log(`AuthManager: Používateľ typu '${userProfileData.role}' sa pokúsil o prístup na zablokovanú stránku. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
-                                } else {
-                                    // Inak, nechajte ho na aktuálnej stránke
-                                    console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a má prístup k aktuálnej stránke. Zostávam na aktuálnej stránke.`);
                                 }
                             }
 
@@ -267,3 +278,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupFirebase();
     handleAuthState();
 });
+
+window.hasReadOnlyAccess = () => {
+    return window.globalUserProfileData && 
+           window.globalUserProfileData.role === 'reader' && 
+           window.globalUserProfileData.approved === true;
+};
+
+// Funkcia na kontrolu, či môže používateľ zapisovať
+window.canWriteData = () => {
+    if (!window.globalUserProfileData || window.globalUserProfileData.approved !== true) {
+        return false;
+    }
+    const role = window.globalUserProfileData.role;
+    return role === 'admin' || role === 'hall';
+};
