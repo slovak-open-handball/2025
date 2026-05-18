@@ -427,10 +427,8 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     if (shouldShowRegisterLink) {
         registerLink.classList.remove('hidden');
         registerLink.href = 'register.html';
-        console.log("header.js: Registračné tlačidlo je viditeľné pre neprihláseného/anonymného používateľa");
     } else {
         registerLink.classList.add('hidden');
-        console.log("header.js: Registračné tlačidlo je skryté");
     }
 };
 
