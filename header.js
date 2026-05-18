@@ -406,25 +406,31 @@ const updateHeaderLinks = (userProfileData) => {
     }
 };
 
+// ===== UPRAVENÁ FUNKCIA =====
+// Anonymný používateľ by mal vidieť tlačidlo registrácie, keď je registrácia otvorená
 const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    // Anonymný alebo prihlásený používateľ by nemal vidieť registračný link
-    // Len neprihlásení (žiadny profil) ho môžu vidieť
-    if (userProfileData) {
-        registerLink.classList.add('hidden');
-        return;
-    }
-
-    const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
+    // Kontrola, či je registrácia otvorená
+    const isRegistrationOpen = window.registrationDates && 
+        new Date() >= window.registrationDates.registrationStartDate.toDate() && 
+        new Date() <= window.registrationDates.registrationEndDate.toDate();
     const hasCategories = window.hasCategories;
 
-    if (isRegistrationOpen && hasCategories) {
+    // Podmienky na zobrazenie registračného tlačidla:
+    // 1. Musia byť dostupné kategórie
+    // 2. Registrácia musí byť otvorená
+    // 3. Používateľ NIE JE email prihlásený (anonymný alebo žiaden profil)
+    const shouldShowRegisterLink = hasCategories && isRegistrationOpen && !isReallyLoggedIn();
+
+    if (shouldShowRegisterLink) {
         registerLink.classList.remove('hidden');
         registerLink.href = 'register.html';
+        console.log("header.js: Registračné tlačidlo je viditeľné pre neprihláseného/anonymného používateľa");
     } else {
         registerLink.classList.add('hidden');
+        console.log("header.js: Registračné tlačidlo je skryté");
     }
 };
 
