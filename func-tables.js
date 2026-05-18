@@ -1727,6 +1727,7 @@ let isTeamNameReplacerInitialized = false;
         const totalAdvancedMatches = advancedMatches.length;
         const completedAdvancedCount = allMatchesForComparison.filter(m => !m.isTransferred && m.status === 'completed').length;
         const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
+        const isFullyCompleted = completionPercentage === 100;
         
         return {
             category: categoryName,
@@ -1742,7 +1743,7 @@ let isTeamNameReplacerInitialized = false;
             completedCount: completedAdvancedCount,
             remainingCount: totalAdvancedMatches - completedAdvancedCount,
             completionPercentage: completionPercentage,
-            isFullyCompleted: totalAdvancedMatches === completedAdvancedCount,
+            isFullyCompleted: isFullyCompleted,
             pointsForWin: pointsForWin,
             allMatchesForComparison: allMatchesForComparison
         };
@@ -3134,21 +3135,31 @@ function getTeamNameByDisplayId(displayId) {
     
     if (isAdvancedGroup) {
         log(`📌 [${category} - ${fullGroupName}] JE NADSTAVBOVÁ, používam createAdvancedGroupTable()`);
-        groupTable = window.matchTracker?.createAdvancedGroupTable(category, fullGroupName);
+    
+        // 🔥 KRITICKÁ ZMENA: Skontrolujeme, či je nadstavbová skupina 100% dokončená
+        const advancedGroupTable = window.matchTracker?.createAdvancedGroupTable(category, fullGroupName);
+    
+        if (!advancedGroupTable) {
+            log(`❌ Nadstavbová tabuľka pre skupinu ${fullGroupName} neexistuje`);
+            return null;
+        }
+    
+        // 🔥 KONTROLA DOKONČENOSTI NADSTAVBOVEJ SKUPINY
+        const isFullyCompleted = advancedGroupTable.completionPercentage === 100;
         
-        if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            log(`❌ Nadstavbová tabuľka pre skupinu ${fullGroupName} neexistuje alebo je prázdna`);
+        if (!isFullyCompleted) {
+            log(`⛔ NADSTAVBOVÁ Skupina ${category} - ${fullGroupName} NIE JE pripravená (len ${advancedGroupTable.completionPercentage}% odohraných zápasov) -> NEBUDEM vracať názov tímu`);
             return null;
         }
         
         const teamIndex = order - 1;
         
-        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const team = groupTable.teams[teamIndex];
+        if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
+            const team = advancedGroupTable.teams[teamIndex];
             log(`✅ Nájdený v NADSTAVBOVEJ tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
             return team.name;
         } else {
-            log(`❌ Pozícia ${order} neexistuje v nadstavbovej skupine (skupina má ${groupTable.teams.length} tímov)`);
+            log(`❌ Pozícia ${order} neexistuje v nadstavbovej skupine (skupina má ${advancedGroupTable.teams.length} tímov)`);
             return null;
         }
     } else {
@@ -3484,15 +3495,30 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return true;
     }
     
-    // Použijeme priamo createGroupTable namiesto getGroupMatches
-    const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+    // 🔥 ZISTÍME TYP SKUPINY
+    const groupType = window.matchTracker?.getGroupTypeSync?.(cleanCategory, fullGroupName);
+    const isAdvancedGroup = (groupType === 'nadstavbová skupina');
+    
+    let groupTable = null;
+    let isFullyCompleted = false;
+    
+    if (isAdvancedGroup) {
+        // Pre nadstavbové skupiny použijeme createAdvancedGroupTable
+        groupTable = window.matchTracker?.createAdvancedGroupTable(cleanCategory, fullGroupName);
+        if (groupTable) {
+            isFullyCompleted = groupTable.completionPercentage === 100;
+        }
+    } else {
+        // Pre základné skupiny použijeme createGroupTable
+        groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+        if (groupTable) {
+            isFullyCompleted = groupTable.completionPercentage === 100;
+        }
+    }
     
     if (!groupTable) {
         return false;
     }
-    
-    // Kontrola, či je 100% dokončená (rovnaká logika ako v tabuľke)
-    const isFullyCompleted = groupTable.completionPercentage === 100;
     
     if (isFullyCompleted) {
         log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! (${groupTable.completionPercentage}%)`);
@@ -3500,7 +3526,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return true;
     }
     
-    log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${groupTable.completedCount}/${groupTable.totalMatches} odohraných → NIE JE PRIPRAVENÁ`);
+    log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${groupTable.completedCount}/${groupTable.totalMatches} odohraných (${groupTable.completionPercentage}%) → NIE JE PRIPRAVENÁ`);
     groupCheckCache.add(`${groupKey}_false`);
     return false;
 }
