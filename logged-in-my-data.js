@@ -393,13 +393,6 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
     
-    const effectiveDataEditDeadline = userProfileData?.dataEditDeadline || settingsRegistrationDates?.dataEditDeadline;    
-    const deadlineMillis = (effectiveDataEditDeadline instanceof Timestamp) ? 
-                            effectiveDataEditDeadline.toDate().getTime() : 
-                            (effectiveDataEditDeadline instanceof Date) ?
-                            effectiveDataEditDeadline.getTime() :
-                            null;
-    
     useEffect(() => {
         let timer;         
         const updateCanEditStatus = () => {
@@ -413,8 +406,42 @@ const MyDataApp = ({ userProfileData }) => {
                 setCanEdit(true);
                 return; 
             }
+            
+            // SPRÁVNA KONVERZIA DÁTUMU - rovnaká ako v UsersManagementApp
+            let deadlineDate = null;
+            
+            // Najprv skúsime získať dátum z userProfileData
+            if (userProfileData?.dataEditDeadline) {
+                if (userProfileData.dataEditDeadline.toDate) {
+                    deadlineDate = userProfileData.dataEditDeadline.toDate();
+                } else if (userProfileData.dataEditDeadline instanceof Date) {
+                    deadlineDate = userProfileData.dataEditDeadline;
+                } else if (userProfileData.dataEditDeadline.seconds) {
+                    // Pre prípad, že je to Firestore Timestamp objekt
+                    deadlineDate = new Date(userProfileData.dataEditDeadline.seconds * 1000);
+                } else {
+                    deadlineDate = new Date(userProfileData.dataEditDeadline);
+                }
+            }
+            
+            // Ak nemáme deadline z userProfileData, použijeme z settings
+            if (!deadlineDate && settingsRegistrationDates?.dataEditDeadline) {
+                if (settingsRegistrationDates.dataEditDeadline.toDate) {
+                    deadlineDate = settingsRegistrationDates.dataEditDeadline.toDate();
+                } else if (settingsRegistrationDates.dataEditDeadline instanceof Date) {
+                    deadlineDate = settingsRegistrationDates.dataEditDeadline;
+                } else if (settingsRegistrationDates.dataEditDeadline.seconds) {
+                    deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline.seconds * 1000);
+                } else {
+                    deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline);
+                }
+            }
+            
+            const deadlineMillis = deadlineDate ? deadlineDate.getTime() : null;
+            
             if (deadlineMillis !== null) { 
                 const nowMillis = Date.now();
+                // Pre referee a volunteer vždy umožníme editáciu (ako v prvom kóde)
                 if (nowMillis <= deadlineMillis || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') { 
                     setCanEdit(true); 
                     if (timer) clearTimeout(timer);
@@ -437,8 +464,17 @@ const MyDataApp = ({ userProfileData }) => {
                     }
                 }
             } else {
-                setCanEdit(false);
-                setIsPasswordChangeOnlyMode(false);
+                // Ak nie je žiadny deadline, umožníme editáciu len pre referee a volunteer
+                if (userProfileData.role === 'referee' || userProfileData.role === 'volunteer') {
+                    setCanEdit(true);
+                } else {
+                    setCanEdit(false);
+                    if (userProfileData.role === 'club') {
+                        setIsPasswordChangeOnlyMode(true);
+                    } else {
+                        setIsPasswordChangeOnlyMode(false);
+                    }
+                }
             }
         };
         updateCanEditStatus();
@@ -447,7 +483,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, deadlineMillis]); 
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]); 
     
     const getRoleColor = (role) => {
         switch (role) {
