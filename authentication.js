@@ -15,7 +15,6 @@ window.EmailAuthProvider = null;
 window.verifyBeforeUpdateEmail = null;
 window.isRegisteringAdmin = false;
 window.isAnonymousUser = false; // NOVÁ: Indikuje, či je používateľ anonymný
-window.unsubscribeUserDoc = null; // PREMENNÁ PRE ODSÚHLASENIE
 
 // Import necessary Firebase functions
 import {
@@ -26,19 +25,19 @@ import {
     onAuthStateChanged,
     signOut,
     signInWithEmailAndPassword,
-    signInAnonymously,
+    signInAnonymously, // NOVÝ IMPORT
     reauthenticateWithCredential,
     updateEmail,
     EmailAuthProvider,
     verifyBeforeUpdateEmail,
-    linkWithCredential
+    linkWithCredential // Pre upgrade z anonymného na trvalý účet
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore,
     doc,
     getDoc,
     onSnapshot,
-    setDoc
+    setDoc // Pre vytvorenie anonymného profilu
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Vložený konfiguračný objekt
@@ -51,8 +50,12 @@ const firebaseConfig = {
     appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
+// URL adresa Google Apps Scriptu na odosielanie e-mailov
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
 // Definovanie globálnych premenných
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 const getAppBasePath = () => {
     const appYearMatch = appId.match(/(\d{4})/);
@@ -86,17 +89,19 @@ let app;
 let db;
 let auth;
 
-// ===== FUNKCIA PRE AUTOMATICKÚ ANONYMOUN AUTENTIFIKÁCIU =====
+// ===== NOVÁ FUNKCIA PRE AUTOMATICKÚ ANONYMOUN AUTENTIFIKÁCIU =====
 const autoSignInAnonymously = async () => {
     try {
         console.log("AuthManager: Pokus o anonymné prihlásenie...");
         const userCredential = await signInAnonymously(auth);
         console.log("AuthManager: Anonymné prihlásenie úspešné:", userCredential.user.uid);
         
+        // Vytvorenie profilu pre anonymného používateľa v ŠPECIÁLNEJ kolekcii (nie v users)
         const anonymousUserRef = doc(db, `anonymousProfiles/${userCredential.user.uid}`);
         const anonymousUserSnap = await getDoc(anonymousUserRef);
         
         if (!anonymousUserSnap.exists()) {
+            // Vytvoríme anonymný profil v samostatnej kolekcii
             await setDoc(anonymousUserRef, {
                 uid: userCredential.user.uid,
                 role: 'anonymous',
@@ -122,10 +127,14 @@ window.upgradeAnonymousToPermanent = async (email, password, userData) => {
     }
     
     try {
+        // Vytvorenie credential pre email/password
         const credential = EmailAuthProvider.credential(email, password);
+        
+        // Prepojenie anonymného účtu s email účtom
         const userCredential = await linkWithCredential(auth.currentUser, credential);
         console.log("Účet úspešne upgradovaný na trvalý");
         
+        // Aktualizácia profilu v databáze
         const userRef = doc(db, `users/${userCredential.user.uid}`);
         await setDoc(userRef, {
             ...userData,
@@ -148,8 +157,12 @@ const setupFirebase = () => {
         db = getFirestore(app);
         auth = getAuth(app);
         
+        // Povolenie anonymnej autentifikácie
+        auth.settings = { ...auth.settings, persistence: 'local' };
+        
         console.log("AuthManager: Firebase inicializovaný.");
 
+        // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
         window.db = db;
         window.firebaseConfig = firebaseConfig;
@@ -159,6 +172,7 @@ const setupFirebase = () => {
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
         window.upgradeAnonymousToPermanent = upgradeAnonymousToPermanent;
         
+        // Kontrola, či je používateľ anonymný
         window.isAnonymous = () => {
             return auth.currentUser && auth.currentUser.isAnonymous === true;
         };
@@ -166,75 +180,6 @@ const setupFirebase = () => {
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
-};
-
-// DÔLEŽITÉ: Samostatná funkcia na načítanie profilu emailového používateľa
-const loadEmailUserProfile = (user) => {
-    const userDocRef = doc(db, `users/${user.uid}`);
-    
-    // Zrušíme predchádzajúci listener
-    if (window.unsubscribeUserDoc) {
-        console.log("AuthManager: Ruším predchádzajúci listener pre profil");
-        window.unsubscribeUserDoc();
-        window.unsubscribeUserDoc = null;
-    }
-    
-    // Nastavíme nový listener
-    window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const userProfileData = { id: snapshot.id, ...snapshot.data() };
-            console.log("AuthManager: Profil načítaný pre používateľa:", user.uid, "Rola:", userProfileData.role);
-            
-            // Ak prebieha registrácia admina
-            if (window.isRegisteringAdmin && userProfileData.role === 'admin') {
-                console.log("AuthManager: Prebieha registrácia administrátora.");
-                window.globalUserProfileData = userProfileData;
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                return;
-            }
-
-            // Neschválený administrátor
-            if (userProfileData.role === 'admin' && userProfileData.approved === false) {
-                console.warn("AuthManager: Nepovolený administrátor - odhlasujem.");
-                signOut(auth).then(() => {
-                    window.globalUserProfileData = null;
-                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                    window.location.href = `${appBasePath}/login.html?status=unapproved_admin`;
-                });
-                return;
-            }
-            
-            // Schválený používateľ
-            if (userProfileData.approved === true) {
-                const currentPath = window.location.pathname;
-                const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
-                const loginPath = `${appBasePath}/login.html`;
-                const registerVolunteerPath = `${appBasePath}/register-volunteer.html`;
-
-                // NEPRESMERÚVAME, AK SME NA REGISTRAČNEJ STRÁNKE DOBROVOĽNÍKA
-                if (currentPath.includes(loginPath)) {
-                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
-                    window.location.href = targetPathMyData;
-                } 
-                else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
-                    console.log(`AuthManager: Používateľ nemá prístup na túto stránku.`);
-                    window.location.href = targetPathMyData;
-                }
-                // ODSTRÁNENÉ PRESMEROVANIE Z REGISTER-VOLUNTEER.HTML
-            }
-
-            window.globalUserProfileData = userProfileData;
-            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-        } else {
-            console.log("AuthManager: Profil pre používateľa", user.uid, "zatiaľ neexistuje, čakám...");
-            window.globalUserProfileData = null;
-            // Neodhlasujeme, len čakáme
-        }
-    }, (error) => {
-        console.error("AuthManager: Chyba pri načítaní profilu:", error);
-        window.globalUserProfileData = null;
-        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-    });
 };
 
 const handleAuthState = async () => {
@@ -247,8 +192,9 @@ const handleAuthState = async () => {
             
             window.isAnonymousUser = user.isAnonymous === true;
             
+            // ROZDELENÁ LOGIKA: Iná cesta pre anonymných, iná pre emailových používateľov
             if (user.isAnonymous) {
-                // Anonymný používateľ
+                // Anonymný používateľ - čítame z anonymousProfiles, NIE z users
                 const anonymousProfileRef = doc(db, `anonymousProfiles/${user.uid}`);
                 
                 try {
@@ -256,10 +202,11 @@ const handleAuthState = async () => {
                     
                     if (docSnap.exists()) {
                         const anonymousProfileData = { id: docSnap.id, ...docSnap.data() };
-                        console.log("AuthManager: Anonymný profil načítaný");
+                        console.log("AuthManager: Anonymný profil načítaný:", anonymousProfileData);
                         window.globalUserProfileData = anonymousProfileData;
                         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: anonymousProfileData }));
                         
+                        // Anonymní používatelia nemôžu pristupovať na admin stránky
                         const currentPath = window.location.pathname;
                         if (blockedPages.some(page => currentPath.includes(page))) {
                             console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku");
@@ -276,28 +223,111 @@ const handleAuthState = async () => {
                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                 }
                 
-                return;
+                return; // Ukončíme spracovanie pre anonymných používateľov
             }
             
-            // Emailový používateľ - zavoláme funkciu na načítanie profilu
-            loadEmailUserProfile(user);
+            // ------------------------------
+            // Kód PRE EMAIL POUŽÍVATEĽOV (ostáva rovnaký)
+            // ------------------------------
+            const userDocRef = doc(db, `users/${user.uid}`);
+            
+            const loadUserProfileData = async (retries = 0) => {
+                const MAX_RETRIES = 2;
+                const RETRY_DELAY = 100;
+
+                try {
+                    const docSnap = await getDoc(userDocRef);
+
+                    if (!docSnap.exists()) {
+                        if (retries < MAX_RETRIES) {
+                            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                            return loadUserProfileData(retries + 1);
+                        } else {
+                            window.globalUserProfileData = null;
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                            return;
+                        }
+                    }
+
+                    if (window.unsubscribeUserDoc) {
+                        window.unsubscribeUserDoc();
+                    }
+
+                    window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            const userProfileData = { id: snapshot.id, ...snapshot.data() };
+                            
+                            // Ak prebieha registrácia admina
+                            if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
+                                console.log("AuthManager: Prebieha registrácia administrátora.");
+                                window.globalUserProfileData = userProfileData;
+                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                return;
+                            }
+
+                            // Neschválený administrátor
+                            if (userProfileData.role === 'admin' && userProfileData.approved === false) {
+                                console.warn("AuthManager: Nepovolený administrátor detekovaný.");
+                                signOut(auth).then(() => {
+                                    window.globalUserProfileData = null;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                                    window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
+                                });
+                                return;
+                            } 
+                            
+                            // Schválení používatelia
+                            else if (userProfileData.approved === true) {
+                                const currentPath = window.location.pathname;
+                                const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
+                                const loginPath = `${appBasePath}/login.html`;
+
+                                if (currentPath.includes(loginPath)) {
+                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
+                                    window.location.href = targetPathMyData;
+                                } 
+                                else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
+                                    console.log(`AuthManager: Používateľ nemá prístup na túto stránku.`);
+                                    window.location.href = targetPathMyData;
+                                }
+                            }
+
+                            window.globalUserProfileData = userProfileData;
+                            console.log("AuthManager: Používateľské dáta načítané:", userProfileData);
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                        } else {
+                            console.error("AuthManager: Profil používateľa nebol nájdený!");
+                            window.globalUserProfileData = null;
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                        }
+                    }, (error) => {
+                        console.error("AuthManager: Chyba pri načítaní profilu:", error);
+                        window.globalUserProfileData = null;
+                        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                    });
+                } catch (error) {
+                    console.error("AuthManager: Chyba pri načítaní profilu:", error);
+                    window.globalUserProfileData = null;
+                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                }
+            };
+
+            loadUserProfileData();
 
         } else {
             console.log("AuthManager: Žiadny používateľ - spúšťam anonymné prihlásenie...");
             await autoSignInAnonymously();
         }
+
+        window.addEventListener('beforeunload', () => {
+            if (window.unsubscribeUserDoc) {
+                window.unsubscribeUserDoc();
+            }
+        });
     });
 
     console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
 };
-
-// Čistenie pri ukončení stránky
-window.addEventListener('beforeunload', () => {
-    if (window.unsubscribeUserDoc) {
-        window.unsubscribeUserDoc();
-        window.unsubscribeUserDoc = null;
-    }
-});
 
 window.addEventListener('DOMContentLoaded', async () => {
     setupFirebase();
