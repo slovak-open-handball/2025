@@ -529,4 +529,5 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
     );
 };
 
-window.ChangeVolunteerModal = ChangeVolunteerModal;
+// Export pre použitie v hlavnom súbore
+export { ChangeVolunteerModal };
