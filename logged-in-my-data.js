@@ -412,19 +412,15 @@ const MyDataApp = ({ userProfileData }) => {
             
             // Najprv skúsime získať dátum z userProfileData
             if (userProfileData?.dataEditDeadline) {
-                // Ak je to Firebase Timestamp objekt (má toDate metódu)
                 if (typeof userProfileData.dataEditDeadline.toDate === 'function') {
                     deadlineDate = userProfileData.dataEditDeadline.toDate();
                 } 
-                // Ak je to už Date objekt
                 else if (userProfileData.dataEditDeadline instanceof Date) {
                     deadlineDate = userProfileData.dataEditDeadline;
                 } 
-                // Ak je to objekt s seconds (Firestore Timestamp v inej podobe)
                 else if (userProfileData.dataEditDeadline.seconds !== undefined) {
                     deadlineDate = new Date(userProfileData.dataEditDeadline.seconds * 1000);
                 } 
-                // Ak je to string alebo číslo
                 else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
@@ -461,8 +457,8 @@ const MyDataApp = ({ userProfileData }) => {
             
             if (deadlineMillis !== null) { 
                 const nowMillis = Date.now();
-                // Pre referee a volunteer vždy umožníme editáciu
-                if (nowMillis <= deadlineMillis || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') { 
+                // UPRAVENÉ: Odstránená výnimka pre referee a volunteer
+                if (nowMillis <= deadlineMillis) { 
                     setCanEdit(true); 
                     if (timer) clearTimeout(timer);
                     if (deadlineMillis - nowMillis > 0) {
@@ -484,17 +480,9 @@ const MyDataApp = ({ userProfileData }) => {
                     }
                 }
             } else {
-                // Ak nie je žiadny deadline, umožníme editáciu len pre referee a volunteer
-                if (userProfileData.role === 'referee' || userProfileData.role === 'volunteer') {
-                    setCanEdit(true);
-                } else {
-                    setCanEdit(false);
-                    if (userProfileData.role === 'club') {
-                        setIsPasswordChangeOnlyMode(true);
-                    } else {
-                        setIsPasswordChangeOnlyMode(false);
-                    }
-                }
+                // Ak nie je žiadny deadline, NEPOVOLÍME editáciu nikomu (okrem admina)
+                setCanEdit(false);
+                setIsPasswordChangeOnlyMode(false);
             }
         };
         updateCanEditStatus();
@@ -503,7 +491,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]); 
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]);
     
     const getRoleColor = (role) => {
         switch (role) {
