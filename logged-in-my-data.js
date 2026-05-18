@@ -186,13 +186,13 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             React.createElement(
                 'div',
                 { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Dobrovoľnícke údaje'),
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Osobné údaje'),
                 showVolunteerPencil && React.createElement(
                     'button',
                     {
                         onClick: onOpenVolunteerModal,
                         className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
-                        'aria-label': 'Upraviť dobrovoľnícke údaje',
+                        'aria-label': 'Upraviť osobné údaje',
                         style: { color: roleColor }
                     },
                     React.createElement(
