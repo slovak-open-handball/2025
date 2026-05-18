@@ -104,6 +104,26 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const phoneLabel = userProfileData?.role === 'club' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
     const showProfilePencil = canEdit || (userProfileData.role === 'club' && isPasswordChangeOnlyMode);    
     const showBillingPencil = canEdit;
+
+    // Funkcia na formátovanie dátumu
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('sk-SK');
+        } catch (e) {
+            return dateString;
+        }
+    };
+
+    // Funkcia na získanie textu pohlavia
+    const getGenderText = (gender) => {
+        if (gender === 'male') return 'Muž';
+        if (gender === 'female') return 'Žena';
+        return gender || '-';
+    };
+
+    // Profilový box (spoločný pre všetkých)
     const profileContent = React.createElement(
         'div',
         { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
@@ -150,61 +170,129 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             )
         )
     );
-    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall' || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') ? null : React.createElement(
-        'div',
-        { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
-        React.createElement(
+
+    // Box pre dobrovoľnícke údaje (len pre rolu volunteer)
+    let volunteerContent = null;
+    if (userProfileData?.role === 'volunteer') {
+        volunteerContent = React.createElement(
             'div',
-            { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
-            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            showBillingPencil && React.createElement(
-                'button',
-                {
-                    onClick: onOpenBillingModal,
-                    className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
-                    'aria-label': 'Upraviť fakturačné údaje',
-                    style: { color: roleColor }
-                },
-                React.createElement(
-                    'svg',
-                    { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
-                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                ),
-                React.createElement('span', { className: 'font-medium' }, 'Upraviť')
-            )
-        ),
-        React.createElement(
-            'div',
-            { className: 'space-y-6 text-gray-700 text-lg' },
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Oficiálny názov klubu'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
+            { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
+            React.createElement(
+                'div',
+                { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Dobrovoľnícke údaje')
             ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
-                React.createElement('div', { className: 'font-normal' },
-                    `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+            React.createElement(
+                'div',
+                { className: 'space-y-6 text-gray-700 text-lg' },
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa trvalého bydliska'),
+                    React.createElement('div', { className: 'font-normal' },
+                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                    )
+                ),
+                React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                    React.createElement('div', null,
+                        React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Pohlavie'),
+                        React.createElement('div', { className: 'font-normal' }, getGenderText(userProfileData.gender))
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dátum narodenia'),
+                        React.createElement('div', { className: 'font-normal' }, formatDate(userProfileData.birthDate))
+                    )
+                ),
+                userProfileData.tshirtSize && React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Veľkosť trička'),
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.tshirtSize)
+                ),
+                userProfileData.volunteerRoles && userProfileData.volunteerRoles.length > 0 && React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dobrovoľnícke role'),
+                    React.createElement('div', { className: 'font-normal flex flex-wrap gap-2 mt-1' },
+                        userProfileData.volunteerRoles.map((role, idx) => 
+                            React.createElement('span', { key: idx, className: 'bg-gray-100 px-3 py-1 rounded-full text-sm' }, role)
+                        )
+                    )
+                ),
+                userProfileData.selectedDates && userProfileData.selectedDates.length > 0 && React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dostupnosť - vybrané dátumy'),
+                    React.createElement('div', { className: 'font-normal flex flex-wrap gap-2 mt-1' },
+                        userProfileData.selectedDates.map((date, idx) => 
+                            React.createElement('span', { key: idx, className: 'bg-gray-100 px-3 py-1 rounded-full text-sm' }, formatDate(date))
+                        )
+                    )
+                ),
+                userProfileData.note && React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Poznámka'),
+                    React.createElement('div', { className: 'font-normal italic' }, userProfileData.note)
+                )
+            )
+        );
+    }
+
+    // Fakturačný box (pre všetkých okrem admin, hall, referee, volunteer)
+    let billingContent = null;
+    if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && userProfileData.role !== 'referee' && userProfileData.role !== 'volunteer') {
+        billingContent = React.createElement(
+            'div',
+            { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
+            React.createElement(
+                'div',
+                { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
+                showBillingPencil && React.createElement(
+                    'button',
+                    {
+                        onClick: onOpenBillingModal,
+                        className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
+                        'aria-label': 'Upraviť fakturačné údaje',
+                        style: { color: roleColor }
+                    },
+                    React.createElement(
+                        'svg',
+                        { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    ),
+                    React.createElement('span', { className: 'font-medium' }, 'Upraviť')
                 )
             ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČO'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.ico || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'DIČ'),
-                React.createElement('div', { className : 'font-normal' }, userProfileData.billing?.dic || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icdph || '-')
+            React.createElement(
+                'div',
+                { className: 'space-y-6 text-gray-700 text-lg' },
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Oficiálny názov klubu'),
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
+                ),
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
+                    React.createElement('div', { className: 'font-normal' },
+                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                    )
+                ),
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČO'),
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.ico || '-')
+                ),
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'DIČ'),
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.dic || '-')
+                ),
+                React.createElement('div', null,
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icdph || '-')
+                )
             )
-        )
-    );
+        );
+    }
+
+    // Zoznam boxov na zobrazenie
+    const boxes = [profileContent];
+    if (volunteerContent) boxes.push(volunteerContent);
+    if (billingContent) boxes.push(billingContent);
+
     return React.createElement(
         'div',
         { className: 'flex flex-col items-center gap-8' },
-        profileContent,
-        billingContent
+        boxes
     );
 };
 const globalDataStore = (() => {
@@ -254,6 +342,7 @@ const MyDataApp = ({ userProfileData }) => {
         isRegistrationDataLoaded, 
         isCategoriesDataLoaded, 
     } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
+    
     useEffect(() => {
         if (!window.db) {
             return;
@@ -271,18 +360,21 @@ const MyDataApp = ({ userProfileData }) => {
         });
         return () => unsubscribe();
     }, [window.db]); 
+    
     useEffect(() => {
         if (userProfileData) {
             setShowProfileModal(false);
             setShowBillingModal(false);
         }
     }, [userProfileData]);
+    
     const effectiveDataEditDeadline = userProfileData?.dataEditDeadline || settingsRegistrationDates?.dataEditDeadline;    
     const deadlineMillis = (effectiveDataEditDeadline instanceof Timestamp) ? 
                             effectiveDataEditDeadline.toDate().getTime() : 
                             (effectiveDataEditDeadline instanceof Date) ?
                             effectiveDataEditDeadline.getTime() :
                             null;
+    
     useEffect(() => {
         let timer;         
         const updateCanEditStatus = () => {
@@ -331,6 +423,7 @@ const MyDataApp = ({ userProfileData }) => {
             }
         };
     }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, deadlineMillis]); 
+    
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
@@ -348,6 +441,7 @@ const MyDataApp = ({ userProfileData }) => {
         }
     };
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
+    
     return React.createElement(
         'div',
         { className: 'flex-grow' },
