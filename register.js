@@ -374,19 +374,44 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Nahraďte existujúci useEffect pre reCAPTCHA
   React.useEffect(() => {
-    const checkRecaptcha = () => {
-      if (window.grecaptcha && window.grecaptcha.ready) {
-        window.grecaptcha.ready(() => {
-          setIsRecaptchaReady(true);
-        });
+      const checkRecaptcha = () => {
+          // Skontrolujeme, či existuje grecaptcha a či má metódu render (pre v3)
+          if (window.grecaptcha && window.grecaptcha.render) {
+              // Pre reCAPTCHA v3 netreba volať render, stačí ready
+              window.grecaptcha.ready(() => {
+                  console.log('reCAPTCHA v3 je pripravená');
+                  setIsRecaptchaReady(true);
+              });
+          } else if (window.grecaptcha && window.grecaptcha.ready) {
+              // Alternatívna kontrola pre novšie verzie
+              window.grecaptcha.ready(() => {
+                  console.log('reCAPTCHA v3 je pripravená');
+                  setIsRecaptchaReady(true);
+              });
+          } else {
+              // Skúsime znova o 100ms
+              setTimeout(checkRecaptcha, 100);
+          }
+      };
+      
+      // Spustíme kontrolu až po načítaní scriptu
+      if (document.querySelector('script[src*="recaptcha/api.js"]')) {
+          checkRecaptcha();
       } else {
-        setTimeout(checkRecaptcha, 100);
+          // Ak script nie je v HTML, načítame ho dynamicky
+          const script = document.createElement('script');
+          script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => {
+              console.log('reCAPTCHA script načítaný');
+              checkRecaptcha();
+          };
+          document.head.appendChild(script);
       }
-    };
-    checkRecaptcha();
   }, []);
-
 
   const closeNotification = () => {
     setShowNotification(false);
