@@ -439,7 +439,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                 await addDoc(collection(db, 'notifications'), {
                     userEmail: userProfileData.email, // E-mail dobrovoľníka
                     changes: changeMessages,          // Pole správ so zmenami
-                    timestamp: new Date().toISOString(), // Dátum a čas zmeny
+                    timestamp: new Date(),           // Dátum a čas zmeny
                 });
             }
             
