@@ -209,13 +209,15 @@ const getRoleColor = (role) => {
 
     switch (role) {
         case 'admin':
-            return '#47b3ff'; // Tvoja farba pre admina
+            return '#47b3ff'; 
         case 'hall':
-            return '#b06835'; // Tvoja farba pre halu
+            return '#b06835'; 
         case 'club':
-            return '#9333EA'; // Tvoja farba pre bežného používateľa
+            return '#9333EA'; 
+        case 'volunteer':
+            return '#FFAC1C';
         default:
-            return defaultColor; // Predvolená farba, ak rola nie je definovaná
+            return defaultColor; 
     }
 };
 
