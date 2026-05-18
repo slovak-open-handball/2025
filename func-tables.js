@@ -979,10 +979,7 @@ let isTeamNameReplacerInitialized = false;
         const completedMatches = completedGroupMatches.length;
         const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
         const isFullyCompleted = completionPercentage === 100;
-        
-        // 🔥 KRITICKÁ ZMENA: Mapovanie názvov tímov LEN AK JE SKUPINA 100% DOKONČENÁ
-        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-        
+                
         if (isFullyCompleted) {
             // Iba ak je 100%, mapujeme názvy
             for (const team of teamsInGroup) {
@@ -1416,10 +1413,7 @@ let isTeamNameReplacerInitialized = false;
         const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed').length;
         const advancedCompletionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedMatches / totalAdvancedMatches * 100) : 0;
         const isAdvancedFullyCompleted = advancedCompletionPercentage === 100;
-        
-        // 🔥 KRITICKÁ ZMENA: Mapovanie názvov tímov LEN AK JE NADSTAVBOVÁ SKUPINA 100% DOKONČENÁ
-        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-        
+                
         if (isAdvancedFullyCompleted) {
             // Iba ak je nadstavbová skupina 100% hotová, mapujeme názvy tímov
             for (const team of teamsInAdvanced) {
