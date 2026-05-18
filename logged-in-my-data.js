@@ -3,7 +3,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 import { countryDialCodes } from "./countryDialCodes.js";
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
+import { ChangeVolunteerModal } from "./logged-in-my-data-change-volunteer-modal.js";
+
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
+
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -36,6 +39,7 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
+
 const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return '-';
     const cleanNumber = phoneNumber.replace(/\s/g, '');
@@ -62,7 +66,8 @@ const formatPhoneNumber = (phoneNumber) => {
         return dialCode;
     }
 };
-const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit, isPasswordChangeOnlyMode }) => {
+
+const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, onOpenVolunteerModal, canEdit, isPasswordChangeOnlyMode }) => {
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
@@ -104,6 +109,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const phoneLabel = userProfileData?.role === 'club' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
     const showProfilePencil = canEdit || (userProfileData.role === 'club' && isPasswordChangeOnlyMode);    
     const showBillingPencil = canEdit;
+    const showVolunteerPencil = canEdit;
 
     // Funkcia na formátovanie dátumu
     const formatDate = (dateString) => {
@@ -180,7 +186,22 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             React.createElement(
                 'div',
                 { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Dobrovoľnícke údaje')
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Dobrovoľnícke údaje'),
+                showVolunteerPencil && React.createElement(
+                    'button',
+                    {
+                        onClick: onOpenVolunteerModal,
+                        className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
+                        'aria-label': 'Upraviť dobrovoľnícke údaje',
+                        style: { color: roleColor }
+                    },
+                    React.createElement(
+                        'svg',
+                        { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    ),
+                    React.createElement('span', { className: 'font-medium' }, 'Upraviť')
+                )
             ),
             React.createElement(
                 'div',
@@ -295,6 +316,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         boxes
     );
 };
+
 const globalDataStore = (() => {
     let internalSnapshot = {};
     let listeners = new Set();
@@ -331,9 +353,11 @@ const globalDataStore = (() => {
 
     return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
 })();
+
 const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
+    const [showVolunteerModal, setShowVolunteerModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
@@ -365,6 +389,7 @@ const MyDataApp = ({ userProfileData }) => {
         if (userProfileData) {
             setShowProfileModal(false);
             setShowBillingModal(false);
+            setShowVolunteerModal(false);
         }
     }, [userProfileData]);
     
@@ -451,6 +476,7 @@ const MyDataApp = ({ userProfileData }) => {
                 userProfileData: userProfileData,
                 onOpenProfileModal: () => setShowProfileModal(true),
                 onOpenBillingModal: () => setShowBillingModal(true),
+                onOpenVolunteerModal: () => setShowVolunteerModal(true),
                 canEdit: canEdit,
                 isPasswordChangeOnlyMode: isPasswordChangeOnlyMode
             }
@@ -473,10 +499,21 @@ const MyDataApp = ({ userProfileData }) => {
                 userProfileData: userProfileData,
                 roleColor: roleColor
             }
+        ),
+        React.createElement(
+            ChangeVolunteerModal,
+            {
+                show: showVolunteerModal,
+                onClose: () => setShowVolunteerModal(false),
+                userProfileData: userProfileData,
+                roleColor: roleColor
+            }
         )
     );
 };
+
 let isEmailSyncListenerSetup = false;
+
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
@@ -527,7 +564,9 @@ const handleDataUpdateAndRender = (event) => {
         }
     }
 };
+
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
