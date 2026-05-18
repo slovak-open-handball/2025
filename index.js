@@ -5,6 +5,7 @@
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 // Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
 // Predvolene sú tlačidlá 'Prihlásenie' a 'Registrácia na turnaj' skryté.
+// ANONYMOUS POUŽÍVATEĽ - je považovaný za neprihláseného v UI
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -29,6 +30,23 @@ const formatDate = (timestamp) => {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `dňa&nbsp;${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
+};
+
+/**
+ * Kontroluje, či je používateľ "skutočne" prihlásený (nie anonymný)
+ * @returns {boolean} - true pre email používateľa, false pre anonymného alebo neprihláseného
+ */
+const isReallyLoggedIn = () => {
+    // Ak nie je profil, nie je prihlásený
+    if (!window.globalUserProfileData) return false;
+    
+    // Anonymný používateľ nie je považovaný za prihláseného v UI
+    if (window.isAnonymousUser === true) return false;
+    
+    // Ak má rolu 'anonymous', tiež nie je prihlásený
+    if (window.globalUserProfileData.role === 'anonymous') return false;
+    
+    return true;
 };
 
 /**
@@ -145,7 +163,7 @@ const toggleRegistrationButton = (isVisible, reason = '') => {
 
 /**
  * Prepína viditeľnosť a text tlačidla "Prihlásenie"/"Moja zóna".
- * @param {boolean} isLoggedIn - true ak je používateľ prihlásený, inak false.
+ * @param {boolean} isLoggedIn - true ak je používateľ prihlásený a NIE je anonymný, inak false.
  */
 const updateLoginButton = (isLoggedIn) => {
     const loginLink = document.getElementById('login-button-wrapper');
@@ -156,7 +174,7 @@ const updateLoginButton = (isLoggedIn) => {
         loginLink.style.display = 'none';
         
         if (isLoggedIn) {
-            // Používateľ je prihlásený, zobrazíme "Moja zóna"
+            // POUZE email používateľ je prihlásený, zobrazíme "Moja zóna"
             loginLink.href = 'logged-in-my-data.html';
             loginButton.textContent = 'Moja zóna';
 
@@ -170,13 +188,13 @@ const updateLoginButton = (isLoggedIn) => {
             loginButton.style.borderColor = roleColor;
             console.log(`Používateľ je prihlásený ako ${userRole}. Tlačidlo 'Moja zóna' bolo nastavené s farbou ${roleColor}.`);
         } else {
-            // Používateľ je odhlásený, zobrazíme "Prihlásenie"
+            // Používateľ je odhlásený alebo anonymný, zobrazíme "Prihlásenie"
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
             // Vrátime pôvodné Tailwind triedy pre farbu
             loginButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
             loginButton.style.backgroundColor = ''; // Odstránime inline štýl
-            console.log("Používateľ odhlásený. Tlačidlo 'Prihlásenie' bolo obnovené.");
+            console.log("Používateľ je odhlásený alebo anonymný. Tlačidlo 'Prihlásenie' bolo obnovené.");
         }
         
         // Zobrazíme tlačidlo až po nastavení všetkých vlastností
@@ -203,20 +221,25 @@ const getRoleColor = (role) => {
 
 /**
  * Zobrazí alebo skryje uvítaciu správu pre prihláseného používateľa.
- * @param {boolean} isLoggedIn - true pre zobrazenie, false pre skrytie.
+ * @param {boolean} isLoggedIn - true pre zobrazenie (len pre email používateľov), false pre skrytie.
  * @param {object} userProfileData - Dáta o profile prihláseného používateľa.
  */
 const toggleLoggedInMessage = (isLoggedIn, userProfileData) => {
     const loggedInMessage = document.getElementById('logged-in-message');
     if (loggedInMessage) {
-        if (isLoggedIn && userProfileData) {
-            const userName = `${userProfileData.firstName} ${userProfileData.lastName}`;
-            loggedInMessage.textContent = `Vitajte, ${userName}!`;
+        if (isLoggedIn && userProfileData && userProfileData.role !== 'anonymous') {
+            const userName = `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim();
+            if (userName) {
+                loggedInMessage.textContent = `Vitajte, ${userName}!`;
+            } else {
+                loggedInMessage.textContent = `Vitajte!`;
+            }
             loggedInMessage.classList.remove('hidden');
+            console.log(`Správa pre prihláseného používateľa bola zobrazená.`);
         } else {
             loggedInMessage.classList.add('hidden');
+            console.log(`Správa pre prihláseného používateľa bola skrytá.`);
         }
-        console.log(`Správa pre prihláseného používateľa bola ${isLoggedIn ? 'zobrazená' : 'skrytá'}.`);
     }
 };
 
@@ -285,27 +308,31 @@ const updateRegistrationStatusAndButtons = () => {
         console.log("Hlavička bola zobrazená po načítaní dát.");
     }
 
-    const isLoggedIn = !!window.globalUserProfileData;
+    // Kľúčová zmena: Použijeme isReallyLoggedIn() namiesto priamej kontroly window.globalUserProfileData
+    const isLoggedIn = isReallyLoggedIn();
+    
+    console.log(`Stav prihlásenia pre UI: ${isLoggedIn ? 'PRIHLÁSENÝ (email používateľ)' : 'NEPRIHLÁSENÝ/ANONYMNÝ'}`);
 
-    // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
+    // Ak je používateľ naozaj prihlásený (email používateľ), zobrazí sa mu len uvítacia správa a Moja zóna
     if (isLoggedIn) {
         toggleLoggedInMessage(true, window.globalUserProfileData);
-        toggleRegistrationButton(false); // Skryjeme registráciu
+        toggleRegistrationButton(false); // Skryjeme registráciu pre prihlásených
     } else {
-        // Ak nie je prihlásený, zobrazíme mu stav registrácie s prioritou kategórií
+        // Anonymný alebo neprihlásený používateľ - zobrazíme mu stav registrácie s prioritou kategórií
         toggleLoggedInMessage(false);
         updateRegistrationStatusText(window.registrationDates); // Táto funkcia už zohľadňuje hasCategories
     }
 
-    // Po nastavení celého UI aktualizujeme aj tlačidlo prihlásenia
+    // Po nastavení celého UI aktualizujeme aj tlačidlo prihlásenia (anonymný = false)
     updateLoginButton(isLoggedIn);
 };
-
 
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
+    console.log("Je používateľ anonymný?", window.isAnonymousUser);
+    console.log("Profil používateľa:", window.globalUserProfileData);
     // Spustíme listener pre registračné dáta a kategórie, ktorý sa postará o celú logiku zobrazenia
     setupRegistrationDataListener();
 });
