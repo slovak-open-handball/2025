@@ -305,7 +305,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                 gender: 'Pohlavie',
                 birthDate: 'Dátum narodenia',
                 tshirtSize: 'Veľkosť trička',
-                volunteerRoles: 'Dobrovoľnícke role',
+                volunteerRoles: 'Dobrovoľnícka aktivita',
                 selectedDates: 'Dostupné dátumy',
                 note: 'Poznámka',
                 phone: 'Telefónne číslo'
