@@ -14,7 +14,7 @@ window.as = null;
 window.EmailAuthProvider = null;
 window.verifyBeforeUpdateEmail = null;
 window.isRegisteringAdmin = false;
-window.isAnonymousUser = false; // NOVÁ: Indikuje, či je používateľ anonymný
+window.isAnonymousUser = false; // Indikuje, či je používateľ anonymný
 
 // Import necessary Firebase functions
 import {
@@ -25,19 +25,18 @@ import {
     onAuthStateChanged,
     signOut,
     signInWithEmailAndPassword,
-    signInAnonymously, // NOVÝ IMPORT
+    signInAnonymously,
     reauthenticateWithCredential,
     updateEmail,
     EmailAuthProvider,
     verifyBeforeUpdateEmail,
-    linkWithCredential // Pre upgrade z anonymného na trvalý účet
+    linkWithCredential
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore,
     doc,
     getDoc,
-    onSnapshot,
-    setDoc // Pre vytvorenie anonymného profilu
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Vložený konfiguračný objekt
@@ -84,28 +83,13 @@ let app;
 let db;
 let auth;
 
-// ===== NOVÁ FUNKCIA PRE AUTOMATICKÚ ANONYMOUN AUTENTIFIKÁCIU =====
+// ===== FUNKCIA PRE AUTOMATICKÚ ANONYMOUN AUTENTIFIKÁCIU =====
 const autoSignInAnonymously = async () => {
     try {
         console.log("AuthManager: Pokus o anonymné prihlásenie...");
         const userCredential = await signInAnonymously(auth);
-        console.log("AuthManager: Anonymné prihlásenie úspešné:", userCredential.user.uid);
-        
-        // Vytvorenie základného profilu pre anonymného používateľa v Firestore
-        const anonymousUserRef = doc(db, `users/${userCredential.user.uid}`);
-        const anonymousUserSnap = await getDoc(anonymousUserRef);
-        
-        if (!anonymousUserSnap.exists()) {
-            // Vytvoríme anonymný profil
-            await setDoc(anonymousUserRef, {
-                uid: userCredential.user.uid,
-                role: 'anonymous',
-                approved: true,
-                createdAt: new Date().toISOString(),
-                isAnonymous: true
-            });
-            console.log("AuthManager: Anonymný profil vytvorený v databáze");
-        }
+        console.log("AuthManager: Anonymné prihlásenie úspešné - READ-ONLY režim");
+        console.log("AuthManager: UID anonymného používateľa:", userCredential.user.uid);
         
         return userCredential.user;
     } catch (error) {
@@ -129,15 +113,16 @@ window.upgradeAnonymousToPermanent = async (email, password, userData) => {
         const userCredential = await linkWithCredential(auth.currentUser, credential);
         console.log("Účet úspešne upgradovaný na trvalý");
         
-        // Aktualizácia profilu v databáze
+        // Vytvorenie profilu v databáze (prvýkrát)
         const userRef = doc(db, `users/${userCredential.user.uid}`);
         await setDoc(userRef, {
             ...userData,
             uid: userCredential.user.uid,
             email: email,
             isAnonymous: false,
+            createdAt: new Date().toISOString(),
             upgradedAt: new Date().toISOString()
-        }, { merge: true });
+        });
         
         return { success: true, user: userCredential.user };
     } catch (error) {
@@ -151,9 +136,6 @@ const setupFirebase = () => {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        
-        // Povolenie anonymnej autentifikácie
-        auth.settings = { ...auth.settings, persistence: 'local' };
         
         console.log("AuthManager: Firebase inicializovaný.");
 
@@ -187,6 +169,37 @@ const handleAuthState = async () => {
             
             window.isAnonymousUser = user.isAnonymous === true;
             
+            // PRE ANONYMNYCH POUŽÍVATEĽOV - žiadne hľadanie dokumentu v databáze
+            if (user.isAnonymous === true) {
+                console.log("AuthManager: Anonymný používateľ - READ-ONLY režim, nevyhľadávam profil v databáze");
+                
+                // Vytvoríme dummy profil pre anonymného používateľa
+                window.globalUserProfileData = {
+                    id: user.uid,
+                    uid: user.uid,
+                    role: 'anonymous',
+                    isAnonymous: true,
+                    approved: true
+                };
+                
+                // Udalosť pre ostatné skripty
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { 
+                    detail: window.globalUserProfileData 
+                }));
+                
+                // Kontrola prístupu na admin stránky
+                const currentPath = window.location.pathname;
+                if (blockedPages.some(page => currentPath.includes(page))) {
+                    console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku, presmerujem na index");
+                    window.location.href = `${appBasePath}/index.html`;
+                }
+                
+                return; // Ukončíme funkciu - nehľadáme dokument v databáze
+            }
+            
+            // ===== KÓD PRE PRIHLÁSENÝCH (NEAONYMNYCH) POUŽÍVATEĽOV =====
+            console.log("AuthManager: Neprihlásený používateľ - načítavam profil z databázy");
+            
             // Správna cesta k profilovému dokumentu
             const userDocRef = doc(db, `users/${user.uid}`);
             
@@ -203,7 +216,8 @@ const handleAuthState = async () => {
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
+                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený. Odhlasujem používateľa.");
+                            await signOut(auth);
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                             return;
@@ -218,21 +232,6 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
-                            // ŠPECIÁLNA LOGIKA PRE ANONYMNYCH POUŽÍVATEĽOV
-                            if (user.isAnonymous || userProfileData.role === 'anonymous') {
-                                console.log("AuthManager: Anonymný používateľ - read-only režim");
-                                window.globalUserProfileData = userProfileData;
-                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                
-                                // Anonymní používatelia nemôžu pristupovať na admin stránky
-                                const currentPath = window.location.pathname;
-                                if (blockedPages.some(page => currentPath.includes(page))) {
-                                    console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku");
-                                    window.location.href = `${appBasePath}/index.html`;
-                                }
-                                return;
-                            }
-                            
                             // Ak prebieha registrácia admina
                             if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
                                 console.log("AuthManager: Prebieha registrácia administrátora.");
@@ -243,12 +242,14 @@ const handleAuthState = async () => {
 
                             // Neschválený administrátor
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
-                                console.warn("AuthManager: Nepovolený administrátor detekovaný.");
-                                // ... email logika zostáva rovnaká
+                                console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa.");
+                                
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                                     window.location.href = `${appBasePath}/login.html?status=unapproved_admin`; 
+                                }).catch((error) => {
+                                    console.error("AuthManager: Chyba pri odhlasovaní:", error);
                                 });
                                 return;
                             } 
@@ -260,11 +261,11 @@ const handleAuthState = async () => {
                                 const loginPath = `${appBasePath}/login.html`;
 
                                 if (currentPath.includes(loginPath)) {
-                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
+                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
                                 } 
                                 else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
-                                    console.log(`AuthManager: Používateľ nemá prístup na túto stránku.`);
+                                    console.log(`AuthManager: Používateľ typu '${userProfileData.role}' sa pokúsil o prístup na zablokovanú stránku. Presmerovávam.`);
                                     window.location.href = targetPathMyData;
                                 }
                             }
