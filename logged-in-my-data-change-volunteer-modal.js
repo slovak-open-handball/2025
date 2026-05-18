@@ -482,7 +482,7 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
             React.createElement(
                 'div',
                 { className: 'sticky top-0 flex items-center justify-between p-4 border-b', style: { backgroundColor: roleColor } },
-                React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Upraviť dobrovoľnícke údaje'),
+                React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Upraviť osobné údaje'),
                 React.createElement(
                     'button',
                     {
