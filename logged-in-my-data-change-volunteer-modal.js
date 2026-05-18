@@ -297,18 +297,18 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
         // Funkcia na formátovanie názvu poľa pre výpis
         const getFieldName = (field) => {
             const fieldNames = {
-                street: 'Ulica',
-                houseNumber: 'Číslo domu',
-                city: 'Mesto',
+                street: 'ulice',
+                houseNumber: 'čísla domu',
+                city: 'mesta',
                 postalCode: 'PSČ',
-                country: 'Krajina',
-                gender: 'Pohlavie',
-                birthDate: 'Dátum narodenia',
-                tshirtSize: 'Veľkosť trička',
-                volunteerRoles: 'Dobrovoľnícka aktivita',
-                selectedDates: 'Dostupné dátumy',
-                note: 'Poznámka',
-                phone: 'Telefónne číslo'
+                country: 'krajiny',
+                gender: 'pohlavia',
+                birthDate: 'dátumu narodenia',
+                tshirtSize: 'veľkosti trička',
+                volunteerRoles: 'dobrovoľníckej aktivity',
+                selectedDates: 'dostupného dátumu',
+                note: 'poznámky',
+                phone: 'telefónneho čísla'
             };
             return fieldNames[field] || field;
         };
