@@ -266,6 +266,154 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
         const contactPhoneNumber = `${selectedDialCode.dialCode}${formData.phone}`;
         const userId = userProfileData.id;
         
+        // --- PRIPRAVA ZMIEN PRE NOTIFIKÁCIU ---
+        // Získame pôvodné údaje pred zmenou
+        const originalData = {
+            street: userProfileData.street || '',
+            houseNumber: userProfileData.houseNumber || '',
+            city: userProfileData.city || '',
+            postalCode: userProfileData.postalCode || '',
+            country: userProfileData.country || '',
+            gender: userProfileData.gender || '',
+            birthDate: userProfileData.birthDate || '',
+            tshirtSize: userProfileData.tshirtSize || '',
+            volunteerRoles: userProfileData.volunteerRoles || [],
+            selectedDates: userProfileData.selectedDates || [],
+            note: userProfileData.note || '',
+            phone: userProfileData.contactPhoneNumber || '',
+        };
+        
+        // Pripravíme si zoznam zmien pre notifikáciu
+        const changeMessages = [];
+        
+        // Pomocná funkcia na normalizáciu hodnôt (ošetrenie medzier a prázdnych hodnôt)
+        const getNormalizedValue = (value) => {
+            if (Array.isArray(value)) {
+                return value.sort().join(', ');
+            }
+            return String(value || '').trim();
+        };
+        
+        // Funkcia na formátovanie názvu poľa pre výpis
+        const getFieldName = (field) => {
+            const fieldNames = {
+                street: 'Ulica',
+                houseNumber: 'Číslo domu',
+                city: 'Mesto',
+                postalCode: 'PSČ',
+                country: 'Krajina',
+                gender: 'Pohlavie',
+                birthDate: 'Dátum narodenia',
+                tshirtSize: 'Veľkosť trička',
+                volunteerRoles: 'Dobrovoľnícke role',
+                selectedDates: 'Dostupné dátumy',
+                note: 'Poznámka',
+                phone: 'Telefónne číslo'
+            };
+            return fieldNames[field] || field;
+        };
+        
+        // Funkcia na formátovanie hodnoty pre výpis
+        const formatValueForDisplay = (field, value) => {
+            if (field === 'gender') {
+                return value === 'male' ? 'Muž' : (value === 'female' ? 'Žena' : value);
+            }
+            if (field === 'birthDate' && value) {
+                try {
+                    return new Date(value).toLocaleDateString('sk-SK');
+                } catch (e) {
+                    return value;
+                }
+            }
+            if (field === 'selectedDates' && Array.isArray(value)) {
+                return value.map(date => {
+                    try {
+                        return new Date(date).toLocaleDateString('sk-SK');
+                    } catch (e) {
+                        return date;
+                    }
+                }).join(', ');
+            }
+            if (field === 'volunteerRoles' && Array.isArray(value)) {
+                return value.join(', ');
+            }
+            if (field === 'phone') {
+                // Formátovanie telefónneho čísla
+                const cleanNumber = value.replace(/\s/g, '');
+                const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+                let dialCode = '';
+                let restOfNumber = '';
+                for (const country of sortedDialCodes) {
+                    if (cleanNumber.startsWith(country.dialCode)) {
+                        dialCode = country.dialCode;
+                        restOfNumber = cleanNumber.substring(country.dialCode.length);
+                        break;
+                    }
+                }
+                if (!dialCode) {
+                    return cleanNumber || 'prázdne';
+                }
+                const parts = [];
+                for (let i = 0; i < restOfNumber.length; i += 3) {
+                    parts.push(restOfNumber.substring(i, i + 3));
+                }
+                return `${dialCode} ${parts.join(' ')}`;
+            }
+            return value || 'prázdne';
+        };
+        
+        // Kontrola zmien v jednotlivých poliach
+        // Adresa
+        if (getNormalizedValue(formData.street) !== getNormalizedValue(originalData.street)) {
+            changeMessages.push(`Zmena ${getFieldName('street')}: z '${formatValueForDisplay('street', originalData.street)}' na '${formatValueForDisplay('street', formData.street)}'`);
+        }
+        if (getNormalizedValue(formData.houseNumber) !== getNormalizedValue(originalData.houseNumber)) {
+            changeMessages.push(`Zmena ${getFieldName('houseNumber')}: z '${formatValueForDisplay('houseNumber', originalData.houseNumber)}' na '${formatValueForDisplay('houseNumber', formData.houseNumber)}'`);
+        }
+        if (getNormalizedValue(formData.city) !== getNormalizedValue(originalData.city)) {
+            changeMessages.push(`Zmena ${getFieldName('city')}: z '${formatValueForDisplay('city', originalData.city)}' na '${formatValueForDisplay('city', formData.city)}'`);
+        }
+        if (getNormalizedValue(formData.postalCode.replace(/\s/g, '')) !== getNormalizedValue(originalData.postalCode.replace(/\s/g, ''))) {
+            changeMessages.push(`Zmena ${getFieldName('postalCode')}: z '${formatValueForDisplay('postalCode', originalData.postalCode)}' na '${formatValueForDisplay('postalCode', formData.postalCode)}'`);
+        }
+        if (getNormalizedValue(formData.country) !== getNormalizedValue(originalData.country)) {
+            changeMessages.push(`Zmena ${getFieldName('country')}: z '${formatValueForDisplay('country', originalData.country)}' na '${formatValueForDisplay('country', formData.country)}'`);
+        }
+        
+        // Osobné údaje
+        if (getNormalizedValue(formData.gender) !== getNormalizedValue(originalData.gender)) {
+            changeMessages.push(`Zmena ${getFieldName('gender')}: z '${formatValueForDisplay('gender', originalData.gender)}' na '${formatValueForDisplay('gender', formData.gender)}'`);
+        }
+        if (getNormalizedValue(formData.birthDate) !== getNormalizedValue(originalData.birthDate)) {
+            changeMessages.push(`Zmena ${getFieldName('birthDate')}: z '${formatValueForDisplay('birthDate', originalData.birthDate)}' na '${formatValueForDisplay('birthDate', formData.birthDate)}'`);
+        }
+        
+        // Telefónne číslo (porovnávame celé číslo s predvoľbou)
+        const newFullPhone = `${selectedDialCode.dialCode}${formData.phone}`;
+        if (getNormalizedValue(newFullPhone) !== getNormalizedValue(originalData.phone)) {
+            changeMessages.push(`Zmena ${getFieldName('phone')}: z '${formatValueForDisplay('phone', originalData.phone)}' na '${formatValueForDisplay('phone', newFullPhone)}'`);
+        }
+        
+        // Veľkosť trička
+        if (getNormalizedValue(formData.tshirtSize) !== getNormalizedValue(originalData.tshirtSize)) {
+            changeMessages.push(`Zmena ${getFieldName('tshirtSize')}: z '${formatValueForDisplay('tshirtSize', originalData.tshirtSize)}' na '${formatValueForDisplay('tshirtSize', formData.tshirtSize)}'`);
+        }
+        
+        // Dobrovoľnícke role (porovnanie polí)
+        if (JSON.stringify(formData.volunteerRoles.sort()) !== JSON.stringify(originalData.volunteerRoles.sort())) {
+            changeMessages.push(`Zmena ${getFieldName('volunteerRoles')}: z '[${formatValueForDisplay('volunteerRoles', originalData.volunteerRoles)}]' na '[${formatValueForDisplay('volunteerRoles', formData.volunteerRoles)}]'`);
+        }
+        
+        // Vybrané dátumy
+        if (JSON.stringify(formData.selectedDates.sort()) !== JSON.stringify(originalData.selectedDates.sort())) {
+            changeMessages.push(`Zmena ${getFieldName('selectedDates')}: z '[${formatValueForDisplay('selectedDates', originalData.selectedDates)}]' na '[${formatValueForDisplay('selectedDates', formData.selectedDates)}]'`);
+        }
+        
+        // Poznámka
+        if (getNormalizedValue(formData.note) !== getNormalizedValue(originalData.note)) {
+            changeMessages.push(`Zmena ${getFieldName('note')}: z '${formatValueForDisplay('note', originalData.note)}' na '${formatValueForDisplay('note', formData.note)}'`);
+        }
+        
         try {
             const db = window.db;
             const userRef = doc(db, 'users', userId);
@@ -284,6 +432,16 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                 note: formData.note,
                 contactPhoneNumber: contactPhoneNumber,
             });
+            
+            // --- VYTVORENIE NOTIFIKÁCIE PRE SPRÁVCU ---
+            // Ak došlo k nejakým zmenám, vytvoríme záznam v kolekcii 'notifications'
+            if (changeMessages.length > 0) {
+                await addDoc(collection(db, 'notifications'), {
+                    userEmail: userProfileData.email, // E-mail dobrovoľníka
+                    changes: changeMessages,          // Pole správ so zmenami
+                    timestamp: new Date().toISOString(), // Dátum a čas zmeny
+                });
+            }
             
             window.showGlobalNotification('Dobrovoľnícke údaje boli úspešne aktualizované.', 'success');
             onClose();
