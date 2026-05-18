@@ -172,7 +172,7 @@ let isTeamNameReplacerInitialized = false;
             category: match.categoryName || 'neurčená',
             group: match.groupName || 'neurčená',
             date: matchDate,
-            dateStr: matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený',
+            dateStr: matchDate ? matchDate.toLocaleDateString('sk-SK') : 'dátum neurčený',
             status: match.status,
             isCompleted: match.status === 'completed'
         };
@@ -1978,7 +1978,7 @@ let isTeamNameReplacerInitialized = false;
                     log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                     normal.forEach((match, idx) => {
                         const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
-                        const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
+                        const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'dátum neurčený';
                         
                         if (match.status === 'completed') {
                             log(`   ${idx+1}. ✅ ${match.homeTeamName} ${match.homeScore || 0}:${match.awayScore || 0} ${match.awayTeamName} (${dateStr})`);
