@@ -1,5 +1,5 @@
 // logged-in-my-data-change-volunteer-modal.js
-import { doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, onSnapshot, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from "./countryDialCodes.js";
 
 const formatPostalCode = (value) => {
