@@ -1793,7 +1793,6 @@ let isTeamNameReplacerInitialized = false;
             });
         }
         
-        const totalAdvancedMatches = advancedMatches.length;
         const completedAdvancedCount = allMatchesForComparison.filter(m => !m.isTransferred && m.status === 'completed').length;
         const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
         const isFullyCompleted = completionPercentage === 100;
