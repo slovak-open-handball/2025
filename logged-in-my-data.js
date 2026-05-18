@@ -407,41 +407,61 @@ const MyDataApp = ({ userProfileData }) => {
                 return; 
             }
             
-            // SPRÁVNA KONVERZIA DÁTUMU - rovnaká ako v UsersManagementApp
+            // SPRÁVNA KONVERZIA DÁTUMU - ošetrenie pre Timestamp aj Date
             let deadlineDate = null;
             
             // Najprv skúsime získať dátum z userProfileData
             if (userProfileData?.dataEditDeadline) {
-                if (userProfileData.dataEditDeadline.toDate) {
+                // Ak je to Firebase Timestamp objekt (má toDate metódu)
+                if (typeof userProfileData.dataEditDeadline.toDate === 'function') {
                     deadlineDate = userProfileData.dataEditDeadline.toDate();
-                } else if (userProfileData.dataEditDeadline instanceof Date) {
+                } 
+                // Ak je to už Date objekt
+                else if (userProfileData.dataEditDeadline instanceof Date) {
                     deadlineDate = userProfileData.dataEditDeadline;
-                } else if (userProfileData.dataEditDeadline.seconds) {
-                    // Pre prípad, že je to Firestore Timestamp objekt
+                } 
+                // Ak je to objekt s seconds (Firestore Timestamp v inej podobe)
+                else if (userProfileData.dataEditDeadline.seconds !== undefined) {
                     deadlineDate = new Date(userProfileData.dataEditDeadline.seconds * 1000);
-                } else {
+                } 
+                // Ak je to string alebo číslo
+                else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
             }
             
             // Ak nemáme deadline z userProfileData, použijeme z settings
             if (!deadlineDate && settingsRegistrationDates?.dataEditDeadline) {
-                if (settingsRegistrationDates.dataEditDeadline.toDate) {
+                if (typeof settingsRegistrationDates.dataEditDeadline.toDate === 'function') {
                     deadlineDate = settingsRegistrationDates.dataEditDeadline.toDate();
-                } else if (settingsRegistrationDates.dataEditDeadline instanceof Date) {
+                } 
+                else if (settingsRegistrationDates.dataEditDeadline instanceof Date) {
                     deadlineDate = settingsRegistrationDates.dataEditDeadline;
-                } else if (settingsRegistrationDates.dataEditDeadline.seconds) {
+                } 
+                else if (settingsRegistrationDates.dataEditDeadline.seconds !== undefined) {
                     deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline.seconds * 1000);
-                } else {
+                } 
+                else {
                     deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline);
                 }
+            }
+            
+            // KONTROLA: Vypíšeme deadline a aktuálny čas pre debug
+            if (deadlineDate) {
+                console.log('=== DEADLINE CHECK ===');
+                console.log('Deadline date:', deadlineDate);
+                console.log('Deadline timestamp:', deadlineDate.getTime());
+                console.log('Current time:', new Date());
+                console.log('Current timestamp:', Date.now());
+                console.log('Is now <= deadline?', Date.now() <= deadlineDate.getTime());
+                console.log('User role:', userProfileData.role);
             }
             
             const deadlineMillis = deadlineDate ? deadlineDate.getTime() : null;
             
             if (deadlineMillis !== null) { 
                 const nowMillis = Date.now();
-                // Pre referee a volunteer vždy umožníme editáciu (ako v prvom kóde)
+                // Pre referee a volunteer vždy umožníme editáciu
                 if (nowMillis <= deadlineMillis || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') { 
                     setCanEdit(true); 
                     if (timer) clearTimeout(timer);
