@@ -956,6 +956,8 @@ let isTeamNameReplacerInitialized = false;
     // a použite ho pre compareTeams namiesto pôvodných allGroupMatches
     
     function createGroupTable(categoryName, groupName) {
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        
         // Získame VŠETKY zápasy v skupine (aj neodohrané)
         const allGroupMatches = getGroupMatches(categoryName, groupName);
         
@@ -1329,6 +1331,8 @@ let isTeamNameReplacerInitialized = false;
     // OPRAVENÁ FUNKCIA: createAdvancedGroupTable - SPRÁVNE MAPOVANIE NÁZVOV PRE ZÁPASY
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        
         // NAJPRV NAČÍTAME TYPY SKUPÍN
         if (!groupsCache) {
             log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
