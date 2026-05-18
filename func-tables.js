@@ -1627,42 +1627,36 @@ let isTeamNameReplacerInitialized = false;
             }
         }
         
-        // Spracovanie zápasov v nadstavbovej skupine pre štatistiky (už máme v allMatchesForComparison)
         for (const match of allMatchesForComparison) {
-            if (match.isTransferred) continue; // Prenesené už spracované
+            if (match.isTransferred) continue; // Preskočíme prenesené (už spracované)
             if (match.status !== 'completed') continue;
-            
+    
             const homeTeamStats = teamsInAdvanced.find(t => t.name === match.homeTeamName);
             const awayTeamStats = teamsInAdvanced.find(t => t.name === match.awayTeamName);
             
             if (homeTeamStats && awayTeamStats) {
-                const pairKey = match.homeTeamName < match.awayTeamName ? 
-                    `${match.homeTeamName}|${match.awayTeamName}` : `${match.awayTeamName}|${match.homeTeamName}`;
+                // 🔥 ODSTRÁNIME KONTROLU processedPairs - každý zápas v nadstavbe sa počíta zvlášť!
                 
-                if (!processedPairs.has(pairKey)) {
-                    processedPairs.add(pairKey);
-                    
-                    homeTeamStats.played++;
-                    awayTeamStats.played++;
-                    homeTeamStats.goalsFor += match.homeScore;
-                    homeTeamStats.goalsAgainst += match.awayScore;
-                    awayTeamStats.goalsFor += match.awayScore;
-                    awayTeamStats.goalsAgainst += match.homeScore;
-                    
-                    if (match.homeScore > match.awayScore) {
-                        homeTeamStats.wins++;
-                        awayTeamStats.losses++;
-                        homeTeamStats.points += pointsForWin;
-                    } else if (match.awayScore > match.homeScore) {
-                        awayTeamStats.wins++;
-                        homeTeamStats.losses++;
-                        awayTeamStats.points += pointsForWin;
-                    } else {
-                        homeTeamStats.draws++;
-                        awayTeamStats.draws++;
-                        homeTeamStats.points += 1;
-                        awayTeamStats.points += 1;
-                    }
+                homeTeamStats.played++;
+                awayTeamStats.played++;
+                homeTeamStats.goalsFor += match.homeScore;
+                homeTeamStats.goalsAgainst += match.awayScore;
+                awayTeamStats.goalsFor += match.awayScore;
+                awayTeamStats.goalsAgainst += match.homeScore;
+                
+                if (match.homeScore > match.awayScore) {
+                    homeTeamStats.wins++;
+                    awayTeamStats.losses++;
+                    homeTeamStats.points += pointsForWin;
+                } else if (match.awayScore > match.homeScore) {
+                    awayTeamStats.wins++;
+                    homeTeamStats.losses++;
+                    awayTeamStats.points += pointsForWin;
+                } else {
+                    homeTeamStats.draws++;
+                    awayTeamStats.draws++;
+                    homeTeamStats.points += 1;
+                    awayTeamStats.points += 1;
                 }
             }
         }
