@@ -1,12 +1,14 @@
 // authentication.js
 // Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
 // overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
+// TERAZ S APP CHECK PRE OCHRANU PROTI ČÍTANIU Z INÝCH STRÁNOK
 
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
 window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
 window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
 window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
+window.appCheck = null; // Inštancia Firebase App Check
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 window.reauthenticateWithCredential = null; // Funkcia pre re-autentifikáciu
 window.as = null; // Funkcia na zmenu emailu
@@ -21,7 +23,7 @@ import {
 import {
     getAuth,
     onAuthStateChanged,
-    signOut, // Import signOut function
+    signOut,
     signInWithEmailAndPassword,
     reauthenticateWithCredential,
     updateEmail,
@@ -31,9 +33,14 @@ import {
 import {
     getFirestore,
     doc,
-    getDoc, // Potrebujeme getDoc pre jednorazové načítanie
+    getDoc,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    initializeAppCheck,
+    ReCaptchaV3Provider,
+    getToken
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
 // Vložený konfiguračný objekt, ktorý ste poskytli
 const firebaseConfig = {
@@ -54,39 +61,90 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 // Extrahovanie roku z appId alebo predvolené nastavenie
 const getAppBasePath = () => {
-    const appYearMatch = appId.match(/(\d{4})/); // Nájde prvú štvorcifernú skupinu
-    const appYear = appYearMatch ? appYearMatch[1] : '2025'; // Použije nájdený rok alebo predvolené '2025'
+    const appYearMatch = appId.match(/(\d{4})/);
+    const appYear = appYearMatch ? appYearMatch[1] : '2025';
     return `/${appYear}`;
 };
 
-const appBasePath = getAppBasePath(); // Získanie dynamickej základnej cesty
+const appBasePath = getAppBasePath();
 
 // Zoznam stránok prístupných len pre adminov
 const blockedPages = [
     'logged-in-add-categories.html',
     'logged-in-add-groups.html',
-    'logged-in-teams-in-groups.html',
-    'logged-in-tournament-settings.html',
     'logged-in-all-registrations.html',
-    'logged-in-users.html',
-    'logged-in-notifications.html',
-    'logged-in-teams-in-groups.html',
     'logged-in-map.html',
-    'logged-in-teams-in-accommodation.html'
+    'logged-in-matches-hall.html',
+    'logged-in-matches.html',
+    'logged-in-my-data.html',
+    'logged-in-my-settings.html',
+    'logged-in-notifications.html',
+    'logged-in-rosters.html',
+    'logged-in-teams-in-accommodation.html',
+    'logged-in-teams-in-groups.html',
+    'logged-in-template.html',
+    'logged-in-tournament-settings.html',
+    'logged-in-users.html',
 ];
-
 
 // Inicializácia Firebase aplikácie
 let app;
 let db;
 let auth;
 
+// ===== NOVÁ FUNKCIA PRE APP CHECK =====
+// ReCaptcha site key - musíte si vytvoriť vlastný v Google Cloud Console
+// https://console.cloud.google.com/security/recaptcha
+// Pre vývoj môžete použiť demo kľúč, ale pre produkciu si vytvorte vlastný
+const RECAPTCHA_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'; // DEMO KEY - NAHRAĎTE VAŠÍM!
+
+// Funkcia na overenie, či App Check beží v debug móde
+const isDebugMode = () => {
+    return window.location.hostname === 'localhost' || 
+           window.location.hostname === '127.0.0.1' ||
+           window.location.search.includes('debug=true');
+};
+
 const setupFirebase = () => {
     try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        console.log("AuthManager: Firebase inicializovaný.");
+        
+        // INICIALIZÁCIA APP CHECK PRE OCHRANU PROTI ČÍTANIU Z INÝCH STRÁNOK
+        if (typeof window !== 'undefined') {
+            // Nastavenie debug tokenu pre vývoj
+            if (isDebugMode()) {
+                self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+                console.log("App Check: Debug mód zapnutý - používam debug token");
+            } else {
+                self.FIREBASE_APPCHECK_DEBUG_TOKEN = false;
+            }
+            
+            // Inicializácia App Check s ReCaptcha v3
+            try {
+                const appCheck = initializeAppCheck(app, {
+                    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+                    isTokenAutoRefreshEnabled: true
+                });
+                window.appCheck = appCheck;
+                console.log("App Check: Úspešne inicializovaný s ReCaptcha");
+                
+                // Testovacie získanie tokenu (pre debug)
+                if (isDebugMode()) {
+                    getToken(appCheck, { forceRefresh: true }).then(token => {
+                        console.log("App Check: Debug token získaný:", token);
+                    }).catch(err => {
+                        console.error("App Check: Chyba pri získavaní debug tokenu:", err);
+                    });
+                }
+            } catch (appCheckError) {
+                console.error("App Check: Chyba pri inicializácii:", appCheckError);
+                // App Check nie je kritický pre fungovanie aplikácie, pokračujeme
+            }
+        }
+        
+        console.log("AuthManager: Firebase inicializovaný s App Check podporou.");
 
         // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
@@ -96,6 +154,58 @@ const setupFirebase = () => {
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
+        
+        // ===== NOVÁ FUNKCIA PRE KONTROLU APP CHECK TOKENU =====
+        window.verifyAppCheckToken = async () => {
+            if (!window.appCheck) {
+                console.warn("App Check nie je inicializovaný");
+                return false;
+            }
+            
+            try {
+                const token = await getToken(window.appCheck, { forceRefresh: false });
+                console.log("App Check token je platný:", token.token);
+                return true;
+            } catch (error) {
+                console.error("App Check token je neplatný:", error);
+                return false;
+            }
+        };
+        
+        // ===== KONTROLA PÔVODU STRÁNKY (DOMÉNY) =====
+        window.validatePageOrigin = () => {
+            const allowedOrigins = [
+                window.location.origin, // Aktuálna doména
+                // Pridajte vaše ďalšie povolené domény:
+                // 'https://vasastranka.sk',
+                // 'https://www.vasastranka.sk'
+            ];
+            
+            // Kontrola, či sme na správnej doméne
+            const currentOrigin = window.location.origin;
+            if (!allowedOrigins.includes(currentOrigin)) {
+                console.error("Neoprávnený prístup: Stránka beží na nesprávnej doméne:", currentOrigin);
+                document.body.innerHTML = '<h1>Prístup zamietnutý</h1><p>Táto stránka je dostupná len z autorizovaných domén.</p>';
+                throw new Error("Neoprávnená doména");
+            }
+            
+            // Kontrola referrer (ak existuje)
+            if (document.referrer && document.referrer !== '') {
+                const isAllowedReferrer = allowedOrigins.some(origin => document.referrer.startsWith(origin));
+                if (!isAllowedReferrer) {
+                    console.warn("Podozrivý referrer - možný pokus o krádež dát:", document.referrer);
+                    // Tu môžete pridať dodatočnú logiku - napr. odhlásenie používateľa
+                    return false;
+                }
+            }
+            return true;
+        };
+        
+        // Spustenie validácie pôvodu
+        if (!window.validatePageOrigin()) {
+            console.error("Validácia pôvodu stránky zlyhala!");
+        }
+        
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
@@ -113,8 +223,8 @@ const handleAuthState = async () => {
             
             // Funkcia na opakované pokusy o načítanie dokumentu
             const loadUserProfileData = async (retries = 0) => {
-                const MAX_RETRIES = 5; // Maximálny počet pokusov
-                const RETRY_DELAY = 500; // Oneskorenie medzi pokusmi v ms
+                const MAX_RETRIES = 5;
+                const RETRY_DELAY = 500;
 
                 try {
                     const docSnap = await getDoc(userDocRef);
@@ -123,7 +233,7 @@ const handleAuthState = async () => {
                         if (retries < MAX_RETRIES) {
                             console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}. Opakujem za ${RETRY_DELAY / 1000}s.`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                            return loadUserProfileData(retries + 1); // Rekurzívny volanie s zvýšením počtu pokusov
+                            return loadUserProfileData(retries + 1);
                         } else {
                             console.error("AuthManager: Dokument profilu používateľa nebol nájdený ani po opakovaných pokusoch. Pravdepodobne nastal problém pri zápise.");
                             window.globalUserProfileData = null;
@@ -141,15 +251,15 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
-                            // Ak prebieha registrácia admina, potlačíme akékoľvek odhlasovanie alebo presmerovanie v authentication.js.
+                            // Ak prebieha registrácia admina, potlačíme akékoľvek odhlasovanie alebo presmerovanie
                             if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
                                 console.log("AuthManager: Prebieha registrácia administrátora. Automatické odhlásenie/presmerovanie z authentication.js je potlačené.");
                                 window.globalUserProfileData = userProfileData;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                return; // Zastaví ďalšie spracovanie pre tohto používateľa
+                                return;
                             }
 
-                            // Pôvodná logika pre neschváleného administrátora zostáva
+                            // Pôvodná logika pre neschváleného administrátora
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný. Odhlasujem používateľa a posielam e-mail s pripomenutím.");
 
@@ -164,9 +274,9 @@ const handleAuthState = async () => {
                                     lastName: adminLastName,
                                 };
 
-                                let innerRetryCount = 0; // Pre retry odosielania emailu
+                                let innerRetryCount = 0;
                                 const innerMaxRetries = 3;
-                                const innerBaseDelay = 1000; // 1 second
+                                const innerBaseDelay = 1000;
 
                                 const sendReminderEmail = async () => {
                                     try {
@@ -176,7 +286,7 @@ const handleAuthState = async () => {
                                             headers: {
                                                 'Content-Type': 'application/json',
                                             },
-                                            mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
+                                            mode: 'no-cors',
                                             body: JSON.stringify(emailPayload)
                                         });
                                         console.log("AuthManager: Apps Script odpoveď pre pripomenutie schválenia (no-cors):", response);
@@ -192,7 +302,7 @@ const handleAuthState = async () => {
                                         }
                                     }
                                 };
-                                sendReminderEmail(); // Iniciovanie odoslania e-mailu
+                                sendReminderEmail();
 
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
@@ -201,26 +311,22 @@ const handleAuthState = async () => {
                                 }).catch((error) => {
                                     console.error("AuthManager: Chyba pri odhlasovaní neschváleného administrátora:", error);
                                 });
-                                return; // Zastaví ďalšie spracovanie pre tohto používateľa
+                                return;
                             } 
-                            // NOVÁ LOGIKA: Presmerovanie schválených používateľov (admin, user, hall s approved: true)
-                            // LEN AK SÚ NA PRIHLASOVACEJ STRÁNKE, ALEBO AK NEMÁJÚ PRÍSTUP NA STRÁNKY PRE ADMINA
+                            // Logika pre schválených používateľov
                             else if (userProfileData.approved === true) {
                                 const currentPath = window.location.pathname;
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
-                                const loginPath = `${appBasePath}/login.html`; // Plná cesta k prihlasovacej stránke
+                                const loginPath = `${appBasePath}/login.html`;
 
-                                // Používateľ je prihlásený, ale len ak sa nachádza na prihlasovacej stránke
                                 if (currentPath.includes(loginPath)) {
                                     console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' sa prihlásil z prihlasovacej stránky. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                // Kontrola prístupu na stránky prístupné len pre admina pre používateľov, ktorí nie sú admin
                                 else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
                                     console.log(`AuthManager: Používateľ typu '${userProfileData.role}' sa pokúsil o prístup na zablokovanú stránku. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
                                 } else {
-                                    // Inak, nechajte ho na aktuálnej stránke
                                     console.log(`AuthManager: Schválený používateľ typu '${userProfileData.role}' je už prihlásený a má prístup k aktuálnej stránke. Zostávam na aktuálnej stránke.`);
                                 }
                             }
@@ -245,7 +351,7 @@ const handleAuthState = async () => {
                 }
             };
 
-            loadUserProfileData(); // Spustenie načítania s opakovanými pokusmi
+            loadUserProfileData();
 
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
@@ -263,7 +369,47 @@ const handleAuthState = async () => {
     console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
 };
 
+// ===== NOVÁ FUNKCIA PRE MONITOROVANIE APP CHECK STAVU =====
+const monitorAppCheckStatus = () => {
+    setInterval(async () => {
+        if (window.appCheck) {
+            try {
+                const token = await getToken(window.appCheck, { forceRefresh: false });
+                console.log("App Check heart-beat: Token je platný, expirácia:", token.expireTime);
+            } catch (error) {
+                console.error("App Check heart-beat: Token je neplatný!", error);
+                // Tu môžete pridať logiku pre prípad, že App Check zlyhá
+                // Napr. zobraziť upozornenie používateľovi
+                if (window.showGlobalNotification) {
+                    window.showGlobalNotification('Bezpečnostný token vypršal, obnovujem...', 'warning');
+                }
+            }
+        }
+    }, 10 * 60 * 1000); // Kontrola každých 10 minút
+};
+
 window.addEventListener('DOMContentLoaded', async () => {
     setupFirebase();
     handleAuthState();
+    monitorAppCheckStatus();
+    
+    // ===== PRIDANIE GLOBÁLNEJ FUNKCIE PRE TESTOVANIE APP CHECK =====
+    window.testAppCheck = async () => {
+        if (!window.appCheck) {
+            console.error("App Check nie je inicializovaný");
+            return { success: false, error: "App Check not initialized" };
+        }
+        
+        try {
+            const token = await getToken(window.appCheck, { forceRefresh: true });
+            console.log("App Check test successful:", token);
+            return { success: true, token: token.token, expireTime: token.expireTime };
+        } catch (error) {
+            console.error("App Check test failed:", error);
+            return { success: false, error: error.message };
+        }
+    };
+    
+    console.log("Authentication.js úplne načítaný s App Check podporou");
+    console.log("Pre otestovanie App Check zavolajte window.testAppCheck()");
 });
