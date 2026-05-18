@@ -18,6 +18,23 @@ let currentUserId = null;
 // Set pre sledovanie už zobrazených notifikácií
 let shownNotificationIds = new Set();
 
+/**
+ * Kontroluje, či je používateľ "skutočne" prihlásený (email používateľ, nie anonymný)
+ * @returns {boolean} - true pre email používateľa, false pre anonymného alebo neprihláseného
+ */
+const isReallyLoggedIn = () => {
+    // Ak nie je profil, nie je prihlásený
+    if (!window.globalUserProfileData) return false;
+    
+    // Anonymný používateľ nie je považovaný za prihláseného
+    if (window.isAnonymousUser === true) return false;
+    
+    // Ak má rolu 'anonymous', tiež nie je prihlásený
+    if (window.globalUserProfileData.role === 'anonymous') return false;
+    
+    return true;
+};
+
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
 
@@ -233,7 +250,7 @@ const getHeaderColorByRole = (role) => {
     case 'volunteer':
       return '#FFAC1C';
     default:
-      return '#1D4ED8';
+      return '#1D4ED8';  // Predvolená modrá pre neprihlásených/anonymných
     }
 }
 
@@ -324,11 +341,15 @@ const updateHeaderLinks = (userProfileData) => {
     }
 
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {        
-        if (userProfileData) {            
+        // Kľúčová zmena: Používame isReallyLoggedIn() namiesto priamej kontroly userProfileData
+        const isLoggedIn = isReallyLoggedIn();
+        
+        if (isLoggedIn) {            
             authLink.classList.add('hidden');
             profileLink.classList.remove('hidden');
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+            
             if (userProfileData.id && currentUserId !== userProfileData.id) {                
                 currentUserId = userProfileData.id;                
                 loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {                    
@@ -358,12 +379,13 @@ const updateHeaderLinks = (userProfileData) => {
                 });
             } 
         } else {            
+            // Neprihlásený alebo anonymný používateľ - zobrazíme prihlasovacie tlačidlo
             authLink.classList.remove('hidden');
             profileLink.classList.add('hidden');
             logoutButton.classList.add('hidden');
-            headerElement.style.backgroundColor = getHeaderColorByRole(null);
+            headerElement.style.backgroundColor = getHeaderColorByRole(null); // Predvolená modrá
             
-            // Vyčistenie všetkých listenerov
+            // Vyčistenie všetkých listenerov (anonymní používatelia nemajú notifikácie)
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
@@ -388,6 +410,8 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
+    // Anonymný alebo prihlásený používateľ by nemal vidieť registračný link
+    // Len neprihlásení (žiadny profil) ho môžu vidieť
     if (userProfileData) {
         registerLink.classList.add('hidden');
         return;
@@ -398,20 +422,29 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
-        if (userProfileData) { 
-            registerLink.href = 'logged-in-registration.html';
-        } else {
-            registerLink.href = 'register.html';
-        }
+        registerLink.href = 'register.html';
     } else {
         registerLink.classList.add('hidden');
     }
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
+    // Notifikácie sú LEN pre adminov a LEN pre email používateľov
     if (unsubscribeFromNotifications) {
         return;
-    }    
+    }
+    
+    // Kontrola, či naozaj ide o admina a nie je anonymný
+    if (!userProfileData || userProfileData.role !== 'admin') {
+        console.log("header.js: Notifikácie nastavené len pre adminov.");
+        return;
+    }
+    
+    if (window.isAnonymousUser === true) {
+        console.log("header.js: Anonymný používateľ nemôže mať notifikácie.");
+        return;
+    }
+    
     notificationListenerSetupCount++;    
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
@@ -424,6 +457,12 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         if (!userId) {
             return;
         }
+        
+        // Dodatočná kontrola, že používateľ nie je anonymný
+        if (window.isAnonymousUser === true) {
+            return;
+        }
+        
         let unreadCount = 0;
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         allNotifications.forEach(notification => {
