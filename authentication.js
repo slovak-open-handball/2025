@@ -191,19 +191,19 @@ const handleAuthState = async () => {
             const userDocRef = doc(db, `users/${user.uid}`);
             
             const loadUserProfileData = async (retries = 0) => {
-                const MAX_RETRIES = 5;
-                const RETRY_DELAY = 500;
+                const MAX_RETRIES = 2;
+                const RETRY_DELAY = 100;
 
                 try {
                     const docSnap = await getDoc(userDocRef);
 
                     if (!docSnap.exists()) {
                         if (retries < MAX_RETRIES) {
-                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}.`);
+//                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}.`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
+//                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                             return;
