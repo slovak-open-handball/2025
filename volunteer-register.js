@@ -59,7 +59,7 @@ const DialCodeModal = ({ isOpen, onClose, onSelect, selectedDialCode, unlockedBu
     const filteredCodes = countryDialCodes.filter(c =>
         c.name.toLowerCase().includes(filter.toLowerCase()) ||
         c.dialCode.includes(filter)
-    ).slice(0, 50);
+    );
     const getDialCodeClasses = (code) => {
         return `py-2 px-4 cursor-pointer hover:bg-gray-100 flex justify-between items-center rounded-lg ${selectedDialCode.dialCode === code.dialCode ? `bg-blue-100 ${unlockedButtonColor} ` : ''}`;
     };
