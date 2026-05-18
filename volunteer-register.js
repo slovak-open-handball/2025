@@ -6,6 +6,24 @@ import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.co
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
 
+// reCAPTCHA kľúč
+const RECAPTCHA_SITE_KEY = "6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x";
+
+// Funkcia na získanie reCAPTCHA tokenu
+const getRecaptchaToken = async (action) => {
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
+        console.warn("reCAPTCHA API nie je načítané alebo pripravené.");
+        return null;
+    }
+    try {
+        const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
+        return token;
+    } catch (e) {
+        console.error(`Chyba reCAPTCHA: ${e.message}`);
+        return null;
+    }
+};
+
 // Funkcia na overenie sily hesla
 const passwordStrengthCheck = (password) => {
     const checks = {
@@ -170,6 +188,43 @@ const App = () => {
     const [timeoutId, setTimeoutId] = React.useState(null);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+    const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
+
+    // Načítanie reCAPTCHA
+    React.useEffect(() => {
+        const checkRecaptcha = () => {
+            if (window.grecaptcha && window.grecaptcha.ready) {
+                window.grecaptcha.ready(() => {
+                    console.log('reCAPTCHA v3 je pripravená');
+                    setIsRecaptchaReady(true);
+                });
+            } else if (window.grecaptcha && window.grecaptcha.execute) {
+                console.log('reCAPTCHA v3 je pripravená (execute exists)');
+                setIsRecaptchaReady(true);
+            } else {
+                setTimeout(checkRecaptcha, 100);
+            }
+        };
+        
+        // Skontrolujeme, či je reCAPTCHA script načítaný
+        if (document.querySelector('script[src*="recaptcha/api.js"]')) {
+            checkRecaptcha();
+        } else {
+            // Dynamické načítanie scriptu
+            const script = document.createElement('script');
+            script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+            script.async = true;
+            script.defer = true;
+            script.onload = () => {
+                console.log('reCAPTCHA script načítaný');
+                checkRecaptcha();
+            };
+            script.onerror = () => {
+                console.error('Nepodarilo sa načítať reCAPTCHA script');
+            };
+            document.head.appendChild(script);
+        }
+    }, []);
 
     // Načítanie veľkostí tričiek
     React.useEffect(() => {
@@ -300,7 +355,23 @@ const App = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setAuthError(null);
+        
+        // Kontrola reCAPTCHA
+        if (!isRecaptchaReady) {
+            setAuthError("reCAPTCHA sa ešte nenačítala. Skúste to prosím znova.");
+            return;
+        }
+        
         setIsSubmitting(true);
+        
+        // Získanie reCAPTCHA tokenu
+        const recaptchaToken = await getRecaptchaToken('volunteer_register');
+        if (!recaptchaToken) {
+            setAuthError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
+            setIsSubmitting(false);
+            return;
+        }
+        
         const contactPhoneNumber = `${selectedDialCode.dialCode}${formData.phone.replace(/\s/g, '')}`;
         try {
             const auth = window.auth;
@@ -327,6 +398,7 @@ const App = () => {
                 selectedDates: formData.selectedDates,
                 note: formData.note,
                 registrationDate: serverTimestamp(),
+                recaptchaToken: recaptchaToken, // Uloženie tokenu pre audit
             });
             setSuccess(true);
             setFormData({
@@ -403,7 +475,7 @@ const App = () => {
 
     const unlockedButtonColor = 'bg-blue-600 hover:bg-blue-700 text-white';
     const lockedButtonColor = 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed';
-    const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid ? unlockedButtonColor : lockedButtonColor}`;
+    const buttonClasses = `mt-6 font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline transition-all duration-300 ${isFormValid && isRecaptchaReady ? unlockedButtonColor : lockedButtonColor}`;
 
     // Zistenie správneho popisu na základe pohlavia
     const getVolunteerLabel = () => {
@@ -919,7 +991,7 @@ const App = () => {
                 {
                     type: 'submit',
                     className: buttonClasses,
-                    disabled: isSubmitting || !isFormValid || !isAuthReady,
+                    disabled: isSubmitting || !isFormValid || !isAuthReady || !isRecaptchaReady,
                 },
                 isSubmitting ? 'Registrujem...' : 'Registrovať sa'
             ),
