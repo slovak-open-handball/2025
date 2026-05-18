@@ -1410,6 +1410,81 @@ let isTeamNameReplacerInitialized = false;
         // 🔥 KROK 1: Získame tímy v nadstavbovej skupine a OKAMŽITE ICH ZMAPUJEME
         // ============================================================
         let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
+
+        // 🔥 VYPOČÍTAME PERCENTO DOKONČENOSTI NADSTAVBOVEJ SKUPINY
+        const totalAdvancedMatches = advancedMatches.length;
+        const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed').length;
+        const advancedCompletionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedMatches / totalAdvancedMatches * 100) : 0;
+        const isAdvancedFullyCompleted = advancedCompletionPercentage === 100;
+        
+        // 🔥 KRITICKÁ ZMENA: Mapovanie názvov tímov LEN AK JE NADSTAVBOVÁ SKUPINA 100% DOKONČENÁ
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        
+        if (isAdvancedFullyCompleted) {
+            // Iba ak je nadstavbová skupina 100% hotová, mapujeme názvy tímov
+            for (const team of teamsInAdvanced) {
+                team.originalId = team.id;
+                let mappedName = null;
+                
+                // Najprv skúsime cez getTeamNameByDisplayId
+                if (looksLikeIdentifier(team.name)) {
+                    mappedName = getTeamNameByDisplayId(team.name);
+                    if (mappedName && mappedName !== team.name) {
+                        team.name = mappedName;
+                        team.id = mappedName;
+                    }
+                }
+                
+                // Ak nenašlo, skúsime cez základné skupiny
+                if (!mappedName || mappedName === team.originalId) {
+                    for (const baseGroup of allBaseGroupsFullyCompleted) {
+                        const baseTable = createGroupTable(categoryName, baseGroup);
+                        if (baseTable && baseTable.teams) {
+                            const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
+                            if (foundTeam && foundTeam.name) {
+                                let finalName = foundTeam.name;
+                                if (looksLikeIdentifier(finalName)) {
+                                    const mappedAgain = getTeamNameByDisplayId(finalName);
+                                    if (mappedAgain && mappedAgain !== finalName) {
+                                        finalName = mappedAgain;
+                                    }
+                                }
+                                team.name = finalName;
+                                team.id = finalName;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Ešte jeden pokus - cez displayId
+                if (!mappedName || mappedName === team.originalId) {
+                    const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
+                    const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
+                    if (mappedAgain && mappedAgain !== possibleDisplayId) {
+                        team.name = mappedAgain;
+                        team.id = mappedAgain;
+                    }
+                }
+            
+                if (team.name && categoryName && team.name.includes(categoryName)) {
+                    const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+                    if (remappedName && remappedName !== team.name) {
+                        team.name = remappedName;
+                        team.id = remappedName;
+                    }
+                }
+                
+                log(`   📛 Tím v nadstavbovej (100% hotová): "${team.originalId}" → "${team.name}"`);
+            }
+        } else {
+            // 🔥 NADSTAVBOVÁ SKUPINA NIE JE HOTOVÁ - NECHÁME PÔVODNÉ IDENTIFIKÁTORY
+            log(`   ⏳ Nadstavbová skupina nie je 100% dokončená (${advancedCompletionPercentage}%), názvy tímov NEBUDÚ mapované`);
+            // Necháme pôvodné identifikátory (napr. "U12 D G1", "U12 D G2", atď.)
+            for (const team of teamsInAdvanced) {
+                log(`   📛 Tím v nadstavbovej (neúplná): "${team.id}" (zostáva ako identifikátor)`);
+            }
+        }
         
         // 🔥 KROK 2: OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
         for (const team of teamsInAdvanced) {
