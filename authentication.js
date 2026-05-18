@@ -69,14 +69,19 @@ const appBasePath = getAppBasePath();
 const blockedPages = [
     'logged-in-add-categories.html',
     'logged-in-add-groups.html',
-    'logged-in-teams-in-groups.html',
-    'logged-in-tournament-settings.html',
     'logged-in-all-registrations.html',
-    'logged-in-users.html',
-    'logged-in-notifications.html',
-    'logged-in-teams-in-groups.html',
     'logged-in-map.html',
-    'logged-in-teams-in-accommodation.html'
+    'logged-in-matches-hall.html',
+    'logged-in-matches.html',
+    'logged-in-my-data.html',
+    'logged-in-my-settings.html',
+    'logged-in-notifications.html',
+    'logged-in-rosters.html',
+    'logged-in-teams-in-accommodation.html',
+    'logged-in-teams-in-groups.html',
+    'logged-in-template.html',
+    'logged-in-tournament-settings.html',
+    'logged-in-users.html'
 ];
 
 // Inicializácia Firebase aplikácie
