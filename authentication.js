@@ -208,7 +208,7 @@ const handleAuthState = async () => {
                             window.location.href = `${appBasePath}/index.html`;
                         }
                     } else {
-                        console.error("AuthManager: Anonymný profil nebol nájdený!");
+                        console.log("AuthManager: Anonymný profil nebol nájdený!");
                         window.globalUserProfileData = null;
                         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                     }
