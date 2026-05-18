@@ -340,46 +340,61 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
                 // Adresa trvalého bydliska
                 React.createElement('h3', { className: 'text-lg font-bold text-gray-800 mb-2' }, 'Adresa trvalého bydliska'),
                 React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                    React.createElement('input', {
-                        type: 'text',
-                        name: 'street',
-                        placeholder: 'Ulica',
-                        value: formData.street,
-                        onChange: handleInputChange,
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
-                    }),
-                    React.createElement('input', {
-                        type: 'text',
-                        name: 'houseNumber',
-                        placeholder: 'Popisné číslo',
-                        value: formData.houseNumber,
-                        onChange: handleInputChange,
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
-                    }),
-                    React.createElement('input', {
-                        type: 'text',
-                        name: 'city',
-                        placeholder: 'Mesto/obec',
-                        value: formData.city,
-                        onChange: handleInputChange,
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
-                    }),
-                    React.createElement('input', {
-                        type: 'text',
-                        name: 'postalCode',
-                        placeholder: 'PSČ (xxx xx)',
-                        value: formData.postalCode,
-                        onChange: handlePostalCodeChange,
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
-                    }),
-                    React.createElement('input', {
-                        type: 'text',
-                        name: 'country',
-                        placeholder: 'Krajina',
-                        value: formData.country,
-                        onChange: handleInputChange,
-                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
-                    })
+                    React.createElement('div', null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Ulica'),
+                        React.createElement('input', {
+                            type: 'text',
+                            name: 'street',
+                            placeholder: 'Ulica',
+                            value: formData.street,
+                            onChange: handleInputChange,
+                            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                        })
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Popisné číslo'),
+                        React.createElement('input', {
+                            type: 'text',
+                            name: 'houseNumber',
+                            placeholder: 'Popisné číslo',
+                            value: formData.houseNumber,
+                            onChange: handleInputChange,
+                            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                        })
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Mesto/obec'),
+                        React.createElement('input', {
+                            type: 'text',
+                            name: 'city',
+                            placeholder: 'Mesto/obec',
+                            value: formData.city,
+                            onChange: handleInputChange,
+                            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                        })
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'PSČ (xxx xx)'),
+                        React.createElement('input', {
+                            type: 'text',
+                            name: 'postalCode',
+                            placeholder: 'PSČ (xxx xx)',
+                            value: formData.postalCode,
+                            onChange: handlePostalCodeChange,
+                            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                        })
+                    ),
+                    React.createElement('div', null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Krajina'),
+                        React.createElement('input', {
+                            type: 'text',
+                            name: 'country',
+                            placeholder: 'Krajina',
+                            value: formData.country,
+                            onChange: handleInputChange,
+                            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
+                        })
+                    )
                 ),
                 // Pohlavie a Dátum narodenia
                 React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
