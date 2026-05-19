@@ -75,7 +75,7 @@ const updateRegistrationStatusText = (dates) => {
 
     // Ak sú kategórie, pokračujeme s logikou dátumov registrácie
     if (!dates || !dates.registrationStartDate || !dates.registrationEndDate) {
-        console.warn("Dáta o registrácii (registrationStartDate alebo registrationEndDate) nie sú k dispozícii alebo sú neúplné.");
+        console.log("Dáta o registrácii (registrationStartDate alebo registrationEndDate) nie sú k dispozícii alebo sú neúplné.");
         messageElement.innerHTML = `<p class="text-gray-600">Informácie o registrácii nie sú momentálne dostupné.</p>`;
         toggleRegistrationButton(false);
         if (countdownIntervalId) {
