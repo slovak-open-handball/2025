@@ -1589,14 +1589,14 @@ const formatDisplayValue = (value, path) => {
 
 
 // Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
-function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) { // Pridané editModalTitle
+function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) {
     const modalRef = React.useRef(null);
-    const db = window.db; // Prístup k db z window objektu
+    const db = window.db;
     const [localEditedData, setLocalEditedData] = React.useState(data);
     const [userRole, setUserRole] = React.useState('');
-    const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false); 
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false); // Opravený preklep z setIsTargetMuserHall na setIsTargetUserHall
-    const inputRefs = React.useRef({}); 
+    const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false);
+    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false);
+    const inputRefs = React.useRef({});
 
     // Stavy pre Phone Input
     const [displayDialCode, setDisplayDialCode] = React.useState('');
@@ -1609,7 +1609,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     // Stavy pre typ dopravy
     const [selectedArrivalType, setSelectedArrivalType] = React.useState('');
-    const [arrivalTime, setArrivalTime] = React.useState(''); // Nový stav pre čas príchodu
+    const [arrivalTime, setArrivalTime] = React.useState('');
     const arrivalOptions = [
         'verejná doprava - vlak',
         'verejná doprava - autobus',
@@ -1620,11 +1620,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     // Stavy pre typ ubytovania
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = React.useState('');
-    // Pridanie predvolenej možnosti "bez ubytovania" do lokálnych možností
     const accommodationOptionsWithNone = React.useMemo(() => {
         return ['bez ubytovania', ...accommodationTypes];
     }, [accommodationTypes]);
-
 
     // Stavy pre balíky
     const [packages, setPackages] = React.useState([]);
@@ -1632,39 +1630,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     // Stavy pre tričká
     const [availableTshirtSizes, setAvailableTshirtSizes] = React.useState([]);
-    // Zmenené teamTshirts na pole objektov, každý s tempId pre React kľúče
-    const [teamTshirts, setTeamTshirts] = React.useState([]); // [{ tempId: 'uuid', size: 'S', quantity: 5 }]
+    const [teamTshirts, setTeamTshirts] = React.useState([]);
 
-    // Stavy pre potvrdenie odstránenia člena
+    // Stavy pre potvrdenie odstránenia
     const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
     const [deleteConfirmMessage, setDeleteConfirmMessage] = React.useState('');
-
-    // Nové stavy pre potvrdenie odstránenia tímu
     const [isConfirmDeleteTeamOpen, setIsConfirmDeleteTeamOpen] = React.useState(false);
     const [deleteTeamConfirmMessage, setDeleteTeamConfirmMessage] = React.useState('');
 
-
-    // Utility to generate a unique ID for new t-shirt entries
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
     React.useEffect(() => {
         if (!isOpen) {
-            // Modal sa práve zatvoril → vyčistíme aj potvrdenia vymazania
             setIsConfirmDeleteOpen(false);
             setDeleteConfirmMessage('');
             setIsConfirmDeleteTeamOpen(false);
             setDeleteTeamConfirmMessage('');
         }
-    }, [isOpen]);    
+    }, [isOpen]);
 
     React.useEffect(() => {
         if (isOpen) {
-            // Keď sa otvorí nové edit modal → istota, že potvrdenia sú zatvorené
             setIsConfirmDeleteOpen(false);
             setIsConfirmDeleteTeamOpen(false);
         }
     }, [isOpen]);
-    
+
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
             if (db && (title.includes('Upraviť tím') || title.includes('Pridať nový tím'))) {
@@ -1672,7 +1663,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 try {
                     const categoriesDocRef = doc(db, 'settings', 'categories');
                     const docSnapshot = await getDoc(categoriesDocRef);
-
                     if (docSnapshot.exists()) {
                         const categoriesData = docSnapshot.data();
                         const fetchedCategories = Object.values(categoriesData)
@@ -1681,67 +1671,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             .sort();
                         setCategories(fetchedCategories);
                     } else {
-                        console.warn("Firestore dokument 'settings/categories' neexistuje. Žiadne kategórie neboli načítané.");
                         setCategories([]);
                     }
                 } catch (error) {
-                    console.error("Chyba pri načítaní kategórií z Firestore:", error);
+                    console.error("Chyba pri načítaní kategórií:", error);
                 }
-
-                const teamElements = [];
-
-                teamElements.push(
-                  React.createElement(
-                    'div',
-                    { key: 'jerseyColors', className: 'mb-6 border-t border-gray-200 pt-4' },
-                    React.createElement('label', {
-                      className: 'block text-base font-semibold text-gray-800 mb-3'
-                    }, 'Farby dresov'),
-                    React.createElement(
-                      'div',
-                      { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
-      
-                      // Domáce farby
-                      React.createElement(
-                        'div',
-                        null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Domáce (home)'),
-                        React.createElement('input', {
-                          type: 'text',
-                          className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                          value: localEditedData.jerseyHomeColor || '',
-                          onChange: (e) => handleChange('jerseyHomeColor', e.target.value),
-                          placeholder: 'Zadajte farbu',
-                          disabled: !isSavable
-                        })
-                      ),
-      
-                      // Vonku farby
-                      React.createElement(
-                        'div',
-                        null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Vonku (away)'),
-                        React.createElement('input', {
-                          type: 'text',
-                          className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                          value: localEditedData.jerseyAwayColor || '',
-                          onChange: (e) => handleChange('jerseyAwayColor', e.target.value),
-                          placeholder: 'Zadajte farbu',
-                          disabled: !isSavable
-                        })
-                      )
-                    ),
-                    React.createElement('p', {
-                      className: 'mt-2 text-sm text-gray-500'
-                    }, 'Zadajte farbu')
-                  )
-                );
 
                 // Načítanie typov ubytovania
                 try {
                     const accommodationDocRef = doc(db, 'settings', 'accommodation');
                     const docSnapshot = await getDoc(accommodationDocRef);
-
                     if (docSnapshot.exists()) {
                         const accommodationData = docSnapshot.data();
                         if (accommodationData && Array.isArray(accommodationData.types)) {
@@ -1750,15 +1689,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 .sort();
                             setAccommodationTypes(fetchedAccommodationTypes);
                         } else {
-                            console.warn("Firestore dokument 'settings/accommodation' neobsahuje pole 'types' alebo má neočakávaný formát.");
                             setAccommodationTypes([]);
                         }
                     } else {
-                        console.warn("Firestore dokument 'settings/accommodation' neexistuje. Žiadne typy ubytovania neboli načítané.");
-                            setAccommodationTypes([]);
+                        setAccommodationTypes([]);
                     }
                 } catch (error) {
-                    console.error("Chyba pri načítaní typov ubytovania z Firestore:", error);
+                    console.error("Chyba pri načítaní typov ubytovania:", error);
                 }
 
                 // Načítanie balíkov
@@ -1768,13 +1705,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     const fetchedPackages = querySnapshot.docs.map(doc => ({
                         id: doc.id,
                         name: doc.data().name,
-                        accommodationTypes: doc.data().accommodationTypes || [], 
+                        accommodationTypes: doc.data().accommodationTypes || [],
                         price: doc.data().price || 0,
                         meals: doc.data().meals || {}
                     }));
                     setPackages(fetchedPackages);
                 } catch (error) {
-                    console.error("Chyba pri načítaní balíkov z Firestore:", error);
+                    console.error("Chyba pri načítaní balíkov:", error);
                     setPackages([]);
                 }
 
@@ -1785,10 +1722,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         if (data && Array.isArray(data.sizes)) {
-                            const sizes = data.sizes.map(s => 
+                            const sizes = data.sizes.map(s =>
                                 typeof s === 'object' && s.size ? String(s.size).trim() : String(s).trim()
                             );
-                            console.log("DEBUG: Načítané veľkosti tričiek:", sizes);
                             setAvailableTshirtSizes(sizes);
                         }
                     }
@@ -1797,62 +1733,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 }
             }
         };
-    
         fetchTeamDataForSelects();
     }, [db, title]);
 
-    // Pridajte tento useEffect do DataEditModal komponentu (napr. za ostatné useEffecty)
     React.useEffect(() => {
         if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0 && selectedAccommodationType) {
-            // Získame všetky balíky dostupné pre aktuálny typ ubytovania
             const allPackages = packages || [];
             const availablePackagesForCurrentType = allPackages.filter(pkg => {
-                if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
-                    return true;
-                }
+                if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) return true;
                 if (selectedAccommodationType === 'bez ubytovania') {
                     return pkg.accommodationTypes.includes('bez ubytovania');
                 }
                 return pkg.accommodationTypes.includes(selectedAccommodationType);
             });
-        
-            // Kontrola, či aktuálne vybraný balík je dostupný
+
             const isCurrentPackageAvailable = selectedPackageName && availablePackagesForCurrentType.some(pkg => pkg.name === selectedPackageName);
-            
+
             if (!isCurrentPackageAvailable && availablePackagesForCurrentType.length > 0) {
-                // Ak nie je dostupný a existujú dostupné balíky, vyberieme prvý
                 const firstAvailablePackage = availablePackagesForCurrentType[0];
                 setSelectedPackageName(firstAvailablePackage.name);
                 const { id, ...packageDataToSave } = firstAvailablePackage;
                 handleChange('packageDetails', packageDataToSave);
-                console.log(`useEffect: Automaticky vybraný balík ${firstAvailablePackage.name} pre typ ubytovania ${selectedAccommodationType}`);
             } else if (!isCurrentPackageAvailable && availablePackagesForCurrentType.length === 0) {
-                // Žiadne dostupné balíky, vyčistíme
                 setSelectedPackageName('');
                 handleChange('packageDetails', null);
-                console.log(`useEffect: Žiadny balík nie je dostupný pre typ ubytovania ${selectedAccommodationType}`);
             }
         }
     }, [packages, selectedAccommodationType, title]);
 
     React.useEffect(() => {
-        // Fetch user's role from window.globalUserProfileData safely
         let currentUserRole = '';
         if (window.globalUserProfileData && window.globalUserProfileData.role) {
             currentUserRole = window.globalUserProfileData.role;
         }
         setUserRole(currentUserRole);
 
-        const safeData = data || {}; 
+        const safeData = data || {};
         const initialData = JSON.parse(JSON.stringify(safeData));
 
         const isUserBeingEditedAdmin = initialData.role === 'admin';
         const isUserBeingEditedHall = initialData.role === 'hall';
-        
+
         setIsTargetUserAdmin(isUserBeingEditedAdmin);
         setIsTargetUserHall(isUserBeingEditedHall);
 
-        // Ak sa upravuje admin alebo hall používateľ, odstráňte tieto polia, aby sa nezobrazovali a neukladali
+        // Ak sa upravuje admin alebo hall používateľ, odstráňte tieto polia
         if (isUserBeingEditedAdmin || isUserBeingEditedHall) {
             delete initialData.billing;
             delete initialData.street;
@@ -1861,18 +1786,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             delete initialData.postalCode;
             delete initialData.country;
             delete initialData.note;
-            delete initialData.contactPhoneNumber; // Tiež odstránime tel. číslo
-            setDisplayDialCode(''); // Vyčistiť stavy tel. čísla
+            delete initialData.contactPhoneNumber;
+            setDisplayDialCode('');
             setDisplayPhoneNumber('');
         }
 
-
-        const isEditingMember = title.toLowerCase().includes('upraviť hráča') || 
-                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šoféra');
+        const isEditingMember = title.toLowerCase().includes('upraviť hráča') ||
+            title.toLowerCase().includes('upraviť člena realizačného tímu') ||
+            title.toLowerCase().includes('upraviť šoféra');
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
 
+        // Inicializácia polí pre dobrovoľníka
         if (title.includes('Upraviť používateľa') && data?.role === 'volunteer') {
             if (initialData.volunteerRoles === undefined) initialData.volunteerRoles = [];
             if (initialData.selectedDates === undefined) initialData.selectedDates = [];
@@ -1880,6 +1805,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.gender === undefined) initialData.gender = '';
             if (initialData.birthDate === undefined) initialData.birthDate = '';
             if (initialData.note === undefined) initialData.note = '';
+            if (initialData.street === undefined) initialData.street = '';
+            if (initialData.houseNumber === undefined) initialData.houseNumber = '';
+            if (initialData.city === undefined) initialData.city = '';
+            if (initialData.postalCode === undefined) initialData.postalCode = '';
+            if (initialData.country === undefined) initialData.country = '';
         }
 
         if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) {
@@ -1901,47 +1831,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
-        } else if (isEditingMember || isNewEntry) { // Používame robustnejšiu detekciu
-            // Inicializovať adresné polia, ak neexistujú, a nastaviť ich na prázdny reťazec
-            // Toto je kľúčové pre správne zobrazenie input boxov pre členov realizačného tímu, hráčov a šoférov
+        } else if (isEditingMember || isNewEntry) {
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
             if (initialData.address.houseNumber === undefined) initialData.address.houseNumber = '';
             if (initialData.address.postalCode === undefined) initialData.address.postalCode = '';
             if (initialData.address.city === undefined) initialData.address.city = '';
             if (initialData.address.country === undefined) initialData.address.country = '';
-            // Ďalšie polia pre členov tímu, ktoré by mohli chýbať
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
             if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
             if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
             if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
         } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
-            // Zabezpečiť, že initialData nie je null
             if (!initialData) {
                 initialData = {};
             }
-    
-            // Inicializovať selectedCategory s existujúcou kategóriou tímu
             setSelectedCategory(initialData._category || initialData.category || '');
             if (initialData.teamName === undefined) initialData.teamName = '';
-    
-            // Inicializovať vybraný typ dopravy a čas príchodu
             setSelectedArrivalType(initialData.arrival?.type || '');
             setArrivalTime(initialData.arrival?.time || '');
-            
-            // Inicializovať vybraný typ ubytovania
             setSelectedAccommodationType(initialData.accommodation?.type || '');
-    
-            // DÔLEŽITÉ: Zabezpečiť, že packageDetails nie je null
             if (!initialData.packageDetails) {
                 initialData.packageDetails = {};
             }
-            
-            // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
             setSelectedPackageName(initialData.packageDetails?.name || '');
-    
-            // Inicializovať teamTshirts...
             const initialTshirts = (initialData.tshirts || [])
                 .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0)
                 .map(tshirt => ({
@@ -1951,36 +1865,25 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 }));
             setTeamTshirts(initialTshirts);
         }
-        
-        setLocalEditedData(initialData); 
-        console.log("DataEditModal useEffect: localEditedData initialized to:", initialData); // Debug log
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes]); // Pridané availableTshirtSizes, isNewEntry a accommodationTypes ako závislosť
 
+        setLocalEditedData(initialData);
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
-            // Check if dial code modal is open, if so, don't close this modal
-            if (isDialCodeModalOpen) {
-                return;
-            }
-            // Check if confirmation modal is open, if so, don't close this modal
-            if (isConfirmDeleteOpen || isConfirmDeleteTeamOpen) { // Zahrnúť aj potvrdenie pre tím
-                return;
-            }
-
+            if (isDialCodeModalOpen) return;
+            if (isConfirmDeleteOpen || isConfirmDeleteTeamOpen) return;
             if (modalRef.current && !modalRef.current.contains(event.target)) {
                 onClose();
             }
         };
-
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
-
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen, isConfirmDeleteTeamOpen]); // Pridané isConfirmDeleteTeamOpen do závislostí
+    }, [isOpen, onClose, isDialCodeModalOpen, isConfirmDeleteOpen, isConfirmDeleteTeamOpen]);
 
     React.useEffect(() => {
         if ((title.includes('Upraviť tím') || title.includes('Pridať nový tím')) && packages.length > 0 && localEditedData) {
@@ -1995,7 +1898,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     if (!isOpen) return null;
 
-    // Handler pre zmenu veľkosti alebo počtu tričiek
     const handleTshirtEntryChange = (tempId, field, value) => {
         setTeamTshirts(prev =>
             prev.map(entry =>
@@ -2006,37 +1908,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         );
     };
 
-    // Handler pre odstránenie riadku s tričkom
     const removeTshirtEntry = (tempId) => {
         setTeamTshirts(prev => prev.filter(entry => entry.tempId !== tempId));
     };
 
-    // Handler pre pridanie nového riadku s tričkom
     const addTshirtEntry = () => {
         const currentlyUsedSizes = teamTshirts.map(entry => entry.size);
         const availableSizesForNewEntry = availableTshirtSizes.filter(size => !currentlyUsedSizes.includes(size));
-
         if (availableSizesForNewEntry.length > 0) {
             setTeamTshirts(prev => [
                 ...prev,
-                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 } // Default to first available size
+                { tempId: generateUniqueId(), size: availableSizesForNewEntry[0], quantity: 0 }
             ]);
         } else {
             setUserNotificationMessage("Všetky dostupné veľkosti tričiek sú už pridané.", 'info');
         }
     };
 
-    // Helper to handle input changes for nested data
     const handleChange = (path, newValue) => {
         setLocalEditedData(prevData => {
-            const newData = JSON.parse(JSON.stringify(prevData)); 
+            const newData = JSON.parse(JSON.stringify(prevData));
             let current = newData;
             const pathParts = path.split('.');
 
             for (let i = 0; i < pathParts.length - 1; i++) {
                 const part = pathParts[i];
-                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/); 
-                
+                const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
                 if (arrayMatch) {
                     const arrayKey = arrayMatch[1];
                     const arrayIndex = parseInt(arrayMatch[2]);
@@ -2060,7 +1957,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 if (typeof getNestedValue(data, path) === 'boolean') {
                     current[lastPart] = (newValue.toLowerCase() === 'áno' || newValue.toLowerCase() === 'true');
                 } else if (typeof getNestedValue(data, path) === 'number') {
-                    current[lastPart] = parseFloat(newValue) || 0; 
+                    current[lastPart] = parseFloat(newValue) || 0;
                 } else {
                     current[lastPart] = newValue;
                 }
@@ -2069,24 +1966,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         });
     };
 
-    // Handler pre IČO a DIČ (iba čísla)
     const handleNumericInput = (e, path) => {
-        const value = e.target.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+        const value = e.target.value.replace(/\D/g, '');
         handleChange(path, value);
     };
 
-    // Handler pre IČ DPH (prvé 2 veľké písmená, potom čísla)
     const handleIcDphChange = (e, path) => {
         let value = e.target.value;
         let formattedValue = '';
         let cursorPosition = e.target.selectionStart;
 
-        // Spracovanie prvých dvoch znakov (iba písmená, veľké)
         if (value.length > 0) {
             if (/[a-zA-Z]/.test(value[0])) {
                 formattedValue += value[0].toUpperCase();
             } else {
-                // Ak prvý znak nie je písmeno, ignorujeme ho a posunieme kurzor
                 value = value.substring(1);
                 cursorPosition = Math.max(0, cursorPosition - 1);
             }
@@ -2095,50 +1988,33 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (/[a-zA-Z]/.test(value[1])) {
                 formattedValue += value[1].toUpperCase();
             } else {
-                // Ak druhý znak nie je písmeno, ignorujeme ho a posunieme kurzor
-                value = formattedValue + value.substring(2); // Len zvyšok bez druhého znaku
+                value = formattedValue + value.substring(2);
                 cursorPosition = Math.max(formattedValue.length, cursorPosition - 1);
             }
         }
-
-        // Spracovanie zvyšných znakov (iba čísla)
         if (value.length > 2) {
             formattedValue += value.substring(2).replace(/\D/g, '');
         }
-        
-        // Obmedziť celkovú dĺžku (2 písmená + 10 číslic = 12 znakov)
         formattedValue = formattedValue.substring(0, 12);
-
         handleChange(path, formattedValue);
-
-        // Obnoviť pozíciu kurzora po formátovaní
         setTimeout(() => {
-            if (inputRefs.current[path]) { // Používame plnú cestu pre ref
+            if (inputRefs.current[path]) {
                 inputRefs.current[path].selectionStart = cursorPosition;
                 inputRefs.current[path].selectionEnd = cursorPosition;
             }
         }, 0);
     };
 
-    // Handler pre PSČ (číslice, medzera po 3. číslici)
     const handlePostalCodeChange = (e, path) => {
         const input = e.target;
-        const oldDisplay = input.value;           // čo videl používateľ
+        const oldDisplay = input.value;
         const cursorPos = input.selectionStart;
-    
-        // 1. extrahujeme iba číslice (max 5)
         let digits = oldDisplay.replace(/\D/g, '').slice(0, 5);
-    
-        // 2. vytvoríme novú zobrazenú hodnotu (s medzerou)
         let newDisplay = digits;
         if (digits.length > 3) {
             newDisplay = digits.slice(0, 3) + ' ' + digits.slice(3);
         }
-    
-        // 3. uložíme do stavu ČISTÉ ČÍSLICE
         handleChange(path, digits);
-    
-        // 4. inteligentne posunieme kurzor
         requestAnimationFrame(() => {
             if (inputRefs.current[path]) {
                 const newCursor = getSmartCursorPosition(oldDisplay, newDisplay, cursorPos);
@@ -2152,13 +2028,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         if (e.key === 'Backspace') {
             const input = e.target;
             const pos = input.selectionStart;
-    
             if (pos === 4 && input.value[3] === ' ') {
                 e.preventDefault();
                 const newDisplay = input.value.slice(0, 3) + input.value.slice(4);
                 const newDigits = newDisplay.replace(/\D/g, '');
                 handleChange(path, newDigits);
-    
                 requestAnimationFrame(() => {
                     if (inputRefs.current[path]) {
                         inputRefs.current[path].selectionStart = 3;
@@ -2169,37 +2043,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         }
     };
 
-    // Handler pre ContactPhoneNumber
     const handleContactPhoneNumberChange = (e) => {
         const value = e.target.value;
-        const cleanedValue = value.replace(/\D/g, ''); // Iba číslice
-        setDisplayPhoneNumber(formatNumberGroups(cleanedValue)); // Formátovať pre zobrazenie
-        // Skutočná hodnota sa uloží pri volaní onSave
+        const cleanedValue = value.replace(/\D/g, '');
+        setDisplayPhoneNumber(formatNumberGroups(cleanedValue));
     };
 
     const handleSelectDialCode = (newDialCode) => {
         setDisplayDialCode(newDialCode);
-        // Ak je potrebné okamžite aktualizovať localEditedData, môžete to urobiť tu
-        // Ale pre "contactPhoneNumber" to necháme na onSave, aby sme sa vyhli zbytočným re-renderom
     };
 
-    const isSavable = targetDocRef !== null; // Savable len ak je targetDocRef (užívateľský dokument) definovaný
+    const isSavable = targetDocRef !== null;
 
-    // Pomocná funkcia na získanie správnych dát pre input, aby sa predišlo opakovanému formátovaniu
     const getNestedDataForInput = (obj, path) => {
-        const value = getNestedValue(obj, path); // Používame neznormalizovaný getNestedValue (bez true)
-        if (value === null) return ''; // Pre zobrazenie v inpute null vždy ako ''
-        if (value === undefined) return ''; // Undefined taktiež ako ''
+        const value = getNestedValue(obj, path);
+        if (value === null) return '';
+        if (value === undefined) return '';
         if (path.includes('postalCode')) {
             return String(value || '').replace(/\s/g, '');
         }
         return value;
     };
 
-    // Určiť, či sa upravuje člen tímu (hráč, RT člen, šofér)
-    const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                            title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                            title.toLowerCase().includes('upraviť šofér');
+    const isEditingMember = title.toLowerCase().includes('upraviť hráč') ||
+        title.toLowerCase().includes('upraviť člen realizačného tímu') ||
+        title.toLowerCase().includes('upraviť šofér');
 
     const handleDeleteMemberClick = () => {
         const memberName = `${localEditedData.firstName || ''} ${localEditedData.lastName || ''}`.trim();
@@ -2207,57 +2075,44 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         setIsConfirmDeleteOpen(true);
     };
 
-    // Nová funkcia pre vykresľovanie polí člena tímu/hráča/šoféra
     const renderMemberFields = () => {
-        // console.log('DataEditModal: renderMemberFields called. localEditedData:', localEditedData); // Debug log
         const memberElements = [];
-        
-        // Určiť, či ide o hráča (zobrazujeme jerseyNumber a registrationNumber) alebo iného člena tímu
         const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
-        
-        // Základné polia pre všetkých členov
         let memberFieldsOrder = [
             'firstName', 'lastName', 'dateOfBirth',
             'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-        
-        // Ak je to hráč, pridáme jerseyNumber a registrationNumber po dateOfBirth
         if (isPlayer) {
             memberFieldsOrder = [
                 'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
                 'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
             ];
         }
-        
         memberFieldsOrder.forEach(path => {
-            // Používame getNestedValue s localEditedData pre aktuálny stav
             const value = getNestedValue(localEditedData, path);
-            const inputValue = value === undefined || value === null ? '' : value; // Pre input hodnoty
-            // console.log(`DataEditModal:   renderMemberFields: For path: ${path}, raw value:`, value, `(type: ${typeof value})`); // Debug log)
-
+            const inputValue = value === undefined || value === null ? '' : value;
             const labelText = formatLabel(path);
             let inputType = 'text';
             let isCheckbox = false;
-            let customProps = {}; 
+            let customProps = {};
 
             if (typeof inputValue === 'boolean') {
                 isCheckbox = true;
             } else if (path.includes('dateOfBirth')) {
                 inputType = 'date';
-            } else if (path.includes('jerseyNumber')) { // Iba pre JerseyNumber
-                 customProps = {
+            } else if (path.includes('jerseyNumber')) {
+                customProps = {
                     onChange: (e) => handleNumericInput(e, path),
                     inputMode: 'numeric',
                     pattern: '[0-9]*',
                     maxLength: 3
                 };
-            } else if (path.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
+            } else if (path.includes('registrationNumber')) {
                 customProps = {
-                    onChange: (e) => handleChange(path, e.target.value), // Už nepoužíva handleNumericInput
+                    onChange: (e) => handleChange(path, e.target.value),
                     maxLength: 20
                 };
-            }
-             else if (path.includes('postalCode')) {
+            } else if (path.includes('postalCode')) {
                 customProps = {
                     onChange: (e) => handlePostalCodeChange(e, path),
                     onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
@@ -2265,19 +2120,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     pattern: '[0-9 ]*',
                     maxLength: 6,
                     value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                    onChange: (e) => handlePostalCodeChange(e, path),
-                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                     readOnly: !isSavable
                 };
             }
-            
-            // console.log(`DataEditModal:     renderMemberFields: Input value for path ${path}: "${inputValue}"`);
 
             memberElements.push(React.createElement(
                 'div',
-                { key: path, className: 'mb-4' }, // Odstránené červené štýly
+                { key: path, className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                // Odstránený riadok s aktuálnou hodnotou
                 isCheckbox ? (
                     React.createElement('input', {
                         type: 'checkbox',
@@ -2291,370 +2141,191 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         ref: el => inputRefs.current[path] = el,
                         type: inputType,
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(inputValue, path), // Používa formatDisplayValue
+                        value: formatDisplayValue(inputValue, path),
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
                         readOnly: !isSavable,
-                        ...customProps 
+                        ...customProps
                     })
                 )
             ));
         });
-
         return memberElements.filter(Boolean);
     };
 
     const renderDataFields = (obj, currentPath = '') => {
-        // Zmenená podmienka pre robustnejšie porovnanie
-        const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér') || isNewEntry;
+        const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') ||
+            title.toLowerCase().includes('upraviť člen realizačného tímu') ||
+            title.toLowerCase().includes('upraviť šofér') || isNewEntry;
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && editingData?.role === 'volunteer';
 
-        // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
-
-        // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
-        }        
+        }
 
-        if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
-            
-            if (currentPath === '') {
-                // Najprv ošetrite prípad úpravy dobrovoľníka (pred ostatnými podmienkami)
-                if (isEditingVolunteer) {
-                    const volunteerElements = [];
-                    
-                    // Zoznam polí pre dobrovoľníka v požadovanom poradí
-                    const volunteerFieldsOrder = [
-                        'firstName', 'lastName', 'email', 'contactPhoneNumber',
-                        'gender', 'birthDate', 'street', 'houseNumber', 'city', 
-                        'postalCode', 'country', 'tshirtSize', 'volunteerRoles', 
-                        'selectedDates', 'note'
-                    ];
-                    
-                    // Roly pre dobrovoľníka (rovnaké ako v registračnom formulári)
-                    const volunteerOptions = [
-                        'Registrácia',
-                        'Organizácia v hale',
-                        'VIP občerstvenie',
-                        'Fan shop',
-                        'Stolík/zápisy stretnutí',
-                        'Občerstvenie pre deti'
-                    ];
-                    
-                    // Pomocná funkcia na formátovanie dátumu pre zobrazenie v checkboxoch
-                    const formatDateForDisplay = (dateString) => {
-                        if (!dateString) return '';
-                        const [year, month, day] = dateString.split('-');
-                        return `${day}. ${month}. ${year}`;
-                    };
-                    
-                    volunteerFieldsOrder.forEach(path => {
-                        const value = getNestedValue(localEditedData, path);
-                        const labelText = formatLabel(path);
-                        
-                        // Špeciálne spracovanie pre vybrané dátumy (checkboxy)
-                        if (path === 'selectedDates') {
-                            // Získanie zoznamu dostupných dátumov z globálneho stavu alebo z Firestore
-                            // Pre jednoduchosť použijeme dostupné dátumy z lokalneho stavu, 
-                            // ale v reálnej aplikácii by ste ich mali načítať z Firestore rovnako ako v registračnom formulári
-                            const availableDates = window.availableTournamentDates || [];
-                            
-                            if (availableDates.length === 0) {
-                                // Fallback: ak nemáme dostupné dátumy, zobrazíme ako text
-                                const selectedDatesFormatted = (value || []).map(date => formatDateForDisplay(date)).join(', ');
-                                volunteerElements.push(
-                                    React.createElement(
-                                        'div',
-                                        { key: path, className: 'mb-4' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                        React.createElement('input', {
-                                            type: 'text',
-                                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2',
-                                            value: selectedDatesFormatted || '-',
-                                            readOnly: true,
-                                            disabled: true
-                                        })
-                                    )
-                                );
-                            } else {
-                                // Zobrazenie ako checkboxy (rovnako ako v registrácii)
-                                const selectedDatesArray = Array.isArray(value) ? value : [];
-                                
-                                volunteerElements.push(
-                                    React.createElement(
-                                        'div',
-                                        { key: path, className: 'mb-4' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
-                                        React.createElement(
-                                            'div',
-                                            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
-                                            availableDates.map((date, idx) => {
-                                                const dateString = typeof date === 'string' ? date : date.toISOString?.()?.split('T')[0] || date;
-                                                const isSelected = selectedDatesArray.includes(dateString);
-                                                const displayDate = formatDateForDisplay(dateString);
-                                                
-                                                return React.createElement(
-                                                    'label',
-                                                    {
-                                                        key: idx,
-                                                        className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
-                                                    },
-                                                    React.createElement('input', {
-                                                        type: 'checkbox',
-                                                        checked: isSelected,
-                                                        onChange: (e) => {
-                                                            const newDates = e.target.checked
-                                                                ? [...selectedDatesArray, dateString]
-                                                                : selectedDatesArray.filter(d => d !== dateString);
-                                                            handleChange(path, newDates);
-                                                        },
-                                                        className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
-                                                        disabled: !isSavable
-                                                    }),
-                                                    React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, displayDate)
-                                                );
-                                            })
-                                        )
-                                    )
-                                );
-                            }
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre roly dobrovoľníka (checkboxy)
-                        if (path === 'volunteerRoles') {
-                            const selectedRoles = Array.isArray(value) ? value : [];
-                            
+        if (currentPath === '') {
+            // Úprava dobrovoľníka
+            if (isEditingVolunteer) {
+                const volunteerElements = [];
+                const volunteerFieldsOrder = [
+                    'firstName', 'lastName', 'email', 'contactPhoneNumber',
+                    'gender', 'birthDate', 'street', 'houseNumber', 'city',
+                    'postalCode', 'country', 'tshirtSize', 'volunteerRoles',
+                    'selectedDates', 'note'
+                ];
+                const volunteerOptions = [
+                    'Registrácia',
+                    'Organizácia v hale',
+                    'VIP občerstvenie',
+                    'Fan shop',
+                    'Stolík/zápisy stretnutí',
+                    'Občerstvenie pre deti'
+                ];
+
+                const formatDateForDisplay = (dateString) => {
+                    if (!dateString) return '';
+                    const [year, month, day] = dateString.split('-');
+                    return `${day}. ${month}. ${year}`;
+                };
+
+                volunteerFieldsOrder.forEach(path => {
+                    const value = getNestedValue(localEditedData, path);
+                    const labelText = formatLabel(path);
+
+                    // Vybrané dátumy
+                    if (path === 'selectedDates') {
+                        const availableDates = window.availableTournamentDates || [];
+                        if (availableDates.length === 0) {
+                            const selectedDatesFormatted = (value || []).map(date => formatDateForDisplay(date)).join(', ');
                             volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
-                                    React.createElement(
-                                        'div',
-                                        { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
-                                        volunteerOptions.map(option => {
-                                            const isSelected = selectedRoles.includes(option);
-                                            return React.createElement(
-                                                'label',
-                                                {
-                                                    key: option,
-                                                    className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
-                                                },
-                                                React.createElement('input', {
-                                                    type: 'checkbox',
-                                                    checked: isSelected,
-                                                    onChange: (e) => {
-                                                        const newRoles = e.target.checked
-                                                            ? [...selectedRoles, option]
-                                                            : selectedRoles.filter(r => r !== option);
-                                                        handleChange(path, newRoles);
-                                                    },
-                                                    className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
-                                                    disabled: !isSavable
-                                                }),
-                                                React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
-                                            );
-                                        })
-                                    )
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre pohlavie (select dropdown)
-                        if (path === 'gender') {
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement(
-                                        'select',
-                                        {
-                                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                            value: value || '',
-                                            onChange: (e) => handleChange(path, e.target.value),
-                                            disabled: !isSavable
-                                        },
-                                        React.createElement('option', { value: '', disabled: true }, 'Vyberte...'),
-                                        React.createElement('option', { value: 'male' }, 'Muž'),
-                                        React.createElement('option', { value: 'female' }, 'Žena')
-                                    )
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre veľkosť trička (select dropdown)
-                        if (path === 'tshirtSize') {
-                            // Načítanie dostupných veľkostí tričiek z globálneho stavu
-                            const tshirtSizes = window.availableTshirtSizes || ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-                            
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement(
-                                        'select',
-                                        {
-                                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                            value: value || '',
-                                            onChange: (e) => handleChange(path, e.target.value),
-                                            disabled: !isSavable
-                                        },
-                                        React.createElement('option', { value: '', disabled: true }, 'Vyberte veľkosť...'),
-                                        tshirtSizes.map(size => 
-                                            React.createElement('option', { key: size, value: size }, size)
-                                        )
-                                    )
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre dátum narodenia
-                        if (path === 'birthDate') {
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement('input', {
-                                        type: 'date',
-                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: value || '',
-                                        onChange: (e) => handleChange(path, e.target.value),
-                                        disabled: !isSavable
-                                    })
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre PSČ (s medzerou)
-                        if (path === 'postalCode') {
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
+                                React.createElement('div', { key: path, className: 'mb-4' },
                                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                                     React.createElement('input', {
                                         type: 'text',
-                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: getFormattedPostalCodeForInput(value || ''),
-                                        onChange: (e) => handlePostalCodeChange(e, path),
-                                        onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-                                        placeholder: 'xxx xx',
-                                        maxLength: 6,
-                                        disabled: !isSavable
-                                    })
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre telefónne číslo (s predvoľbou)
-                        if (path === 'contactPhoneNumber') {
-                            const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value || '', countryDialCodes);
-                            const [localDialCode, setLocalDialCode] = React.useState(dialCode);
-                            const [localPhoneNumber, setLocalPhoneNumber] = React.useState(formatNumberGroups(numberWithoutDialCode));
-                            const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
-                            
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex' },
-                                        React.createElement('button', {
-                                            type: 'button',
-                                            className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                                            onClick: () => setIsDialCodeModalOpen(true),
-                                            disabled: !isSavable
-                                        }, localDialCode || 'Vybrať predvoľbu'),
-                                        React.createElement('input', {
-                                            type: 'tel',
-                                            className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                            value: localPhoneNumber,
-                                            onChange: (e) => {
-                                                const cleaned = e.target.value.replace(/\D/g, '');
-                                                setLocalPhoneNumber(formatNumberGroups(cleaned));
-                                                const fullNumber = combinePhoneNumber(localDialCode, cleaned);
-                                                handleChange(path, fullNumber);
-                                            },
-                                            disabled: !isSavable,
-                                            placeholder: 'Zadajte telefónne číslo'
-                                        })
-                                    ),
-                                    React.createElement(DialCodeSelectionModal, {
-                                        isOpen: isDialCodeModalOpen,
-                                        onClose: () => setIsDialCodeModalOpen(false),
-                                        onSelectDialCode: (newDialCode) => {
-                                            setLocalDialCode(newDialCode);
-                                            const cleaned = localPhoneNumber.replace(/\D/g, '');
-                                            const fullNumber = combinePhoneNumber(newDialCode, cleaned);
-                                            handleChange(path, fullNumber);
-                                        },
-                                        currentDialCode: localDialCode
-                                    })
-                                )
-                            );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre email (readonly)
-                        if (path === 'email') {
-                            volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement('input', {
-                                        type: 'email',
-                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2`,
-                                        value: value || '',
+                                        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2',
+                                        value: selectedDatesFormatted || '-',
                                         readOnly: true,
                                         disabled: true
                                     })
                                 )
                             );
-                            return;
-                        }
-                        
-                        // Špeciálne spracovanie pre poznámku (textarea)
-                        if (path === 'note') {
+                        } else {
+                            const selectedDatesArray = Array.isArray(value) ? value : [];
                             volunteerElements.push(
-                                React.createElement(
-                                    'div',
-                                    { key: path, className: 'mb-4' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                    React.createElement('textarea', {
-                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: value || '',
-                                        onChange: (e) => handleChange(path, e.target.value),
-                                        rows: 3,
-                                        disabled: !isSavable,
-                                        placeholder: 'Sem môžete napísať dodatočné informácie...'
-                                    })
+                                React.createElement('div', { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
+                                    React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
+                                        availableDates.map((date, idx) => {
+                                            const dateString = typeof date === 'string' ? date : date.toISOString?.()?.split('T')[0] || date;
+                                            const isSelected = selectedDatesArray.includes(dateString);
+                                            const displayDate = formatDateForDisplay(dateString);
+                                            return React.createElement('label', {
+                                                key: idx,
+                                                className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
+                                            },
+                                                React.createElement('input', {
+                                                    type: 'checkbox',
+                                                    checked: isSelected,
+                                                    onChange: (e) => {
+                                                        const newDates = e.target.checked
+                                                            ? [...selectedDatesArray, dateString]
+                                                            : selectedDatesArray.filter(d => d !== dateString);
+                                                        handleChange(path, newDates);
+                                                    },
+                                                    className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
+                                                    disabled: !isSavable
+                                                }),
+                                                React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, displayDate)
+                                            );
+                                        })
+                                    )
                                 )
                             );
-                            return;
                         }
-                        
-                        // Východiskové spracovanie pre bežné textové polia
+                        return;
+                    }
+
+                    // Dobrovoľnícke roly
+                    if (path === 'volunteerRoles') {
+                        const selectedRoles = Array.isArray(value) ? value : [];
                         volunteerElements.push(
-                            React.createElement(
-                                'div',
-                                { key: path, className: 'mb-4' },
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
+                                React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
+                                    volunteerOptions.map(option => {
+                                        const isSelected = selectedRoles.includes(option);
+                                        return React.createElement('label', {
+                                            key: option,
+                                            className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
+                                        },
+                                            React.createElement('input', {
+                                                type: 'checkbox',
+                                                checked: isSelected,
+                                                onChange: (e) => {
+                                                    const newRoles = e.target.checked
+                                                        ? [...selectedRoles, option]
+                                                        : selectedRoles.filter(r => r !== option);
+                                                    handleChange(path, newRoles);
+                                                },
+                                                className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
+                                                disabled: !isSavable
+                                            }),
+                                            React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
+                                        );
+                                    })
+                                )
+                            )
+                        );
+                        return;
+                    }
+
+                    // Pohlavie
+                    if (path === 'gender') {
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('select', {
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: value || '',
+                                    onChange: (e) => handleChange(path, e.target.value),
+                                    disabled: !isSavable
+                                },
+                                    React.createElement('option', { value: '', disabled: true }, 'Vyberte...'),
+                                    React.createElement('option', { value: 'male' }, 'Muž'),
+                                    React.createElement('option', { value: 'female' }, 'Žena')
+                                )
+                            )
+                        );
+                        return;
+                    }
+
+                    // Veľkosť trička
+                    if (path === 'tshirtSize') {
+                        const tshirtSizes = window.availableTshirtSizes || ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('select', {
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: value || '',
+                                    onChange: (e) => handleChange(path, e.target.value),
+                                    disabled: !isSavable
+                                },
+                                    React.createElement('option', { value: '', disabled: true }, 'Vyberte veľkosť...'),
+                                    tshirtSizes.map(size => React.createElement('option', { key: size, value: size }, size))
+                                )
+                            )
+                        );
+                        return;
+                    }
+
+                    // Dátum narodenia
+                    if (path === 'birthDate') {
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                                 React.createElement('input', {
-                                    type: 'text',
+                                    type: 'date',
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
                                     onChange: (e) => handleChange(path, e.target.value),
@@ -2662,34 +2333,150 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 })
                             )
                         );
-                    });
-                    
-                    return volunteerElements;
-                }
-            
-            if (isEditingMemberOrNewEntry && !title.includes('Pridať nový tím')) { // Použiť novú premennú, ale NIE pre "Pridať nový tím"
-                // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
-                return renderMemberFields(); // Voláme novú dedikovanú funkciu
-            } else if (title.includes('Upraviť používateľa')) { 
+                        return;
+                    }
+
+                    // PSČ
+                    if (path === 'postalCode') {
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: getFormattedPostalCodeForInput(value || ''),
+                                    onChange: (e) => handlePostalCodeChange(e, path),
+                                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                                    placeholder: 'xxx xx',
+                                    maxLength: 6,
+                                    disabled: !isSavable
+                                })
+                            )
+                        );
+                        return;
+                    }
+
+                    // Telefónne číslo
+                    if (path === 'contactPhoneNumber') {
+                        const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value || '', countryDialCodes);
+                        const [localDialCode, setLocalDialCode] = React.useState(dialCode);
+                        const [localPhoneNumber, setLocalPhoneNumber] = React.useState(formatNumberGroups(numberWithoutDialCode));
+                        const [localIsDialCodeModalOpen, setLocalIsDialCodeModalOpen] = React.useState(false);
+
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('div', { className: 'flex' },
+                                    React.createElement('button', {
+                                        type: 'button',
+                                        className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                        onClick: () => setLocalIsDialCodeModalOpen(true),
+                                        disabled: !isSavable
+                                    }, localDialCode || 'Vybrať predvoľbu'),
+                                    React.createElement('input', {
+                                        type: 'tel',
+                                        className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: localPhoneNumber,
+                                        onChange: (e) => {
+                                            const cleaned = e.target.value.replace(/\D/g, '');
+                                            setLocalPhoneNumber(formatNumberGroups(cleaned));
+                                            const fullNumber = combinePhoneNumber(localDialCode, cleaned);
+                                            handleChange(path, fullNumber);
+                                        },
+                                        disabled: !isSavable,
+                                        placeholder: 'Zadajte telefónne číslo'
+                                    })
+                                ),
+                                React.createElement(DialCodeSelectionModal, {
+                                    isOpen: localIsDialCodeModalOpen,
+                                    onClose: () => setLocalIsDialCodeModalOpen(false),
+                                    onSelectDialCode: (newDialCode) => {
+                                        setLocalDialCode(newDialCode);
+                                        const cleaned = localPhoneNumber.replace(/\D/g, '');
+                                        const fullNumber = combinePhoneNumber(newDialCode, cleaned);
+                                        handleChange(path, fullNumber);
+                                    },
+                                    currentDialCode: localDialCode
+                                })
+                            )
+                        );
+                        return;
+                    }
+
+                    // Email (len na čítanie)
+                    if (path === 'email') {
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('input', {
+                                    type: 'email',
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2`,
+                                    value: value || '',
+                                    readOnly: true,
+                                    disabled: true
+                                })
+                            )
+                        );
+                        return;
+                    }
+
+                    // Poznámka
+                    if (path === 'note') {
+                        volunteerElements.push(
+                            React.createElement('div', { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('textarea', {
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: value || '',
+                                    onChange: (e) => handleChange(path, e.target.value),
+                                    rows: 3,
+                                    disabled: !isSavable,
+                                    placeholder: 'Sem môžete napísať dodatočné informácie...'
+                                })
+                            )
+                        );
+                        return;
+                    }
+
+                    // Bežné textové polia
+                    volunteerElements.push(
+                        React.createElement('div', { key: path, className: 'mb-4' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                            React.createElement('input', {
+                                type: 'text',
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                value: value || '',
+                                onChange: (e) => handleChange(path, e.target.value),
+                                disabled: !isSavable
+                            })
+                        )
+                    );
+                });
+                return volunteerElements;
+            }
+
+            // Úprava člena tímu
+            if (isEditingMemberOrNewEntry && !title.includes('Pridať nový tím')) {
+                return renderMemberFields();
+            }
+
+            // Úprava používateľa (klub, admin, hall)
+            else if (title.includes('Upraviť používateľa')) {
                 const elements = [];
-                
                 const allUserFields = [
                     'firstName', 'lastName', 'contactPhoneNumber',
                     'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
-                    'street', 'houseNumber', 'city', 'postalCode', 'country', 'note' 
+                    'street', 'houseNumber', 'city', 'postalCode', 'country', 'note'
                 ];
                 let fieldsToRenderForUser = allUserFields;
                 const isCurrentUserAdmin = userRole === 'admin';
                 const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
 
-                // Ak aktuálny používateľ je admin A používateľ, ktorého upravujeme, je admin ALEBO hall,
-                // zobrazíme len meno a priezvisko. Telefónne číslo, fakturačné údaje, adresa a poznámka sa skryjú.
                 if (isCurrentUserAdmin && isUserBeingEditedAdminOrHall) {
-                    fieldsToRenderForUser = ['firstName', 'lastName']; // Len meno a priezvisko
+                    fieldsToRenderForUser = ['firstName', 'lastName'];
                 }
 
-                const renderedFields = new Set(); // Track rendered fields for the user form
-
+                const renderedFields = new Set();
 
                 const renderUserField = (path, value) => {
                     if (renderedFields.has(path)) return null;
@@ -2699,11 +2486,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                         return null;
                     }
-                    
+
                     const labelText = formatLabel(path);
                     let inputType = 'text';
                     let isCheckbox = false;
-                    let customProps = {}; 
+                    let customProps = {};
 
                     if (typeof value === 'boolean') {
                         isCheckbox = true;
@@ -2714,12 +2501,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             onChange: (e) => handleNumericInput(e, path),
                             inputMode: 'numeric',
                             pattern: '[0-9]*',
-                            maxLength: 10 
+                            maxLength: 10
                         };
                     } else if (path === 'billing.icDph') {
                         customProps = {
                             onChange: (e) => handleIcDphChange(e, path),
-                            maxLength: 12 
+                            maxLength: 12
                         };
                     } else if (path.includes('postalCode')) {
                         customProps = {
@@ -2729,20 +2516,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             pattern: '[0-9 ]*',
                             maxLength: 6,
                             value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                            onChange: (e) => handlePostalCodeChange(e, path),
-                            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                             readOnly: !isSavable
                         };
                     } else if (path === 'contactPhoneNumber') {
-                        // Nezobrazovať tlačidlo a input pre admin/hall používateľov
                         if (isUserBeingEditedAdminOrHall) return null;
-                        return React.createElement(
-                            'div',
-                            { key: path, className: 'mb-4' },
+                        return React.createElement('div', { key: path, className: 'mb-4' },
                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                            React.createElement(
-                                'div',
-                                { className: 'flex' },
+                            React.createElement('div', { className: 'flex' },
                                 React.createElement('button', {
                                     type: 'button',
                                     className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -2758,15 +2538,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     readOnly: !isSavable,
                                     inputMode: 'tel',
                                     placeholder: 'Zadajte telefónne číslo',
-                                    maxLength: 15 
+                                    maxLength: 15
                                 })
                             )
                         );
                     }
 
-                    return React.createElement(
-                        'div',
-                        { key: path, className: 'mb-4' },
+                    return React.createElement('div', { key: path, className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         isCheckbox ? (
                             React.createElement('input', {
@@ -2790,20 +2568,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     );
                 };
 
-                // Vykresliť len povolené polia pre používateľa
                 fieldsToRenderForUser.forEach(path => {
                     elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
                 });
 
-                // Zabezpečiť, aby sa prázdne billing, adresa a poznámka NEVYKRESLOVALI
-                // ak je používateľ admin/hall
                 if (!isUserBeingEditedAdminOrHall) {
                     const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
                     if (billingFieldsInScope.length > 0) {
                         elements.push(
-                            React.createElement(
-                                'div',
-                                { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('div', { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
                                 billingFieldsInScope.map(billingPath => {
                                     const billingValue = getNestedDataForInput(localEditedData, billingPath);
                                     return renderUserField(billingPath, billingValue);
@@ -2812,15 +2585,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         );
                     }
 
-                    const addressFieldsInScope = allUserFields.filter(p => 
+                    const addressFieldsInScope = allUserFields.filter(p =>
                         ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
                     );
-                    
                     if (addressFieldsInScope.length > 0) {
                         elements.push(
-                            React.createElement(
-                                'div',
-                                { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            React.createElement('div', { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
                                 addressFieldsInScope.map(addressPath => {
                                     const addressValue = getNestedDataForInput(localEditedData, addressPath);
                                     return renderUserField(addressPath, addressValue);
@@ -2833,30 +2603,26 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
                     }
                 }
+                return elements.filter(Boolean);
+            }
 
-                return elements.filter(Boolean); 
-            } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) { // Ak upravujeme Tím alebo pridávame nový tím
+            // Úprava tímu
+            else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
                 const teamElements = [];
 
-                // 1. Kategória tímu (Selectbox)
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: '_category', className: 'mb-4' },
+                    React.createElement('div', { key: '_category', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Kategória tímu'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedCategory,
-                                onChange: (e) => {
-                                    setSelectedCategory(e.target.value);
-                                    // Pre nový tím alebo úpravu existujúceho tímu, aktualizujeme _category aj category
-                                    handleChange('_category', e.target.value);
-                                    handleChange('category', e.target.value);
-                                },
-                                disabled: !isSavable
+                        React.createElement('select', {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedCategory,
+                            onChange: (e) => {
+                                setSelectedCategory(e.target.value);
+                                handleChange('_category', e.target.value);
+                                handleChange('category', e.target.value);
                             },
+                            disabled: !isSavable
+                        },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte kategóriu'),
                             selectedCategory && !categories.includes(selectedCategory) &&
                                 React.createElement('option', { key: selectedCategory, value: selectedCategory, disabled: true, hidden: true }, selectedCategory),
@@ -2865,11 +2631,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     )
                 );
 
-                // 2. Názov tímu (Inputbox)
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'teamName', className: 'mb-4' },
+                    React.createElement('div', { key: 'teamName', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Názov tímu'),
                         React.createElement('input', {
                             type: 'text',
@@ -2881,101 +2644,75 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     )
                 );
 
-                // 3. Typ dopravy (Selectbox a Čas)
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'arrival', className: 'mb-4' },
+                    React.createElement('div', { key: 'arrival', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ dopravy'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedArrivalType,
-                                onChange: (e) => {
-                                    setSelectedArrivalType(e.target.value);
-                                    handleChange('arrival.type', e.target.value); // Aktualizovať vnorené pole
-                                },
-                                disabled: !isSavable
+                        React.createElement('select', {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedArrivalType,
+                            onChange: (e) => {
+                                setSelectedArrivalType(e.target.value);
+                                handleChange('arrival.type', e.target.value);
                             },
+                            disabled: !isSavable
+                        },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
-                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
                             selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
                                 React.createElement('option', { key: selectedArrivalType, value: selectedArrivalType, disabled: true, hidden: true }, selectedArrivalType),
                             arrivalOptions.map(option => React.createElement('option', { key: option, value: option }, option))
                         ),
-                        // Input pre čas, ak je selectedArrivalType "verejná doprava - vlak" alebo "verejná doprava - autobus"
                         (selectedArrivalType === 'verejná doprava - vlak' || selectedArrivalType === 'verejná doprava - autobus') &&
-                        React.createElement(
-                            'div',
-                            { key: 'arrival.time-container', className: 'mt-2' },
-                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Čas príchodu'),
-                            React.createElement('input', {
-                                type: 'time',
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: arrivalTime,
-                                onChange: (e) => {
-                                    setArrivalTime(e.target.value);
-                                    handleChange('arrival.time', e.target.value);
-                                },
-                                readOnly: !isSavable
-                            })
-                        )
+                            React.createElement('div', { key: 'arrival.time-container', className: 'mt-2' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Čas príchodu'),
+                                React.createElement('input', {
+                                    type: 'time',
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: arrivalTime,
+                                    onChange: (e) => {
+                                        setArrivalTime(e.target.value);
+                                        handleChange('arrival.time', e.target.value);
+                                    },
+                                    readOnly: !isSavable
+                                })
+                            )
                     )
                 );
 
-                // 4. Typ ubytovania (Selectbox)
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'accommodation.type', className: 'mb-4' },
+                    React.createElement('div', { key: 'accommodation.type', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Typ ubytovania'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedAccommodationType,
-                                onChange: (e) => {
-                                    const newValue = e.target.value;
-                                    setSelectedAccommodationType(newValue);
-                                    handleChange('accommodation', { type: newValue });
-                                    handleChange('accommodation.type', newValue);
-                                    
-                                    // --- NOVÁ LOGIKA: Po zmene typu ubytovania vyberieme vhodný balík ---
-                                    // Získame všetky balíky dostupné pre nový typ ubytovania
-                                    const allPackages = packages || [];
-                                    const availablePackagesForNewType = allPackages.filter(pkg => {
-                                        if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
-                                            return true;
-                                        }
-                                        if (newValue === 'bez ubytovania') {
-                                            return pkg.accommodationTypes.includes('bez ubytovania');
-                                        }
-                                        return pkg.accommodationTypes.includes(newValue);
-                                    });
-                    
-                                    // Ak je aktuálne vybraný balík stále dostupný, ponecháme ho
-                                    const currentPackageStillAvailable = selectedPackageName && availablePackagesForNewType.some(pkg => pkg.name === selectedPackageName);
-                                    
-                                    if (currentPackageStillAvailable) {
-                                        // Aktuálny balík je stále dostupný, nič nemeníme
-                                        console.log("Aktuálny balík je stále dostupný pre nový typ ubytovania");
-                                    } else if (availablePackagesForNewType.length > 0) {
-                                        // Vyberieme prvý dostupný balík
-                                        const firstAvailablePackage = availablePackagesForNewType[0];
-                                        setSelectedPackageName(firstAvailablePackage.name);
-                                        const { id, ...packageDataToSave } = firstAvailablePackage;
-                                        handleChange('packageDetails', packageDataToSave);
-                                        console.log(`Automaticky vybraný balík: ${firstAvailablePackage.name} pre typ ubytovania: ${newValue}`);
-                                    } else {
-                                        // Žiadny balík nie je dostupný, vyčistíme
-                                        setSelectedPackageName('');
-                                        handleChange('packageDetails', null);
-                                        console.log(`Žiadny balík nie je dostupný pre typ ubytovania: ${newValue}`);
+                        React.createElement('select', {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedAccommodationType,
+                            onChange: (e) => {
+                                const newValue = e.target.value;
+                                setSelectedAccommodationType(newValue);
+                                handleChange('accommodation', { type: newValue });
+                                handleChange('accommodation.type', newValue);
+
+                                const allPackages = packages || [];
+                                const availablePackagesForNewType = allPackages.filter(pkg => {
+                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) return true;
+                                    if (newValue === 'bez ubytovania') {
+                                        return pkg.accommodationTypes.includes('bez ubytovania');
                                     }
-                                },
-                                disabled: !isSavable
+                                    return pkg.accommodationTypes.includes(newValue);
+                                });
+
+                                const currentPackageStillAvailable = selectedPackageName && availablePackagesForNewType.some(pkg => pkg.name === selectedPackageName);
+
+                                if (!currentPackageStillAvailable && availablePackagesForNewType.length > 0) {
+                                    const firstAvailablePackage = availablePackagesForNewType[0];
+                                    setSelectedPackageName(firstAvailablePackage.name);
+                                    const { id, ...packageDataToSave } = firstAvailablePackage;
+                                    handleChange('packageDetails', packageDataToSave);
+                                } else if (!currentPackageStillAvailable && availablePackagesForNewType.length === 0) {
+                                    setSelectedPackageName('');
+                                    handleChange('packageDetails', null);
+                                }
                             },
+                            disabled: !isSavable
+                        },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
                             selectedAccommodationType && !accommodationOptionsWithNone.includes(selectedAccommodationType) &&
                                 React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
@@ -2984,38 +2721,30 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     )
                 );
 
-                // 5. Názov balíka (Selectbox)
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'packageDetails.name', className: 'mb-4' },
+                    React.createElement('div', { key: 'packageDetails.name', className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Balík'),
-                        React.createElement(
-                            'select',
-                            {
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                value: selectedPackageName || '',
-                                onChange: (e) => {
-                                    const newPackageName = e.target.value;
-                                    setSelectedPackageName(newPackageName);
-                                    const selectedPackage = packages.find(pkg => pkg.name === newPackageName);
-                                    if (selectedPackage) {
-                                        const { id, ...packageDataToSave } = selectedPackage;
-                                        handleChange('packageDetails', packageDataToSave);
-                                    } else {
-                                        handleChange('packageDetails', null);
-                                    }
-                                },
-                                disabled: !isSavable
+                        React.createElement('select', {
+                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                            value: selectedPackageName || '',
+                            onChange: (e) => {
+                                const newPackageName = e.target.value;
+                                setSelectedPackageName(newPackageName);
+                                const selectedPackage = packages.find(pkg => pkg.name === newPackageName);
+                                if (selectedPackage) {
+                                    const { id, ...packageDataToSave } = selectedPackage;
+                                    handleChange('packageDetails', packageDataToSave);
+                                } else {
+                                    handleChange('packageDetails', null);
+                                }
                             },
+                            disabled: !isSavable
+                        },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                            // Filtrujeme balíky podľa vybraného typu ubytovania
                             (() => {
                                 const allPackages = packages || [];
                                 const filteredPackages = allPackages.filter(pkg => {
-                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
-                                        return true;
-                                    }
+                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) return true;
                                     if (selectedAccommodationType === 'bez ubytovania') {
                                         return pkg.accommodationTypes.includes('bez ubytovania');
                                     }
@@ -3023,31 +2752,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 });
                                 return filteredPackages
                                     .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                                    .map(pkg => 
-                                        React.createElement('option', { 
-                                            key: pkg.id || pkg.name, 
-                                            value: pkg.name 
-                                        }, pkg.name)
-                                    );
+                                    .map(pkg => React.createElement('option', { key: pkg.id || pkg.name, value: pkg.name }, pkg.name));
                             })()
                         )
                     )
                 );
 
                 teamElements.push(
-                    React.createElement(
-                        'div',
-                        { key: 'jerseyColors', className: 'mb-6 border-t border-gray-200 pt-4' },
-                        React.createElement('label', {
-                            className: 'block text-base font-semibold text-gray-800 mb-3'
-                        }, 'Farby dresov'),
-                        React.createElement(
-                            'div',
-                            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
-                            // Domáce farby
-                            React.createElement(
-                                'div',
-                                null,
+                    React.createElement('div', { key: 'jerseyColors', className: 'mb-6 border-t border-gray-200 pt-4' },
+                        React.createElement('label', { className: 'block text-base font-semibold text-gray-800 mb-3' }, 'Farby dresov'),
+                        React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' },
+                            React.createElement('div', null,
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 1'),
                                 React.createElement('input', {
                                     type: 'text',
@@ -3058,10 +2773,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     disabled: !isSavable
                                 })
                             ),
-                            // Vonku farby
-                            React.createElement(
-                                'div',
-                                null,
+                            React.createElement('div', null,
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Farba dresov 2'),
                                 React.createElement('input', {
                                     type: 'text',
@@ -3072,46 +2784,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     disabled: !isSavable
                                 })
                             )
-                        ),
+                        )
                     )
                 );
 
-                // 6. Tričká
                 if (availableTshirtSizes.length > 0) {
-                    const usedSizes = teamTshirts.map(entry => entry.size); // Get all sizes currently selected across all rows
+                    const usedSizes = teamTshirts.map(entry => entry.size);
                     teamElements.push(
-                        React.createElement(
-                            'div',
-                            { key: 'tshirts-section', className: 'mb-4' },
+                        React.createElement('div', { key: 'tshirts-section', className: 'mb-4' },
                             React.createElement('h4', { className: 'text-md font-semibold text-gray-800 mb-2' }, 'Tričká'),
-                            // Render existing t-shirt entries
                             teamTshirts.map(tshirtEntry =>
-                                React.createElement(
-                                    'div',
-                                    { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
-                                    React.createElement(
-                                        'select',
-                                        {
-                                            className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                            value: tshirtEntry.size,
-                                            onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
-                                            disabled: !isSavable
-                                        },
-                                        // Option for the currently selected size, always show it
-                                        // Even if it might be considered 'used' by another entry in some edge case or if no longer available globally
-                                        availableTshirtSizes.includes(tshirtEntry.size) ? 
+                                React.createElement('div', { key: tshirtEntry.tempId, className: 'flex items-center mb-2' },
+                                    React.createElement('select', {
+                                        className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: tshirtEntry.size,
+                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
+                                        disabled: !isSavable
+                                    },
+                                        availableTshirtSizes.includes(tshirtEntry.size) ?
                                             React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
-                                        : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
-
-                                        // Only show other available sizes that are not currently used by other entries
+                                            : (tshirtEntry.size && React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size, disabled: true, hidden: true }, `${tshirtEntry.size} (Neplatná)`)),
                                         availableTshirtSizes
-                                            .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size) // Filter out already used sizes, but keep the current entry's size
+                                            .filter(size => !usedSizes.includes(size) || size === tshirtEntry.size)
                                             .map(size => (
-                                                size !== tshirtEntry.size ? // Avoid duplicating the already rendered current size option
-                                                React.createElement('option', {
-                                                    key: size,
-                                                    value: size,
-                                                }, size) : null
+                                                size !== tshirtEntry.size ?
+                                                    React.createElement('option', { key: size, value: size }, size) : null
                                             ))
                                     ),
                                     React.createElement('input', {
@@ -3125,52 +2822,44 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     React.createElement('button', {
                                         type: 'button',
                                         onClick: () => removeTshirtEntry(tshirtEntry.tempId),
-                                        className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none', // Circular delete button
-                                        style: { lineHeight: '10px' }, // Adjust line height to center the '-'
+                                        className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 focus:outline-none text-xl leading-none',
+                                        style: { lineHeight: '10px' },
                                     }, '-')
                                 )
                             ),
-                            // Wrap the add button in a div for centering
                             React.createElement('div', { className: 'flex justify-center mt-2' },
                                 React.createElement('button', {
                                     type: 'button',
                                     onClick: addTshirtEntry,
-                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none', // Changed color to blue, made round, text-xl for larger +, line-height for centering
-                                    style: { lineHeight: '10px' }, // Adjust line height to center the '+'
-                                    disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length // Disable if all sizes are used
+                                    className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none',
+                                    style: { lineHeight: '10px' },
+                                    disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length
                                 }, '+')
                             )
                         )
                     );
                 }
-
                 return teamElements;
             }
-        } else { // Pre všetky ostatné prípady (vnorené objekty alebo iné, ako vyššie špecifikované typy úprav)
-            // Táto časť sa už nemala volať pre členov (hráčov/RT/šoférov)
+        } else {
+            // Vnorené polia
             return Object.entries(obj).map(([key, value]) => {
                 if (key.startsWith('_') || ['teams', 'columnOrder', 'displayNotifications', 'emailVerified', 'password', 'packageDetails', 'accommodation', 'arrival', 'tshirts'].includes(key)) {
                     return null;
                 }
-                
+
                 const fullKeyPath = currentPath ? `${currentPath}.${key}` : key;
 
                 if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value.toDate && typeof value.toDate === 'function')) {
-                    return React.createElement(
-                        CollapsibleSection,
-                        {
-                            key: fullKeyPath,
-                            title: formatLabel(fullKeyPath),
-                            defaultOpen: false,
-                            noOuterStyles: true
-                        },
-                        renderDataFields(value, fullKeyPath)
-                    );
+                    return React.createElement(CollapsibleSection, {
+                        key: fullKeyPath,
+                        title: formatLabel(fullKeyPath),
+                        defaultOpen: false,
+                        noOuterStyles: true
+                    }, renderDataFields(value, fullKeyPath));
                 } else if (Array.isArray(value)) {
                     if (value.length === 0) {
-                        return React.createElement(
-                            'div',
-                            { key: fullKeyPath, className: 'mb-4' },
+                        return React.createElement('div', { key: fullKeyPath, className: 'mb-4' },
                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, formatLabel(fullKeyPath)),
                             React.createElement('input', {
                                 type: 'text',
@@ -3180,39 +2869,36 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             })
                         );
                     }
-                    return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
-                        value.map((item, index) => React.createElement(
-                            CollapsibleSection,
-                            { key: `${fullKeyPath}[${index}]`, title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`, defaultOpen: false, noOuterStyles: false },
-                            renderDataFields(item, `${fullKeyPath}[${index}]`)
-                        ))
+                    return React.createElement('div', { key: fullKeyPath, className: 'border border-gray-200 rounded-lg mb-2' },
+                        value.map((item, index) => React.createElement(CollapsibleSection, {
+                            key: `${fullKeyPath}[${index}]`,
+                            title: `${item.firstName || ''} ${item.lastName || item.size || 'Položka'}`,
+                            defaultOpen: false,
+                            noOuterStyles: false
+                        }, renderDataFields(item, `${fullKeyPath}[${index}]`)))
                     );
                 } else {
-                    // Pre tento generický renderField potrebujeme, aby fungoval ako renderUserField,
-                    // len s cestou a hodnotou (bez špeciálnych podmienok pre telefónne číslo atď.)
                     const labelText = formatLabel(fullKeyPath);
                     let inputType = 'text';
                     let isCheckbox = false;
-                    let customProps = {}; 
+                    let customProps = {};
 
                     if (typeof value === 'boolean') {
                         isCheckbox = true;
                     } else if (fullKeyPath.toLowerCase().includes('password')) {
                         inputType = 'password';
                     } else if (fullKeyPath.includes('dateOfBirth')) {
-                         inputType = 'date';
-                    } else if (fullKeyPath.includes('jerseyNumber')) { // Iba pre JerseyNumber
-                         customProps = {
+                        inputType = 'date';
+                    } else if (fullKeyPath.includes('jerseyNumber')) {
+                        customProps = {
                             onChange: (e) => handleNumericInput(e, fullKeyPath),
                             inputMode: 'numeric',
                             pattern: '[0-9]*',
                             maxLength: 3
                         };
-                    } else if (fullKeyPath.includes('registrationNumber')) { // Teraz umožňuje všetky znaky pre RegistrationNumber
-                         customProps = {
-                            onChange: (e) => handleChange(fullKeyPath, e.target.value), // Už nepoužíva handleNumericInput
+                    } else if (fullKeyPath.includes('registrationNumber')) {
+                        customProps = {
+                            onChange: (e) => handleChange(fullKeyPath, e.target.value),
                             maxLength: 20
                         };
                     } else if (fullKeyPath.includes('postalCode')) {
@@ -3221,13 +2907,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             onKeyDown: (e) => handlePostalCodeKeyDown(e, fullKeyPath),
                             inputMode: 'numeric',
                             pattern: '[0-9 ]*',
-                            maxLength: 6 
+                            maxLength: 6
                         };
                     }
-                    
-                    return React.createElement(
-                        'div',
-                        { key: fullKeyPath, className: 'mb-4' },
+
+                    return React.createElement('div', { key: fullKeyPath, className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         isCheckbox ? (
                             React.createElement('input', {
@@ -3267,19 +2951,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
-                renderDataFields(localEditedData) // Tu odovzdávame localEditedData
+                renderDataFields(localEditedData)
             ),
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mt-4' },
-                // Tlačidlo "Odstrániť" pre členov
-                (!isNewEntry && isEditingMember) && React.createElement('button', { 
+                (!isNewEntry && isEditingMember) && React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: handleDeleteMemberClick,
                     disabled: !isSavable
                 }, 'Odstrániť člena'),
-
-                // Tlačidlo "Odstrániť" pre tím (zobrazí sa, ak sa upravuje tím a nie je to nový záznam)
                 (!isNewEntry && (title.includes('Upraviť tím'))) && React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: () => {
@@ -3288,7 +2969,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     },
                     disabled: !isSavable
                 }, 'Odstrániť tím'),
-
                 React.createElement(
                     'div',
                     { className: 'flex space-x-2' },
@@ -3301,23 +2981,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         onClick: async () => {
                             try {
                                 window.showGlobalLoader();
-                                
                                 const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
-                        
-                                // 1. Telefónne číslo (len ak nie admin/hall)
+
                                 if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
                                     dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                                 } else if (isTargetUserAdmin || isTargetUserHall) {
                                     delete dataToPrepareForSave.contactPhoneNumber;
                                 }
-                        
-                                // 2. Špeciálne polia pre tím - DÔLEŽITÁ OPRAVA
+
                                 if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
-                                    // Zabezpečte, že tieto polia sú správne nastavené
                                     dataToPrepareForSave.category = selectedCategory;
                                     dataToPrepareForSave._category = selectedCategory;
-    
-                                    // Správne nastavenie príchodu
+
                                     if (selectedArrivalType) {
                                         dataToPrepareForSave.arrival = { type: selectedArrivalType };
                                         if (selectedArrivalType === 'verejná doprava - vlak' || selectedArrivalType === 'verejná doprava - autobus') {
@@ -3328,15 +3003,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     } else {
                                         dataToPrepareForSave.arrival = { type: '' };
                                     }
-                                    
-                                    // Správne nastavenie ubytovania - TOTO JE DÔLEŽITÉ
-                                    // Najprv skopírujeme existujúce dáta, potom prepíšeme typ
+
                                     if (!dataToPrepareForSave.accommodation) {
                                         dataToPrepareForSave.accommodation = {};
                                     }
                                     dataToPrepareForSave.accommodation.type = selectedAccommodationType;
-                                    
-                                    // Správne nastavenie balíka
+
                                     if (selectedPackageName) {
                                         const selectedPackage = packages.find(pkg => pkg.name === selectedPackageName);
                                         if (selectedPackage) {
@@ -3344,35 +3016,25 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                             dataToPrepareForSave.packageDetails = packageDataToSave;
                                         }
                                     } else {
-                                        // Ak nie je vybraný žiadny balík, vymažeme ho
                                         delete dataToPrepareForSave.packageDetails;
                                     }
-                                    
-                                    // Správne nastavenie tričiek
+
                                     dataToPrepareForSave.tshirts = teamTshirts
                                         .filter(t => t.size && t.quantity > 0)
                                         .map(({ size, quantity }) => ({ size, quantity }));
                                 }
-                        
-                                // 3. Filtrovanie interných/nepotrebných kľúčov
+
                                 const finalDataToSave = {};
                                 Object.keys(dataToPrepareForSave).forEach(key => {
                                     if (!['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
                                         const value = dataToPrepareForSave[key];
                                         if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
-                                            // preskočiť billing pre admin/hall
                                         } else {
                                             finalDataToSave[key] = value;
                                         }
                                     }
                                 });
-                        
-                                console.log("DEBUG: DataEditModal → finalDataToSave pre tím:", finalDataToSave);
-                    
-                                // ────────────────────────────────────────────────────────────────
-                                // ROZHODNUTIE: či vôbec robiť diff v modálnom okne
-                                // ────────────────────────────────────────────────────────────────
-                    
+
                                 const isAddingNewMember = isNewEntry && (
                                     editModalTitle.toLowerCase().includes('pridať nový hráč') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
@@ -3380,75 +3042,52 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     editModalTitle.toLowerCase().includes('pridať nový šofér (žena)') ||
                                     editModalTitle.toLowerCase().includes('pridať nový šofér (muž)')
                                 );
-                    
+
                                 const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
-                    
                                 let generatedChanges = [];
-                    
+
                                 if (isAddingNewMember) {
-                                    // NOVÝ ČLEN → v modálnom okne NEgenerujeme diff
                                     console.log("DEBUG: Nový člen → preskakujem getChangesForNotification v DataEditModal");
-                                }
-                                else if (isAddingNewTeam) {
-                                    // NOVÝ TÍM → špeciálna jednoduchá notifikácia (bez diffu)
+                                } else if (isAddingNewTeam) {
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
-                                    console.log("DEBUG: Nový tím → používam špeciálnu notifikáciu bez diffu");
-                                }
-                                else {
-                                    // ÚPRAVA (člena alebo tímu) → normálny diff
+                                } else {
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave));
-                                
-                                    // Skryť billing/adresu pre admin/hall pri porovnaní
+
                                     if (isTargetUserAdmin || isTargetUserHall) {
                                         delete originalDataForCompare.address;
                                         delete originalDataForCompare.billing;
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
-                                
+
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
                                         modifiedDataForCompare,
                                         formatDateToDMMYYYY
                                     );
-                                
-                                    // Explicitná kontrola zmeny kategórie (len pre tímy)
+
                                     const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                     const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
                                     if (originalCategory !== updatedCategory && !generatedChanges.some(c => c.includes('Zmena Kategórie:'))) {
                                         generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                     }
-                                
-                                    // Prefix iba pre tímy (ak ide o tím)
+
                                     if (finalDataToSave.teamName || finalDataToSave._category) {
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
-                                        generatedChanges = generatedChanges.map(change => 
+                                        generatedChanges = generatedChanges.map(change =>
                                             `Tím ${teamName} (${teamCategory}): ${change}`
                                         );
                                     }
-                                    else if (editModalTitle.toLowerCase().includes('upraviť hráč') ||
-                                             editModalTitle.toLowerCase().includes('upraviť člen') ||
-                                             editModalTitle.toLowerCase().includes('upraviť šofér')) {
-                                        // ŽIADNY prefix tu – necháme to na handleSaveEditedData
-                                        console.log("DEBUG: Úprava člena → prefix sa pridá v handleSaveEditedData");
-                                    }
                                 }
-                    
-                                console.log("DEBUG: DataEditModal → generatedChanges:", generatedChanges);
-                                console.log("DEBUG: DataEditModal → generatedChanges.length:", generatedChanges.length);
-                    
-                                // Ak nič nezmenené a nie je to nový člen/tím → zavrieť
+
                                 if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                                     onClose();
                                     return;
                                 }
-                    
-                                // ────────────────────────────────────────────────────────────────
-                                // Uloženie notifikácie do Firestore (ak niečo máme)
-                                // ────────────────────────────────────────────────────────────────
+
                                 const userEmail = window.auth.currentUser?.email;
                                 if (generatedChanges.length > 0 && userEmail) {
                                     const notificationsCollectionRef = collection(db, 'notifications');
@@ -3457,12 +3096,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         changes: generatedChanges,
                                         timestamp: serverTimestamp()
                                     });
-                                    console.log("Notifikácia uložená z DataEditModal (diff alebo nový tím)");
                                 }
-                    
-                                // ────────────────────────────────────────────────────────────────
-                                // Volanie hlavnej logiky uloženia (handleSaveEditedData)
-                                // ────────────────────────────────────────────────────────────────
+
                                 onSave(
                                     finalDataToSave,
                                     targetDocRef,
@@ -3471,7 +3106,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     isTargetUserAdmin,
                                     isTargetUserHall
                                 );
-                    
+
                             } catch (e) {
                                 console.error("Chyba v DataEditModal pri ukladaní:", e);
                                 setError(`Chyba pri ukladaní: ${e.message}`);
@@ -3484,7 +3119,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 )
             )
         ),
-        // DialCodeSelectionModal sa zobrazí iba vtedy, ak sa upravuje používateľ a NIE JE to admin/hall
         !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
             isOpen: isDialCodeModalOpen,
             onClose: () => setIsDialCodeModalOpen(false),
@@ -3494,18 +3128,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         React.createElement(ConfirmationModal, {
             isOpen: isConfirmDeleteOpen,
             onClose: () => setIsConfirmDeleteOpen(false),
-            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath), // Zavolať prop onDeleteMember
+            onConfirm: () => onDeleteMember(targetDocRef, originalDataPath),
             title: "Potvrdenie odstránenia člena",
             message: deleteConfirmMessage
         }),
-        // Nový ConfirmationModal pre tím
         React.createElement(ConfirmationModal, {
             isOpen: isConfirmDeleteTeamOpen,
             onClose: () => setIsConfirmDeleteTeamOpen(false),
             onConfirm: () => {
-                onDeleteTeam(targetDocRef, originalDataPath); // Zavolať prop onDeleteTeam
-                setIsConfirmDeleteTeamOpen(false); // Zatvoriť aj potvrdzovací modal
-                onClose(); // Zatvoriť hlavný DataEditModal
+                onDeleteTeam(targetDocRef, originalDataPath);
+                setIsConfirmDeleteTeamOpen(false);
+                onClose();
             },
             title: "Potvrdenie odstránenia tímu",
             message: deleteTeamConfirmMessage
