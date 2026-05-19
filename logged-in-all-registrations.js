@@ -2358,11 +2358,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                     // Telefónne číslo
                     if (path === 'contactPhoneNumber') {
-                        const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value || '', countryDialCodes);
-                        const [localDialCode, setLocalDialCode] = React.useState(dialCode);
-                        const [localPhoneNumber, setLocalPhoneNumber] = React.useState(formatNumberGroups(numberWithoutDialCode));
-                        const [localIsDialCodeModalOpen, setLocalIsDialCodeModalOpen] = React.useState(false);
-
+                        // Použiť existujúce stavy displayDialCode a displayPhoneNumber z komponentu
+                        // a setIsDialCodeModalOpen z komponentu
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
@@ -2370,51 +2367,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     React.createElement('button', {
                                         type: 'button',
                                         className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                                        onClick: () => setLocalIsDialCodeModalOpen(true),
+                                        onClick: () => setIsDialCodeModalOpen(true),
                                         disabled: !isSavable
-                                    }, localDialCode || 'Vybrať predvoľbu'),
+                                    }, displayDialCode || 'Vybrať predvoľbu'),
                                     React.createElement('input', {
+                                        ref: el => inputRefs.current[path] = el,
                                         type: 'tel',
                                         className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
-                                        value: localPhoneNumber,
-                                        onChange: (e) => {
-                                            const cleaned = e.target.value.replace(/\D/g, '');
-                                            setLocalPhoneNumber(formatNumberGroups(cleaned));
-                                            const fullNumber = combinePhoneNumber(localDialCode, cleaned);
-                                            handleChange(path, fullNumber);
-                                        },
-                                        disabled: !isSavable,
-                                        placeholder: 'Zadajte telefónne číslo'
+                                        value: displayPhoneNumber,
+                                        onChange: handleContactPhoneNumberChange,
+                                        readOnly: !isSavable,
+                                        inputMode: 'tel',
+                                        placeholder: 'Zadajte telefónne číslo',
+                                        maxLength: 15
                                     })
-                                ),
-                                React.createElement(DialCodeSelectionModal, {
-                                    isOpen: localIsDialCodeModalOpen,
-                                    onClose: () => setLocalIsDialCodeModalOpen(false),
-                                    onSelectDialCode: (newDialCode) => {
-                                        setLocalDialCode(newDialCode);
-                                        const cleaned = localPhoneNumber.replace(/\D/g, '');
-                                        const fullNumber = combinePhoneNumber(newDialCode, cleaned);
-                                        handleChange(path, fullNumber);
-                                    },
-                                    currentDialCode: localDialCode
-                                })
-                            )
-                        );
-                        return;
-                    }
-
-                    // Email (len na čítanie)
-                    if (path === 'email') {
-                        volunteerElements.push(
-                            React.createElement('div', { key: path, className: 'mb-4' },
-                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                                React.createElement('input', {
-                                    type: 'email',
-                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2`,
-                                    value: value || '',
-                                    readOnly: true,
-                                    disabled: true
-                                })
+                                )
                             )
                         );
                         return;
