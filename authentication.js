@@ -101,6 +101,19 @@ const setupFirebase = () => {
     }
 };
 
+// Pomocná funkcia na kontrolu, či sme na login stránke
+const isOnLoginPage = () => {
+    const currentPath = window.location.pathname;
+    // Kontroluje, či cesta končí na 'login.html' (napr. /2025/login.html alebo /nazov-projektu/login.html)
+    return currentPath.endsWith('/login.html') || currentPath === '/login.html';
+};
+
+// Pomocná funkcia na kontrolu, či sme na chránenej stránke
+const isOnBlockedPage = () => {
+    const currentPath = window.location.pathname;
+    return blockedPages.some(page => currentPath.includes(page));
+};
+
 const handleAuthState = async () => {
     onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
@@ -161,15 +174,13 @@ const handleAuthState = async () => {
                             
                             // Schválení používatelia
                             else if (userProfileData.approved === true) {
-                                const currentPath = window.location.pathname;
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
-                                const loginPath = `${appBasePath}/login.html`;
 
-                                if (currentPath.includes(loginPath)) {
+                                if (isOnLoginPage()) {
                                     console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                else if (userProfileData.role !== 'admin' && blockedPages.some(page => currentPath.includes(page))) {
+                                else if (userProfileData.role !== 'admin' && isOnBlockedPage()) {
                                     console.log(`AuthManager: Používateľ nemá prístup na túto stránku.`);
                                     window.location.href = targetPathMyData;
                                 }
@@ -202,15 +213,11 @@ const handleAuthState = async () => {
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             
-            // KONTROLA: Ak nie je prihlásený žiadny používateľ a nachádzame sa na stránke z blockedPages,
+            // KONTROLA: Ak nie je prihlásený žiadny používateľ a nachádzame sa na chránenej stránke,
             // okamžite presmerujeme na login.html
-            const currentPath = window.location.pathname;
-            const loginPath = `${appBasePath}/login.html`;
-            
-            // Skontrolujeme, či aktuálna stránka je v zozname blockedPages (a nie je to už login.html)
-            if (!currentPath.includes(loginPath) && blockedPages.some(page => currentPath.includes(page))) {
+            if (!isOnLoginPage() && isOnBlockedPage()) {
                 console.log("AuthManager: Neprihlásený používateľ na chránenej stránke. Presmerovávam na login.");
-                window.location.href = loginPath;
+                window.location.href = `${appBasePath}/login.html`;
                 return;
             }
         }
