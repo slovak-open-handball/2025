@@ -7520,7 +7520,9 @@ const SpiderApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
-//            React.createElement(
+            React.createElement(
+                'div',
+                { className: 'flex flex-col gap-12 w-full px-8' },
 //                'div',
 //                { 
 //                    className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
@@ -7860,7 +7862,7 @@ const SpiderApp = ({ userProfileData }) => {
                         )
                     )
                 )
-//            )
+            )
         )
     );
 };
