@@ -3150,7 +3150,8 @@ async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerI
             return {
                 firstName: result.data.firstName,
                 lastName: result.data.lastName,
-                jerseyNumber: result.data.jerseyNumber
+                jerseyNumber: result.data.jerseyNumber,
+                memberType: result.data.memberType  // 🔥 PRIDANÉ: typ člena
             };
         }
         
