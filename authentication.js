@@ -70,6 +70,15 @@ const publicPages = [
     'volunteer-register.html',
 ];
 
+// Definícia stránok dostupných LEN pre neprihlásených používateľov
+// (ak je prihlásený používateľ na takejto stránke, bude presmerovaný)
+const guestOnlyPages = [
+    'login.html',
+    'register.html',
+    'admin-register.html',
+    'volunteer-register.html'
+];
+
 // Definícia prístupových práv pre jednotlivé roly
 const roleAccess = {
     admin: [
@@ -139,6 +148,15 @@ const isPublicPage = () => {
     const fileName = getFileNameFromPath(currentPath);
     const result = publicPages.includes(fileName);
     console.log(`AuthManager: isPublicPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
+    return result;
+};
+
+// Pomocná funkcia na kontrolu, či je stránka dostupná LEN pre neprihlásených používateľov
+const isGuestOnlyPage = () => {
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    const result = guestOnlyPages.includes(fileName);
+    console.log(`AuthManager: isGuestOnlyPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
     return result;
 };
 
@@ -234,6 +252,14 @@ const handleAuthState = async () => {
                                 const currentPage = getFileNameFromPath(window.location.pathname);
                                 const userRole = userProfileData.role;
                                 const isCurrentPagePublic = isPublicPage();
+                                const isCurrentPageGuestOnly = isGuestOnlyPage();
+                                
+                                // Ak je prihlásený používateľ na stránke, ktorá je len pre neprihlásených, presmeruj ho
+                                if (isCurrentPageGuestOnly) {
+                                    console.log(`AuthManager: Prihlásený používateľ na stránke určenej len pre neprihlásených ("${currentPage}"). Presmerovávam na ${targetPathMyData}`);
+                                    window.location.href = targetPathMyData;
+                                    return;
+                                }
                                 
                                 // Ak je na login stránke, presmeruj na my-data
                                 if (isOnLoginPage()) {
