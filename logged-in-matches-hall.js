@@ -440,7 +440,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
     }, [teamName, categoryName]);
     
     // Funkcia pre kliknutie na člena
-    const handleMemberClick = (member, index, arrayName) => {
+    const handleMemberClick = async (member, index, arrayName) => {
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
         console.log(`Typ: ${member.type}`);
@@ -451,6 +451,32 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
+        
+        // 🔥 VOLANIE WORKER PRE ZÍSKANIE ÚDAJOV HRÁČA
+        try {
+            // Zavoláme Worker s parametrami
+            const playerData = await fetchPlayerFromWorker(
+                mappedName,        // názov tímu (použijeme zmapovaný)
+                categoryName,      // názov kategórie
+                arrayName,         // názov poľa (playerDetails, menTeamMemberDetails, atď.)
+                index              // poradové číslo (0-based)
+            );
+        
+            if (playerData) {
+                console.log(`=== ÚDAJE Z WORKER ===`);
+                console.log(`Meno: ${playerData.firstName}`);
+                console.log(`Priezvisko: ${playerData.lastName}`);
+                console.log(`Číslo dresu: ${playerData.jerseyNumber}`);
+                console.log(`======================`);
+                
+                // Tu môžete zobraziť tieto údaje napr. v modálnom okne
+                alert(`Hráč: ${playerData.firstName} ${playerData.lastName}\nČíslo dresu: ${playerData.jerseyNumber || 'neuvedené'}`);
+            } else {
+                console.log('❌ Nepodarilo sa získať údaje z Worker');
+            }
+        } catch (err) {
+            console.error('Chyba pri volaní Worker:', err);
+        }
     };
     
     // Získanie ikonky podľa typu člena
@@ -3048,4 +3074,46 @@ if (window.db && window.globalUserProfileData) {
             renderApp();
         }
     }, 3000);
+}
+
+
+// Funkcia na volanie Cloudflare Worker pre získanie údajov hráča
+async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerIndex) {
+    const WORKER_URL = 'https://soh.production.workers.dev'; // Nahraďte vašou URL
+  
+    try {
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                teamName: teamName,
+                categoryName: categoryName,
+                playerType: playerType,
+                playerIndex: playerIndex
+            })
+        });
+  
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Worker error:', errorData);
+            return null;
+        }
+  
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            return {
+                firstName: result.data.firstName,
+                lastName: result.data.lastName,
+                jerseyNumber: result.data.jerseyNumber
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Chyba pri volaní Worker:', error);
+        return null;
+    }
 }
