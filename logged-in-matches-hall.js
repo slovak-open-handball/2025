@@ -446,36 +446,36 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`Typ: ${member.type}`);
         console.log(`Poradie v poli: ${index + 1}.`);
         console.log(`Názov poľa: ${arrayName}`);
-        console.log(`Celkový počet v tomto poli: ${members.length}`);
         console.log(`Tím (pôvodný): ${teamName}`);
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
-        
+    
         // 🔥 VOLANIE WORKER PRE ZÍSKANIE ÚDAJOV HRÁČA
         try {
-            // Zavoláme Worker s parametrami
             const playerData = await fetchPlayerFromWorker(
                 mappedName,        // názov tímu (použijeme zmapovaný)
                 categoryName,      // názov kategórie
                 arrayName,         // názov poľa (playerDetails, menTeamMemberDetails, atď.)
                 index              // poradové číslo (0-based)
             );
-        
+            
             if (playerData) {
                 console.log(`=== ÚDAJE Z WORKER ===`);
                 console.log(`Meno: ${playerData.firstName}`);
                 console.log(`Priezvisko: ${playerData.lastName}`);
                 console.log(`Číslo dresu: ${playerData.jerseyNumber}`);
                 console.log(`======================`);
-                
-                // Tu môžete zobraziť tieto údaje napr. v modálnom okne
-                alert(`Hráč: ${playerData.firstName} ${playerData.lastName}\nČíslo dresu: ${playerData.jerseyNumber || 'neuvedené'}`);
+            
+                // Zobrazenie v alert okne
+                alert(`🎯 HRÁČ\n\nMeno: ${playerData.firstName} ${playerData.lastName}\nČíslo dresu: ${playerData.jerseyNumber || 'neuvedené'}`);
             } else {
                 console.log('❌ Nepodarilo sa získať údaje z Worker');
+                alert(`⚠️ Nepodarilo sa načítať údaje hráča\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
             }
         } catch (err) {
-            console.error('Chyba pri volaní Worker:', err);
+            console.error('❌ Chyba pri volaní Worker:', err);
+            alert(`Chyba pri načítaní údajov: ${err.message}`);
         }
     };
     
