@@ -2159,7 +2159,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && localEditedData?.role === 'volunteer';
 
-        if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
+        if (title.includes('upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
         }
 
