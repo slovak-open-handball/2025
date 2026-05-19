@@ -7744,10 +7744,10 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex flex-col items-center w-full px-8',
+                        className: 'flex flex-col items-center w-full',
                         style: { 
                             minHeight: '700px',
-                            padding: '20px 0'
+                            padding: '20px'
                         }
                     },
                     
