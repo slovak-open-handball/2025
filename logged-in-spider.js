@@ -7747,7 +7747,7 @@ const SpiderApp = ({ userProfileData }) => {
                         className: 'flex flex-col items-center w-full',
                         style: { 
                             minHeight: '700px',
-                            padding: '20px'
+                            padding: '30px'
                         }
                     },
                     
