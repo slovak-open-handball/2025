@@ -60,6 +60,19 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
+// Zoznam admin stránok (prístupné len pre adminov)
+const adminPages = [
+    'logged-in-add-categories.html',
+    'logged-in-add-groups.html',
+    'logged-in-teams-in-groups.html',
+    'logged-in-tournament-settings.html',
+    'logged-in-all-registrations.html',
+    'logged-in-users.html',
+    'logged-in-notifications.html',
+    'logged-in-map.html',
+    'logged-in-teams-in-accommodation.html'
+];
+
 // Inicializácia Firebase aplikácie
 let app;
 let db;
@@ -108,6 +121,15 @@ const isLoggedInPage = () => {
     const fileName = getFileNameFromPath(currentPath);
     const result = fileName.includes('logged-in');
     console.log(`AuthManager: isLoggedInPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
+    return result;
+};
+
+// Pomocná funkcia na kontrolu, či ide o admin stránku
+const isAdminPage = () => {
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    const result = adminPages.includes(fileName);
+    console.log(`AuthManager: isAdminPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
     return result;
 };
 
@@ -160,7 +182,6 @@ const handleAuthState = async () => {
                             // Neschválený administrátor
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný.");
-                                // ... email logika zostáva rovnaká
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
@@ -173,13 +194,19 @@ const handleAuthState = async () => {
                             else if (userProfileData.approved === true) {
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
 
+                                // Ak je na login stránke, presmeruj na my-data
                                 if (isOnLoginPage()) {
-                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
+                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                else if (userProfileData.role !== 'admin' && isLoggedInPage()) {
-                                    console.log(`AuthManager: Používateľ (ne-admin) nemá prístup na túto stránku. Presmerovávam na logged-in-my-data.html.`);
+                                // Ak nie je admin a je na admin stránke, presmeruj na my-data
+                                else if (userProfileData.role !== 'admin' && isAdminPage()) {
+                                    console.log(`AuthManager: Používateľ (ne-admin) nemá prístup na admin stránku. Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
+                                }
+                                // Inak nechaj používateľa na aktuálnej stránke (bežná logged-in stránka)
+                                else {
+                                    console.log(`AuthManager: Používateľ má prístup na aktuálnu stránku.`);
                                 }
                             }
 
