@@ -7516,351 +7516,338 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
 
-        // Obsah - pavúková tabuľka (s tabuľkou)
+                // Obsah - pavúková tabuľka (s tabuľkou)
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
-//            React.createElement(
-//                'div',
-//                { 
-//                    className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
-//                    style: { 
-//                        width: '100%', 
-//                        maxWidth: '100%',
-//                        overflowX: 'auto'
-//                    }
-//                },
-                
-                !selectedCategory ? (
-                    // ZOBRAZENIE VŠETKÝCH PAVÚKOV POD SEBOU
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col gap-12' },
-                        
-                        // Ak nemáme žiadne kategórie s pavúkmi
-                        (() => {
-                            // Získanie všetkých kategórií, ktoré majú pavúkové zápasy
-                            const categoriesWithSpider = categories.filter(category => {
-                                const spiderMatches = allMatches.filter(m => 
-                                    m.categoryId === category.id && 
-                                    m.matchType && 
-                                    ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
-                                     'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
-                                     'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                                     'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
-                                     'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
-                                     'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
-                                     'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
-                                     'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
-                                );
-                                return spiderMatches.length > 0;
-                            });
+            
+            !selectedCategory ? (
+                // ZOBRAZENIE VŠETKÝCH PAVÚKOV POD SEBOU
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col gap-12 w-full px-8' },
+                    
+                    // Ak nemáme žiadne kategórie s pavúkmi
+                    (() => {
+                        // Získanie všetkých kategórií, ktoré majú pavúkové zápasy
+                        const categoriesWithSpider = categories.filter(category => {
+                            const spiderMatches = allMatches.filter(m => 
+                                m.categoryId === category.id && 
+                                m.matchType && 
+                                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                 'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                            );
+                            return spiderMatches.length > 0;
+                        });
 
-                            const sortedCategoriesWithSpider = [...categoriesWithSpider].sort((a, b) => 
-                                a.name.localeCompare(b.name)
+                        const sortedCategoriesWithSpider = [...categoriesWithSpider].sort((a, b) => 
+                            a.name.localeCompare(b.name)
+                        );
+                        
+                        if (sortedCategoriesWithSpider.length === 0) {
+                            return React.createElement(
+                                'div',
+                                { className: 'text-center py-16 text-gray-500' },
+                                React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                                React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                                React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu pre zobrazenie pavúka alebo vytvorte nový pavúk kliknutím na zelenú polovicu tlačidla "+"')
+                            );
+                        }
+                        
+                        // Pre každú kategóriu s pavúkom vykreslíme jej pavúka
+                        return sortedCategoriesWithSpider.map(category => {
+                            // Filtrujeme pavúkové zápasy pre túto kategóriu
+                            const categorySpiderMatches = allMatches.filter(m => 
+                                m.categoryId === category.id && 
+                                m.matchType && 
+                                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                 'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
                             );
                             
-                            if (sortedCategoriesWithSpider.length === 0) {
-                                return React.createElement(
-                                    'div',
-                                    { className: 'text-center py-16 text-gray-500' },
-                                    React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
-                                    React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                                    React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu pre zobrazenie pavúka alebo vytvorte nový pavúk kliknutím na zelenú polovicu tlačidla "+"')
-                                );
-                            }
+                            // Zistenie úrovne pavúka pre túto kategóriu
+                            const hasSixteenfinals = categorySpiderMatches.some(m => m.matchType.startsWith('šestnásťfinále'));
+                            const hasEightfinals = categorySpiderMatches.some(m => m.matchType.startsWith('osemfinále'));
+                            const hasQuarterfinals = categorySpiderMatches.some(m => m.matchType.startsWith('štvrťfinále'));
                             
-                            // Pre každú kategóriu s pavúkom vykreslíme jej pavúka
-                            return sortedCategoriesWithSpider.map(category => {
-                                // Filtrujeme pavúkové zápasy pre túto kategóriu
-                                const categorySpiderMatches = allMatches.filter(m => 
-                                    m.categoryId === category.id && 
-                                    m.matchType && 
-                                    ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
-                                     'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
-                                     'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                                     'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
-                                     'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
-                                     'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
-                                     'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
-                                     'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
-                                );
-                                
-                                // Zistenie úrovne pavúka pre túto kategóriu
-                                const hasSixteenfinals = categorySpiderMatches.some(m => m.matchType.startsWith('šestnásťfinále'));
-                                const hasEightfinals = categorySpiderMatches.some(m => m.matchType.startsWith('osemfinále'));
-                                const hasQuarterfinals = categorySpiderMatches.some(m => m.matchType.startsWith('štvrťfinále'));
-                                
-                                let categorySpiderLevel = 1;
-                                if (hasSixteenfinals) categorySpiderLevel = 4;
-                                else if (hasEightfinals) categorySpiderLevel = 3;
-                                else if (hasQuarterfinals) categorySpiderLevel = 2;
-                                
-                                // Vytvorenie štruktúry pre túto kategóriu
-                                const categorySpiderStructure = {
-                                    final: categorySpiderMatches.find(m => m.matchType === 'finále') || { exists: false },
-                                    semiFinals: [
-                                        categorySpiderMatches.find(m => m.matchType === 'semifinále 1') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'semifinále 2') || { exists: false }
-                                    ],
-                                    quarterFinals: [
-                                        categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 1') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 2') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 3') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 4') || { exists: false }
-                                    ],
-                                    eightFinals: [
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 1') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 2') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 3') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 4') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 5') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 6') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 7') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'osemfinále 8') || { exists: false }
-                                    ],
-                                    sixteenFinals: [
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 1') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 2') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 3') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 4') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 5') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 6') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 7') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 8') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 9') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 10') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 11') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 12') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 13') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 14') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 15') || { exists: false },
-                                        categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 16') || { exists: false }
-                                    ],
-                                    thirdPlace: categorySpiderMatches.find(m => m.matchType === 'o 3. miesto') || { exists: false }
-                                };
-                                
-                                // Naplnenie dátami
-                                categorySpiderMatches.forEach(match => {
-                                    if (match.matchType === 'finále') {
-                                        categorySpiderStructure.final = { ...categorySpiderStructure.final, ...match, exists: true };
-                                    } else if (match.matchType === 'semifinále 1') {
-                                        categorySpiderStructure.semiFinals[0] = { ...categorySpiderStructure.semiFinals[0], ...match, exists: true };
-                                    } else if (match.matchType === 'semifinále 2') {
-                                        categorySpiderStructure.semiFinals[1] = { ...categorySpiderStructure.semiFinals[1], ...match, exists: true };
-                                    } else if (match.matchType === 'o 3. miesto') {
-                                        categorySpiderStructure.thirdPlace = { ...categorySpiderStructure.thirdPlace, ...match, exists: true };
-                                    } else if (match.matchType === 'štvrťfinále 1') {
-                                        categorySpiderStructure.quarterFinals[0] = { ...categorySpiderStructure.quarterFinals[0], ...match, exists: true };
-                                    } else if (match.matchType === 'štvrťfinále 2') {
-                                        categorySpiderStructure.quarterFinals[1] = { ...categorySpiderStructure.quarterFinals[1], ...match, exists: true };
-                                    } else if (match.matchType === 'štvrťfinále 3') {
-                                        categorySpiderStructure.quarterFinals[2] = { ...categorySpiderStructure.quarterFinals[2], ...match, exists: true };
-                                    } else if (match.matchType === 'štvrťfinále 4') {
-                                        categorySpiderStructure.quarterFinals[3] = { ...categorySpiderStructure.quarterFinals[3], ...match, exists: true };
-                                    } else if (match.matchType.startsWith('osemfinále')) {
-                                        const index = parseInt(match.matchType.split(' ')[1]) - 1;
-                                        if (index >= 0 && index < 8) {
-                                            categorySpiderStructure.eightFinals[index] = { ...categorySpiderStructure.eightFinals[index], ...match, exists: true };
-                                        }
-                                    } else if (match.matchType.startsWith('šestnásťfinále')) {
-                                        const index = parseInt(match.matchType.split(' ')[1]) - 1;
-                                        if (index >= 0 && index < 16) {
-                                            categorySpiderStructure.sixteenFinals[index] = { ...categorySpiderStructure.sixteenFinals[index], ...match, exists: true };
-                                        }
+                            let categorySpiderLevel = 1;
+                            if (hasSixteenfinals) categorySpiderLevel = 4;
+                            else if (hasEightfinals) categorySpiderLevel = 3;
+                            else if (hasQuarterfinals) categorySpiderLevel = 2;
+                            
+                            // Vytvorenie štruktúry pre túto kategóriu
+                            const categorySpiderStructure = {
+                                final: categorySpiderMatches.find(m => m.matchType === 'finále') || { exists: false },
+                                semiFinals: [
+                                    categorySpiderMatches.find(m => m.matchType === 'semifinále 1') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'semifinále 2') || { exists: false }
+                                ],
+                                quarterFinals: [
+                                    categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 1') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 2') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 3') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'štvrťfinále 4') || { exists: false }
+                                ],
+                                eightFinals: [
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 1') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 2') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 3') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 4') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 5') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 6') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 7') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'osemfinále 8') || { exists: false }
+                                ],
+                                sixteenFinals: [
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 1') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 2') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 3') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 4') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 5') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 6') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 7') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 8') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 9') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 10') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 11') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 12') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 13') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 14') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 15') || { exists: false },
+                                    categorySpiderMatches.find(m => m.matchType === 'šestnásťfinále 16') || { exists: false }
+                                ],
+                                thirdPlace: categorySpiderMatches.find(m => m.matchType === 'o 3. miesto') || { exists: false }
+                            };
+                            
+                            // Naplnenie dátami
+                            categorySpiderMatches.forEach(match => {
+                                if (match.matchType === 'finále') {
+                                    categorySpiderStructure.final = { ...categorySpiderStructure.final, ...match, exists: true };
+                                } else if (match.matchType === 'semifinále 1') {
+                                    categorySpiderStructure.semiFinals[0] = { ...categorySpiderStructure.semiFinals[0], ...match, exists: true };
+                                } else if (match.matchType === 'semifinále 2') {
+                                    categorySpiderStructure.semiFinals[1] = { ...categorySpiderStructure.semiFinals[1], ...match, exists: true };
+                                } else if (match.matchType === 'o 3. miesto') {
+                                    categorySpiderStructure.thirdPlace = { ...categorySpiderStructure.thirdPlace, ...match, exists: true };
+                                } else if (match.matchType === 'štvrťfinále 1') {
+                                    categorySpiderStructure.quarterFinals[0] = { ...categorySpiderStructure.quarterFinals[0], ...match, exists: true };
+                                } else if (match.matchType === 'štvrťfinále 2') {
+                                    categorySpiderStructure.quarterFinals[1] = { ...categorySpiderStructure.quarterFinals[1], ...match, exists: true };
+                                } else if (match.matchType === 'štvrťfinále 3') {
+                                    categorySpiderStructure.quarterFinals[2] = { ...categorySpiderStructure.quarterFinals[2], ...match, exists: true };
+                                } else if (match.matchType === 'štvrťfinále 4') {
+                                    categorySpiderStructure.quarterFinals[3] = { ...categorySpiderStructure.quarterFinals[3], ...match, exists: true };
+                                } else if (match.matchType.startsWith('osemfinále')) {
+                                    const index = parseInt(match.matchType.split(' ')[1]) - 1;
+                                    if (index >= 0 && index < 8) {
+                                        categorySpiderStructure.eightFinals[index] = { ...categorySpiderStructure.eightFinals[index], ...match, exists: true };
                                     }
-                                });
-                                
-                                // Výber správnej renderovacej funkcie podľa úrovne
-                                let renderFunction;
-                                if (categorySpiderLevel === 4) renderFunction = renderLevel4;
-                                else if (categorySpiderLevel === 3) renderFunction = renderLevel3;
-                                else if (categorySpiderLevel === 2) renderFunction = renderLevel2;
-                                else renderFunction = renderLevel1;
-                                
-                                return React.createElement(
+                                } else if (match.matchType.startsWith('šestnásťfinále')) {
+                                    const index = parseInt(match.matchType.split(' ')[1]) - 1;
+                                    if (index >= 0 && index < 16) {
+                                        categorySpiderStructure.sixteenFinals[index] = { ...categorySpiderStructure.sixteenFinals[index], ...match, exists: true };
+                                    }
+                                }
+                            });
+                            
+                            // Výber správnej renderovacej funkcie podľa úrovne
+                            let renderFunction;
+                            if (categorySpiderLevel === 4) renderFunction = renderLevel4;
+                            else if (categorySpiderLevel === 3) renderFunction = renderLevel3;
+                            else if (categorySpiderLevel === 2) renderFunction = renderLevel2;
+                            else renderFunction = renderLevel1;
+                            
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: category.id,
+                                    className: 'border border-gray-200 rounded-xl p-6 bg-gray-50 w-full',
+                                    style: { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }
+                                },
+                                React.createElement(
+                                    'h2',
+                                    { 
+                                        className: 'text-2xl font-bold mb-6 text-gray-800 text-center border-b pb-3',
+                                    },
+                                    `${category.name} ${categorySpiderLevel === 4 ? '(šestnásťfinále)' : (categorySpiderLevel === 3 ? '(osemfinále)' : (categorySpiderLevel === 2 ? '(štvrťfinále)' : ''))}`
+                                ),
+                                React.createElement(
                                     'div',
                                     { 
-                                        key: category.id,
-                                        className: 'mb-12 border border-gray-200 rounded-xl p-6 bg-gray-50',
-                                        style: { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }
+                                        className: 'overflow-x-auto',
+                                        style: { 
+                                            width: '100%',
+                                            maxWidth: categorySpiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
+                                                        categorySpiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
+                                                          (categorySpiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
+                                                                            `${2 * (260 + 24 + 4)}px`),
+                                            margin: '0 auto'
+                                        }
                                     },
                                     React.createElement(
-                                        'h2',
-                                        { 
-                                            className: 'text-2xl font-bold mb-6 text-gray-800 text-center border-b pb-3',
-                                        },
-                                        `${category.name} ${categorySpiderLevel === 4 ? '(šestnásťfinále)' : (categorySpiderLevel === 3 ? '(osemfinále)' : (categorySpiderLevel === 2 ? '(štvrťfinále)' : ''))}`
-                                    ),
-                                    React.createElement(
-                                        'div',
-                                        { 
-                                            className: 'overflow-x-auto',
-                                            style: { 
+                                        'table',
+                                        {
+                                            style: {
+                                                borderCollapse: 'collapse',
                                                 width: '100%',
-                                                maxWidth: categorySpiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
-                                                            categorySpiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
-                                                              (categorySpiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
-                                                                                `${2 * (260 + 24 + 4)}px`),
-                                                margin: '0 auto'
+                                                tableLayout: 'fixed',
+                                                border: '0px solid #d1d5db'
                                             }
                                         },
                                         React.createElement(
-                                            'table',
-                                            {
-                                                style: {
-                                                    borderCollapse: 'collapse',
-                                                    width: '100%',
-                                                    tableLayout: 'fixed',
-                                                    border: '0px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'tbody',
-                                                null,
-                                                renderFunction(
-                                                    categorySpiderStructure,
-                                                    userProfileData,
-                                                    generationInProgress,
-                                                    generateSingleMatch,
-                                                    deleteSingleMatch,
-                                                    handleTeamClick,
-                                                    removeTeamAssignment
-                                                )
+                                            'tbody',
+                                            null,
+                                            renderFunction(
+                                                categorySpiderStructure,
+                                                userProfileData,
+                                                generationInProgress,
+                                                generateSingleMatch,
+                                                deleteSingleMatch,
+                                                handleTeamClick,
+                                                removeTeamAssignment
                                             )
                                         )
                                     )
-                                );
-                            });
-                        })()
-                    )
-                ) : !hasSpiderMatches ? (
-                    React.createElement(
-                        'div',
-                        { className: 'text-center py-16 text-gray-500' },
-                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
-                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Pre túto kategóriu neexistujú žiadne pavúkové zápasy. Kliknite na zelenú polovicu tlačidla "+" pre vygenerovanie pavúka.')
-                    )
-                ) : !spiderData ? (
-                    React.createElement(
-                        'div',
-                        { className: 'text-center py-16 text-gray-500' },
-                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
-                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Načítavam dáta...')
-                    )
-                ) : (
+                                )
+                            );
+                        });
+                    })()
+                )
+            ) : !hasSpiderMatches ? (
+                React.createElement(
+                    'div',
+                    { className: 'text-center py-16 text-gray-500' },
+                    React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                    React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                    React.createElement('p', { className: 'text-lg' }, 'Pre túto kategóriu neexistujú žiadne pavúkové zápasy. Kliknite na zelenú polovicu tlačidla "+" pre vygenerovanie pavúka.')
+                )
+            ) : !spiderData ? (
+                React.createElement(
+                    'div',
+                    { className: 'text-center py-16 text-gray-500' },
+                    React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                    React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                    React.createElement('p', { className: 'text-lg' }, 'Načítavam dáta...')
+                )
+            ) : (
+                React.createElement(
+                    'div',
+                    { 
+                        className: 'flex flex-col items-center w-full px-8',
+                        style: { 
+                            minHeight: '700px',
+                            padding: '20px 0'
+                        }
+                    },
+                    
+                    // ROVNAKÝ BOX AKO PRI NEVYFILTROVANEJ KATEGÓRII
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-col items-center',
+                            className: 'border border-gray-200 rounded-xl p-6 bg-gray-50 w-full',
                             style: { 
-                                minHeight: '700px',
-                                padding: '20px',
-                                width: '100%'
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                             }
                         },
+                        // Nadpis
+                        React.createElement(
+                            'h2',
+                            { 
+                                className: 'text-2xl font-bold mb-6 text-gray-800 text-center border-b pb-3',
+                            },
+                            `${categories.find(c => c.id === selectedCategory)?.name || selectedCategory} ${spiderLevel === 4 ? '(šestnásťfinále)' : (spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : ''))}`
+                        ),
                         
-                        // ROVNAKÝ BOX AKO PRI NEVYFILTROVANEJ KATEGÓRII
+                        // Tabuľka pre pavúka - ROVNAKÁ ŠTRUKTÚRA AKO PRI NEVYFILTROVANÝCH PAVÚKOCH
                         React.createElement(
                             'div',
                             { 
-                                className: 'border border-gray-200 rounded-xl p-6 bg-gray-50',
+                                className: 'overflow-x-auto',
                                 style: { 
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                    width: '100%'
+                                    width: '100%',
+                                    maxWidth: spiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
+                                                spiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
+                                                  (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
+                                                                    `${2 * (260 + 24 + 4)}px`),
+                                    margin: '0 auto'
                                 }
                             },
-                            // Nadpis
                             React.createElement(
-                                'h2',
-                                { 
-                                    className: 'text-2xl font-bold mb-6 text-gray-800 text-center border-b pb-3',
-                                },
-                                `${categories.find(c => c.id === selectedCategory)?.name || selectedCategory} ${spiderLevel === 4 ? '(šestnásťfinále)' : (spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : ''))}`
-                            ),
-                            
-                            // Tabuľka pre pavúka - ROVNAKÁ ŠTRUKTÚRA AKO PRI NEVYFILTROVANÝCH PAVÚKOCH
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'overflow-x-auto',
-                                    style: { 
+                                'table',
+                                {
+                                    style: {
+                                        borderCollapse: 'collapse',
                                         width: '100%',
-                                        maxWidth: spiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
-                                                    spiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
-                                                      (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
-                                                                        `${2 * (260 + 24 + 4)}px`),
-                                        margin: '0 auto'
+                                        tableLayout: 'fixed',
+                                        border: '0px solid #d1d5db'
                                     }
                                 },
+                                
+                                // Vytvorenie tela tabuľky - VOLÁME PRÍSLUŠNÚ FUNKCIU PODĽA ÚROVNE
                                 React.createElement(
-                                    'table',
-                                    {
-                                        style: {
-                                            borderCollapse: 'collapse',
-                                            width: '100%',
-                                            tableLayout: 'fixed',
-                                            border: '0px solid #d1d5db'
-                                        }
-                                    },
+                                    'tbody',
+                                    null,
                                     
-                                    // Vytvorenie tela tabuľky - VOLÁME PRÍSLUŠNÚ FUNKCIU PODĽA ÚROVNE
-                                    React.createElement(
-                                        'tbody',
-                                        null,
-                                        
-                                        // ===== ÚROVEŇ 1 (len semifinále a finále) =====
-                                        spiderLevel === 1 && renderLevel1(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
-                                        
-                                        // ===== ÚROVEŇ 2 (so štvrťfinále) =====
-                                        spiderLevel === 2 && renderLevel2(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
-                                        
-                                        // ===== ÚROVEŇ 3 (s osemfinále) =====
-                                        spiderLevel === 3 && renderLevel3(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
-                                        
-                                        // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
-                                        spiderLevel === 4 && renderLevel4(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        )
+                                    // ===== ÚROVEŇ 1 (len semifinále a finále) =====
+                                    spiderLevel === 1 && renderLevel1(
+                                        spiderData, 
+                                        userProfileData, 
+                                        generationInProgress, 
+                                        generateSingleMatch, 
+                                        deleteSingleMatch, 
+                                        handleTeamClick, 
+                                        removeTeamAssignment
+                                    ),
+                                    
+                                    // ===== ÚROVEŇ 2 (so štvrťfinále) =====
+                                    spiderLevel === 2 && renderLevel2(
+                                        spiderData, 
+                                        userProfileData, 
+                                        generationInProgress, 
+                                        generateSingleMatch, 
+                                        deleteSingleMatch, 
+                                        handleTeamClick, 
+                                        removeTeamAssignment
+                                    ),
+                                    
+                                    // ===== ÚROVEŇ 3 (s osemfinále) =====
+                                    spiderLevel === 3 && renderLevel3(
+                                        spiderData, 
+                                        userProfileData, 
+                                        generationInProgress, 
+                                        generateSingleMatch, 
+                                        deleteSingleMatch, 
+                                        handleTeamClick, 
+                                        removeTeamAssignment
+                                    ),
+                                    
+                                    // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
+                                    spiderLevel === 4 && renderLevel4(
+                                        spiderData, 
+                                        userProfileData, 
+                                        generationInProgress, 
+                                        generateSingleMatch, 
+                                        deleteSingleMatch, 
+                                        handleTeamClick, 
+                                        removeTeamAssignment
                                     )
                                 )
                             )
                         )
                     )
                 )
-//            )
+            )
         )
     );
 };
