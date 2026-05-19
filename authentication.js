@@ -60,18 +60,36 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
-// Zoznam admin stránok (prístupné len pre adminov)
-const adminPages = [
-    'logged-in-add-categories.html',
-    'logged-in-add-groups.html',
-    'logged-in-teams-in-groups.html',
-    'logged-in-tournament-settings.html',
-    'logged-in-all-registrations.html',
-    'logged-in-users.html',
-    'logged-in-notifications.html',
-    'logged-in-map.html',
-    'logged-in-teams-in-accommodation.html'
-];
+// Definícia prístupových práv pre jednotlivé roly
+const roleAccess = {
+    admin: [
+        'logged-in-add-categories.html',
+        'logged-in-add-groups.html',
+        'logged-in-all-registrations.html',
+        'logged-in-map.html',
+        'logged-in-matches.html',
+        'logged-in-my-data.html',
+        'logged-in-my-settings.html',
+        'logged-in-notifications.html',
+        'logged-in-rosters.html',
+        'logged-in-teams-in-accommodation.html',
+        'logged-in-teams-in-groups.html',
+        'logged-in-template.html',
+        'logged-in-tournament-settings.html',
+        'logged-in-users.html'
+    ],
+    hall: [
+        'logged-in-my-data.html',
+        'logged-in-matches-hall.html'
+    ],
+    club: [
+        'logged-in-my-data.html',
+        'logged-in-rosters.html'
+    ],
+    volunteer: [
+        'logged-in-my-data.html'
+    ]
+};
 
 // Inicializácia Firebase aplikácie
 let app;
@@ -124,13 +142,21 @@ const isLoggedInPage = () => {
     return result;
 };
 
-// Pomocná funkcia na kontrolu, či ide o admin stránku
-const isAdminPage = () => {
-    const currentPath = window.location.pathname;
-    const fileName = getFileNameFromPath(currentPath);
-    const result = adminPages.includes(fileName);
-    console.log(`AuthManager: isAdminPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
-    return result;
+// Pomocná funkcia na kontrolu, či má používateľ prístup k aktuálnej stránke
+const hasAccessToPage = (userRole, currentPage) => {
+    if (!userRole || !currentPage) return false;
+    
+    // Ak rola nemá definovaný prístup, vráti false
+    if (!roleAccess[userRole]) {
+        console.log(`AuthManager: Rola "${userRole}" nemá definovaný žiadny prístup.`);
+        return false;
+    }
+    
+    const allowedPages = roleAccess[userRole];
+    const hasAccess = allowedPages.includes(currentPage);
+    
+    console.log(`AuthManager: hasAccessToPage() - role: "${userRole}", page: "${currentPage}", hasAccess: ${hasAccess}`);
+    return hasAccess;
 };
 
 const handleAuthState = async () => {
@@ -152,11 +178,9 @@ const handleAuthState = async () => {
 
                     if (!docSnap.exists()) {
                         if (retries < MAX_RETRIES) {
-//                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}.`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-//                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                             return;
@@ -193,20 +217,22 @@ const handleAuthState = async () => {
                             // Schválení používatelia
                             else if (userProfileData.approved === true) {
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
-
+                                const currentPage = getFileNameFromPath(window.location.pathname);
+                                const userRole = userProfileData.role;
+                                
                                 // Ak je na login stránke, presmeruj na my-data
                                 if (isOnLoginPage()) {
                                     console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                // Ak nie je admin a je na admin stránke, presmeruj na my-data
-                                else if (userProfileData.role !== 'admin' && isAdminPage()) {
-                                    console.log(`AuthManager: Používateľ (ne-admin) nemá prístup na admin stránku. Presmerovávam na ${targetPathMyData}`);
+                                // Kontrola prístupu k aktuálnej stránke podľa roly
+                                else if (!hasAccessToPage(userRole, currentPage)) {
+                                    console.log(`AuthManager: Používateľ s rolou "${userRole}" nemá prístup na stránku "${currentPage}". Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                 }
-                                // Inak nechaj používateľa na aktuálnej stránke (bežná logged-in stránka)
+                                // Inak nechaj používateľa na aktuálnej stránke
                                 else {
-                                    console.log(`AuthManager: Používateľ má prístup na aktuálnu stránku.`);
+                                    console.log(`AuthManager: Používateľ s rolou "${userRole}" má prístup na stránku "${currentPage}".`);
                                 }
                             }
 
