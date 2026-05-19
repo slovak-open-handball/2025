@@ -234,14 +234,22 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                         )
                     )
                 ),
-                userProfileData.selectedDates && userProfileData.selectedDates.length > 0 && React.createElement('div', null,
-                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dostupnosť - vybrané dátumy'),
-                    React.createElement('div', { className: 'font-normal flex flex-wrap gap-2 mt-1' },
-                        userProfileData.selectedDates.map((date, idx) => 
-                            React.createElement('span', { key: idx, className: 'bg-gray-100 px-3 py-1 rounded-full text-sm' }, formatDate(date))
+                userProfileData.selectedDates && userProfileData.selectedDates.length > 0 && (() => {
+                    // Zoradenie dátumov od najskoršieho po najneskorší
+                    const sortedDates = [...userProfileData.selectedDates].sort((a, b) => {
+                        const dateA = new Date(a);
+                        const dateB = new Date(b);
+                        return dateA - dateB;
+                    });                    
+                    return React.createElement('div', null,
+                        React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dostupnosť - vybrané dátumy'),
+                        React.createElement('div', { className: 'font-normal flex flex-wrap gap-2 mt-1' },
+                            sortedDates.map((date, idx) => 
+                                React.createElement('span', { key: idx, className: 'bg-gray-100 px-3 py-1 rounded-full text-sm' }, formatDate(date))
+                            )
                         )
-                    )
-                ),
+                    );
+                })(),
                 userProfileData.note && React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Poznámka'),
                     React.createElement('div', { className: 'font-normal italic' }, userProfileData.note)
