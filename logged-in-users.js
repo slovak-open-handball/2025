@@ -1227,14 +1227,14 @@ function UsersManagementApp() {
                 // Akcie s tlacitkami su podmienene na zaklade roly a schvalenia
                 isNotCurrentUser ?
                   React.createElement(React.Fragment, null,
-                    // Tlacidlo "Schvalit" je viditelne pre schvalenych adminov a len pre Neschvalenych adminov
-                    (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved) && React.createElement(
+                    // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
+                    (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
                       'button',
                       {
-                        onClick: () => handleApproveAdmin(user.id, user.email),
-                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                        onClick: () => setUserToDelete(user),
+                        className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out mr-2'
                       },
-                      'Schváliť'
+                      'Odstrániť'
                     ),
                     // Tlacidlo "Upravit rolu" je viditelne pre schvalenych adminov (okrem najstarsiho) a pre neschvalenych adminov
                     ((canChangeRole) || (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved)) && React.createElement(
@@ -1245,6 +1245,15 @@ function UsersManagementApp() {
                       },
                       'Upraviť rolu'
                     ),
+                    // Tlacidlo "Schvalit" je viditelne pre schvalenych adminov a len pre Neschvalenych adminov
+                    (window.isCurrentUserAdmin && user.role === 'admin' && !user.approved) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => handleApproveAdmin(user.id, user.email),
+                        className: 'bg-green-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-600 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Schváliť'
+                    ),
                     // UPRAVENÉ: Tlačidlo "Priradiť halu" / "Upraviť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
                     (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin && user.role === 'hall') && React.createElement(
                       'button',
@@ -1254,16 +1263,7 @@ function UsersManagementApp() {
                       },
                       user.hallId ? 'Upraviť halu' : 'Priradiť halu'
                     )
-                  ) : null,
-                // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
-                (isCurrentUserOldestAdmin && user.id !== window.currentUserId) && React.createElement(
-                  'button',
-                  {
-                    onClick: () => setUserToDelete(user),
-                    className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out ml-2'
-                  },
-                  'Odstrániť'
-                )
+                  ) : null
               )
             )
           })
