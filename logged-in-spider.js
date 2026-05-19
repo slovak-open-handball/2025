@@ -7555,8 +7555,12 @@ const SpiderApp = ({ userProfileData }) => {
                                 );
                                 return spiderMatches.length > 0;
                             });
+
+                            const sortedCategoriesWithSpider = [...categoriesWithSpider].sort((a, b) => 
+                                a.name.localeCompare(b.name)
+                            );
                             
-                            if (categoriesWithSpider.length === 0) {
+                            if (sortedCategoriesWithSpider.length === 0) {
                                 return React.createElement(
                                     'div',
                                     { className: 'text-center py-16 text-gray-500' },
@@ -7567,7 +7571,7 @@ const SpiderApp = ({ userProfileData }) => {
                             }
                             
                             // Pre každú kategóriu s pavúkom vykreslíme jej pavúka
-                            return categoriesWithSpider.map(category => {
+                            return sortedCategoriesWithSpider.map(category => {
                                 // Filtrujeme pavúkové zápasy pre túto kategóriu
                                 const categorySpiderMatches = allMatches.filter(m => 
                                     m.categoryId === category.id && 
