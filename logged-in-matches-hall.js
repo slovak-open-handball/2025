@@ -456,7 +456,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         try {
             if (!window.db) {
                 console.error('❌ Firestore nie je inicializovaný');
-                alert(`Meno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+                console.log(`Meno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
                 return;
             }
             
@@ -508,15 +508,15 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
                 console.log(`Číslo dresu: ${foundPlayer.jerseyNumber}`);
                 console.log(`========================`);
                 
-                alert(`🎯 HRÁČ\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\nČíslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
+                console.log(`🎯 HRÁČ\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\nČíslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
             } else {
                 console.log('❌ Hráč nebol nájdený v databáze');
-                alert(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+                console.log(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
             }
             
         } catch (err) {
             console.error('❌ Chyba pri načítaní z Firestore:', err);
-            alert(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+            console.error(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
         }
     };
     
