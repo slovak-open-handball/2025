@@ -132,6 +132,15 @@ const isOnLoginPage = () => {
     return result;
 };
 
+// Pomocná funkcia na kontrolu, či sme na index stránke
+const isOnIndexPage = () => {
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    const result = fileName === 'index.html' || fileName === '' || fileName === '/' || currentPath.endsWith('/');
+    console.log(`AuthManager: isOnIndexPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
+    return result;
+};
+
 // Pomocná funkcia na kontrolu, či stránka vyžaduje prihlásenie (obsahuje "logged-in")
 const isLoggedInPage = () => {
     const currentPath = window.location.pathname;
@@ -263,13 +272,15 @@ const handleAuthState = async () => {
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             
             // KONTROLA: Ak nie je prihlásený žiadny používateľ a stránka vyžaduje prihlásenie (obsahuje "logged-in"),
-            // presmerujeme na login.html
+            // presmerujeme na login.html, ALE NIE na index.html
             const onLoginPage = isOnLoginPage();
+            const onIndexPage = isOnIndexPage();
             const requiresLogin = isLoggedInPage();
             
-            console.log(`AuthManager: Kontrola presmerovania - onLoginPage: ${onLoginPage}, requiresLogin: ${requiresLogin}`);
+            console.log(`AuthManager: Kontrola presmerovania - onLoginPage: ${onLoginPage}, onIndexPage: ${onIndexPage}, requiresLogin: ${requiresLogin}`);
             
-            if (!onLoginPage && requiresLogin) {
+            // Nepresmerúvame iba ak sme na index stránke ALEBO na login stránke
+            if (!onLoginPage && !onIndexPage && requiresLogin) {
                 console.log("AuthManager: Neprihlásený používateľ na stránke vyžadujúcej prihlásenie. Presmerovávam na login.");
                 const loginUrl = `${appBasePath}/login.html`;
                 console.log(`AuthManager: Presmerúvam na: ${loginUrl}`);
