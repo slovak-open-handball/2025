@@ -60,20 +60,6 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
-// Zoznam stránok prístupných len pre adminov
-const blockedPages = [
-    'logged-in-add-categories.html',
-    'logged-in-add-groups.html',
-    'logged-in-teams-in-groups.html',
-    'logged-in-tournament-settings.html',
-    'logged-in-all-registrations.html',
-    'logged-in-users.html',
-    'logged-in-notifications.html',
-    'logged-in-teams-in-groups.html',
-    'logged-in-map.html',
-    'logged-in-teams-in-accommodation.html'
-];
-
 // Inicializácia Firebase aplikácie
 let app;
 let db;
@@ -101,20 +87,27 @@ const setupFirebase = () => {
     }
 };
 
+// Pomocná funkcia na získanie názvu súboru z cesty
+const getFileNameFromPath = (path) => {
+    const parts = path.split('/');
+    return parts[parts.length - 1];
+};
+
 // Pomocná funkcia na kontrolu, či sme na login stránke
 const isOnLoginPage = () => {
     const currentPath = window.location.pathname;
-    // Kontroluje, či cesta končí na 'login.html' (napr. /2025/login.html alebo /nazov-projektu/login.html)
-    const result = currentPath.endsWith('/login.html') || currentPath === '/login.html';
-    console.log(`AuthManager: isOnLoginPage() - currentPath: "${currentPath}", result: ${result}`);
+    const fileName = getFileNameFromPath(currentPath);
+    const result = fileName === 'login.html';
+    console.log(`AuthManager: isOnLoginPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
     return result;
 };
 
-// Pomocná funkcia na kontrolu, či sme na chránenej stránke
-const isOnBlockedPage = () => {
+// Pomocná funkcia na kontrolu, či stránka vyžaduje prihlásenie (obsahuje "logged-in")
+const isLoggedInPage = () => {
     const currentPath = window.location.pathname;
-    const result = blockedPages.some(page => currentPath.includes(page));
-    console.log(`AuthManager: isOnBlockedPage() - currentPath: "${currentPath}", found: ${result}, matching page: ${blockedPages.find(page => currentPath.includes(page)) || 'none'}`);
+    const fileName = getFileNameFromPath(currentPath);
+    const result = fileName.includes('logged-in');
+    console.log(`AuthManager: isLoggedInPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
     return result;
 };
 
@@ -184,8 +177,8 @@ const handleAuthState = async () => {
                                     console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam.`);
                                     window.location.href = targetPathMyData;
                                 } 
-                                else if (userProfileData.role !== 'admin' && isOnBlockedPage()) {
-                                    console.log(`AuthManager: Používateľ nemá prístup na túto stránku.`);
+                                else if (userProfileData.role !== 'admin' && isLoggedInPage()) {
+                                    console.log(`AuthManager: Používateľ (ne-admin) nemá prístup na túto stránku. Presmerovávam na logged-in-my-data.html.`);
                                     window.location.href = targetPathMyData;
                                 }
                             }
@@ -217,15 +210,15 @@ const handleAuthState = async () => {
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             
-            // KONTROLA: Ak nie je prihlásený žiadny používateľ a nachádzame sa na chránenej stránke,
-            // okamžite presmerujeme na login.html
+            // KONTROLA: Ak nie je prihlásený žiadny používateľ a stránka vyžaduje prihlásenie (obsahuje "logged-in"),
+            // presmerujeme na login.html
             const onLoginPage = isOnLoginPage();
-            const onBlockedPage = isOnBlockedPage();
+            const requiresLogin = isLoggedInPage();
             
-            console.log(`AuthManager: Kontrola presmerovania - onLoginPage: ${onLoginPage}, onBlockedPage: ${onBlockedPage}`);
+            console.log(`AuthManager: Kontrola presmerovania - onLoginPage: ${onLoginPage}, requiresLogin: ${requiresLogin}`);
             
-            if (!onLoginPage && onBlockedPage) {
-                console.log("AuthManager: Neprihlásený používateľ na chránenej stránke. Presmerovávam na login.");
+            if (!onLoginPage && requiresLogin) {
+                console.log("AuthManager: Neprihlásený používateľ na stránke vyžadujúcej prihlásenie. Presmerovávam na login.");
                 const loginUrl = `${appBasePath}/login.html`;
                 console.log(`AuthManager: Presmerúvam na: ${loginUrl}`);
                 window.location.href = loginUrl;
