@@ -1388,14 +1388,24 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     const normalizeValueForComparison = (value, path) => {
         if (value === null || value === undefined) return '';
-
+    
+        // ŠPECIÁLNE SPRACOVANIE PRE selectedDates (pole dátumov)
+        if (path === 'selectedDates' && Array.isArray(value)) {
+            return value.map(dateStr => {
+                if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    return formatDateFn(dateStr);
+                }
+                return dateStr;
+            }).join(', ');
+        }
+    
         // ─── ŠPECIÁLNE SPRACOVANIE DÁTUMOV ───────────────────────────────
         const lowerPath = path.toLowerCase();
         const isDateField = 
             lowerPath.includes('dateofbirth') || 
             lowerPath.includes('registrationdate') ||
             lowerPath.includes('date');
-
+    
         if (isDateField) {
             if (value && typeof value.toDate === 'function') {
                 return formatDateFn(value.toDate());
@@ -1405,7 +1415,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             }
             return String(value);
         }
-
+    
         // ─── Zvyšok pôvodnej logiky ──────────────────────────────────────
         if (value && typeof value.toDate === 'function') {
             return value.toDate().toISOString();
@@ -1416,7 +1426,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             }
             if (value.type) return value.type;
             if (value.name) return value.name;
-            // Špeciálne spracovanie pre accommodationTypes (pole)
             if (path === 'packageDetails.accommodationTypes' && Array.isArray(value)) {
                 return value.join(', ');
             }
@@ -1426,7 +1435,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 return '[OBJECT_ERROR]';
             }
         }
-        // Špeciálne spracovanie pre accommodationTypes (ak je to pole)
         if (Array.isArray(value) && (path === 'packageDetails.accommodationTypes' || path === 'accommodationTypes')) {
             return value.join(', ');
         }
@@ -1463,9 +1471,23 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 if (origAccType !== updAccType) {
                     changes.push(`Zmena Typ ubytovania: z '${origAccType}' na '${updAccType}'`);
                 }
-                continue; // Preskočíme ďalšie spracovanie vnorených kľúčov accommodation
+                continue;
             }
-
+            
+            // ŠPECIÁLNE SPRACOVANIE PRE selectedDates
+            if (currentPath === 'selectedDates') {
+                const originalDates = Array.isArray(origObj?.[key]) ? origObj[key] : [];
+                const updatedDates = Array.isArray(updObj?.[key]) ? updObj[key] : [];
+                
+                const formattedOriginal = originalDates.map(d => formatDateFn(d)).join(', ');
+                const formattedUpdated = updatedDates.map(d => formatDateFn(d)).join(', ');
+                
+                if (formattedOriginal !== formattedUpdated) {
+                    changes.push(`Zmena ${formatLabel(currentPath)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
+                }
+                continue;
+            }
+    
             const origValue = origObj ? origObj[key] : undefined;
             const updValue = updObj ? updObj[key] : undefined;
 
