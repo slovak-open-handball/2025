@@ -201,6 +201,18 @@ const handleAuthState = async () => {
             console.log("AuthManager: Žiadny používateľ nie je prihlásený.");
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+            
+            // KONTROLA: Ak nie je prihlásený žiadny používateľ a nachádzame sa na stránke z blockedPages,
+            // okamžite presmerujeme na login.html
+            const currentPath = window.location.pathname;
+            const loginPath = `${appBasePath}/login.html`;
+            
+            // Skontrolujeme, či aktuálna stránka je v zozname blockedPages (a nie je to už login.html)
+            if (!currentPath.includes(loginPath) && blockedPages.some(page => currentPath.includes(page))) {
+                console.log("AuthManager: Neprihlásený používateľ na chránenej stránke. Presmerovávam na login.");
+                window.location.href = loginPath;
+                return;
+            }
         }
 
         window.addEventListener('beforeunload', () => {
