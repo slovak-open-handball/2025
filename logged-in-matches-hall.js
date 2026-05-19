@@ -3076,49 +3076,6 @@ if (window.db && window.globalUserProfileData) {
     }, 3000);
 }
 
-
-// Funkcia na volanie Cloudflare Worker pre získanie údajov hráča
-async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerIndex) {
-    const WORKER_URL = 'https://soh.production.workers.dev'; // Nahraďte vašou URL
-  
-    try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                teamName: teamName,
-                categoryName: categoryName,
-                playerType: playerType,
-                playerIndex: playerIndex
-            })
-        });
-  
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Worker error:', errorData);
-            return null;
-        }
-  
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-            return {
-                firstName: result.data.firstName,
-                lastName: result.data.lastName,
-                jerseyNumber: result.data.jerseyNumber
-            };
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Chyba pri volaní Worker:', error);
-        return null;
-    }
-}
-
-
 async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerIndex) {
     // POZNÁMKA: Po nasadení Workeru nahraďte URL vašou skutočnou adresou
     // Bude vyzerať napr: https://soh.nazov-subdomain.workers.dev
