@@ -69,7 +69,6 @@ const roleAccess = {
         'logged-in-map.html',
         'logged-in-matches.html',
         'logged-in-my-data.html',
-        'logged-in-my-settings.html',
         'logged-in-notifications.html',
         'logged-in-rosters.html',
         'logged-in-teams-in-accommodation.html',
