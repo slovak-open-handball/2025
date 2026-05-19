@@ -91,21 +91,8 @@ const autoSignInAnonymously = async () => {
         const userCredential = await signInAnonymously(auth);
         console.log("AuthManager: Anonymné prihlásenie úspešné:", userCredential.user.uid);
         
-        // Vytvorenie základného profilu pre anonymného používateľa v Firestore
-        const anonymousUserRef = doc(db, `users/${userCredential.user.uid}`);
-        const anonymousUserSnap = await getDoc(anonymousUserRef);
-        
-        if (!anonymousUserSnap.exists()) {
-            // Vytvoríme anonymný profil
-            await setDoc(anonymousUserRef, {
-                uid: userCredential.user.uid,
-                role: 'anonymous',
-                approved: true,
-                createdAt: new Date().toISOString(),
-                isAnonymous: true
-            });
-            console.log("AuthManager: Anonymný profil vytvorený v databáze");
-        }
+        // PRE ANONYMNYCH POUŽÍVATEĽOV NIE JE POTREBNÉ VYTVÁRAŤ PROFIL V USERS KOLEKCII
+        // Anonymní používatelia majú len read-only prístup a ich profil nie je potrebný
         
         return userCredential.user;
     } catch (error) {
@@ -187,7 +174,32 @@ const handleAuthState = async () => {
             
             window.isAnonymousUser = user.isAnonymous === true;
             
-            // Správna cesta k profilovému dokumentu
+            // PRE ANONYMNYCH POUŽÍVATEĽOV - NENAČÍTAME PROFIL Z USERS KOLEKCII
+            if (user.isAnonymous) {
+                console.log("AuthManager: Anonymný používateľ - read-only režim, nenačítavam profil z users kolekcie");
+                
+                // Vytvoríme virtuálny profil pre anonymného používateľa
+                window.globalUserProfileData = {
+                    id: user.uid,
+                    uid: user.uid,
+                    role: 'anonymous',
+                    approved: true,
+                    isAnonymous: true,
+                    displayName: 'Anonymný používateľ'
+                };
+                
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+                
+                // Anonymní používatelia nemôžu pristupovať na admin stránky
+                const currentPath = window.location.pathname;
+                if (blockedPages.some(page => currentPath.includes(page))) {
+                    console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku");
+                    window.location.href = `${appBasePath}/index.html`;
+                }
+                return;
+            }
+            
+            // PRE PRIHLÁSENÝCH EMAILOVÝCH POUŽÍVATEĽOV - načítame profil normálne
             const userDocRef = doc(db, `users/${user.uid}`);
             
             const loadUserProfileData = async (retries = 0) => {
@@ -199,11 +211,10 @@ const handleAuthState = async () => {
 
                     if (!docSnap.exists()) {
                         if (retries < MAX_RETRIES) {
-//                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}.`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-//                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
+                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                             return;
@@ -218,21 +229,6 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
-                            // ŠPECIÁLNA LOGIKA PRE ANONYMNYCH POUŽÍVATEĽOV
-                            if (user.isAnonymous || userProfileData.role === 'anonymous') {
-                                console.log("AuthManager: Anonymný používateľ - read-only režim");
-                                window.globalUserProfileData = userProfileData;
-                                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                
-                                // Anonymní používatelia nemôžu pristupovať na admin stránky
-                                const currentPath = window.location.pathname;
-                                if (blockedPages.some(page => currentPath.includes(page))) {
-                                    console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku");
-                                    window.location.href = `${appBasePath}/index.html`;
-                                }
-                                return;
-                            }
-                            
                             // Ak prebieha registrácia admina
                             if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
                                 console.log("AuthManager: Prebieha registrácia administrátora.");
@@ -244,7 +240,6 @@ const handleAuthState = async () => {
                             // Neschválený administrátor
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný.");
-                                // ... email logika zostáva rovnaká
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
