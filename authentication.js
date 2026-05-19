@@ -74,6 +74,7 @@ const publicPages = [
 // (ak je prihlásený používateľ na takejto stránke, bude presmerovaný)
 const guestOnlyPages = [
     'login.html',
+    'index.html',
     'register.html',
     'admin-register.html',
     'volunteer-register.html'
