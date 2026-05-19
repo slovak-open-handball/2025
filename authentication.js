@@ -217,7 +217,7 @@ const handleAuthState = async () => {
             // okamžite presmerujeme na login.html
             if (!isOnLoginPage() && isOnBlockedPage()) {
                 console.log("AuthManager: Neprihlásený používateľ na chránenej stránke. Presmerovávam na login.");
-                window.location.href = `${appBasePath}/login.html`;
+                window.location.href = `login.html`;
                 return;
             }
         }
