@@ -451,72 +451,91 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
         
-        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI PRIAMO Z FIRESTORE
-        // (využíva existujúce prihlásenie hall používateľa)
+        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI - POUŽIJEME WORKER PRE NEPRIHLÁSENÝCH
+        // alebo priamy Firestore pre prihlásených
         try {
-            if (!window.db) {
-                console.error('❌ Firestore nie je inicializovaný');
-                console.log(`Meno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
-                return;
-            }
-            
-            // Použijeme existujúci onSnapshot listener alebo priamy getDocs
-            const usersRef = collection(window.db, 'users');
-            const usersSnapshot = await getDocs(usersRef);
-            
-            let foundPlayer = null;
-            
-            for (const userDoc of usersSnapshot.docs) {
-                const userData = userDoc.data();
-                const teams = userData.teams || {};
+            // Skúsime najprv priamy Firestore (pre prihlásených hall používateľov)
+            if (window.db && window.globalUserProfileData) {
+                const usersRef = collection(window.db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
                 
-                for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                    if (categoryKey !== categoryName) continue;
+                let foundPlayer = null;
+                
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
                     
-                    const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
-                    
-                    if (foundTeam) {
-                        let playersArray = [];
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        if (categoryKey !== categoryName) continue;
                         
-                        switch (arrayName) {
-                            case 'playerDetails':
-                                playersArray = foundTeam.playerDetails || [];
-                                break;
-                            case 'menTeamMemberDetails':
-                                playersArray = foundTeam.menTeamMemberDetails || [];
-                                break;
-                            case 'womenTeamMemberDetails':
-                                playersArray = foundTeam.womenTeamMemberDetails || [];
-                                break;
-                            default:
-                                playersArray = [];
-                        }
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
                         
-                        if (index >= 0 && index < playersArray.length) {
-                            foundPlayer = playersArray[index];
-                            break;
+                        if (foundTeam) {
+                            let playersArray = [];
+                            
+                            switch (arrayName) {
+                                case 'playerDetails':
+                                    playersArray = foundTeam.playerDetails || [];
+                                    break;
+                                case 'menTeamMemberDetails':
+                                    playersArray = foundTeam.menTeamMemberDetails || [];
+                                    break;
+                                case 'womenTeamMemberDetails':
+                                    playersArray = foundTeam.womenTeamMemberDetails || [];
+                                    break;
+                                default:
+                                    playersArray = [];
+                            }
+                            
+                            if (index >= 0 && index < playersArray.length) {
+                                foundPlayer = playersArray[index];
+                                break;
+                            }
                         }
                     }
+                    if (foundPlayer) break;
                 }
-                if (foundPlayer) break;
+                
+                if (foundPlayer) {
+                    console.log(`=== ÚDAJE Z FIRESTORE ===`);
+                    console.log(`Meno: ${foundPlayer.firstName}`);
+                    console.log(`Priezvisko: ${foundPlayer.lastName}`);
+                    console.log(`Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
+                    console.log(`Typ člena: ${member.type}`);  // 🔥 ZOBRAZÍME TYP ČLENA
+                    console.log(`========================`);
+                    
+                    console.log(`🎯 ${member.type}\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}` : ''}`);
+                    return;
+                }
             }
             
-            if (foundPlayer) {
-                console.log(`=== ÚDAJE Z FIRESTORE ===`);
-                console.log(`Meno: ${foundPlayer.firstName}`);
-                console.log(`Priezvisko: ${foundPlayer.lastName}`);
-                console.log(`Číslo dresu: ${foundPlayer.jerseyNumber}`);
+            // Ak nie sme prihlásený hall používateľ, použijeme Worker
+            console.log(`🔄 Používam Worker pre načítanie údajov...`);
+            
+            const workerResult = await fetchPlayerFromWorker(
+                mappedName,      // teamName
+                categoryName,    // categoryName
+                arrayName,       // playerType
+                index            // playerIndex
+            );
+            
+            if (workerResult) {
+                console.log(`=== ÚDAJE Z WORKER ===`);
+                console.log(`Meno: ${workerResult.firstName}`);
+                console.log(`Priezvisko: ${workerResult.lastName}`);
+                console.log(`Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}`);
+                console.log(`Typ člena: ${workerResult.memberType || member.type}`);  // 🔥 ZOBRAZÍME TYP ČLENA
                 console.log(`========================`);
                 
-                console.log(`🎯 HRÁČ\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\nČíslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
+                console.log(`🎯 ${workerResult.memberType || member.type}\n\nMeno: ${workerResult.firstName} ${workerResult.lastName}\n${workerResult.memberType === 'Hráč' ? `Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}` : ''}`);
             } else {
                 console.log('❌ Hráč nebol nájdený v databáze');
-                console.log(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+                console.log(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${member.jerseyNumber || 'neuvedené'}` : `Typ: ${member.type}`}`);
             }
             
         } catch (err) {
             console.error('❌ Chyba pri načítaní z Firestore:', err);
-            console.error(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+            console.error(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${member.jerseyNumber || 'neuvedené'}` : `Typ: ${member.type}`}`);
         }
     };
     
