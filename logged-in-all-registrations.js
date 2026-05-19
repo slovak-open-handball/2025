@@ -2195,7 +2195,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (isEditingVolunteer) {
                 const volunteerElements = [];
                 const volunteerFieldsOrder = [
-                    'firstName', 'lastName', 'email', 'contactPhoneNumber',
+                    'firstName', 'lastName', 'contactPhoneNumber',
                     'gender', 'birthDate', 'street', 'houseNumber', 'city',
                     'postalCode', 'country', 'tshirtSize', 'volunteerRoles',
                     'selectedDates', 'note'
