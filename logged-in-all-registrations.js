@@ -1330,6 +1330,11 @@ const formatLabel = (key) => {
     if (key === 'country') return 'Krajina';
     if (key === 'approved') return 'Schválený';
     if (key === 'email') return 'E-mail';
+    if (key === 'gender') return 'Pohlavie';
+    if (key === 'birthDate') return 'Dátum narodenia';
+    if (key === 'selectedDates') return 'Dni k dispozícii';
+    if (key === 'volunteerRoles') return 'Môžem byť nápomocný/-á';
+    if (key === 'tshirtSize') return 'Veľkosť trička';
     if (key === 'contactPhoneNumber') return 'Telefónne číslo';
     if (key === 'passwordLastChanged') return 'Dátum poslednej zmeny hesla';
     if (key === 'password') return 'Heslo';
