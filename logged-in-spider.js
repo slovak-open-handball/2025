@@ -7757,7 +7757,8 @@ const SpiderApp = ({ userProfileData }) => {
                             className: 'flex flex-col items-center',
                             style: { 
                                 minHeight: '700px',
-                                padding: '20px'
+                                padding: '20px',
+                                width: '100%'
                             }
                         },
                         
@@ -7766,7 +7767,10 @@ const SpiderApp = ({ userProfileData }) => {
                             'div',
                             { 
                                 className: 'border border-gray-200 rounded-xl p-6 bg-gray-50',
-                                style: { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }
+                                style: { 
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    width: '100%'
+                                }
                             },
                             // Nadpis
                             React.createElement(
@@ -7784,71 +7788,80 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'overflow-x-auto',
                                     style: { 
                                         width: '100%',
-                                        maxWidth: spiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
-                                                    spiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
-                                                      (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
-                                                                        `${2 * (260 + 24 + 4)}px`),
-                                        margin: '0 auto'
+                                        display: 'flex',
+                                        justifyContent: 'center'  // PRIDANÉ: centrovanie tabuľky
                                     }
                                 },
                                 React.createElement(
-                                    'table',
+                                    'div',
                                     {
                                         style: {
-                                            borderCollapse: 'collapse',
-                                            width: '100%',
-                                            tableLayout: 'fixed',
-                                            border: '0px solid #d1d5db'
+                                            maxWidth: spiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
+                                                        spiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
+                                                          (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
+                                                                            `${2 * (260 + 24 + 4)}px`),
+                                            minWidth: 'fit-content'
                                         }
                                     },
-                                    
-                                    // Vytvorenie tela tabuľky - VOLÁME PRÍSLUŠNÚ FUNKCIU PODĽA ÚROVNE
                                     React.createElement(
-                                        'tbody',
-                                        null,
+                                        'table',
+                                        {
+                                            style: {
+                                                borderCollapse: 'collapse',
+                                                width: '100%',
+                                                tableLayout: 'fixed',
+                                                border: '0px solid #d1d5db'
+                                            }
+                                        },
+                                    
+                                        // Vytvorenie tela tabuľky - VOLÁME PRÍSLUŠNÚ FUNKCIU PODĽA ÚROVNE
+                                        React.createElement(
+                                            'tbody',
+                                            null,
+                                            
+                                            // ===== ÚROVEŇ 1 (len semifinále a finále) =====
+                                            spiderLevel === 1 && renderLevel1(
+                                                spiderData, 
+                                                userProfileData, 
+                                                generationInProgress, 
+                                                generateSingleMatch, 
+                                                deleteSingleMatch, 
+                                                handleTeamClick, 
+                                                removeTeamAssignment
+                                            ),
                                         
-                                        // ===== ÚROVEŇ 1 (len semifinále a finále) =====
-                                        spiderLevel === 1 && renderLevel1(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
+                                            // ===== ÚROVEŇ 2 (so štvrťfinále) =====
+                                            spiderLevel === 2 && renderLevel2(
+                                                spiderData, 
+                                                userProfileData, 
+                                                generationInProgress, 
+                                                generateSingleMatch, 
+                                                deleteSingleMatch, 
+                                                handleTeamClick, 
+                                                removeTeamAssignment
+                                            ),
+                                            
+                                            // ===== ÚROVEŇ 3 (s osemfinále) =====
+                                            spiderLevel === 3 && renderLevel3(
+                                                spiderData, 
+                                                userProfileData, 
+                                                generationInProgress, 
+                                                generateSingleMatch, 
+                                                deleteSingleMatch, 
+                                                handleTeamClick, 
+                                                removeTeamAssignment
+                                            ),
                                         
-                                        // ===== ÚROVEŇ 2 (so štvrťfinále) =====
-                                        spiderLevel === 2 && renderLevel2(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
-                                        
-                                        // ===== ÚROVEŇ 3 (s osemfinále) =====
-                                        spiderLevel === 3 && renderLevel3(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
-                                        ),
-                                        
-                                        // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
-                                        spiderLevel === 4 && renderLevel4(
-                                            spiderData, 
-                                            userProfileData, 
-                                            generationInProgress, 
-                                            generateSingleMatch, 
-                                            deleteSingleMatch, 
-                                            handleTeamClick, 
-                                            removeTeamAssignment
+                                            // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
+                                            spiderLevel === 4 && renderLevel4(
+                                                spiderData, 
+                                                userProfileData, 
+                                                generationInProgress, 
+                                                generateSingleMatch, 
+                                                deleteSingleMatch, 
+                                                handleTeamClick, 
+                                                removeTeamAssignment
+                                            )
                                         )
                                     )
                                 )
