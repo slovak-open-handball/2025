@@ -7521,15 +7521,15 @@ const SpiderApp = ({ userProfileData }) => {
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
             React.createElement(
-                'div',
-                { 
-                    className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
-                    style: { 
-                        width: '100%', 
-                        maxWidth: '100%',
-                        overflowX: 'auto'
-                    }
-                },
+//                'div',
+//                { 
+//                    className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
+//                    style: { 
+//                        width: '100%', 
+//                        maxWidth: '100%',
+//                        overflowX: 'auto'
+//                    }
+//                },
                 
                 !selectedCategory ? (
                     // ZOBRAZENIE VŠETKÝCH PAVÚKOV POD SEBOU
