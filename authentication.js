@@ -1,7 +1,6 @@
 // authentication.js
 // Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
 // overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
-// TERAZ S ANONYMOUN AUTENTIFIKÁCIOU PRE READ-ONLY PRÍSTUP
 
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
 window.isGlobalAuthReady = false;
@@ -14,7 +13,6 @@ window.as = null;
 window.EmailAuthProvider = null;
 window.verifyBeforeUpdateEmail = null;
 window.isRegisteringAdmin = false;
-window.isAnonymousUser = false; // NOVÁ: Indikuje, či je používateľ anonymný
 
 // Import necessary Firebase functions
 import {
@@ -25,19 +23,16 @@ import {
     onAuthStateChanged,
     signOut,
     signInWithEmailAndPassword,
-    signInAnonymously, // NOVÝ IMPORT
     reauthenticateWithCredential,
     updateEmail,
     EmailAuthProvider,
-    verifyBeforeUpdateEmail,
-    linkWithCredential // Pre upgrade z anonymného na trvalý účet
+    verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore,
     doc,
     getDoc,
-    onSnapshot,
-    setDoc // Pre vytvorenie anonymného profilu
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Vložený konfiguračný objekt
@@ -84,63 +79,11 @@ let app;
 let db;
 let auth;
 
-// ===== NOVÁ FUNKCIA PRE AUTOMATICKÚ ANONYMOUN AUTENTIFIKÁCIU =====
-const autoSignInAnonymously = async () => {
-    try {
-        console.log("AuthManager: Pokus o anonymné prihlásenie...");
-        const userCredential = await signInAnonymously(auth);
-        console.log("AuthManager: Anonymné prihlásenie úspešné:", userCredential.user.uid);
-        
-        // PRE ANONYMNYCH POUŽÍVATEĽOV NIE JE POTREBNÉ VYTVÁRAŤ PROFIL V USERS KOLEKCII
-        // Anonymní používatelia majú len read-only prístup a ich profil nie je potrebný
-        
-        return userCredential.user;
-    } catch (error) {
-        console.error("AuthManager: Chyba pri anonymnom prihlásení:", error);
-        return null;
-    }
-};
-
-// Funkcia na upgrade z anonymného na trvalý účet
-window.upgradeAnonymousToPermanent = async (email, password, userData) => {
-    if (!auth.currentUser || !auth.currentUser.isAnonymous) {
-        console.error("Nie je možné upgradovať - používateľ nie je anonymný");
-        return { success: false, error: "User is not anonymous" };
-    }
-    
-    try {
-        // Vytvorenie credential pre email/password
-        const credential = EmailAuthProvider.credential(email, password);
-        
-        // Prepojenie anonymného účtu s email účtom
-        const userCredential = await linkWithCredential(auth.currentUser, credential);
-        console.log("Účet úspešne upgradovaný na trvalý");
-        
-        // Aktualizácia profilu v databáze
-        const userRef = doc(db, `users/${userCredential.user.uid}`);
-        await setDoc(userRef, {
-            ...userData,
-            uid: userCredential.user.uid,
-            email: email,
-            isAnonymous: false,
-            upgradedAt: new Date().toISOString()
-        }, { merge: true });
-        
-        return { success: true, user: userCredential.user };
-    } catch (error) {
-        console.error("Chyba pri upgrade účtu:", error);
-        return { success: false, error: error.message };
-    }
-};
-
 const setupFirebase = () => {
     try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        
-        // Povolenie anonymnej autentifikácie
-        auth.settings = { ...auth.settings, persistence: 'local' };
         
         console.log("AuthManager: Firebase inicializovaný.");
 
@@ -152,12 +95,6 @@ const setupFirebase = () => {
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
-        window.upgradeAnonymousToPermanent = upgradeAnonymousToPermanent;
-        
-        // Kontrola, či je používateľ anonymný
-        window.isAnonymous = () => {
-            return auth.currentUser && auth.currentUser.isAnonymous === true;
-        };
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
@@ -170,36 +107,8 @@ const handleAuthState = async () => {
 
         if (user) {
             console.log("AuthManager: Používateľ prihlásený:", user.uid);
-            console.log("AuthManager: Je anonymný?", user.isAnonymous);
             
-            window.isAnonymousUser = user.isAnonymous === true;
-            
-            // PRE ANONYMNYCH POUŽÍVATEĽOV - NENAČÍTAME PROFIL Z USERS KOLEKCII
-            if (user.isAnonymous) {
-                console.log("AuthManager: Anonymný používateľ - read-only režim, nenačítavam profil z users kolekcie");
-                
-                // Vytvoríme virtuálny profil pre anonymného používateľa
-                window.globalUserProfileData = {
-                    id: user.uid,
-                    uid: user.uid,
-                    role: 'anonymous',
-                    approved: true,
-                    isAnonymous: true,
-                    displayName: 'Anonymný používateľ'
-                };
-                
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-                
-                // Anonymní používatelia nemôžu pristupovať na admin stránky
-                const currentPath = window.location.pathname;
-                if (blockedPages.some(page => currentPath.includes(page))) {
-                    console.log("AuthManager: Anonymný používateľ nemá prístup na túto stránku");
-                    window.location.href = `${appBasePath}/index.html`;
-                }
-                return;
-            }
-            
-            // PRE PRIHLÁSENÝCH EMAILOVÝCH POUŽÍVATEĽOV - načítame profil normálne
+            // Správna cesta k profilovému dokumentu
             const userDocRef = doc(db, `users/${user.uid}`);
             
             const loadUserProfileData = async (retries = 0) => {
@@ -211,10 +120,11 @@ const handleAuthState = async () => {
 
                     if (!docSnap.exists()) {
                         if (retries < MAX_RETRIES) {
+//                            console.warn(`AuthManager: Dokument profilu používateľa vo Firestore zatiaľ neexistuje. Pokus ${retries + 1}/${MAX_RETRIES}.`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
+//                            console.error("AuthManager: Dokument profilu používateľa nebol nájdený.");
                             window.globalUserProfileData = null;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
                             return;
@@ -240,6 +150,7 @@ const handleAuthState = async () => {
                             // Neschválený administrátor
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný.");
+                                // ... email logika zostáva rovnaká
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
@@ -287,9 +198,9 @@ const handleAuthState = async () => {
             loadUserProfileData();
 
         } else {
-            console.log("AuthManager: Žiadny používateľ - spúšťam anonymné prihlásenie...");
-            // Automatické anonymné prihlásenie
-            await autoSignInAnonymously();
+            console.log("AuthManager: Žiadny používateľ nie je prihlásený.");
+            window.globalUserProfileData = null;
+            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
         }
 
         window.addEventListener('beforeunload', () => {
