@@ -226,12 +226,9 @@ const findCategoryIdByName = (categories, categoryName) => {
 // =====================================================
 const SpiderApp = ({ userProfileData }) => {
 
-    // =====================================================
-    // FUNKCIE PRE VYKRESLENIE JEDNOTLIVÝCH ÚROVNÍ PAVÚKA
-    // =====================================================
-    
+    // ... (renderLevel1, renderLevel2, renderLevel3, renderLevel4 funkcie sú rovnaké, preto sú vynechané kvôli stručnosti) ...
     // Funkcia pre vykreslenie úrovne 1 (semifinále, finále, o 3. miesto)
-    const renderLevel1 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment) => {
+    const renderLevel1 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
         return React.createElement(
             React.Fragment,
             null,
@@ -267,7 +264,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu bunky do spodného okraja
@@ -319,7 +317,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara z ľavej bunky doprava (od stredu)
@@ -352,7 +351,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara z pravej bunky doľava (od stredu)
@@ -391,7 +391,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu bunky do horného okraja
@@ -402,7 +403,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
     
     // Funkcia pre vykreslenie úrovne 2 (so štvrťfinále)
-    const renderLevel2 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment) => {
+    const renderLevel2 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
         return React.createElement(
             React.Fragment,
             null,
@@ -438,7 +439,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V ľavej hornej bunke vodorovná čiara od stredu doprava
@@ -485,7 +487,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V hornej prostrednej bunke zvislá čiara od stredu po spodný okraj
@@ -530,7 +533,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V pravej hornej bunke vodorovná čiara od stredu doľava
@@ -593,7 +597,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         }),
                         React.createElement(MatchCell, { 
                             match: spiderData.semiFinals[1], 
@@ -606,7 +611,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     
@@ -719,7 +725,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V ľavej dolnej bunke vodorovná čiara od stredu doprava
@@ -766,7 +773,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V spodnej prostrednej bunke zvislá čiara od stredu po horný okraj
@@ -799,7 +807,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // V pravej dolnej bunke vodorovná čiara od stredu doľava
@@ -824,7 +833,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
     
     // Funkcia pre vykreslenie úrovne 3 (s osemfinále)
-    const renderLevel3 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment) => {
+    const renderLevel3 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
         return React.createElement(
             React.Fragment,
             null,
@@ -860,7 +869,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po pravý okraj
@@ -943,7 +953,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -996,7 +1007,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1072,7 +1084,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1141,7 +1154,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1205,7 +1219,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu bunky po jej spodný okraj (pridanie)
@@ -1261,7 +1276,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1326,7 +1342,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1399,7 +1416,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1459,7 +1477,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1523,7 +1542,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu bunky po jej horný okraj (pridanie)
@@ -1579,7 +1599,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1633,7 +1654,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1709,7 +1731,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1778,7 +1801,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1861,7 +1885,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1886,7 +1911,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
     
     // Funkcia pre vykreslenie úrovne 4 (so šestnásťfinále)
-    const renderLevel4 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment) => {
+    const renderLevel4 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
         return React.createElement(
             React.Fragment,
             null,
@@ -1923,7 +1948,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -1979,7 +2005,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -2029,7 +2056,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -2094,7 +2122,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -2151,7 +2180,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -2265,7 +2295,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -2327,7 +2358,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -2385,7 +2417,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -2449,7 +2482,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -2555,7 +2589,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -2605,7 +2640,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -2679,7 +2715,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -2745,7 +2782,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -2824,7 +2862,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu po spodný okraj
@@ -2900,7 +2939,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -2963,7 +3003,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -3037,7 +3078,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -3098,7 +3140,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -3179,7 +3222,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara od stredu po horný okraj (ponechaná, lebo má height: '50%')
@@ -3255,7 +3299,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -3305,7 +3350,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -3379,7 +3425,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Zvislá čiara v strede
@@ -3632,7 +3679,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -3690,7 +3738,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -4033,7 +4082,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po pravý okraj
@@ -4147,7 +4197,8 @@ const SpiderApp = ({ userProfileData }) => {
                             onTeamClick: handleTeamClick,
                             onRemoveTeam: removeTeamAssignment,
                             isFilterActive: isFilterActive,
-                            allMatches: allMatches
+                            allMatches: allMatches,
+                            hasCompletedMatch: hasCompletedMatch
                         })
                     ),
                     // Vodorovná čiara od stredu po ľavý okraj
@@ -4199,6 +4250,9 @@ const SpiderApp = ({ userProfileData }) => {
 
     // NOVÝ STAV: Dáta skupín
     const [groupsData, setGroupsData] = useState({});
+
+    // NOVÝ STAV: Existencia ukončeného zápasu v systéme
+    const [hasCompletedMatch, setHasCompletedMatch] = useState(false);
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -4280,13 +4334,16 @@ const SpiderApp = ({ userProfileData }) => {
             
             const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
                 const loadedMatches = [];
+                let completedExists = false;
                 snapshot.forEach((doc) => {
-                    loadedMatches.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
+                    const matchData = { id: doc.id, ...doc.data() };
+                    loadedMatches.push(matchData);
+                    if (matchData.status === 'completed') {
+                        completedExists = true;
+                    }
                 });
                 setAllMatches(loadedMatches);
+                setHasCompletedMatch(completedExists);
                 console.log('Načítané všetky zápasy:', loadedMatches.length);
             }, (error) => {
                 console.error('Chyba pri načítaní zápasov:', error);
@@ -6420,7 +6477,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
 
     // UPRAVENÝ MatchCell KOMPONENT - PRIDANÁ PODPORA PRE STATUS 'completed'
-    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches }) => {
+    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
         const [teamToRemove, setTeamToRemove] = useState(null);
@@ -6557,8 +6614,8 @@ const SpiderApp = ({ userProfileData }) => {
                     onMouseEnter: () => setIsHovered(true),
                     onMouseLeave: () => setIsHovered(false)
                 },
-                // Ikona koša pre adminov pre celý zápas - NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS
-                userProfileData?.role === 'admin' && match.exists && isFilterActive && !isMatchCompleted && React.createElement(
+                // Ikona koša pre adminov pre celý zápas - NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
+                userProfileData?.role === 'admin' && match.exists && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                     'div',
                     { 
                         className: `absolute -top-2 -right-2 transition-all duration-200 ${
@@ -6588,7 +6645,7 @@ const SpiderApp = ({ userProfileData }) => {
                     { className: 'text-sm font-semibold text-center mb-2 pb-1 border-b border-gray-200' },
                     title
                 ),
-                // Domáci tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS)
+                // Domáci tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME)
                 React.createElement(
                     'div',
                     { 
@@ -6608,8 +6665,8 @@ const SpiderApp = ({ userProfileData }) => {
                         }, homeTeam),
                         homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                     ),
-                    // Ikony pre adminov - NEBUDÚ SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS
-                    userProfileData?.role === 'admin' && isFilterActive && !isMatchCompleted && React.createElement(
+                    // Ikony pre adminov - NEBUDÚ SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
+                    userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                         'div',
                         { 
                             className: `flex items-center gap-1 transition-all duration-200 ${
@@ -6665,7 +6722,7 @@ const SpiderApp = ({ userProfileData }) => {
                     )
                 ),
                 
-                // Hosťovský tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS)
+                // Hosťovský tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME)
                 React.createElement(
                     'div',
                     { 
@@ -6685,7 +6742,7 @@ const SpiderApp = ({ userProfileData }) => {
                         }, awayTeam),
                         awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                     ),
-                    userProfileData?.role === 'admin' && isFilterActive && !isMatchCompleted && React.createElement(
+                    userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                         'div',
                         { 
                             className: `flex items-center gap-1 transition-all duration-200 ${
@@ -7138,7 +7195,7 @@ const SpiderApp = ({ userProfileData }) => {
                     'button',
                     { 
                         className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
-                            generationInProgress || !selectedCategory 
+                            generationInProgress || !selectedCategory || hasCompletedMatch
                                 ? 'bg-white cursor-not-allowed' 
                                 : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                         }`,
@@ -7146,12 +7203,13 @@ const SpiderApp = ({ userProfileData }) => {
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)',
                         },
                         onClick: generateSpider,
-                        disabled: generationInProgress || !selectedCategory,
+                        disabled: generationInProgress || !selectedCategory || hasCompletedMatch,
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 
+                               (hasCompletedMatch ? 'Generovanie pavúka nie je možné, pretože už existuje ukončený zápas.' :
                                (spiderLevel === 1 ? 'Generovať štvrťfinále' : 
                                 spiderLevel === 2 ? 'Generovať osemfinále' : 
                                 spiderLevel === 3 ? 'Generovať šestnásťfinále' : 
-                                'Generovať pavúka')
+                                'Generovať pavúka'))
                     },
                     React.createElement(
                         'div',
@@ -7159,7 +7217,7 @@ const SpiderApp = ({ userProfileData }) => {
                             style: {
                                 position: 'absolute',
                                 inset: 0,
-                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(34 197 94)' : 'none',
+                                boxShadow: !selectedCategory && !generationInProgress && !hasCompletedMatch ? 'inset 0 0 0 2px rgb(34 197 94)' : 'none',
                                 borderRadius: '50%',
                                 pointerEvents: 'none'
                             }
@@ -7175,8 +7233,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
-                                color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white',
-                                zIndex: !selectedCategory && !generationInProgress ? 22 : 'auto'
+                                color: (!selectedCategory || generationInProgress || hasCompletedMatch) ? 'rgb(34 197 94)' : 'white',
+                                zIndex: (!selectedCategory && !generationInProgress && !hasCompletedMatch) ? 22 : 'auto'
                             }
                         },
                         '+'
@@ -7187,7 +7245,7 @@ const SpiderApp = ({ userProfileData }) => {
                     'button',
                     { 
                         className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
-                            generationInProgress || !selectedCategory 
+                            generationInProgress || !selectedCategory || hasCompletedMatch
                                 ? 'bg-white cursor-not-allowed' 
                                 : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
                         }`,
@@ -7195,12 +7253,14 @@ const SpiderApp = ({ userProfileData }) => {
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
                         },
                         onClick: () => {
-                            if (selectedCategory && !generationInProgress) {
+                            if (selectedCategory && !generationInProgress && !hasCompletedMatch) {
                                 setIsDeleteMatchesModalOpen(true);
                             }
                         },
-                        disabled: generationInProgress || !selectedCategory,
-                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
+                        disabled: generationInProgress || !selectedCategory || hasCompletedMatch,
+                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 
+                               (hasCompletedMatch ? 'Mazanie pavúka nie je možné, pretože už existuje ukončený zápas.' : 
+                                'Zmazať pavúka')
                     },
                     React.createElement(
                         'div',
@@ -7208,7 +7268,7 @@ const SpiderApp = ({ userProfileData }) => {
                             style: {
                                 position: 'absolute',
                                 inset: 0,
-                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(239 68 68)' : 'none',
+                                boxShadow: !selectedCategory && !generationInProgress && !hasCompletedMatch ? 'inset 0 0 0 2px rgb(239 68 68)' : 'none',
                                 borderRadius: '50%',
                                 pointerEvents: 'none'
                             }
@@ -7224,13 +7284,13 @@ const SpiderApp = ({ userProfileData }) => {
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
-                                color: !selectedCategory || generationInProgress ? 'rgb(239 68 68)' : 'white'
+                                color: (!selectedCategory || generationInProgress || hasCompletedMatch) ? 'rgb(239 68 68)' : 'white'
                             }
                         },
                         '-'
                     ),
                     // Pridanie dvoch šikmých čiar pre zablokovaný stav
-                    !selectedCategory && !generationInProgress && React.createElement(
+                    (!selectedCategory || hasCompletedMatch) && !generationInProgress && React.createElement(
                         React.Fragment,
                         null,
                         // Zelená čiara
@@ -7751,7 +7811,10 @@ const SpiderApp = ({ userProfileData }) => {
                                                 generateSingleMatch,
                                                 deleteSingleMatch,
                                                 handleTeamClick,
-                                                removeTeamAssignment
+                                                removeTeamAssignment,
+                                                isFilterActive,
+                                                allMatches,
+                                                hasCompletedMatch
                                             )
                                         )
                                     )
@@ -7843,7 +7906,10 @@ const SpiderApp = ({ userProfileData }) => {
                                         generateSingleMatch, 
                                         deleteSingleMatch, 
                                         handleTeamClick, 
-                                        removeTeamAssignment
+                                        removeTeamAssignment,
+                                        isFilterActive,
+                                        allMatches,
+                                        hasCompletedMatch
                                     ),
                                     
                                     // ===== ÚROVEŇ 2 (so štvrťfinále) =====
@@ -7854,7 +7920,10 @@ const SpiderApp = ({ userProfileData }) => {
                                         generateSingleMatch, 
                                         deleteSingleMatch, 
                                         handleTeamClick, 
-                                        removeTeamAssignment
+                                        removeTeamAssignment,
+                                        isFilterActive,
+                                        allMatches,
+                                        hasCompletedMatch
                                     ),
                                     
                                     // ===== ÚROVEŇ 3 (s osemfinále) =====
@@ -7865,7 +7934,10 @@ const SpiderApp = ({ userProfileData }) => {
                                         generateSingleMatch, 
                                         deleteSingleMatch, 
                                         handleTeamClick, 
-                                        removeTeamAssignment
+                                        removeTeamAssignment,
+                                        isFilterActive,
+                                        allMatches,
+                                        hasCompletedMatch
                                     ),
                                     
                                     // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
@@ -7876,7 +7948,10 @@ const SpiderApp = ({ userProfileData }) => {
                                         generateSingleMatch, 
                                         deleteSingleMatch, 
                                         handleTeamClick, 
-                                        removeTeamAssignment
+                                        removeTeamAssignment,
+                                        isFilterActive,
+                                        allMatches,
+                                        hasCompletedMatch
                                     )
                                 )
                             )
