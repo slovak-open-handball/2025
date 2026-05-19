@@ -3134,7 +3134,6 @@ async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerI
                 categoryName: categoryName,
                 playerType: playerType,
                 playerIndex: playerIndex
-                // 🔥 ŽIADNY firebaseToken!
             })
         });
   
