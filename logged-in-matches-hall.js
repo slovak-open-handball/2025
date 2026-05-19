@@ -3117,26 +3117,11 @@ if (window.db && window.globalUserProfileData) {
     }, 3000);
 }
 
+// Funkcia pre verejnú verziu - NEPOSIELA žiadny token
 async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerIndex) {
     const WORKER_URL = 'https://soh-2025.turnaj-slovak-open-handball.workers.dev/';
   
     try {
-        // Získame aktuálny Firebase token
-        let firebaseToken = null;
-        if (window.auth && window.auth.currentUser) {
-            firebaseToken = await window.auth.currentUser.getIdToken();
-            console.log(`✅ Firebase token získaný, dĺžka: ${firebaseToken.length}`);
-        } else {
-            console.error('❌ Používateľ nie je prihlásený');
-            // Fallback - použijeme anonymný token
-            firebaseToken = localStorage.getItem('firebaseToken');
-        }
-        
-        if (!firebaseToken) {
-            console.error('❌ Žiadny Firebase token k dispozícii');
-            return null;
-        }
-        
         console.log(`📡 Volám Worker pre hráča:`, { teamName, categoryName, playerType, playerIndex });
         
         const response = await fetch(WORKER_URL, {
@@ -3148,8 +3133,8 @@ async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerI
                 teamName: teamName,
                 categoryName: categoryName,
                 playerType: playerType,
-                playerIndex: playerIndex,
-                firebaseToken: firebaseToken
+                playerIndex: playerIndex
+                // 🔥 ŽIADNY firebaseToken!
             })
         });
   
