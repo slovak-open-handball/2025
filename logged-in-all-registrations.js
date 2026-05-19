@@ -1867,11 +1867,22 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         }
 
 
-        const isEditingMember = title.toLowerCase().includes('upraviť hráč') || 
-                                title.toLowerCase().includes('upraviť člen realizačného tímu') || 
-                                title.toLowerCase().includes('upraviť šofér');
+        const isEditingMember = title.toLowerCase().includes('upraviť hráča') || 
+                                title.toLowerCase().includes('upraviť člena realizačného tímu') || 
+                                title.toLowerCase().includes('upraviť šoféra');
 
-        if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) { // Len pre bežných používateľov
+        const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
+
+        if (title.includes('Upraviť používateľa') && data?.role === 'volunteer') {
+            if (initialData.volunteerRoles === undefined) initialData.volunteerRoles = [];
+            if (initialData.selectedDates === undefined) initialData.selectedDates = [];
+            if (initialData.tshirtSize === undefined) initialData.tshirtSize = '';
+            if (initialData.gender === undefined) initialData.gender = '';
+            if (initialData.birthDate === undefined) initialData.birthDate = '';
+            if (initialData.note === undefined) initialData.note = '';
+        }
+
+        if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) {
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
             if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
@@ -2298,14 +2309,364 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 title.toLowerCase().includes('upraviť člen realizačného tímu') || 
                                 title.toLowerCase().includes('upraviť šofér') || isNewEntry;
 
+        const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && editingData?.role === 'volunteer';
+
         // console.log(`DataEditModal: renderDataFields: called with currentPath: ${currentPath}, isEditingMember: ${isEditingMember}, obj:`, obj); // Debug log
 
         // Skryť isMenuToggled pre úpravu používateľa
         if (title.includes('Upraviť používateľa') && currentPath === 'isMenuToggled') {
             return null;
-        }
+        }        
 
         if (currentPath === '') { // Ak sme na najvyššej úrovni dátového objektu
+            
+            if (currentPath === '') {
+                // Najprv ošetrite prípad úpravy dobrovoľníka (pred ostatnými podmienkami)
+                if (isEditingVolunteer) {
+                    const volunteerElements = [];
+                    
+                    // Zoznam polí pre dobrovoľníka v požadovanom poradí
+                    const volunteerFieldsOrder = [
+                        'firstName', 'lastName', 'email', 'contactPhoneNumber',
+                        'gender', 'birthDate', 'street', 'houseNumber', 'city', 
+                        'postalCode', 'country', 'tshirtSize', 'volunteerRoles', 
+                        'selectedDates', 'note'
+                    ];
+                    
+                    // Roly pre dobrovoľníka (rovnaké ako v registračnom formulári)
+                    const volunteerOptions = [
+                        'Registrácia',
+                        'Organizácia v hale',
+                        'VIP občerstvenie',
+                        'Fan shop',
+                        'Stolík/zápisy stretnutí',
+                        'Občerstvenie pre deti'
+                    ];
+                    
+                    // Pomocná funkcia na formátovanie dátumu pre zobrazenie v checkboxoch
+                    const formatDateForDisplay = (dateString) => {
+                        if (!dateString) return '';
+                        const [year, month, day] = dateString.split('-');
+                        return `${day}. ${month}. ${year}`;
+                    };
+                    
+                    volunteerFieldsOrder.forEach(path => {
+                        const value = getNestedValue(localEditedData, path);
+                        const labelText = formatLabel(path);
+                        
+                        // Špeciálne spracovanie pre vybrané dátumy (checkboxy)
+                        if (path === 'selectedDates') {
+                            // Získanie zoznamu dostupných dátumov z globálneho stavu alebo z Firestore
+                            // Pre jednoduchosť použijeme dostupné dátumy z lokalneho stavu, 
+                            // ale v reálnej aplikácii by ste ich mali načítať z Firestore rovnako ako v registračnom formulári
+                            const availableDates = window.availableTournamentDates || [];
+                            
+                            if (availableDates.length === 0) {
+                                // Fallback: ak nemáme dostupné dátumy, zobrazíme ako text
+                                const selectedDatesFormatted = (value || []).map(date => formatDateForDisplay(date)).join(', ');
+                                volunteerElements.push(
+                                    React.createElement(
+                                        'div',
+                                        { key: path, className: 'mb-4' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                        React.createElement('input', {
+                                            type: 'text',
+                                            className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2',
+                                            value: selectedDatesFormatted || '-',
+                                            readOnly: true,
+                                            disabled: true
+                                        })
+                                    )
+                                );
+                            } else {
+                                // Zobrazenie ako checkboxy (rovnako ako v registrácii)
+                                const selectedDatesArray = Array.isArray(value) ? value : [];
+                                
+                                volunteerElements.push(
+                                    React.createElement(
+                                        'div',
+                                        { key: path, className: 'mb-4' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
+                                            availableDates.map((date, idx) => {
+                                                const dateString = typeof date === 'string' ? date : date.toISOString?.()?.split('T')[0] || date;
+                                                const isSelected = selectedDatesArray.includes(dateString);
+                                                const displayDate = formatDateForDisplay(dateString);
+                                                
+                                                return React.createElement(
+                                                    'label',
+                                                    {
+                                                        key: idx,
+                                                        className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
+                                                    },
+                                                    React.createElement('input', {
+                                                        type: 'checkbox',
+                                                        checked: isSelected,
+                                                        onChange: (e) => {
+                                                            const newDates = e.target.checked
+                                                                ? [...selectedDatesArray, dateString]
+                                                                : selectedDatesArray.filter(d => d !== dateString);
+                                                            handleChange(path, newDates);
+                                                        },
+                                                        className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
+                                                        disabled: !isSavable
+                                                    }),
+                                                    React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, displayDate)
+                                                );
+                                            })
+                                        )
+                                    )
+                                );
+                            }
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre roly dobrovoľníka (checkboxy)
+                        if (path === 'volunteerRoles') {
+                            const selectedRoles = Array.isArray(value) ? value : [];
+                            
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, labelText),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2' },
+                                        volunteerOptions.map(option => {
+                                            const isSelected = selectedRoles.includes(option);
+                                            return React.createElement(
+                                                'label',
+                                                {
+                                                    key: option,
+                                                    className: `flex items-center p-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200 ${isSelected ? 'bg-blue-100' : 'bg-gray-50'}`
+                                                },
+                                                React.createElement('input', {
+                                                    type: 'checkbox',
+                                                    checked: isSelected,
+                                                    onChange: (e) => {
+                                                        const newRoles = e.target.checked
+                                                            ? [...selectedRoles, option]
+                                                            : selectedRoles.filter(r => r !== option);
+                                                        handleChange(path, newRoles);
+                                                    },
+                                                    className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
+                                                    disabled: !isSavable
+                                                }),
+                                                React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
+                                            );
+                                        })
+                                    )
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre pohlavie (select dropdown)
+                        if (path === 'gender') {
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement(
+                                        'select',
+                                        {
+                                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                            value: value || '',
+                                            onChange: (e) => handleChange(path, e.target.value),
+                                            disabled: !isSavable
+                                        },
+                                        React.createElement('option', { value: '', disabled: true }, 'Vyberte...'),
+                                        React.createElement('option', { value: 'male' }, 'Muž'),
+                                        React.createElement('option', { value: 'female' }, 'Žena')
+                                    )
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre veľkosť trička (select dropdown)
+                        if (path === 'tshirtSize') {
+                            // Načítanie dostupných veľkostí tričiek z globálneho stavu
+                            const tshirtSizes = window.availableTshirtSizes || ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+                            
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement(
+                                        'select',
+                                        {
+                                            className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                            value: value || '',
+                                            onChange: (e) => handleChange(path, e.target.value),
+                                            disabled: !isSavable
+                                        },
+                                        React.createElement('option', { value: '', disabled: true }, 'Vyberte veľkosť...'),
+                                        tshirtSizes.map(size => 
+                                            React.createElement('option', { key: size, value: size }, size)
+                                        )
+                                    )
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre dátum narodenia
+                        if (path === 'birthDate') {
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement('input', {
+                                        type: 'date',
+                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: value || '',
+                                        onChange: (e) => handleChange(path, e.target.value),
+                                        disabled: !isSavable
+                                    })
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre PSČ (s medzerou)
+                        if (path === 'postalCode') {
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: getFormattedPostalCodeForInput(value || ''),
+                                        onChange: (e) => handlePostalCodeChange(e, path),
+                                        onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                                        placeholder: 'xxx xx',
+                                        maxLength: 6,
+                                        disabled: !isSavable
+                                    })
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre telefónne číslo (s predvoľbou)
+                        if (path === 'contactPhoneNumber') {
+                            const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value || '', countryDialCodes);
+                            const [localDialCode, setLocalDialCode] = React.useState(dialCode);
+                            const [localPhoneNumber, setLocalPhoneNumber] = React.useState(formatNumberGroups(numberWithoutDialCode));
+                            const [isDialCodeModalOpen, setIsDialCodeModalOpen] = React.useState(false);
+                            
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex' },
+                                        React.createElement('button', {
+                                            type: 'button',
+                                            className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                                            onClick: () => setIsDialCodeModalOpen(true),
+                                            disabled: !isSavable
+                                        }, localDialCode || 'Vybrať predvoľbu'),
+                                        React.createElement('input', {
+                                            type: 'tel',
+                                            className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                            value: localPhoneNumber,
+                                            onChange: (e) => {
+                                                const cleaned = e.target.value.replace(/\D/g, '');
+                                                setLocalPhoneNumber(formatNumberGroups(cleaned));
+                                                const fullNumber = combinePhoneNumber(localDialCode, cleaned);
+                                                handleChange(path, fullNumber);
+                                            },
+                                            disabled: !isSavable,
+                                            placeholder: 'Zadajte telefónne číslo'
+                                        })
+                                    ),
+                                    React.createElement(DialCodeSelectionModal, {
+                                        isOpen: isDialCodeModalOpen,
+                                        onClose: () => setIsDialCodeModalOpen(false),
+                                        onSelectDialCode: (newDialCode) => {
+                                            setLocalDialCode(newDialCode);
+                                            const cleaned = localPhoneNumber.replace(/\D/g, '');
+                                            const fullNumber = combinePhoneNumber(newDialCode, cleaned);
+                                            handleChange(path, fullNumber);
+                                        },
+                                        currentDialCode: localDialCode
+                                    })
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre email (readonly)
+                        if (path === 'email') {
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement('input', {
+                                        type: 'email',
+                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2`,
+                                        value: value || '',
+                                        readOnly: true,
+                                        disabled: true
+                                    })
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Špeciálne spracovanie pre poznámku (textarea)
+                        if (path === 'note') {
+                            volunteerElements.push(
+                                React.createElement(
+                                    'div',
+                                    { key: path, className: 'mb-4' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                    React.createElement('textarea', {
+                                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                        value: value || '',
+                                        onChange: (e) => handleChange(path, e.target.value),
+                                        rows: 3,
+                                        disabled: !isSavable,
+                                        placeholder: 'Sem môžete napísať dodatočné informácie...'
+                                    })
+                                )
+                            );
+                            return;
+                        }
+                        
+                        // Východiskové spracovanie pre bežné textové polia
+                        volunteerElements.push(
+                            React.createElement(
+                                'div',
+                                { key: path, className: 'mb-4' },
+                                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
+                                    value: value || '',
+                                    onChange: (e) => handleChange(path, e.target.value),
+                                    disabled: !isSavable
+                                })
+                            )
+                        );
+                    });
+                    
+                    return volunteerElements;
+                }
+            
             if (isEditingMemberOrNewEntry && !title.includes('Pridať nový tím')) { // Použiť novú premennú, ale NIE pre "Pridať nový tím"
                 // console.log('DataEditModal: renderDataFields: isEditingMember is true and currentPath is empty, calling renderMemberFields.');
                 return renderMemberFields(); // Voláme novú dedikovanú funkciu
@@ -3355,7 +3716,6 @@ function AllRegistrationsApp() {
   // Nové stavy pre modálne okno na pridanie tímu
   // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
 
-
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
       // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
       const cleanedData = { ...data };
@@ -3433,7 +3793,6 @@ function AllRegistrationsApp() {
     setCurrentTeamForNewMember(null); // Resetovať tím
   }, [currentTeamForNewMember, db, openEditModal, setUserNotificationMessage]);
 
-
   const allTeamsFlattened = React.useMemo(() => {
     if (!showUsers && showTeams) {
         let teams = [];
@@ -3482,23 +3841,23 @@ function AllRegistrationsApp() {
     return [];
   }, [filteredUsers, showUsers, showTeams]);
 
-const calculateVolunteerTshirtSummary = () => {
-    const tshirtSizeCounts = new Map();
-    // Predvolené veľkosti tričiek
-    const defaultSizes = availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-    // Inicializácia mapy pre všetky veľkosti
-    defaultSizes.forEach(size => tshirtSizeCounts.set(size, 0));
-    // Prechádzať len dobrovoľníkov
-    filteredUsers
-        .filter(user => user.role === 'volunteer')
-        .forEach(user => {
-            const tshirtSize = user.tshirtSize;
-            if (tshirtSize && tshirtSizeCounts.has(tshirtSize)) {
-                tshirtSizeCounts.set(tshirtSize, tshirtSizeCounts.get(tshirtSize) + 1);
-            }
-        });
-    return tshirtSizeCounts;
-};
+    const calculateVolunteerTshirtSummary = () => {
+        const tshirtSizeCounts = new Map();
+        // Predvolené veľkosti tričiek
+        const defaultSizes = availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+        // Inicializácia mapy pre všetky veľkosti
+        defaultSizes.forEach(size => tshirtSizeCounts.set(size, 0));
+        // Prechádzať len dobrovoľníkov
+        filteredUsers
+            .filter(user => user.role === 'volunteer')
+            .forEach(user => {
+                const tshirtSize = user.tshirtSize;
+                if (tshirtSize && tshirtSizeCounts.has(tshirtSize)) {
+                    tshirtSizeCounts.set(tshirtSize, tshirtSizeCounts.get(tshirtSize) + 1);
+                }
+            });
+        return tshirtSizeCounts;
+    };
   
   // Nové useMemo pre výpočty súhrnu, ktoré závisia od allTeamsFlattened
   const teamSummary = React.useMemo(() => {
@@ -3532,7 +3891,6 @@ const calculateVolunteerTshirtSummary = () => {
           totalTshirtQuantities
       };
   }, [allTeamsFlattened, availableTshirtSizes]);
-
 
   const toggleRowExpansion = (userId) => {
       setExpandedRows(prev => ({
@@ -3570,6 +3928,61 @@ const calculateVolunteerTshirtSummary = () => {
         setExpandedRows(newExpandedState);
     }
   };
+
+  React.useEffect(() => {
+      if (!db) return;
+      
+      const fetchTournamentDates = async () => {
+          try {
+              const docRef = doc(db, 'settings/registration');
+              const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                  if (docSnap.exists()) {
+                      const data = docSnap.data();
+                      if (data.tournamentStart && data.tournamentEnd) {
+                          const startDate = data.tournamentStart.toDate();
+                          const endDate = data.tournamentEnd.toDate();
+                          const dates = [];
+                          const currentDate = new Date(startDate);
+                          while (currentDate <= endDate) {
+                              dates.push(new Date(currentDate));
+                              currentDate.setDate(currentDate.getDate() + 1);
+                          }
+                          window.availableTournamentDates = dates;
+                      }
+                  }
+              }, (error) => {
+                  console.error("Chyba pri načítavaní dátumov turnaja:", error);
+              });
+              return () => unsubscribe();
+          } catch (error) {
+              console.error("Chyba:", error);
+          }
+      };
+      
+      fetchTournamentDates();
+  }, [db]);
+  
+  // Načítanie veľkostí tričiek (pre dobrovoľníkov)
+  React.useEffect(() => {
+      if (!db) return;
+      
+      const fetchTshirtSizes = () => {
+          const docRef = doc(db, 'settings/sizeTshirts');
+          const unsubscribe = onSnapshot(docRef, (docSnap) => {
+              if (docSnap.exists()) {
+                  const data = docSnap.data();
+                  if (data && data.sizes && Array.isArray(data.sizes)) {
+                      window.availableTshirtSizes = data.sizes;
+                  }
+              }
+          }, (error) => {
+              console.error("Chyba pri načítavaní veľkostí tričiek:", error);
+          });
+          return () => unsubscribe();
+      };
+      
+      fetchTshirtSizes();
+  }, [db]);
 
   React.useEffect(() => {
       setStateFromHash();
