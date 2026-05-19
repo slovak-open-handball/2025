@@ -439,7 +439,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         };
     }, [teamName, categoryName]);
     
-    // Funkcia pre kliknutie na člena
+    // Funkcia pre kliknutie na člena - UPRAVENÁ VERZIA
     const handleMemberClick = async (member, index, arrayName) => {
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
@@ -451,8 +451,47 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
         
-        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI - POUŽIJEME WORKER PRE NEPRIHLÁSENÝCH
-        // alebo priamy Firestore pre prihlásených
+        // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
+        // Keďže v zozname sú najprv všetci muži RT, potom ženy RT,
+        // musíme pre ženy upraviť index
+        
+        let actualIndex = index;
+        let actualArrayName = arrayName;
+        
+        // Ak ide o člena RT (žena) a máme v tíme aj mužov RT,
+        // tak v zozname je poradie posunuté o počet mužov
+        if (member.type === 'Člen RT (žena)') {
+            // Získame aktuálny zoznam členov z members state
+            // members obsahuje: najprv všetkých RT (muži + ženy), potom hráčov
+            const allRTMembers = members.filter(m => m.type !== 'Hráč');
+            
+            // Spočítame koľko je mužov RT pred touto ženou
+            let menCount = 0;
+            for (let i = 0; i < allRTMembers.length; i++) {
+                if (allRTMembers[i].type === 'Člen RT (muž)') {
+                    menCount++;
+                }
+                // Ak sme našli túto ženu, zastavíme
+                if (allRTMembers[i] === member) {
+                    break;
+                }
+            }
+            
+            // Index v pôvodnom poli womenTeamMemberDetails = 
+            // aktuálny index v zozname mínus počet mužov RT
+            actualIndex = index - menCount;
+            actualArrayName = 'womenTeamMemberDetails';
+            
+            console.log(`🔄 Prepočet indexu pre ženu RT:`);
+            console.log(`   Index v zozname: ${index}`);
+            console.log(`   Počet mužov RT pred ňou: ${menCount}`);
+            console.log(`   Skutočný index v womenTeamMemberDetails: ${actualIndex}`);
+        }
+        
+        // Ak ide o člena RT (muž), arrayName je už správne 'menTeamMemberDetails'
+        // a index je správny, pretože muži sú v zozname na začiatku v rovnakom poradí
+        
+        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI
         try {
             // Skúsime najprv priamy Firestore (pre prihlásených hall používateľov)
             if (window.db && window.globalUserProfileData) {
@@ -473,7 +512,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
                         if (foundTeam) {
                             let playersArray = [];
                             
-                            switch (arrayName) {
+                            switch (actualArrayName) {
                                 case 'playerDetails':
                                     playersArray = foundTeam.playerDetails || [];
                                     break;
@@ -487,8 +526,8 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
                                     playersArray = [];
                             }
                             
-                            if (index >= 0 && index < playersArray.length) {
-                                foundPlayer = playersArray[index];
+                            if (actualIndex >= 0 && actualIndex < playersArray.length) {
+                                foundPlayer = playersArray[actualIndex];
                                 break;
                             }
                         }
@@ -501,7 +540,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
                     console.log(`Meno: ${foundPlayer.firstName}`);
                     console.log(`Priezvisko: ${foundPlayer.lastName}`);
                     console.log(`Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
-                    console.log(`Typ člena: ${member.type}`);  // 🔥 ZOBRAZÍME TYP ČLENA
+                    console.log(`Typ člena: ${member.type}`);
                     console.log(`========================`);
                     
                     console.log(`🎯 ${member.type}\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}` : ''}`);
@@ -511,12 +550,13 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
             
             // Ak nie sme prihlásený hall používateľ, použijeme Worker
             console.log(`🔄 Používam Worker pre načítanie údajov...`);
+            console.log(`   Odosielam: teamName=${mappedName}, categoryName=${categoryName}, playerType=${actualArrayName}, playerIndex=${actualIndex}`);
             
             const workerResult = await fetchPlayerFromWorker(
                 mappedName,      // teamName
                 categoryName,    // categoryName
-                arrayName,       // playerType
-                index            // playerIndex
+                actualArrayName, // playerType (opravený)
+                actualIndex      // playerIndex (opravený)
             );
             
             if (workerResult) {
@@ -524,7 +564,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
                 console.log(`Meno: ${workerResult.firstName}`);
                 console.log(`Priezvisko: ${workerResult.lastName}`);
                 console.log(`Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}`);
-                console.log(`Typ člena: ${workerResult.memberType || member.type}`);  // 🔥 ZOBRAZÍME TYP ČLENA
+                console.log(`Typ člena: ${workerResult.memberType || member.type}`);
                 console.log(`========================`);
                 
                 console.log(`🎯 ${workerResult.memberType || member.type}\n\nMeno: ${workerResult.firstName} ${workerResult.lastName}\n${workerResult.memberType === 'Hráč' ? `Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}` : ''}`);
