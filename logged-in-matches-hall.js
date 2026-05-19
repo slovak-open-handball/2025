@@ -450,32 +450,73 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
-    
-        // 🔥 VOLANIE WORKER PRE ZÍSKANIE ÚDAJOV HRÁČA
+        
+        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI PRIAMO Z FIRESTORE
+        // (využíva existujúce prihlásenie hall používateľa)
         try {
-            const playerData = await fetchPlayerFromWorker(
-                mappedName,        // názov tímu (použijeme zmapovaný)
-                categoryName,      // názov kategórie
-                arrayName,         // názov poľa (playerDetails, menTeamMemberDetails, atď.)
-                index              // poradové číslo (0-based)
-            );
-            
-            if (playerData) {
-                console.log(`=== ÚDAJE Z WORKER ===`);
-                console.log(`Meno: ${playerData.firstName}`);
-                console.log(`Priezvisko: ${playerData.lastName}`);
-                console.log(`Číslo dresu: ${playerData.jerseyNumber}`);
-                console.log(`======================`);
-            
-                // Zobrazenie v alert okne
-                alert(`🎯 HRÁČ\n\nMeno: ${playerData.firstName} ${playerData.lastName}\nČíslo dresu: ${playerData.jerseyNumber || 'neuvedené'}`);
-            } else {
-                console.log('❌ Nepodarilo sa získať údaje z Worker');
-                alert(`⚠️ Nepodarilo sa načítať údaje hráča\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+            if (!window.db) {
+                console.error('❌ Firestore nie je inicializovaný');
+                alert(`Meno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+                return;
             }
+            
+            // Použijeme existujúci onSnapshot listener alebo priamy getDocs
+            const usersRef = collection(window.db, 'users');
+            const usersSnapshot = await getDocs(usersRef);
+            
+            let foundPlayer = null;
+            
+            for (const userDoc of usersSnapshot.docs) {
+                const userData = userDoc.data();
+                const teams = userData.teams || {};
+                
+                for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                    if (categoryKey !== categoryName) continue;
+                    
+                    const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
+                    
+                    if (foundTeam) {
+                        let playersArray = [];
+                        
+                        switch (arrayName) {
+                            case 'playerDetails':
+                                playersArray = foundTeam.playerDetails || [];
+                                break;
+                            case 'menTeamMemberDetails':
+                                playersArray = foundTeam.menTeamMemberDetails || [];
+                                break;
+                            case 'womenTeamMemberDetails':
+                                playersArray = foundTeam.womenTeamMemberDetails || [];
+                                break;
+                            default:
+                                playersArray = [];
+                        }
+                        
+                        if (index >= 0 && index < playersArray.length) {
+                            foundPlayer = playersArray[index];
+                            break;
+                        }
+                    }
+                }
+                if (foundPlayer) break;
+            }
+            
+            if (foundPlayer) {
+                console.log(`=== ÚDAJE Z FIRESTORE ===`);
+                console.log(`Meno: ${foundPlayer.firstName}`);
+                console.log(`Priezvisko: ${foundPlayer.lastName}`);
+                console.log(`Číslo dresu: ${foundPlayer.jerseyNumber}`);
+                console.log(`========================`);
+                
+                alert(`🎯 HRÁČ\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\nČíslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
+            } else {
+                console.log('❌ Hráč nebol nájdený v databáze');
+                alert(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
+            }
+            
         } catch (err) {
-            console.error('❌ Chyba pri volaní Worker:', err);
-            alert(`Chyba pri načítaní údajov: ${err.message}`);
+            console.error('❌ Chyba pri načítaní z Firestore:', err);
+            alert(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\nČíslo dresu: ${member.jerseyNumber || 'neuvedené'}`);
         }
     };
     
@@ -3077,11 +3118,25 @@ if (window.db && window.globalUserProfileData) {
 }
 
 async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerIndex) {
-    // POZNÁMKA: Po nasadení Workeru nahraďte URL vašou skutočnou adresou
-    // Bude vyzerať napr: https://soh.nazov-subdomain.workers.dev
     const WORKER_URL = 'https://soh-2025.turnaj-slovak-open-handball.workers.dev/';
   
     try {
+        // Získame aktuálny Firebase token
+        let firebaseToken = null;
+        if (window.auth && window.auth.currentUser) {
+            firebaseToken = await window.auth.currentUser.getIdToken();
+            console.log(`✅ Firebase token získaný, dĺžka: ${firebaseToken.length}`);
+        } else {
+            console.error('❌ Používateľ nie je prihlásený');
+            // Fallback - použijeme anonymný token
+            firebaseToken = localStorage.getItem('firebaseToken');
+        }
+        
+        if (!firebaseToken) {
+            console.error('❌ Žiadny Firebase token k dispozícii');
+            return null;
+        }
+        
         console.log(`📡 Volám Worker pre hráča:`, { teamName, categoryName, playerType, playerIndex });
         
         const response = await fetch(WORKER_URL, {
@@ -3093,7 +3148,8 @@ async function fetchPlayerFromWorker(teamName, categoryName, playerType, playerI
                 teamName: teamName,
                 categoryName: categoryName,
                 playerType: playerType,
-                playerIndex: playerIndex
+                playerIndex: playerIndex,
+                firebaseToken: firebaseToken
             })
         });
   
