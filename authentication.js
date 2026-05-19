@@ -105,13 +105,17 @@ const setupFirebase = () => {
 const isOnLoginPage = () => {
     const currentPath = window.location.pathname;
     // Kontroluje, či cesta končí na 'login.html' (napr. /2025/login.html alebo /nazov-projektu/login.html)
-    return currentPath.endsWith('/login.html') || currentPath === '/login.html';
+    const result = currentPath.endsWith('/login.html') || currentPath === '/login.html';
+    console.log(`AuthManager: isOnLoginPage() - currentPath: "${currentPath}", result: ${result}`);
+    return result;
 };
 
 // Pomocná funkcia na kontrolu, či sme na chránenej stránke
 const isOnBlockedPage = () => {
     const currentPath = window.location.pathname;
-    return blockedPages.some(page => currentPath.includes(page));
+    const result = blockedPages.some(page => currentPath.includes(page));
+    console.log(`AuthManager: isOnBlockedPage() - currentPath: "${currentPath}", found: ${result}, matching page: ${blockedPages.find(page => currentPath.includes(page)) || 'none'}`);
+    return result;
 };
 
 const handleAuthState = async () => {
@@ -215,10 +219,19 @@ const handleAuthState = async () => {
             
             // KONTROLA: Ak nie je prihlásený žiadny používateľ a nachádzame sa na chránenej stránke,
             // okamžite presmerujeme na login.html
-            if (!isOnLoginPage() && isOnBlockedPage()) {
+            const onLoginPage = isOnLoginPage();
+            const onBlockedPage = isOnBlockedPage();
+            
+            console.log(`AuthManager: Kontrola presmerovania - onLoginPage: ${onLoginPage}, onBlockedPage: ${onBlockedPage}`);
+            
+            if (!onLoginPage && onBlockedPage) {
                 console.log("AuthManager: Neprihlásený používateľ na chránenej stránke. Presmerovávam na login.");
-                window.location.href = `login.html`;
+                const loginUrl = `${appBasePath}/login.html`;
+                console.log(`AuthManager: Presmerúvam na: ${loginUrl}`);
+                window.location.href = loginUrl;
                 return;
+            } else {
+                console.log("AuthManager: Žiadne presmerovanie nebolo spustené.");
             }
         }
 
