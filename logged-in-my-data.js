@@ -227,7 +227,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                     React.createElement('div', { className: 'font-normal' }, userProfileData.tshirtSize)
                 ),
                 userProfileData.volunteerRoles && userProfileData.volunteerRoles.length > 0 && React.createElement('div', null,
-                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dobrovoľnícke role'),
+                    React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dobrovoľnícke roly'),
                     React.createElement('div', { className: 'font-normal flex flex-wrap gap-2 mt-1' },
                         userProfileData.volunteerRoles.map((role, idx) => 
                             React.createElement('span', { key: idx, className: 'bg-gray-100 px-3 py-1 rounded-full text-sm' }, role)
