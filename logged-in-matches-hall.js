@@ -3352,6 +3352,53 @@ const MatchesHallApp = () => {
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [allMatchesList, showingDetail, selectedMatch]);
+
+    // Real-time listener pre skóre z udalostí (góly)
+    useEffect(() => {
+        if (!window.db) return;
+        
+        console.log('🔄 Nastavujem real-time listener pre udalosti (góly)...');
+        
+        const eventsRef = collection(window.db, 'matchEvents');
+        
+        const unsubscribe = onSnapshot(eventsRef, (snapshot) => {
+            // Skupinujeme góly podľa matchId
+            const goalsByMatch = {};
+            
+            snapshot.forEach(doc => {
+                const event = doc.data();
+                if (event.eventType === 'goal') {
+                    if (!goalsByMatch[event.matchId]) {
+                        goalsByMatch[event.matchId] = { home: 0, away: 0 };
+                    }
+                    if (event.team === 'home') {
+                        goalsByMatch[event.matchId].home++;
+                    } else if (event.team === 'away') {
+                        goalsByMatch[event.matchId].away++;
+                    }
+                }
+            });
+            
+            // Aktualizujeme stav len pre zápasy v našej hale (voliteľné, ale môže zlepšiť výkon)
+            setMatchScoresFromEvents(prev => {
+                // Spojíme existujúce skóre s novými
+                const newScores = { ...prev };
+                Object.keys(goalsByMatch).forEach(matchId => {
+                    newScores[matchId] = goalsByMatch[matchId];
+                });
+                return newScores;
+            });
+            
+            console.log('📊 Aktualizované skóre z udalostí:', goalsByMatch);
+        }, (error) => {
+            console.error('❌ Chyba pri real-time počúvaní udalostí:', error);
+        });
+        
+        return () => {
+            console.log('🔌 Ruším real-time listener pre udalosti');
+            unsubscribe();
+        };
+    }, [window.db]);
     
     // Cleanup real-time listenera pri odmontovaní komponentu
     useEffect(() => {
