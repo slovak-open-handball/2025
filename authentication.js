@@ -60,7 +60,8 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
-// Definícia verejných stránok (prístupné aj neprihláseným používateľom)
+// Definícia verejných stránok (prístupné len pre neprihlásených používateľov)
+// Prihlásení používatelia majú prístup ku všetkým stránkam
 const publicPages = [
     'account.html',
     'admin-register.html',
@@ -71,15 +72,16 @@ const publicPages = [
 ];
 
 // Definícia stránok dostupných LEN pre neprihlásených používateľov
-// (ak je prihlásený používateľ na takejto stránke, bude presmerovaný)
+// (ak je prihlásený používateľ na takejto stránke, bude presmerovaný na my-data)
 const guestOnlyPages = [
     'login.html',
+    'index.html',
     'register.html',
     'admin-register.html',
     'volunteer-register.html'
 ];
 
-// Definícia prístupových práv pre jednotlivé roly
+// Definícia prístupových práv pre jednotlivé roly (pre neverejné stránky)
 const roleAccess = {
     admin: [
         'logged-in-add-categories.html',
@@ -142,7 +144,7 @@ const getFileNameFromPath = (path) => {
     return parts[parts.length - 1];
 };
 
-// Pomocná funkcia na kontrolu, či je stránka verejná (prístupná aj neprihláseným)
+// Pomocná funkcia na kontrolu, či je stránka verejná (prístupná pre neprihlásených)
 const isPublicPage = () => {
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
@@ -179,12 +181,12 @@ const isOnRegistrationPage = () => {
     return result;
 };
 
-// Pomocná funkcia na kontrolu, či stránka vyžaduje prihlásenie (nie je verejná)
-const isLoggedInPage = () => {
+// Pomocná funkcia na kontrolu, či je stránka neverejná (vyžaduje prihlásenie)
+const isPrivatePage = () => {
     return !isPublicPage();
 };
 
-// Pomocná funkcia na kontrolu, či má používateľ prístup k aktuálnej stránke
+// Pomocná funkcia na kontrolu, či má používateľ prístup k aktuálnej stránke (podľa roly)
 const hasAccessToPage = (userRole, currentPage) => {
     if (!userRole || !currentPage) return false;
     
@@ -339,7 +341,9 @@ const handleAuthState = async () => {
                                 // Spustíme kontrolu časovača registrácie (pre prípad že sme na registračnej stránke)
                                 checkRegistrationTimer(userProfileData);
                                 
-                                // Ak je prihlásený používateľ na stránke, ktorá je len pre neprihlásených, presmeruj ho
+                                // PRIHLÁSENÝ POUŽÍVATEĽ MÁ PRÍSTUP KU VŠETKÝM STRÁNKAM
+                                // Iba výnimka: ak je na stránke, ktorá je len pre neprihlásených (guest only)
+                                // tak ho presmerujeme na my-data
                                 if (isCurrentPageGuestOnly) {
                                     console.log(`AuthManager: Prihlásený používateľ na stránke určenej len pre neprihlásených ("${currentPage}"). Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
@@ -348,18 +352,20 @@ const handleAuthState = async () => {
                                 
                                 // Ak je na login stránke, presmeruj na my-data
                                 if (isOnLoginPage()) {
-                                    console.log(`AuthManager: Schválený používateľ sa prihlásil. Presmerovávam na ${targetPathMyData}`);
+                                    console.log(`AuthManager: Prihlásený používateľ na login stránke. Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
-                                } 
-                                // Kontrola prístupu k aktuálnej stránke podľa roly (iba ak nie je verejná)
-                                else if (!isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
+                                    return;
+                                }
+                                
+                                // Pre neverejné stránky kontrolujeme prístup podľa roly
+                                if (!isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
                                     console.log(`AuthManager: Používateľ s rolou "${userRole}" nemá prístup na stránku "${currentPage}". Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
+                                    return;
                                 }
-                                // Inak nechaj používateľa na aktuálnej stránke
-                                else {
-                                    console.log(`AuthManager: Používateľ s rolou "${userRole}" má prístup na stránku "${currentPage}".`);
-                                }
+                                
+                                // Inak nechaj používateľa na aktuálnej stránke (má prístup)
+                                console.log(`AuthManager: Prihlásený používateľ s rolou "${userRole}" má prístup na stránku "${currentPage}".`);
                             }
 
                             window.globalUserProfileData = userProfileData;
@@ -395,22 +401,23 @@ const handleAuthState = async () => {
                 registrationLogoutTimeout = null;
             }
             
-            // KONTROLA: Ak nie je prihlásený žiadny používateľ a stránka NIE JE verejná,
-            // presmerujeme na login.html
+            // NEPRIHLÁSENÝ POUŽÍVATEĽ - má prístup LEN k verejným stránkam
             const isCurrentPagePublic = isPublicPage();
+            const currentFileName = getFileNameFromPath(window.location.pathname);
             
-            console.log(`AuthManager: Kontrola presmerovania - isCurrentPagePublic: ${isCurrentPagePublic}`);
+            console.log(`AuthManager: Neprihlásený používateľ na stránke "${currentFileName}". Je verejná? ${isCurrentPagePublic}`);
             
-            // Presmerujeme iba ak stránka nie je verejná
+            // Ak stránka nie je verejná, presmerujeme na login
             if (!isCurrentPagePublic) {
                 console.log("AuthManager: Neprihlásený používateľ na neverejnej stránke. Presmerovávam na login.");
                 const loginUrl = `${appBasePath}/login.html`;
                 console.log(`AuthManager: Presmerúvam na: ${loginUrl}`);
                 window.location.href = loginUrl;
                 return;
-            } else {
-                console.log("AuthManager: Neprihlásený používateľ na verejnej stránke. Žiadne presmerovanie.");
             }
+            
+            // Ak je na verejnej stránke, necháme ho tam
+            console.log("AuthManager: Neprihlásený používateľ na verejnej stránke. Žiadne presmerovanie.");
         }
 
         window.addEventListener('beforeunload', () => {
