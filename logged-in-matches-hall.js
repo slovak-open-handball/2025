@@ -466,7 +466,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         // 🔥 KONTROLA, ČI JE VYBRANÁ AKCIA A ČASOVAČ BEŽÍ
         if (!timerRef) {
             console.error('❌ timerRef nie je dostupný');
-            alert('Chyba: Časovač nie je inicializovaný');
             return;
         }
         
@@ -508,12 +507,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log('⏱️ Časovač beží:', isTimerRunning);
         
         if (!selectedAction) {
-            alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
             return;
         }
         
         if (!isTimerRunning) {
-            alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
             return;
         }
         
@@ -550,7 +547,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         } else {
             console.error('❌ Žiadna metóda na uloženie udalosti nie je dostupná');
             console.log('Dostupné vlastnosti timerRef.current:', timerCurrent ? Object.keys(timerCurrent) : 'null');
-            alert('Chyba: Nie je možné uložiť udalosť');
             return;
         }
         
@@ -847,15 +843,11 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     const saveMatchEventInternalWithAction = async (teamType, member, action) => {
         if (!action || !window.db || !matchId) {
-            if (!action) {
-                alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
-            }
             return false;
         }
         
         // Kontrola či je časovač spustený
         if (!isRunningRef.current) {
-            alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
             return false;
         }
         
@@ -926,7 +918,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return true;
         } catch (err) {
             console.error('Chyba pri ukladaní udalosti:', err);
-            alert('Nepodarilo sa uložiť udalosť');
             return false;
         }
     };
@@ -936,12 +927,10 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const awayScoreInt = parseInt(manualAwayScore);
         
         if (isNaN(homeScoreInt) || isNaN(awayScoreInt)) {
-            alert('Prosím zadajte platné čísla pre oba výsledky');
             return;
         }
         
         if (homeScoreInt < 0 || awayScoreInt < 0) {
-            alert('Výsledky nemôžu byť záporné');
             return;
         }
         
@@ -983,7 +972,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 }
             } catch (err) {
                 console.error('Chyba pri ukladaní manuálneho výsledku:', err);
-                alert('Nepodarilo sa uložiť výsledok');
             }
         }
     };
