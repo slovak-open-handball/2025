@@ -1394,14 +1394,29 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         // 🔥 AK SME DOSIAHLI KONIEC PERIÓDY A NIE JE TO POSLEDNÁ PERIÓDA, ZASTAVÍME ČASOVAČ
         if (reachedEndOfPeriod && !isEndOfMatch(clamped) && isRunningRef.current) {
-            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača, zápas sa prepína do stavu pozastavené`);
-            stopTimerAndSave(true); // true = zastavenie kvôli koncu periódy
+            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača`);
+            // Zastavíme časovač ako keby používateľ klikol na STOP
+            stopTimerAndSave(true);
+            // Po zastavení časovača sa už nevykoná žiadna ďalšia aktualizácia
+            return;
         }
         
         // Ak sme na konci celého zápasu, tiež zastavíme
         if (clamped >= maxTotal && total >= maxTotal && isRunningRef.current) {
             console.log(`🏁 Koniec zápasu - automatické zastavenie časovača`);
             stopTimerAndSave(true);
+            return;
+        }
+        
+        // 🔥 AK SME PREKROČILI HRANICU PERIÓDY (napr. z 14:59 na 15:01), OPRAVÍME ČAS
+        if (newPeriodTime > periodLength && !isEndOfMatch(clamped)) {
+            // Ak sme prekročili koniec periódy, zastavíme na presnom čase konca periódy
+            const exactEndTime = Math.floor(clamped / periodLength) * periodLength;
+            setDisplaySeconds(exactEndTime);
+            if (isRunningRef.current) {
+                console.log(`⏹️ Prekročenie konca periódy - oprava času a zastavenie`);
+                stopTimerAndSave(true);
+            }
         }
     };
 
@@ -1476,20 +1491,11 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         completedAt: Timestamp.now(),
                         resultCalculatedFromEvents: true
                     });
-                } else if (isPeriodEnd) {
-                    // 🔥 KONIEC PERIÓDY - nastavíme status na 'paused' (pozastavené)
-                    console.log(`⏹️ Koniec periódy - časovač zastavený, zápas je v stave "pozastavené"`);
+                } else {
+                    // 🔥 KONIEC PERIÓDY ALEBO BEŽNÉ ZASTAVENIE - nastavíme status na 'paused'
                     await updateDoc(matchRef, {
                         manualTimeOffset: finalSeconds,
                         status: 'paused',
-                        startedAt: null,
-                        pausedAt: Timestamp.now(),
-                        updatedAt: Timestamp.now()
-                    });
-                } else {
-                    await updateDoc(matchRef, {
-                        manualTimeOffset: finalSeconds,
-                        status: newStatus,
                         startedAt: null,
                         pausedAt: Timestamp.now(),
                         updatedAt: Timestamp.now()
@@ -1517,7 +1523,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         // 🔥 KONTROLA: Či sme na konci periódy (časovač by nemal štartovať na konci periódy)
         if (isEndOfPeriod(currentSeconds) && !isEndOfMatch(currentSeconds)) {
-            console.log(`⚠️ Časovač nemôže štartovať na konci periódy ${period} - zápas je v stave "pozastavené"`);
+            console.log(`⚠️ Časovač nemôže štartovať na konci periódy ${period}`);
             return;
         }
         
