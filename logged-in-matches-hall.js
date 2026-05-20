@@ -1894,25 +1894,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         return { homeGoals, awayGoals };
     };
     
-    // 🔥 EFEKT: Počítanie gólov z udalostí (len ak je zápas v stave 'scheduled' alebo 'in-progress'/'paused' bez manuálneho výsledku)
+    // 🔥 EFEKT: Počítanie gólov z udalostí (vždy pre prebiehajúce zápasy)
     React.useEffect(() => {
-        // Ak zápas nie je completed alebo nemá manuálne zadaný výsledok, počítame góly z udalostí
-        const hasManualResult = match.manualResultEntered === true || 
-                               (currentHomeScore !== undefined && currentHomeScore !== null && 
-                                currentAwayScore !== undefined && currentAwayScore !== null &&
-                                match.status === 'completed');
-        
-        if (!hasManualResult && currentMatchStatus !== 'completed') {
+        // Ak je zápas v stave 'in-progress' alebo 'paused', vždy používame skóre z udalostí
+        const isMatchInProgress = currentMatchStatus === 'in-progress' || currentMatchStatus === 'paused';
+    
+        if (isMatchInProgress) {
             const { homeGoals, awayGoals } = calculateGoalsFromEvents(matchEvents);
             setCalculatedHomeScore(homeGoals);
             setCalculatedAwayScore(awayGoals);
             setUseCalculatedScore(true);
-            console.log(`📊 Výpočet gólov z udalostí: DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
+            console.log(`📊 Výpočet gólov z udalostí (prebiehajúci zápas): DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
         } else {
             setUseCalculatedScore(false);
         }
-    }, [matchEvents, currentMatchStatus, match.manualResultEntered, match.status, currentHomeScore, currentAwayScore]);
-    
+    }, [matchEvents, currentMatchStatus]);
+        
     // Načítanie udalostí pre zápas
     const loadMatchEvents = async () => {
         if (!window.db || !match.id) return;
@@ -2447,18 +2444,19 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     
     // Získanie aktuálneho skóre pre zobrazenie
     let finalDisplayScore = null;
+    const isMatchInProgress = currentMatchStatus === 'in-progress' || currentMatchStatus === 'paused';
 
-    if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
+    if (isMatchInProgress && useCalculatedScore) {
+        // Prebiehajúci zápas - vždy zobrazíme skóre z udalostí (aj 0:0)
+        finalDisplayScore = { home: calculatedHomeScore, away: calculatedAwayScore };
+    } else if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
         // Ukončený zápas s výsledkom v DB
         finalDisplayScore = { home: currentHomeScore, away: currentAwayScore };
-    } else if (useCalculatedScore) {
-        // Prebiehajúci zápas - zobrazíme skóre z udalostí (aj 0:0)
-        finalDisplayScore = { home: calculatedHomeScore, away: calculatedAwayScore };
     } else if (currentHomeScore !== undefined && currentHomeScore !== null) {
-        // Existujúci výsledok v DB (napr. manuálne zadaný počas zápasu)
+        // Existujúci výsledok v DB (napr. manuálne zadaný počas zápasu - ale to by nemalo nastať)
         finalDisplayScore = { home: currentHomeScore, away: currentAwayScore };
     }
-
+    
     const showScore = finalDisplayScore !== null;
     
     return React.createElement(
