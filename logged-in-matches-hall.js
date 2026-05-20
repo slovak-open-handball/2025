@@ -470,31 +470,38 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 OPRAVA: Použijeme priamo aktuálnu akciu z timerRef
+        // 🔥 OPRAVA: Použijeme priamo aktuálnu akciu z timerRef.current
         let selectedAction = null;
         let isTimerRunning = false;
         
-        // Skúsime získať aktuálnu akciu priamo z ref
-        if (timerRef.current && typeof timerRef.current.getSelectedAction === 'function') {
-            selectedAction = timerRef.current.getSelectedAction();
-            console.log('🎯 Aktuálna vybraná akcia z timerRef.current:', selectedAction);
-        } else if (timerRef.getSelectedAction && typeof timerRef.getSelectedAction === 'function') {
-            selectedAction = timerRef.getSelectedAction();
-            console.log('🎯 Aktuálna vybraná akcia z timerRef (funkcia):', selectedAction);
+        // Správny prístup k metódam je cez timerRef.current
+        const timerCurrent = timerRef.current;
+        
+        if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
+            selectedAction = timerCurrent.getSelectedAction();
+            console.log('🎯 Aktuálna vybraná akcia z timerRef.current.getSelectedAction():', selectedAction);
+        } else if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
+            selectedAction = timerCurrent.getSelectedAction();
+            console.log('🎯 Aktuálna vybraná akcia z timerRef.current (getSelectedAction):', selectedAction);
         } else {
-            console.warn('⚠️ timerRef nemá metódu getSelectedAction');
-            // Fallback - skúsime získať z timerRef priamo ako vlastnosť
-            selectedAction = timerRef.selectedAction || null;
-            console.log('🎯 Fallback selectedAction:', selectedAction);
+            console.warn('⚠️ timerRef.current nemá metódu getSelectedAction', timerCurrent);
+            // Fallback - skúsime získať z timerRef priamo (ak je to funkcia, nie ref)
+            if (typeof timerRef.getSelectedAction === 'function') {
+                selectedAction = timerRef.getSelectedAction();
+                console.log('🎯 Fallback timerRef.getSelectedAction():', selectedAction);
+            }
         }
         
         // Kontrola behu časovača
-        if (timerRef.current && typeof timerRef.current.isTimerRunning === 'function') {
-            isTimerRunning = timerRef.current.isTimerRunning();
-        } else if (timerRef.isTimerRunning && typeof timerRef.isTimerRunning === 'function') {
+        if (timerCurrent && typeof timerCurrent.isTimerRunning === 'function') {
+            isTimerRunning = timerCurrent.isTimerRunning();
+            console.log('⏱️ timerCurrent.isTimerRunning():', isTimerRunning);
+        } else if (typeof timerRef.isTimerRunning === 'function') {
             isTimerRunning = timerRef.isTimerRunning();
+            console.log('⏱️ timerRef.isTimerRunning():', isTimerRunning);
         } else {
-            isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning : false;
+            isTimerRunning = false;
+            console.log('⏱️ isTimerRunning: default false');
         }
         
         console.log('🎯 Výsledná akcia:', selectedAction);
@@ -510,7 +517,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 ULOŽENIE UDALOSTI - použijeme novú metódu saveEventWithAction ak existuje
+        // 🔥 ULOŽENIE UDALOSTI - použijeme metódu saveEventWithAction ak existuje
         const memberForSave = {
             type: member.type,
             name: `${member.firstName} ${member.lastName}`.trim(),
@@ -525,17 +532,24 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         
         let success = false;
         
-        // Skúsime použiť novú metódu saveEventWithAction ak existuje
-        if (timerRef.current && typeof timerRef.current.saveEventWithAction === 'function') {
-            success = await timerRef.current.saveEventWithAction(teamType, memberForSave, selectedAction);
-        } else if (timerRef.saveEventWithAction && typeof timerRef.saveEventWithAction === 'function') {
+        // Skúsime použiť metódu saveEventWithAction (priorita)
+        if (timerCurrent && typeof timerCurrent.saveEventWithAction === 'function') {
+            console.log('📞 Volám timerCurrent.saveEventWithAction()');
+            success = await timerCurrent.saveEventWithAction(teamType, memberForSave, selectedAction);
+        } else if (typeof timerRef.saveEventWithAction === 'function') {
+            console.log('📞 Volám timerRef.saveEventWithAction()');
             success = await timerRef.saveEventWithAction(teamType, memberForSave, selectedAction);
-        } else if (timerRef.current && typeof timerRef.current.saveMatchEvent === 'function') {
-            success = await timerRef.current.saveMatchEvent(teamType, memberForSave);
-        } else if (timerRef.saveMatchEvent && typeof timerRef.saveMatchEvent === 'function') {
+        } 
+        // Fallback na saveMatchEvent
+        else if (timerCurrent && typeof timerCurrent.saveMatchEvent === 'function') {
+            console.log('📞 Volám timerCurrent.saveMatchEvent()');
+            success = await timerCurrent.saveMatchEvent(teamType, memberForSave);
+        } else if (typeof timerRef.saveMatchEvent === 'function') {
+            console.log('📞 Volám timerRef.saveMatchEvent()');
             success = await timerRef.saveMatchEvent(teamType, memberForSave);
         } else {
             console.error('❌ Žiadna metóda na uloženie udalosti nie je dostupná');
+            console.log('Dostupné vlastnosti timerRef.current:', timerCurrent ? Object.keys(timerCurrent) : 'null');
             alert('Chyba: Nie je možné uložiť udalosť');
             return;
         }
