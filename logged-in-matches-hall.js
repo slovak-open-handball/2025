@@ -1468,7 +1468,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     seconds: 0, 
                     period: 1, 
                     isRunning: false,
-                    resetComplete: true
+                    resetComplete: true,
+                    resetEvents: true
                 });
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
@@ -1893,6 +1894,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return { homeGoals, awayGoals };
     };
+
+    React.useEffect(() => {
+        // Ak je resetComplete a resetEvents, vynulujeme vypočítané skóre
+        if (match.resetComplete || match.resetEvents) {
+            setCalculatedHomeScore(0);
+            setCalculatedAwayScore(0);
+            setUseCalculatedScore(false);
+        }
+    }, [match.resetComplete, match.resetEvents]);
     
     // 🔥 EFEKT: Počítanie gólov z udalostí (vždy pre prebiehajúce zápasy)
     React.useEffect(() => {
@@ -3363,6 +3373,7 @@ const MatchesHallApp = () => {
             // Skupinujeme góly podľa matchId
             const goalsByMatch = {};
             
+            // Prvý prechod: zozbierame všetky matchId, ktoré majú góly
             snapshot.forEach(doc => {
                 const event = doc.data();
                 if (event.eventType === 'goal') {
@@ -3377,17 +3388,22 @@ const MatchesHallApp = () => {
                 }
             });
             
-            // Aktualizujeme stav len pre zápasy v našej hale (voliteľné, ale môže zlepšiť výkon)
+            // 🔥 OPRAVA: Vymažeme staré skóre pre matchId, ktoré už nemajú žiadne góly
             setMatchScoresFromEvents(prev => {
-                // Spojíme existujúce skóre s novými
-                const newScores = { ...prev };
+                const newScores = {};
+                
+                // Zachováme len tie matchId, ktoré majú aspoň jeden gól v aktuálnom snapshot-e
                 Object.keys(goalsByMatch).forEach(matchId => {
                     newScores[matchId] = goalsByMatch[matchId];
                 });
+                
+                // Voliteľné: Pridáme matchId z prev, ktoré majú stále góly (pre prípad, že snapshot neobsahuje všetky)
+                // Ale v našom prípade onSnapshot vracia celú kolekciu, takže nemusíme
+                
+                console.log('📊 Aktualizované skóre z udalostí (len s gólmi):', newScores);
                 return newScores;
             });
             
-            console.log('📊 Aktualizované skóre z udalostí:', goalsByMatch);
         }, (error) => {
             console.error('❌ Chyba pri real-time počúvaní udalostí:', error);
         });
