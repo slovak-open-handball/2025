@@ -466,44 +466,50 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             console.log(`🔄 Prepočet indexu pre ženu RT: ${index} -> ${actualIndex}`);
         }
         
-        // 🔥 ULOŽENIE UDALOSTI (AK JE VYBRANÁ AKCIA)
-        if (timerRef && timerRef.saveMatchEvent && teamType) {
-            const selectedAction = timerRef.getSelectedAction ? timerRef.getSelectedAction() : null;
-            const isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning() : false;
-            
-            if (!selectedAction) {
-                alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
-                return;
-            }
-            
-            if (!isTimerRunning) {
-                alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
-                return;
-            }
-            
-            const memberForSave = {
-                type: member.type,
-                name: `${member.firstName} ${member.lastName}`.trim(),
-                firstName: member.firstName,
-                lastName: member.lastName,
-                jerseyNumber: member.jerseyNumber,
-                index: actualIndex,
-                typeKey: actualArrayName
-            };
-            
-            console.log(`💾 Ukladám udalosť: ${selectedAction} pre ${memberForSave.name} (${teamType})`);
-            const success = await timerRef.saveMatchEvent(teamType, memberForSave);
-            
-            if (success) {
-                console.log(`✅ Udalosť úspešne uložená`);
-            } else {
-                console.error(`❌ Udalosť sa nepodarila uložiť`);
-            }
+        // 🔥 KONTROLA, ČI JE VYBRANÁ AKCIA A ČASOVAČ BEŽÍ
+        if (!timerRef) {
+            console.error('❌ timerRef nie je dostupný');
+            alert('Chyba: Časovač nie je inicializovaný');
+            return;
         }
         
-        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI
+        const selectedAction = timerRef.getSelectedAction ? timerRef.getSelectedAction() : null;
+        const isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning() : false;
+        
+        if (!selectedAction) {
+            alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
+            return;
+        }
+        
+        if (!isTimerRunning) {
+            alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
+            return;
+        }
+        
+        // 🔥 ULOŽENIE UDALOSTI
+        const memberForSave = {
+            type: member.type,
+            name: `${member.firstName} ${member.lastName}`.trim(),
+            firstName: member.firstName,
+            lastName: member.lastName,
+            jerseyNumber: member.jerseyNumber,
+            index: actualIndex,
+            typeKey: actualArrayName
+        };
+        
+        console.log(`💾 Ukladám udalosť: ${selectedAction} pre ${memberForSave.name} (${teamType})`);
+        const success = await timerRef.saveMatchEvent(teamType, memberForSave);
+        
+        if (success) {
+            console.log(`✅ Udalosť úspešne uložená`);
+            // Po úspešnom uložení môžeme resetovať vybranú akciu v časovači
+            // (to už robí saveMatchEventInternal)
+        } else {
+            console.error(`❌ Udalosť sa nepodarila uložiť`);
+        }
+        
+        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI (len pre zobrazenie v konzole - nepovinné)
         try {
-            // Skúsime najprv priamy Firestore (pre prihlásených hall používateľov)
             if (window.db && window.globalUserProfileData) {
                 const usersRef = collection(window.db, 'users');
                 const usersSnapshot = await getDocs(usersRef);
@@ -546,46 +552,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
                 
                 if (foundPlayer) {
-                    console.log(`=== ÚDAJE Z FIRESTORE ===`);
-                    console.log(`Meno: ${foundPlayer.firstName}`);
-                    console.log(`Priezvisko: ${foundPlayer.lastName}`);
-                    console.log(`Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
-                    console.log(`Typ člena: ${member.type}`);
-                    console.log(`========================`);
-                    
-                    console.log(`🎯 ${member.type}\n\nMeno: ${foundPlayer.firstName} ${foundPlayer.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}` : ''}`);
-                    return;
+                    console.log(`📋 Informácie o hráčovi: ${foundPlayer.firstName} ${foundPlayer.lastName}, číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
                 }
             }
-            
-            // Ak nie sme prihlásený hall používateľ, použijeme Worker
-            console.log(`🔄 Používam Worker pre načítanie údajov...`);
-            console.log(`   Odosielam: teamName=${mappedName}, categoryName=${categoryName}, playerType=${actualArrayName}, playerIndex=${actualIndex}`);
-            
-            const workerResult = await fetchPlayerFromWorker(
-                mappedName,      // teamName
-                categoryName,    // categoryName
-                actualArrayName, // playerType (opravený)
-                actualIndex      // playerIndex (opravený)
-            );
-            
-            if (workerResult) {
-                console.log(`=== ÚDAJE Z WORKER ===`);
-                console.log(`Meno: ${workerResult.firstName}`);
-                console.log(`Priezvisko: ${workerResult.lastName}`);
-                console.log(`Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}`);
-                console.log(`Typ člena: ${workerResult.memberType || member.type}`);
-                console.log(`========================`);
-                
-                console.log(`🎯 ${workerResult.memberType || member.type}\n\nMeno: ${workerResult.firstName} ${workerResult.lastName}\n${workerResult.memberType === 'Hráč' ? `Číslo dresu: ${workerResult.jerseyNumber || 'neuvedené'}` : ''}`);
-            } else {
-                console.log('❌ Hráč nebol nájdený v databáze');
-                console.log(`⚠️ Hráč nebol nájdený v databáze\n\nMeno: ${member.firstName} ${member.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${member.jerseyNumber || 'neuvedené'}` : `Typ: ${member.type}`}`);
-            }
-            
         } catch (err) {
-            console.error('❌ Chyba pri načítaní z Firestore:', err);
-            console.error(`Chyba pri načítaní údajov: ${err.message}\n\nMeno: ${member.firstName} ${member.lastName}\n${member.type === 'Hráč' ? `Číslo dresu: ${member.jerseyNumber || 'neuvedené'}` : `Typ: ${member.type}`}`);
+            console.error('Chyba pri načítaní detailov hráča:', err);
         }
     };
     
