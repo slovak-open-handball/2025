@@ -2752,6 +2752,22 @@ const MatchesHallApp = () => {
     
     // Stav pre real-time aktualizáciu statusov zápasov
     const [matchStatuses, setMatchStatuses] = useState({});
+    const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});    
+
+    // V MatchesHallApp, pridajte túto funkciu
+    const calculateGoalsFromEvents = (events) => {
+        let homeGoals = 0;
+        let awayGoals = 0;
+    
+        events.forEach(event => {
+            if (event.eventType === 'goal') {
+                if (event.team === 'home') homeGoals++;
+                else if (event.team === 'away') awayGoals++;
+            }
+        });
+        
+        return { home: homeGoals, away: awayGoals };
+    };
     
     // Funkcia na vytvorenie hash pre zápas
     const createMatchHash = (homeTeamId, awayTeamId) => {
@@ -3537,7 +3553,27 @@ const MatchesHallApp = () => {
                             
                             dayMatches.forEach((match, matchIndex) => {
                                 const dateTime = formatMatchDateTime(match.scheduledTime);
-                                const isResultAvailable = match.homeScore !== undefined && match.homeScore !== null && match.awayScore !== undefined && match.awayScore !== null;
+                                const eventsScore = matchScoresFromEvents[match.id];
+                                const hasEventsScore = eventsScore && (eventsScore.home > 0 || eventsScore.away > 0);
+                                const isMatchInProgress = match.status === 'in-progress' || match.status === 'paused';
+                                const hasDbScore = match.homeScore !== undefined && match.homeScore !== null && match.awayScore !== undefined && match.awayScore !== null;
+
+                                // Rozhodneme, čo zobraziť
+                                let displayHomeScore = null;
+                                let displayAwayScore = null;
+                                let showScore = false;
+
+                                if (isMatchInProgress && hasEventsScore) {
+                                    // Prebiehajúci zápas - zobrazíme skóre z udalostí
+                                    displayHomeScore = eventsScore.home;
+                                    displayAwayScore = eventsScore.away;
+                                    showScore = true;
+                                } else if (hasDbScore) {
+                                    // Ukončený zápas alebo manuálne zadané skóre
+                                    displayHomeScore = match.homeScore;
+                                    displayAwayScore = match.awayScore;
+                                    showScore = true;
+                                }
                                 
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
@@ -3650,13 +3686,13 @@ const MatchesHallApp = () => {
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                            isResultAvailable ?
+                                            showScore ?
                                                 React.createElement(
                                                     'div',
                                                     { className: 'flex items-center justify-center gap-1' },
-                                                    React.createElement('span', { className: 'font-bold text-gray-800' }, match.homeScore),
+                                                    React.createElement('span', { className: 'font-bold text-gray-800' }, displayHomeScore),
                                                     React.createElement('span', { className: 'text-gray-400' }, ':'),
-                                                    React.createElement('span', { className: 'font-bold text-gray-800' }, match.awayScore)
+                                                    React.createElement('span', { className: 'font-bold text-gray-800' }, displayAwayScore)
                                                 ) :
                                                 React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
                                         ),
