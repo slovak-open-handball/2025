@@ -170,6 +170,16 @@ const isOnLoginPage = () => {
     return result;
 };
 
+// Pomocná funkcia na kontrolu, či sme na jednej z registračných stránok
+const isOnRegistrationPage = () => {
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    const registrationPages = ['register.html', 'admin-register.html', 'volunteer-register.html'];
+    const result = registrationPages.includes(fileName);
+    console.log(`AuthManager: isOnRegistrationPage() - fileName: "${fileName}", result: ${result}`);
+    return result;
+};
+
 // Pomocná funkcia na kontrolu, či stránka vyžaduje prihlásenie (nie je verejná)
 const isLoggedInPage = () => {
     return !isPublicPage();
@@ -190,6 +200,75 @@ const hasAccessToPage = (userRole, currentPage) => {
     
     console.log(`AuthManager: hasAccessToPage() - role: "${userRole}", page: "${currentPage}", hasAccess: ${hasAccess}`);
     return hasAccess;
+};
+
+// Premenná pre timeout odhlásenia pri registrácii
+let registrationLogoutTimeout = null;
+
+// Funkcia na kontrolu registračného časovača
+const checkRegistrationTimer = (userProfileData) => {
+    // Zrušíme predchádzajúci timeout ak existuje
+    if (registrationLogoutTimeout) {
+        clearTimeout(registrationLogoutTimeout);
+        registrationLogoutTimeout = null;
+    }
+    
+    // Kontrola či sme na registračnej stránke
+    if (!isOnRegistrationPage()) {
+        return;
+    }
+    
+    // Kontrola či máme registrationDate v profile
+    if (!userProfileData || !userProfileData.registrationDate) {
+        console.log("AuthManager: Chýba registrationDate v profile používateľa.");
+        return;
+    }
+    
+    // Konverzia registrationDate na timestamp v milisekundách
+    let registrationTimestamp;
+    if (userProfileData.registrationDate.seconds) {
+        registrationTimestamp = userProfileData.registrationDate.seconds * 1000;
+    } else if (typeof userProfileData.registrationDate === 'number') {
+        registrationTimestamp = userProfileData.registrationDate;
+    } else {
+        console.log("AuthManager: Neznámy formát registrationDate.");
+        return;
+    }
+    
+    const currentTime = Date.now();
+    const expiryTime = registrationTimestamp + 30000; // +30 sekúnd
+    const timeUntilExpiry = expiryTime - currentTime;
+    
+    console.log(`AuthManager: Kontrola časovača registrácie - aktuálny čas: ${new Date(currentTime).toLocaleTimeString()}, expirácia: ${new Date(expiryTime).toLocaleTimeString()}, zostáva: ${timeUntilExpiry}ms`);
+    
+    if (timeUntilExpiry > 0) {
+        // Aktuálny čas je menší ako registrationDate + 30 sekúnd
+        // Nastavíme timeout na odhlásenie po uplynutí času
+        console.log(`AuthManager: Nastavujem odhlásenie o ${timeUntilExpiry}ms`);
+        registrationLogoutTimeout = setTimeout(async () => {
+            console.log("AuthManager: Uplynul čas 30 sekúnd od registrácie, odhlasujem používateľa.");
+            try {
+                await signOut(auth);
+                window.globalUserProfileData = null;
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                window.location.href = `${appBasePath}/login.html?status=registration_expired`;
+            } catch (error) {
+                console.error("AuthManager: Chyba pri odhlasovaní po registrácii:", error);
+                window.location.href = `${appBasePath}/login.html`;
+            }
+        }, timeUntilExpiry);
+    } else {
+        // Aktuálny čas je väčší ako registrationDate + 30 sekúnd
+        // Používateľ by mal byť presmerovaný na logged-in-my-data.html
+        console.log("AuthManager: Čas 30 sekúnd od registrácie už uplynul, presmerúvam na logged-in-my-data.html");
+        
+        // Presmerujeme iba ak sme na registračnej stránke
+        if (isOnRegistrationPage()) {
+            const targetPath = `${appBasePath}/logged-in-my-data.html`;
+            console.log(`AuthManager: Presmerúvam na ${targetPath}`);
+            window.location.href = targetPath;
+        }
+    }
 };
 
 const handleAuthState = async () => {
@@ -233,6 +312,9 @@ const handleAuthState = async () => {
                                 console.log("AuthManager: Prebieha registrácia administrátora.");
                                 window.globalUserProfileData = userProfileData;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                
+                                // Spustíme kontrolu časovača registrácie
+                                checkRegistrationTimer(userProfileData);
                                 return;
                             }
 
@@ -254,6 +336,9 @@ const handleAuthState = async () => {
                                 const userRole = userProfileData.role;
                                 const isCurrentPagePublic = isPublicPage();
                                 const isCurrentPageGuestOnly = isGuestOnlyPage();
+                                
+                                // Spustíme kontrolu časovača registrácie (pre prípad že sme na registračnej stránke)
+                                checkRegistrationTimer(userProfileData);
                                 
                                 // Ak je prihlásený používateľ na stránke, ktorá je len pre neprihlásených, presmeruj ho
                                 if (isCurrentPageGuestOnly) {
@@ -305,6 +390,12 @@ const handleAuthState = async () => {
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             
+            // Zrušíme timeout ak existuje
+            if (registrationLogoutTimeout) {
+                clearTimeout(registrationLogoutTimeout);
+                registrationLogoutTimeout = null;
+            }
+            
             // KONTROLA: Ak nie je prihlásený žiadny používateľ a stránka NIE JE verejná,
             // presmerujeme na login.html
             const isCurrentPagePublic = isPublicPage();
@@ -326,6 +417,9 @@ const handleAuthState = async () => {
         window.addEventListener('beforeunload', () => {
             if (window.unsubscribeUserDoc) {
                 window.unsubscribeUserDoc();
+            }
+            if (registrationLogoutTimeout) {
+                clearTimeout(registrationLogoutTimeout);
             }
         });
     });
