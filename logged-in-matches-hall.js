@@ -2007,7 +2007,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    // Komponent pre zoznam udalostí (upravený - dva stĺpce pre hráčov)
+    // Komponent pre zoznam udalostí (upravený - pridaný stĺpec so skóre)
     const renderMatchEvents = () => {
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
@@ -2045,6 +2045,47 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             return { teamName, playerName, jerseyNumber };
         };
         
+        // 🔥 FUNKCIA: Výpočet skóre v čase udalosti (pre góly)
+        const getScoreAtEvent = (currentEventIndex, targetEvent) => {
+            // Ak nejde o gól, nevracame nič
+            if (targetEvent.eventType !== 'goal') return null;
+            
+            let homeGoals = 0;
+            let awayGoals = 0;
+            
+            // Prechádzame udalosti od najstaršej po aktuálnu (vzostupne podľa času)
+            // Keďže matchEvents sú zoradené od najnovšej po najstaršiu (desc),
+            // musíme prejsť v opačnom poradí
+            const reversedEvents = [...matchEvents].reverse();
+            
+            for (let i = 0; i < reversedEvents.length; i++) {
+                const event = reversedEvents[i];
+                
+                // Ak sme narazili na aktuálnu udalosť, končíme (nezapočítavame ju ešte)
+                if (event.id === targetEvent.id) {
+                    break;
+                }
+                
+                // Počítame góly pred touto udalosťou
+                if (event.eventType === 'goal') {
+                    if (event.team === 'home') {
+                        homeGoals++;
+                    } else if (event.team === 'away') {
+                        awayGoals++;
+                    }
+                }
+            }
+            
+            // Pridáme aktuálny gól podľa tímu
+            if (targetEvent.team === 'home') {
+                homeGoals++;
+            } else if (targetEvent.team === 'away') {
+                awayGoals++;
+            }
+            
+            return { home: homeGoals, away: awayGoals };
+        };
+        
         return React.createElement(
             'div',
             { className: 'mt-6 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
@@ -2076,19 +2117,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 React.createElement(
                                     'tr',
                                     null,
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-2/5' }, 'Domáci'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, ''),
+                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-1/4' }, 'Domáci'),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, 'Skóre'),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-12' }, ''),
                                     React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-20' }, 'Čas'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, ''),
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-2/5' }, 'Hostia')
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-12' }, ''),
+                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-1/4' }, 'Hostia')
                                 )
                             ),
                             React.createElement(
                                 'tbody',
                                 { className: 'divide-y divide-gray-100' },
-                                matchEvents.map((event) => {
+                                matchEvents.map((event, idx) => {
                                     const isHomeEvent = event.team === 'home';
                                     const { teamName, playerName, jerseyNumber } = getPlayerDisplay(event);
+                                    const isGoal = event.eventType === 'goal';
+                                    const score = isGoal ? getScoreAtEvent(idx, event) : null;
                                     
                                     // Získanie textu akcie pre tooltip
                                     const getActionTitle = () => {
@@ -2125,6 +2169,19 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                     )
                                                 ) :
                                                 React.createElement('div', { className: 'text-right' }, '')
+                                        ),
+                                        
+                                        // 🔥 NOVÝ STĹPEC: Skóre (len pre góly)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-center font-mono text-sm font-bold' },
+                                            isGoal && score ? 
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700' },
+                                                    `${score.home}:${score.away}`
+                                                ) :
+                                                React.createElement('span', { className: 'text-gray-300' }, '—')
                                         ),
                                         
                                         // Ikona udalosti (ľavá)
