@@ -439,6 +439,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         };
     }, [teamName, categoryName]);
     
+    // Upravená handleMemberClick funkcia v TeamMembersList komponente
     const handleMemberClick = async (member, index, arrayName) => {
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
@@ -446,6 +447,12 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log(`Tím (pôvodný): ${teamName}`);
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
+        
+        // 🔥 KONTROLA: Gól môže dať len Hráč (nie člen RT)
+        if (selectedAction === 'goal' && member.type !== 'Hráč') {
+            alert('Gól môže dať iba hráč! Člen realizačného tímu nemôže zaznamenať gól.');
+            return;
+        }
         
         // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
         let actualIndex = index;
