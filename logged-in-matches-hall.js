@@ -1922,6 +1922,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const categoryColor = getCategoryDrawColor(match.categoryId);
     const lighterCategoryColor = getLighterColor(categoryColor);
     const matchColors = getMatchColors(match, groupsData);
+
+    const matchTimerRef = React.useRef(null);
     
     // STATE pre nastavenia kategórie
     const [categorySettings, setCategorySettings] = React.useState(null);
