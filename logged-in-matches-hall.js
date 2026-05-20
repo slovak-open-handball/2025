@@ -2062,7 +2062,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                         jerseyNumber
                                                     )
                                                 ) :
-                                                React.createElement('div', { className: 'text-right' }, '—')
+                                                React.createElement('div', { className: 'text-right' }, '')
                                         ),
                                         
                                         // Ikona udalosti (ľavá)
@@ -2109,7 +2109,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                     ),
                                                     React.createElement('span', { className: 'text-gray-800' }, playerName)
                                                 ) :
-                                                React.createElement('div', {}, '—')
+                                                React.createElement('div', {}, '')
                                         )
                                     );
                                 })
