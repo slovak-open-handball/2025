@@ -712,7 +712,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
     );
 };
 
-const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames, onActionSelected, selectedAction: externalSelectedAction }) => {
+const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySettings, teamNames, onActionSelected, selectedAction: externalSelectedAction }, ref) => {
     const [isRunning, setIsRunning] = useState(false);
     const [period, setPeriod] = useState(1);
     const [totalPeriods, setTotalPeriods] = useState(1);
@@ -741,7 +741,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
     const lastServerUpdateRef = useRef(0);
     const displaySecondsRef = useRef(0);
     
-    // 🔥 OPRAVA: Definícia ref pre expose funkcií rodičovi
     const matchTimerRef = useRef(null);
 
     useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
