@@ -443,12 +443,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
         console.log(`Typ: ${member.type}`);
-        console.log(`Poradie v poli: ${index + 1}.`);
-        console.log(`Názov poľa: ${arrayName}`);
         console.log(`Tím (pôvodný): ${teamName}`);
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
-        console.log(`========================`);
         
         // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
         let actualIndex = index;
@@ -473,8 +470,35 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        const selectedAction = timerRef.getSelectedAction ? timerRef.getSelectedAction() : null;
-        const isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning() : false;
+        // 🔥 OPRAVA: Použijeme priamo aktuálnu akciu z timerRef
+        let selectedAction = null;
+        let isTimerRunning = false;
+        
+        // Skúsime získať aktuálnu akciu priamo z ref
+        if (timerRef.current && typeof timerRef.current.getSelectedAction === 'function') {
+            selectedAction = timerRef.current.getSelectedAction();
+            console.log('🎯 Aktuálna vybraná akcia z timerRef.current:', selectedAction);
+        } else if (timerRef.getSelectedAction && typeof timerRef.getSelectedAction === 'function') {
+            selectedAction = timerRef.getSelectedAction();
+            console.log('🎯 Aktuálna vybraná akcia z timerRef (funkcia):', selectedAction);
+        } else {
+            console.warn('⚠️ timerRef nemá metódu getSelectedAction');
+            // Fallback - skúsime získať z timerRef priamo ako vlastnosť
+            selectedAction = timerRef.selectedAction || null;
+            console.log('🎯 Fallback selectedAction:', selectedAction);
+        }
+        
+        // Kontrola behu časovača
+        if (timerRef.current && typeof timerRef.current.isTimerRunning === 'function') {
+            isTimerRunning = timerRef.current.isTimerRunning();
+        } else if (timerRef.isTimerRunning && typeof timerRef.isTimerRunning === 'function') {
+            isTimerRunning = timerRef.isTimerRunning();
+        } else {
+            isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning : false;
+        }
+        
+        console.log('🎯 Výsledná akcia:', selectedAction);
+        console.log('⏱️ Časovač beží:', isTimerRunning);
         
         if (!selectedAction) {
             alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
@@ -486,7 +510,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 ULOŽENIE UDALOSTI
+        // 🔥 ULOŽENIE UDALOSTI - použijeme novú metódu saveEventWithAction ak existuje
         const memberForSave = {
             type: member.type,
             name: `${member.firstName} ${member.lastName}`.trim(),
@@ -498,65 +522,28 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         };
         
         console.log(`💾 Ukladám udalosť: ${selectedAction} pre ${memberForSave.name} (${teamType})`);
-        const success = await timerRef.saveMatchEvent(teamType, memberForSave);
+        
+        let success = false;
+        
+        // Skúsime použiť novú metódu saveEventWithAction ak existuje
+        if (timerRef.current && typeof timerRef.current.saveEventWithAction === 'function') {
+            success = await timerRef.current.saveEventWithAction(teamType, memberForSave, selectedAction);
+        } else if (timerRef.saveEventWithAction && typeof timerRef.saveEventWithAction === 'function') {
+            success = await timerRef.saveEventWithAction(teamType, memberForSave, selectedAction);
+        } else if (timerRef.current && typeof timerRef.current.saveMatchEvent === 'function') {
+            success = await timerRef.current.saveMatchEvent(teamType, memberForSave);
+        } else if (timerRef.saveMatchEvent && typeof timerRef.saveMatchEvent === 'function') {
+            success = await timerRef.saveMatchEvent(teamType, memberForSave);
+        } else {
+            console.error('❌ Žiadna metóda na uloženie udalosti nie je dostupná');
+            alert('Chyba: Nie je možné uložiť udalosť');
+            return;
+        }
         
         if (success) {
             console.log(`✅ Udalosť úspešne uložená`);
-            // Po úspešnom uložení môžeme resetovať vybranú akciu v časovači
-            // (to už robí saveMatchEventInternal)
         } else {
             console.error(`❌ Udalosť sa nepodarila uložiť`);
-        }
-        
-        // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI (len pre zobrazenie v konzole - nepovinné)
-        try {
-            if (window.db && window.globalUserProfileData) {
-                const usersRef = collection(window.db, 'users');
-                const usersSnapshot = await getDocs(usersRef);
-                
-                let foundPlayer = null;
-                
-                for (const userDoc of usersSnapshot.docs) {
-                    const userData = userDoc.data();
-                    const teams = userData.teams || {};
-                    
-                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        if (categoryKey !== categoryName) continue;
-                        
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
-                        
-                        if (foundTeam) {
-                            let playersArray = [];
-                            
-                            switch (actualArrayName) {
-                                case 'playerDetails':
-                                    playersArray = foundTeam.playerDetails || [];
-                                    break;
-                                case 'menTeamMemberDetails':
-                                    playersArray = foundTeam.menTeamMemberDetails || [];
-                                    break;
-                                case 'womenTeamMemberDetails':
-                                    playersArray = foundTeam.womenTeamMemberDetails || [];
-                                    break;
-                                default:
-                                    playersArray = [];
-                            }
-                            
-                            if (actualIndex >= 0 && actualIndex < playersArray.length) {
-                                foundPlayer = playersArray[actualIndex];
-                                break;
-                            }
-                        }
-                    }
-                    if (foundPlayer) break;
-                }
-                
-                if (foundPlayer) {
-                    console.log(`📋 Informácie o hráčovi: ${foundPlayer.firstName} ${foundPlayer.lastName}, číslo dresu: ${foundPlayer.jerseyNumber || 'neuvedené'}`);
-                }
-            }
-        } catch (err) {
-            console.error('Chyba pri načítaní detailov hráča:', err);
         }
     };
     
@@ -814,10 +801,39 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         return () => unsubscribe();
     }, [matchId]);
 
-    // Interná funkcia na uloženie udalosti (volaná z TeamMembersList)
     const saveMatchEventInternal = async (teamType, member) => {
-        if (!selectedAction || !window.db || !matchId) {
-            if (!selectedAction) {
+        console.log('💾 saveMatchEventInternal volaný, selectedAction =', selectedAction);
+        return await saveMatchEventInternalWithAction(teamType, member, selectedAction);
+    };
+
+    // Verejná funkcia pre uloženie udalosti (volaná z TeamMembersList cez ref)
+    const saveMatchEvent = async (teamType, member) => {
+        return await saveMatchEventInternal(teamType, member);
+    };
+
+    // 🔥 OPRAVA: Expose funkcie cez ref pre rodičovský komponent (MatchDetailView)
+    React.useImperativeHandle(ref, () => ({
+        saveMatchEvent: saveMatchEvent,
+        getSelectedAction: () => {
+            // 🔥 DEBUG: Vypíšeme aktuálny stav selectedAction
+            console.log('🔍 getSelectedAction volaný, selectedAction =', selectedAction);
+            return selectedAction;
+        },
+        isTimerRunning: () => {
+            const running = isRunningRef.current;
+            console.log('🔍 isTimerRunning volaný, isRunning =', running);
+            return running;
+        },
+        // 🔥 PRIDANÉ: metóda na priame uloženie udalosti s akciou
+        saveEventWithAction: async (teamType, member, action) => {
+            console.log('🎯 saveEventWithAction volaný s akciou:', action);
+            return await saveMatchEventInternalWithAction(teamType, member, action);
+        }
+    }));
+
+    const saveMatchEventInternalWithAction = async (teamType, member, action) => {
+        if (!action || !window.db || !matchId) {
+            if (!action) {
                 alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
             }
             return false;
@@ -837,7 +853,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         let eventType = '';
         let eventSubtype = null;
         
-        switch (selectedAction) {
+        switch (action) {
             case 'goal':
                 eventType = 'goal';
                 break;
@@ -861,6 +877,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 eventType = 'exclusion';
                 break;
             default:
+                console.error('Neznáma akcia:', action);
                 return false;
         }
         
@@ -885,7 +902,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         try {
             const eventsRef = collection(window.db, 'matchEvents');
             await addDoc(eventsRef, eventData);
-            console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType}) v čase ${currentMatchTime}s (perióda ${currentPeriodNum})`);
+            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v čase ${currentMatchTime}s (perióda ${currentPeriodNum})`);
             
             // Po úspešnom uložení resetujeme vybranú akciu
             setSelectedAction(null);
@@ -899,18 +916,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
     };
-
-    // Verejná funkcia pre uloženie udalosti (volaná z TeamMembersList cez ref)
-    const saveMatchEvent = async (teamType, member) => {
-        return await saveMatchEventInternal(teamType, member);
-    };
-
-    // 🔥 OPRAVA: Expose funkcie cez ref pre rodičovský komponent (MatchDetailView)
-    React.useImperativeHandle(ref, () => ({
-        saveMatchEvent: saveMatchEvent,
-        getSelectedAction: () => selectedAction,
-        isTimerRunning: () => isRunningRef.current
-    }));
 
     const handleManualResultSubmit = async () => {
         const homeScoreInt = parseInt(manualHomeScore);
