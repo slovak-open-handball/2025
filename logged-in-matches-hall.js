@@ -1828,8 +1828,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         ),
         renderEndMatchModal(),
         renderForfeitModal(),
-        renderManualResultModal(),
-        renderMatchEvents() // Pridané zobrazenie udalostí priamo v časovači
+        renderManualResultModal()
     );
 });
 
