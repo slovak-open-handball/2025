@@ -381,7 +381,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
 };
 
 // UPRAVENÝ TeamMembersList KOMPONENT - PRIDANÝ CALLBACK PRE ZMAPOVANÝ NÁZOV
-const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -439,7 +439,6 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         };
     }, [teamName, categoryName]);
     
-    // Funkcia pre kliknutie na člena - UPRAVENÁ VERZIA
     const handleMemberClick = async (member, index, arrayName) => {
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
@@ -452,44 +451,55 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
         console.log(`========================`);
         
         // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
-        // Keďže v zozname sú najprv všetci muži RT, potom ženy RT,
-        // musíme pre ženy upraviť index
-        
         let actualIndex = index;
         let actualArrayName = arrayName;
         
-        // Ak ide o člena RT (žena) a máme v tíme aj mužov RT,
-        // tak v zozname je poradie posunuté o počet mužov
         if (member.type === 'Člen RT (žena)') {
-            // Získame aktuálny zoznam členov z members state
-            // members obsahuje: najprv všetkých RT (muži + ženy), potom hráčov
             const allRTMembers = members.filter(m => m.type !== 'Hráč');
-            
-            // Spočítame koľko je mužov RT pred touto ženou
             let menCount = 0;
             for (let i = 0; i < allRTMembers.length; i++) {
-                if (allRTMembers[i].type === 'Člen RT (muž)') {
-                    menCount++;
-                }
-                // Ak sme našli túto ženu, zastavíme
-                if (allRTMembers[i] === member) {
-                    break;
-                }
+                if (allRTMembers[i].type === 'Člen RT (muž)') menCount++;
+                if (allRTMembers[i] === member) break;
             }
-            
-            // Index v pôvodnom poli womenTeamMemberDetails = 
-            // aktuálny index v zozname mínus počet mužov RT
             actualIndex = index - menCount;
             actualArrayName = 'womenTeamMemberDetails';
-            
-            console.log(`🔄 Prepočet indexu pre ženu RT:`);
-            console.log(`   Index v zozname: ${index}`);
-            console.log(`   Počet mužov RT pred ňou: ${menCount}`);
-            console.log(`   Skutočný index v womenTeamMemberDetails: ${actualIndex}`);
+            console.log(`🔄 Prepočet indexu pre ženu RT: ${index} -> ${actualIndex}`);
         }
         
-        // Ak ide o člena RT (muž), arrayName je už správne 'menTeamMemberDetails'
-        // a index je správny, pretože muži sú v zozname na začiatku v rovnakom poradí
+        // 🔥 ULOŽENIE UDALOSTI (AK JE VYBRANÁ AKCIA)
+        if (timerRef && timerRef.saveMatchEvent && teamType) {
+            const selectedAction = timerRef.getSelectedAction ? timerRef.getSelectedAction() : null;
+            const isTimerRunning = timerRef.isTimerRunning ? timerRef.isTimerRunning() : false;
+            
+            if (!selectedAction) {
+                alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
+                return;
+            }
+            
+            if (!isTimerRunning) {
+                alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
+                return;
+            }
+            
+            const memberForSave = {
+                type: member.type,
+                name: `${member.firstName} ${member.lastName}`.trim(),
+                firstName: member.firstName,
+                lastName: member.lastName,
+                jerseyNumber: member.jerseyNumber,
+                index: actualIndex,
+                typeKey: actualArrayName
+            };
+            
+            console.log(`💾 Ukladám udalosť: ${selectedAction} pre ${memberForSave.name} (${teamType})`);
+            const success = await timerRef.saveMatchEvent(teamType, memberForSave);
+            
+            if (success) {
+                console.log(`✅ Udalosť úspešne uložená`);
+            } else {
+                console.error(`❌ Udalosť sa nepodarila uložiť`);
+            }
+        }
         
         // 🔥 NAČÍTANIE ÚDAJOV O HRÁČOVI
         try {
@@ -2577,11 +2587,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             React.createElement(TeamMembersList, {
                 teamName: homeTeamDisplay,
                 categoryName: categoryDisplayName,
+                teamType: 'home',
+                timerRef: matchTimerRef,
                 onMappedNameUpdate: setHomeTeamMappedName
             }),
             React.createElement(TeamMembersList, {
                 teamName: awayTeamDisplay,
                 categoryName: categoryDisplayName,
+                teamType: 'away',
+                timerRef: matchTimerRef,
                 onMappedNameUpdate: setAwayTeamMappedName
             })
         ),
