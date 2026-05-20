@@ -2179,10 +2179,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             isGoal && isHomeEvent && score ? 
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'inline-block px-2 py-0.5 rounded bg-green-100 text-green-700' },
+                                                    { className: 'inline-block px-2 py-0.5 rounded text-black-700' },
                                                     `${score.home}:${score.away}`
                                                 ) :
-                                                React.createElement('span', { className: 'text-gray-300' }, '—')
+                                                React.createElement('span', { className: 'text-gray-300' }, '')
                                         ),
                                         
                                         // Ikona udalosti (ľavá)
@@ -2221,10 +2221,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             isGoal && !isHomeEvent && score ? 
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-700' },
+                                                    { className: 'inline-block px-2 py-0.5 rounded text-black-700' },
                                                     `${score.home}:${score.away}`
                                                 ) :
-                                                React.createElement('span', { className: 'text-gray-300' }, '—')
+                                                React.createElement('span', { className: 'text-gray-300' }, '')
                                         ),
                                         
                                         // Stĺpec pre hostí (číslo dresu + meno) - zarovnané vľavo
@@ -2446,8 +2446,20 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
     
     // Získanie aktuálneho skóre pre zobrazenie
-    const displayScore = getDisplayScore();
-    const showScore = displayScore !== null;
+    let finalDisplayScore = null;
+
+    if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
+        // Ukončený zápas s výsledkom v DB
+        finalDisplayScore = { home: currentHomeScore, away: currentAwayScore };
+    } else if (useCalculatedScore) {
+        // Prebiehajúci zápas - zobrazíme skóre z udalostí (aj 0:0)
+        finalDisplayScore = { home: calculatedHomeScore, away: calculatedAwayScore };
+    } else if (currentHomeScore !== undefined && currentHomeScore !== null) {
+        // Existujúci výsledok v DB (napr. manuálne zadaný počas zápasu)
+        finalDisplayScore = { home: currentHomeScore, away: currentAwayScore };
+    }
+
+    const showScore = finalDisplayScore !== null;
     
     return React.createElement(
         'div',
@@ -2629,13 +2641,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     React.createElement(
                         'div',
                         { className: 'text-center' },
-                        showScore ?
+                        showScore && finalDisplayScore ?
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center justify-center gap-3' },
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, displayScore.home),
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, finalDisplayScore.home),
                                 React.createElement('span', { className: 'text-xl text-gray-400' }, ':'),
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, displayScore.away)
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, finalDisplayScore.away)
                             ) :
                             React.createElement(
                                 'div',
