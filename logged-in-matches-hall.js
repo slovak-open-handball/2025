@@ -697,8 +697,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     );
 };
 
-// Upravený MatchTimer komponent - kontinuálny čas, manuálne prepínanie periód, blokovanie tlačidiel
-
 const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySettings, teamNames, onActionSelected, selectedAction: externalSelectedAction }, ref) => {
     const [isRunning, setIsRunning] = useState(false);
     const [period, setPeriod] = useState(1);
@@ -899,7 +897,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         const eventData = {
             matchId: matchId,
-            totalTime: currentTotalTime,  // 🔥 CELKOVÝ ČAS ZÁPASU
+            totalTime: currentTotalTime,
             period: currentPeriodNum,
             eventType: eventType,
             eventSubtype: eventSubtype,
@@ -1387,13 +1385,23 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const maxTotal = totalPeriods * periodDuration * 60;
         let clamped = Math.min(total, maxTotal);
         
+        // 🔥 ZISTÍME, ČI SME DOSIAHLI KONIEC AKTUÁLNEJ PERIÓDY
+        const oldPeriodTime = getPeriodTime(displaySecondsRef.current);
+        const newPeriodTime = getPeriodTime(clamped);
+        
+        // 🔥 AK SME DOSIAHLI KONIEC PERIÓDY (čas v perióde dosiahol dĺžku periódy)
+        const reachedEndOfPeriod = newPeriodTime >= periodDuration * 60 && oldPeriodTime < periodDuration * 60;
+        
         // Aktualizujeme celkový čas
         setDisplaySeconds(clamped);
         
-        // 🔥 NEPREPÍNAME PERIÓDU AUTOMATICKY - ponechávame manuálne prepínanie
-        // (odstránená automatická aktualizácia periódy)
+        // 🔥 AK SME DOSIAHLI KONIEC PERIÓDY A NIE JE TO POSLEDNÁ PERIÓDA, ZASTAVÍME ČASOVAČ
+        if (reachedEndOfPeriod && !isEndOfMatch(clamped) && isRunningRef.current) {
+            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača`);
+            stopTimerAndSave(true);
+        }
         
-        // Ak sme na konci celého zápasu, zastavíme
+        // Ak sme na konci celého zápasu, tiež zastavíme
         if (clamped >= maxTotal && total >= maxTotal && isRunningRef.current) {
             console.log(`🏁 Koniec zápasu - automatické zastavenie časovača`);
             stopTimerAndSave(true);
@@ -1415,7 +1423,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         startTimeRef.current = null;
     };
 
-    const stopTimerAndSave = async (isMatchEnd = false) => {
+    const stopTimerAndSave = async (isPeriodEnd = false) => {
         if (!isRunningRef.current) return;
         const finalSeconds = displaySeconds;
         stopLocalInterval();
@@ -1430,8 +1438,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 let newStatus = 'paused';
                 const maxTotal = totalPeriods * periodDuration * 60;
                 
-                // 🔥 AK SME NA KONCI ZÁPASU, VYPOČÍTAME VÝSLEDOK
-                if (finalSeconds >= maxTotal || isMatchEnd) {
+                // 🔥 AK SME NA KONCI ZÁPASU
+                if (finalSeconds >= maxTotal) {
                     newStatus = 'completed';
                     console.log(`🏆 Zápas bol ukončený, počítam výsledok z udalostí...`);
                     
@@ -1471,6 +1479,16 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         completedAt: Timestamp.now(),
                         resultCalculatedFromEvents: true
                     });
+                } else if (isPeriodEnd) {
+                    // 🔥 KONIEC PERIÓDY - len zastavíme, nemeníme status na completed
+                    console.log(`⏹️ Koniec periódy - časovač zastavený, zápas nie je ukončený`);
+                    await updateDoc(matchRef, {
+                        manualTimeOffset: finalSeconds,
+                        status: 'paused',
+                        startedAt: null,
+                        pausedAt: Timestamp.now(),
+                        updatedAt: Timestamp.now()
+                    });
                 } else {
                     await updateDoc(matchRef, {
                         manualTimeOffset: finalSeconds,
@@ -1484,7 +1502,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 if (onTimeUpdate) onTimeUpdate({ 
                     totalSeconds: finalSeconds, 
                     period, 
-                    isRunning: false
+                    isRunning: false,
+                    periodEnded: isPeriodEnd && finalSeconds < maxTotal
                 });
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
@@ -1498,6 +1517,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const currentSeconds = displaySeconds;
         const maxTotal = totalPeriods * periodDuration * 60;
         if (currentSeconds >= maxTotal) return;
+        
+        // 🔥 KONTROLA: Či sme na konci periódy (časovač by nemal štartovať na konci periódy)
+        if (isEndOfPeriod(currentSeconds) && !isEndOfMatch(currentSeconds)) {
+            console.log(`⚠️ Časovač nemôže štartovať na konci periódy ${period}`);
+            return;
+        }
         
         startLocalInterval(currentSeconds);
         setIsRunning(true);
@@ -1618,7 +1643,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         periodRef.current = initialPeriod;
         setDisplaySeconds(initialTotalSeconds);
         
-        if (match.status === 'in-progress') {
+        // 🔥 KONTROLA: Ak sme na konci periódy, časovač nemôže bežať
+        if (match.status === 'in-progress' && !isEndOfPeriod(initialTotalSeconds)) {
             startLocalInterval(initialTotalSeconds);
             setIsRunning(true);
             isRunningRef.current = true;
@@ -1672,6 +1698,13 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const subtractSecond = () => canSubtractSecond() && addTime(-1);
     const toggleTimer = () => {
         if (match?.status === 'completed') return;
+        
+        // 🔥 KONTROLA: Nemôžeme štartovať na konci periódy
+        if (!isRunningRef.current && isEndOfPeriod(displaySeconds) && !isEndOfMatch(displaySeconds)) {
+            console.log(`⚠️ Nemôžete spustiť časovač na konci periódy ${period}`);
+            return;
+        }
+        
         isRunningRef.current ? stopTimerAndSave() : startTimer();
     };
 
@@ -1931,6 +1964,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const isMinusSecondDisabled = !canSubtractSecond();
     const isPlusMinuteDisabled = !canAddMinute();
     const isPlusSecondDisabled = !canAddSecond();
+    const isAtPeriodEnd = isEndOfPeriod(displaySeconds) && !isEndOfMatch(displaySeconds);
     
     if (isMatchCompleted) {
         return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
@@ -1967,18 +2001,25 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             React.createElement('div', { className: 'text-center mb-4' },
                 React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime(displaySeconds)),
                 React.createElement('div', { className: 'mt-1 text-sm text-gray-500' }, `Celkový čas zápasu`),
-                React.createElement('div', { className: 'mt-2 text-lg font-mono font-semibold text-gray-700' }, 
+                React.createElement('div', { className: 'mt-2 text-lg font-mono font-semibold', 
+                    style: { color: isAtPeriodEnd ? '#ef4444' : 'inherit' }
+                }, 
+                    `${Math.floor(currentPeriodTime / 60).toString().padStart(2, '0')}:${(currentPeriodTime % 60).toString().padStart(2, '0')}`
+                ),
+                React.createElement('div', { className: 'text-sm text-gray-500' }, 
                     `Perióda ${period} / ${totalPeriods} (${periodStart}:00 - ${periodEnd}:00)`
                 ),
-                React.createElement('div', { className: 'text-sm text-gray-500 mt-1' }, 
-                    `Čas v perióde: ${formatPeriodTime(currentPeriodTime)}`
+                isAtPeriodEnd && React.createElement('div', { className: 'mt-1 text-xs text-red-500 font-medium' }, 
+                    '⏹️ Koniec periódy - časovač zastavený'
                 )
             ),
             
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6' },
                 React.createElement('button', { 
                     onClick: toggleTimer, 
+                    disabled: isAtPeriodEnd,
                     className: `px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
+                        isAtPeriodEnd ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
                         isRunning ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
                     }` 
                 },
@@ -1988,28 +2029,28 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 React.createElement('button', { 
                     onClick: subtractMinute, 
                     disabled: isMinusMinuteDisabled,
-                    title: isMinusMinuteDisabled ? 'Nie je možné odpočítať minútu (menej ako 1 minúta v perióde)' : '',
+                    title: isMinusMinuteDisabled ? (currentPeriodTime < 60 ? 'Nie je možné odpočítať minútu (menej ako 1 minúta v perióde)' : '') : '',
                     className: `px-3 py-2 rounded-lg font-semibold transition-colors text-sm ${isMinusMinuteDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer'}` 
                 }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Min'),
                 React.createElement('button', { 
                     onClick: addMinute, 
                     disabled: isPlusMinuteDisabled,
-                    title: isPlusMinuteDisabled ? 'Nie je možné pridať minútu (koniec periódy)' : '',
+                    title: isPlusMinuteDisabled ? (currentPeriodTime + 60 > periodLength ? 'Nie je možné pridať minútu (koniec periódy)' : '') : '',
                     className: `px-3 py-2 rounded-lg font-semibold transition-colors text-sm ${isPlusMinuteDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer'}` 
                 }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement('button', { 
                     onClick: subtractSecond, 
                     disabled: isMinusSecondDisabled,
-                    title: isMinusSecondDisabled ? 'Nie je možné odpočítať sekundu (menej ako 1 sekunda v perióde)' : '',
+                    title: isMinusSecondDisabled ? (currentPeriodTime < 1 ? 'Nie je možné odpočítať sekundu (menej ako 1 sekunda v perióde)' : '') : '',
                     className: `px-3 py-2 rounded-lg font-semibold transition-colors text-sm ${isMinusSecondDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer'}` 
                 }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Sec'),
                 React.createElement('button', { 
                     onClick: addSecond, 
                     disabled: isPlusSecondDisabled,
-                    title: isPlusSecondDisabled ? 'Nie je možné pridať sekundu (koniec periódy)' : '',
+                    title: isPlusSecondDisabled ? (currentPeriodTime + 1 > periodLength ? 'Nie je možné pridať sekundu (koniec periódy)' : '') : '',
                     className: `px-3 py-2 rounded-lg font-semibold transition-colors text-sm ${isPlusSecondDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer'}` 
                 }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
