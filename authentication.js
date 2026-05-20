@@ -75,7 +75,6 @@ const publicPages = [
 // (ak je prihlásený používateľ na takejto stránke, bude presmerovaný na my-data)
 const guestOnlyPages = [
     'login.html',
-    'index.html',
     'register.html',
     'admin-register.html',
     'volunteer-register.html'
@@ -244,8 +243,8 @@ const checkRegistrationTimer = (userProfileData) => {
     
     if (timeUntilExpiry > 0) {
         // Aktuálny čas je menší ako registrationDate + 30 sekúnd
-        // Nastavíme timeout na odhlásenie po uplynutí času
-        console.log(`AuthManager: Nastavujem odhlásenie o ${timeUntilExpiry}ms`);
+        // Používateľ OSTÁVA na stránke a po uplynutí času sa odhlási
+        console.log(`AuthManager: Čas 30 sekúnd ešte neuplynul, používateľ ostáva na stránke. Nastavujem odhlásenie o ${timeUntilExpiry}ms`);
         registrationLogoutTimeout = setTimeout(async () => {
             console.log("AuthManager: Uplynul čas 30 sekúnd od registrácie, odhlasujem používateľa.");
             try {
@@ -337,13 +336,26 @@ const handleAuthState = async () => {
                                 const userRole = userProfileData.role;
                                 const isCurrentPagePublic = isPublicPage();
                                 const isCurrentPageGuestOnly = isGuestOnlyPage();
+                                const isOnRegPage = isOnRegistrationPage();
                                 
                                 // Spustíme kontrolu časovača registrácie (pre prípad že sme na registračnej stránke)
+                                // Táto funkcia sa postará o:
+                                // - ak čas ešte neuplynul: nastaví timeout na odhlásenie
+                                // - ak čas už uplynul: presmeruje na my-data
                                 checkRegistrationTimer(userProfileData);
                                 
+                                // AK SME NA REGISTRAČNEJ STRÁNKE:
+                                // Nevykonávame ŽIADNE ďalšie presmerovanie - checkRegistrationTimer už rozhodol
+                                if (isOnRegPage) {
+                                    console.log(`AuthManager: Prihlásený používateľ na registračnej stránke "${currentPage}". Žiadne presmerovanie (časovač je spustený).`);
+                                    window.globalUserProfileData = userProfileData;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                    return;
+                                }
+                                
+                                // PRE VŠETKY OSTATNÉ STRÁNKY (nie registračné):
                                 // PRIHLÁSENÝ POUŽÍVATEĽ MÁ PRÍSTUP KU VŠETKÝM STRÁNKAM
                                 // Iba výnimka: ak je na stránke, ktorá je len pre neprihlásených (guest only)
-                                // tak ho presmerujeme na my-data
                                 if (isCurrentPageGuestOnly) {
                                     console.log(`AuthManager: Prihlásený používateľ na stránke určenej len pre neprihlásených ("${currentPage}"). Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
