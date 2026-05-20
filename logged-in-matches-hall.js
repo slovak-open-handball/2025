@@ -879,9 +879,14 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
         let userId = null;
-        // 🔥 OPRAVA: Použijeme match.categoryName alebo z categoriesData
+        
+        // 🔥 OPRAVA: Získanie názvu kategórie - použijeme match.categoryName alebo z categoriesData
         const categoryNameForSearch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
-        const teamNameForSearch = match.homeTeamIdentifier === teamType ? match.homeTeamIdentifier : match.awayTeamIdentifier;
+        
+        // 🔥 OPRAVA: Získanie názvu tímu podľa teamType - použijeme priamo homeTeamIdentifier alebo awayTeamIdentifier
+        const teamNameForSearch = teamType === 'home' ? match.homeTeamIdentifier : match.awayTeamIdentifier;
+        
+        console.log(`🔍 Vyhľadávanie userId: teamType=${teamType}, teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForSearch}, member.index=${member.index}, member.typeKey=${member.typeKey}`);
         
         if (window.db && teamNameForSearch && categoryNameForSearch) {
             try {
@@ -899,20 +904,25 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
                         
                         if (foundTeam) {
+                            console.log(`✅ Nájdený tím: ${foundTeam.teamName} v kategórii ${categoryKey}`);
+                            
                             // Kontrola, či člen s daným indexom a typom existuje
                             let memberExists = false;
                             
                             if (member.typeKey === 'playerDetails') {
                                 if (foundTeam.playerDetails && foundTeam.playerDetails[member.index]) {
                                     memberExists = true;
+                                    console.log(`   Hráč na indexe ${member.index}: ${foundTeam.playerDetails[member.index].firstName} ${foundTeam.playerDetails[member.index].lastName}`);
                                 }
                             } else if (member.typeKey === 'menTeamMemberDetails') {
                                 if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[member.index]) {
                                     memberExists = true;
+                                    console.log(`   Člen RT (muž) na indexe ${member.index}: ${foundTeam.menTeamMemberDetails[member.index].firstName} ${foundTeam.menTeamMemberDetails[member.index].lastName}`);
                                 }
                             } else if (member.typeKey === 'womenTeamMemberDetails') {
                                 if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[member.index]) {
                                     memberExists = true;
+                                    console.log(`   Člen RT (žena) na indexe ${member.index}: ${foundTeam.womenTeamMemberDetails[member.index].firstName} ${foundTeam.womenTeamMemberDetails[member.index].lastName}`);
                                 }
                             }
                             
@@ -920,14 +930,22 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                                 userId = userDoc.id;
                                 console.log(`✅ Nájdený userId: ${userId} pre člena ${member.name} (index: ${member.index}, typ: ${member.typeKey})`);
                                 break;
+                            } else {
+                                console.log(`❌ Člen na indexe ${member.index} v ${member.typeKey} neexistuje`);
                             }
                         }
                     }
                     if (userId) break;
                 }
+                
+                if (!userId) {
+                    console.log(`❌ Nepodarilo sa nájsť userId pre team=${teamNameForSearch}, category=${categoryNameForSearch}, index=${member.index}, typeKey=${member.typeKey}`);
+                }
             } catch (err) {
                 console.error('Chyba pri vyhľadávaní userId:', err);
             }
+        } else {
+            console.log(`❌ Chýbajú údaje pre vyhľadanie userId: teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForSearch}`);
         }
         
         const eventData = {
