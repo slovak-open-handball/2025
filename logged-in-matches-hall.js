@@ -879,9 +879,11 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
         let userId = null;
-        const categoryNameForSearch = categoryDisplayName || match.categoryName;
+        // 🔥 OPRAVA: Použijeme match.categoryName alebo z categoriesData
+        const categoryNameForSearch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        const teamNameForSearch = match.homeTeamIdentifier === teamType ? match.homeTeamIdentifier : match.awayTeamIdentifier;
         
-        if (window.db && teamName && categoryNameForSearch) {
+        if (window.db && teamNameForSearch && categoryNameForSearch) {
             try {
                 const usersRef = collection(window.db, 'users');
                 const usersSnapshot = await getDocs(usersRef);
@@ -893,8 +895,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                         if (categoryKey !== categoryNameForSearch) continue;
                         
-                        // Hľadáme tím podľa názvu (použijeme mappedName alebo pôvodný teamName)
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                        // Hľadáme tím podľa názvu
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
                         
                         if (foundTeam) {
                             // Kontrola, či člen s daným indexom a typom existuje
@@ -938,7 +940,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             memberType: member.type,
             memberTypeKey: member.typeKey,
             memberIndex: member.index,
-            userId: userId,  // 🔥 ID POUŽÍVATEĽA, KTORÉMU PATRÍ ČLEN TÍMU
+            userId: userId,
             createdAt: Timestamp.now(),
             timestamp: Timestamp.now()
         };
