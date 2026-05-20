@@ -236,7 +236,7 @@ const checkRegistrationTimer = (userProfileData) => {
     }
     
     const currentTime = Date.now();
-    const expiryTime = registrationTimestamp + 30000; // +30 sekúnd
+    const expiryTime = registrationTimestamp + 20000; // +20 sekúnd
     const timeUntilExpiry = expiryTime - currentTime;
     
     console.log(`AuthManager: Kontrola časovača registrácie - aktuálny čas: ${new Date(currentTime).toLocaleTimeString()}, expirácia: ${new Date(expiryTime).toLocaleTimeString()}, zostáva: ${timeUntilExpiry}ms`);
