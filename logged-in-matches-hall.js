@@ -471,7 +471,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         
         // 🔥 KONTROLA: Gól môže dať len Hráč (nie člen RT)
         if (selectedAction === 'goal' && member.type !== 'Hráč') {
-            alert('Gól môže dať iba hráč! Člen realizačného tímu nemôže zaznamenať gól.');
             return;
         }
         
@@ -491,12 +490,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log('⏱️ Časovač beží:', isTimerRunning);
         
         if (!selectedAction) {
-            alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
             return;
         }
         
         if (!isTimerRunning) {
-            alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
             return;
         }
         
@@ -546,7 +543,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         } else {
             console.error('❌ Žiadna metóda na uloženie udalosti nie je dostupná');
             console.log('Dostupné vlastnosti timerRef.current:', timerCurrent ? Object.keys(timerCurrent) : 'null');
-            alert('Chyba: Nie je možné uložiť udalosť');
             return;
         }
         
@@ -1947,7 +1943,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 
             } catch (err) {
                 console.error('Chyba pri ukončovaní zápasu:', err);
-                alert('Nepodarilo sa ukončiť zápas a vypočítať výsledok');
             }
         }
     };
