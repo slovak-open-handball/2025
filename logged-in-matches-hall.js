@@ -2007,7 +2007,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    // Komponent pre zoznam udalostí (upravený - pridaný stĺpec so skóre)
+    // Komponent pre zoznam udalostí (upravený - pridaný stĺpec so skóre na oboch stranách)
     const renderMatchEvents = () => {
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
@@ -2117,11 +2117,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 React.createElement(
                                     'tr',
                                     null,
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-1/4' }, 'Domáci'),
+                                    React.createElement('th', { className: 'px-4 py-2 text-right text-xs font-medium text-gray-500 w-1/4' }, 'Domáci'),
                                     React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, 'Skóre'),
                                     React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-12' }, ''),
                                     React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-20' }, 'Čas'),
                                     React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-12' }, ''),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, 'Skóre'),
                                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-1/4' }, 'Hostia')
                                 )
                             ),
@@ -2153,32 +2154,32 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         'tr',
                                         { key: event.id, className: 'hover:bg-gray-50 transition-colors' },
                                         
-                                        // Stĺpec pre domácich (meno + číslo dresu)
+                                        // Stĺpec pre domácich (meno + číslo dresu) - zarovnané vpravo
                                         React.createElement(
                                             'td',
-                                            { className: 'px-4 py-2 text-sm' },
+                                            { className: 'px-4 py-2 text-sm text-right' },
                                             isHomeEvent ? 
                                                 React.createElement(
                                                     'div',
                                                     { className: 'flex items-center justify-end gap-2' },
-                                                    React.createElement('span', { className: 'text-gray-800 text-right' }, playerName),
+                                                    React.createElement('span', { className: 'text-gray-800' }, playerName),
                                                     jerseyNumber && React.createElement(
                                                         'span',
                                                         { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
                                                         jerseyNumber
                                                     )
                                                 ) :
-                                                React.createElement('div', { className: 'text-right' }, '')
+                                                React.createElement('div', {}, '')
                                         ),
                                         
-                                        // 🔥 NOVÝ STĹPEC: Skóre (len pre góly)
+                                        // 🔥 STĹPEC: Skóre pre domácich (len pre góly domácich)
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-bold' },
-                                            isGoal && score ? 
+                                            isGoal && isHomeEvent && score ? 
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700' },
+                                                    { className: 'inline-block px-2 py-0.5 rounded bg-green-100 text-green-700' },
                                                     `${score.home}:${score.away}`
                                                 ) :
                                                 React.createElement('span', { className: 'text-gray-300' }, '—')
@@ -2213,10 +2214,23 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Stĺpec pre hostí (číslo dresu + meno)
+                                        // 🔥 STĹPEC: Skóre pre hostí (len pre góly hostí)
                                         React.createElement(
                                             'td',
-                                            { className: 'px-4 py-2 text-sm' },
+                                            { className: 'px-4 py-2 text-center font-mono text-sm font-bold' },
+                                            isGoal && !isHomeEvent && score ? 
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-700' },
+                                                    `${score.home}:${score.away}`
+                                                ) :
+                                                React.createElement('span', { className: 'text-gray-300' }, '—')
+                                        ),
+                                        
+                                        // Stĺpec pre hostí (číslo dresu + meno) - zarovnané vľavo
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-sm text-left' },
                                             !isHomeEvent ? 
                                                 React.createElement(
                                                     'div',
