@@ -1715,48 +1715,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         );
     };
 
-    // Komponent pre zoznam udalostí (v MatchTimer - pre lepšiu dostupnosť)
-    const renderMatchEvents = () => {
-        const getEventIcon = (eventType, eventSubtype) => {
-            switch (eventType) {
-                case 'goal':
-                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { width: '20px' } });
-                case 'penalty':
-                    return React.createElement('i', { className: 'fa-solid fa-circle-dot text-teal-600', style: { width: '20px' } });
-                case 'card':
-                    if (eventSubtype === 'yellow') return React.createElement('i', { className: 'fa-solid fa-square text-yellow-500', style: { width: '20px' } });
-                    if (eventSubtype === 'red') return React.createElement('i', { className: 'fa-solid fa-square text-red-600', style: { width: '20px' } });
-                    if (eventSubtype === 'blue') return React.createElement('i', { className: 'fa-solid fa-square text-blue-500', style: { width: '20px' } });
-                    return React.createElement('i', { className: 'fa-solid fa-id-card', style: { width: '20px' } });
-                case 'exclusion':
-                    return React.createElement('i', { className: 'fa-solid fa-clock text-orange-600', style: { width: '20px' } });
-                default:
-                    return React.createElement('i', { className: 'fa-solid fa-circle-info', style: { width: '20px' } });
-            }
-        };
-        
-        const getEventText = (event) => {
-            const teamName = event.team === 'home' 
-                ? (teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier))
-                : (teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier));
-            
-            const actionText = {
-                goal: '⚽ Gól',
-                penalty: '🎯 7m',
-                card: event.eventSubtype === 'yellow' ? '🟨 ŽK' : event.eventSubtype === 'red' ? '🟥 ČK' : '🟦 MK',
-                exclusion: '⏱️ Vylúčenie'
-            };
-            
-            return `${actionText[event.eventType] || event.eventType} - ${teamName}: ${event.memberName} (${event.memberType})`;
-        };
-        
-        const formatMatchTime = (seconds) => {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        };
-    };
-
     const isMatchCompleted = match?.status === 'completed';
     
     if (isMatchCompleted) {
@@ -1988,45 +1946,42 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    // Komponent pre zoznam udalostí
+    // Komponent pre zoznam udalostí (upravený - dva stĺpce pre hráčov)
     const renderMatchEvents = () => {
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
                 case 'goal':
-                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { width: '20px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
                 case 'penalty':
-                    return React.createElement('i', { className: 'fa-solid fa-circle-dot text-teal-600', style: { width: '20px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-circle-dot text-teal-600', style: { fontSize: '18px' } });
                 case 'card':
-                    if (eventSubtype === 'yellow') return React.createElement('i', { className: 'fa-solid fa-square text-yellow-500', style: { width: '20px' } });
-                    if (eventSubtype === 'red') return React.createElement('i', { className: 'fa-solid fa-square text-red-600', style: { width: '20px' } });
-                    if (eventSubtype === 'blue') return React.createElement('i', { className: 'fa-solid fa-square text-blue-500', style: { width: '20px' } });
-                    return React.createElement('i', { className: 'fa-solid fa-id-card', style: { width: '20px' } });
+                    if (eventSubtype === 'yellow') return React.createElement('i', { className: 'fa-solid fa-square text-yellow-500', style: { fontSize: '18px' } });
+                    if (eventSubtype === 'red') return React.createElement('i', { className: 'fa-solid fa-square text-red-600', style: { fontSize: '18px' } });
+                    if (eventSubtype === 'blue') return React.createElement('i', { className: 'fa-solid fa-square text-blue-500', style: { fontSize: '18px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-id-card', style: { fontSize: '18px' } });
                 case 'exclusion':
-                    return React.createElement('i', { className: 'fa-solid fa-clock text-orange-600', style: { width: '20px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-clock text-orange-600', style: { fontSize: '18px' } });
                 default:
-                    return React.createElement('i', { className: 'fa-solid fa-circle-info', style: { width: '20px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-circle-info', style: { fontSize: '18px' } });
             }
-        };
-        
-        const getEventText = (event) => {
-            const teamName = event.team === 'home' 
-                ? (teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier))
-                : (teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier));
-            
-            const actionText = {
-                goal: '⚽ Gól',
-                penalty: '🎯 7m',
-                card: event.eventSubtype === 'yellow' ? '🟨 ŽK' : event.eventSubtype === 'red' ? '🟥 ČK' : '🟦 MK',
-                exclusion: '⏱️ Vylúčenie'
-            };
-            
-            return `${actionText[event.eventType] || event.eventType} - ${teamName}: ${event.memberName} (${event.memberType})`;
         };
         
         const formatMatchTime = (seconds) => {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        };
+        
+        // Funkcia na získanie názvu tímu a čísla dresu pre hráča
+        const getPlayerDisplay = (event) => {
+            const teamName = event.team === 'home' 
+                ? (teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier))
+                : (teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier));
+            
+            const playerName = event.memberName || '';
+            const jerseyNumber = event.memberJerseyNumber || '';
+            
+            return { teamName, playerName, jerseyNumber };
         };
         
         return React.createElement(
@@ -2040,7 +1995,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             ),
             React.createElement(
                 'div',
-                { className: 'max-h-64 overflow-y-auto' },
+                { className: 'max-h-96 overflow-y-auto' },
                 eventsLoading ? 
                     React.createElement('div', { className: 'text-center py-8 text-gray-400' }, 
                         React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
@@ -2060,28 +2015,105 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 React.createElement(
                                     'tr',
                                     null,
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Čas'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Perióda'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Udalosť')
+                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-2/5' }, 'Domáci'),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, ''),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-20' }, 'Čas'),
+                                    React.createElement('th', { className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 w-16' }, ''),
+                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 w-2/5' }, 'Hostia')
                                 )
                             ),
                             React.createElement(
                                 'tbody',
                                 { className: 'divide-y divide-gray-100' },
-                                matchEvents.map((event) => 
-                                    React.createElement(
+                                matchEvents.map((event) => {
+                                    const isHomeEvent = event.team === 'home';
+                                    const { teamName, playerName, jerseyNumber } = getPlayerDisplay(event);
+                                    
+                                    // Získanie textu akcie pre tooltip
+                                    const getActionTitle = () => {
+                                        switch (event.eventType) {
+                                            case 'goal': return 'Gól';
+                                            case 'penalty': return '7m';
+                                            case 'card':
+                                                if (event.eventSubtype === 'yellow') return 'Žltá karta';
+                                                if (event.eventSubtype === 'red') return 'Červená karta';
+                                                if (event.eventSubtype === 'blue') return 'Modrá karta';
+                                                return 'Karta';
+                                            case 'exclusion': return 'Vylúčenie';
+                                            default: return 'Udalosť';
+                                        }
+                                    };
+                                    
+                                    return React.createElement(
                                         'tr',
-                                        { key: event.id, className: 'hover:bg-gray-50' },
-                                        React.createElement('td', { className: 'px-4 py-2 font-mono text-sm text-gray-700' }, formatMatchTime(event.matchTime)),
-                                        React.createElement('td', { className: 'px-4 py-2 text-sm text-gray-500' }, `${event.period}.`),
-                                        React.createElement('td', { className: 'px-4 py-2 text-sm text-gray-700' },
-                                            React.createElement('div', { className: 'flex items-center gap-2' },
-                                                getEventIcon(event.eventType, event.eventSubtype),
-                                                React.createElement('span', {}, getEventText(event))
+                                        { key: event.id, className: 'hover:bg-gray-50 transition-colors' },
+                                        
+                                        // Stĺpec pre domácich (meno + číslo dresu)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-sm' },
+                                            isHomeEvent ? 
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center justify-end gap-2' },
+                                                    React.createElement('span', { className: 'text-gray-800 text-right' }, playerName),
+                                                    jerseyNumber && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
+                                                        jerseyNumber
+                                                    )
+                                                ) :
+                                                React.createElement('div', { className: 'text-right' }, '—')
+                                        ),
+                                        
+                                        // Ikona udalosti (ľavá)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-center' },
+                                            isHomeEvent && React.createElement(
+                                                'div',
+                                                { className: 'flex justify-center', title: getActionTitle() },
+                                                getEventIcon(event.eventType, event.eventSubtype)
                                             )
+                                        ),
+                                        
+                                        // Čas udalosti
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600' },
+                                            formatMatchTime(event.matchTime)
+                                        ),
+                                        
+                                        // Ikona udalosti (pravá)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-center' },
+                                            !isHomeEvent && React.createElement(
+                                                'div',
+                                                { className: 'flex justify-center', title: getActionTitle() },
+                                                getEventIcon(event.eventType, event.eventSubtype)
+                                            )
+                                        ),
+                                        
+                                        // Stĺpec pre hostí (číslo dresu + meno)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-2 text-sm' },
+                                            !isHomeEvent ? 
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-2' },
+                                                    jerseyNumber && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
+                                                        jerseyNumber
+                                                    ),
+                                                    React.createElement('span', { className: 'text-gray-800' }, playerName)
+                                                ) :
+                                                React.createElement('div', {}, '—')
                                         )
-                                    )
-                                )
+                                    );
+                                })
                             )
                         )
             )
