@@ -2402,7 +2402,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             React.createElement(
                 'div',
                 { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-                React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Udalosti zápasu'),
+                React.createElement('h3', { className: 'font-semibold text-center text-gray-800' }, 'Udalosti zápasu'),
             ),
             React.createElement(
                 'div',
