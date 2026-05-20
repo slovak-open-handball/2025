@@ -3645,7 +3645,89 @@ const MatchesHallApp = () => {
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                                 
-                                // ... zvyšok kódu pre infoTags zostáva rovnaký ...
+                                const categoryColor = getCategoryDrawColor(match.categoryId);
+                                const lighterCategoryColor = getLighterColor(categoryColor);
+                                
+                                const matchColors = getMatchColors(match, groupsData);
+                                
+                                // 🔥 DEFINÍCIA infoTags (toto chýbalo)
+                                const infoTags = [];
+                                
+                                // Tag pre typ zápasu
+                                if (match.matchType && !match.isPlacementMatch) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'type',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: matchColors.backgroundColor,
+                                                color: matchColors.textColor,
+                                                fontWeight: '500'
+                                            }
+                                        },
+                                        match.matchType
+                                    ));
+                                }
+                                
+                                // Tag pre zápas o umiestnenie
+                                if (match.isPlacementMatch) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'placement',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: ELIMINATION_COLORS.backgroundColor,
+                                                color: ELIMINATION_COLORS.textColor,
+                                                fontWeight: '500'
+                                            }
+                                        },
+                                        `o ${match.placementRank}. miesto`
+                                    ));
+                                }
+                                
+                                // Tag pre skupinu
+                                if (match.groupName && !match.isPlacementMatch) {
+                                    let groupColors;
+                                    if (isEliminationMatch(match)) {
+                                        groupColors = ELIMINATION_COLORS;
+                                    } else {
+                                        groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
+                                    }
+                                    
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'group',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: groupColors.backgroundColor,
+                                                color: groupColors.textColor,
+                                                fontWeight: '500'
+                                            }
+                                        },
+                                        match.groupName
+                                    ));
+                                }
+                                
+                                // Tag pre kategóriu - použitie názvu z ID ak treba
+                                let categoryDisplayTag = match.categoryName;
+                                if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
+                                    categoryDisplayTag = categoriesData[match.categoryId];
+                                }
+                                
+                                if (categoryDisplayTag) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'category',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: lighterCategoryColor,
+                                                color: categoryColor,
+                                                fontWeight: '500'
+                                            }
+                                        },
+                                        categoryDisplayTag
+                                    ));
+                                }
                                 
                                 dayRows.push(
                                     React.createElement(
