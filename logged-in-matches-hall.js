@@ -877,13 +877,13 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 return false;
         }
         
+        // 🔥 Získanie názvu kategórie pre tento zápas
+        const categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        
         // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
         let userId = null;
         
-        // 🔥 Získanie názvu kategórie - použijeme match.categoryName alebo z categoriesData
-        const categoryNameForSearch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
-        
-        // 🔥 OPRAVA: Získanie SPRÁVNEHO názvu tímu - použijeme teamNames alebo mappedName
+        // 🔥 Získanie SPRÁVNEHO názvu tímu - použijeme teamNames alebo mappedName
         // Získame správny zobrazený názov tímu (napr. "ŠKP Topoľčany" namiesto "U12 D E1")
         let teamNameForSearch = null;
         if (teamType === 'home') {
@@ -892,9 +892,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             teamNameForSearch = teamNames?.[match.awayTeamIdentifier] || match.awayTeamIdentifier;
         }
         
-        console.log(`🔍 Vyhľadávanie userId: teamType=${teamType}, teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForSearch}, member.index=${member.index}, member.typeKey=${member.typeKey}`);
+        console.log(`🔍 Vyhľadávanie userId: teamType=${teamType}, teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForMatch}, member.index=${member.index}, member.typeKey=${member.typeKey}`);
         
-        if (window.db && teamNameForSearch && categoryNameForSearch) {
+        if (window.db && teamNameForSearch && categoryNameForMatch) {
             try {
                 const usersRef = collection(window.db, 'users');
                 const usersSnapshot = await getDocs(usersRef);
@@ -903,8 +903,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
+                    // 🔥 HĽADÁME TÍM V SPRÁVNEJ KATEGÓRII (podľa názvu kategórie zápasu)
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        if (categoryKey !== categoryNameForSearch) continue;
+                        if (categoryKey !== categoryNameForMatch) continue;
                         
                         // Hľadáme tím podľa názvu - používame správny zobrazený názov
                         const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
@@ -945,15 +946,16 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 }
                 
                 if (!userId) {
-                    console.log(`❌ Nepodarilo sa nájsť userId pre team=${teamNameForSearch}, category=${categoryNameForSearch}, index=${member.index}, typeKey=${member.typeKey}`);
+                    console.log(`❌ Nepodarilo sa nájsť userId pre team=${teamNameForSearch}, category=${categoryNameForMatch}, index=${member.index}, typeKey=${member.typeKey}`);
                 }
             } catch (err) {
                 console.error('Chyba pri vyhľadávaní userId:', err);
             }
         } else {
-            console.log(`❌ Chýbajú údaje pre vyhľadanie userId: teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForSearch}`);
+            console.log(`❌ Chýbajú údaje pre vyhľadanie userId: teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForMatch}`);
         }
         
+        // 🔥 UDALOSŤ - ukladáme aj názov kategórie zápasu
         const eventData = {
             matchId: matchId,
             totalTime: currentTotalTime,
@@ -965,6 +967,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             memberTypeKey: member.typeKey,
             memberIndex: member.index,
             userId: userId,
+            categoryName: categoryNameForMatch,  // 🔥 PRIDANÉ: názov kategórie zápasu
             createdAt: Timestamp.now(),
             timestamp: Timestamp.now()
         };
@@ -972,7 +975,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         try {
             const eventsRef = collection(window.db, 'matchEvents');
             await addDoc(eventsRef, eventData);
-            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v celkovom čase ${currentTotalTime}s (perióda ${currentPeriodNum}), userId: ${userId}`);
+            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v celkovom čase ${currentTotalTime}s (perióda ${currentPeriodNum}), userId: ${userId}, category: ${categoryNameForMatch}`);
             
             setSelectedAction(null);
             if (onActionSelected && typeof onActionSelected === 'function') {
