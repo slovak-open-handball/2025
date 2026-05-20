@@ -1,5 +1,5 @@
 // logged-in-matches-hall.js
-import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -1422,6 +1422,27 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 const matchSnap = await getDoc(matchRef);
                 const currentMatchData = matchSnap.exists() ? matchSnap.data() : {};
                 
+                // 🔥 VYMAZANIE VŠETKÝCH UDALOSTÍ ZÁPASU
+                console.log(`🗑️ Mažem všetky udalosti pre zápas ${matchId}...`);
+                
+                const eventsRef = collection(window.db, 'matchEvents');
+                const q = query(eventsRef, where('matchId', '==', matchId));
+                const eventsSnapshot = await getDocs(q);
+                
+                const deletePromises = [];
+                eventsSnapshot.forEach((eventDoc) => {
+                    console.log(`   Mažem udalosť: ${eventDoc.id}`);
+                    deletePromises.push(deleteDoc(doc(window.db, 'matchEvents', eventDoc.id)));
+                });
+                
+                if (deletePromises.length > 0) {
+                    await Promise.all(deletePromises);
+                    console.log(`✅ Vymazaných ${deletePromises.length} udalostí pre zápas ${matchId}`);
+                } else {
+                    console.log(`ℹ️ Žiadne udalosti na vymazanie pre zápas ${matchId}`);
+                }
+                
+                // Reset match data
                 const updateData = {
                     manualTimeOffset: 0,
                     currentPeriod: 1,
@@ -1462,7 +1483,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
                 
-                console.log(`✅ Zápas ${matchId} bol resetovaný - výsledok vymazaný, stav nastavený na 'scheduled'`);
+                console.log(`✅ Zápas ${matchId} bol resetovaný - výsledok vymazaný, udalosti vymazané, stav nastavený na 'scheduled'`);
+                
             } catch (err) {
                 console.error('Chyba pri resetovaní časovača:', err);
             }
