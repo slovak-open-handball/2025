@@ -2415,7 +2415,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     matchEvents.length === 0 ?
                         React.createElement('div', { className: 'text-center py-8 text-gray-400' },
                             React.createElement('i', { className: 'fa-regular fa-clock text-3xl mb-2 opacity-50' }),
-                            React.createElement('p', { className: 'text-sm' }, 'Zatiaľ žiadne udalosti')
+                            React.createElement('p', { className: 'text-sm' }, 'Žiadne udalosti zápasu.')
                         ) :
                         React.createElement(
                             'table',
