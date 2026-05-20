@@ -740,6 +740,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
     const periodRef = useRef(period);
     const lastServerUpdateRef = useRef(0);
     const displaySecondsRef = useRef(0);
+    
+    // 🔥 OPRAVA: Definícia ref pre expose funkcií rodičovi
+    const matchTimerRef = useRef(null);
 
     useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
     useEffect(() => { periodDurationRef.current = periodDuration; }, [periodDuration]);
@@ -760,12 +763,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
         }
     }, [externalSelectedAction]);
 
-    // Funkcia pre kliknutie na tlačidlo akcie
+    // Funkcia pre kliknutie na tlačidlo akcie (len označí, neotvára modál)
     const handleActionClick = (action) => {
         if (selectedAction === action) {
-            setSelectedAction(null);
+            setSelectedAction(null); // Zruší označenie
         } else {
-            setSelectedAction(action);
+            setSelectedAction(action); // Označí novú akciu
         }
     };
 
@@ -830,7 +833,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
         return () => unsubscribe();
     }, [matchId]);
 
-    // Interná funkcia na uloženie udalosti
+    // Interná funkcia na uloženie udalosti (volaná z TeamMembersList)
     const saveMatchEventInternal = async (teamType, member) => {
         if (!selectedAction || !window.db || !matchId) {
             if (!selectedAction) {
@@ -916,12 +919,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
         }
     };
 
-    // Verejná funkcia pre uloženie udalosti (volaná z TeamMembersList)
+    // Verejná funkcia pre uloženie udalosti (volaná z TeamMembersList cez ref)
     const saveMatchEvent = async (teamType, member) => {
         return await saveMatchEventInternal(teamType, member);
     };
 
-    // Expose funkcie cez ref pre rodičovský komponent
+    // 🔥 OPRAVA: Expose funkcie cez ref pre rodičovský komponent (MatchDetailView)
     React.useImperativeHandle(matchTimerRef, () => ({
         saveMatchEvent: saveMatchEvent,
         getSelectedAction: () => selectedAction,
@@ -1874,6 +1877,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames,
                 )
             ),
             
+            // 🔥 TLAČIDLÁ AKCIÍ (len označujú akciu, neotvárajú modál)
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
                 React.createElement('button', { 
                     onClick: () => handleActionClick('goal'), 
