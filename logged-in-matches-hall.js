@@ -880,11 +880,17 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
         let userId = null;
         
-        // 🔥 OPRAVA: Získanie názvu kategórie - použijeme match.categoryName alebo z categoriesData
+        // 🔥 Získanie názvu kategórie - použijeme match.categoryName alebo z categoriesData
         const categoryNameForSearch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
-        // 🔥 OPRAVA: Získanie názvu tímu podľa teamType - použijeme priamo homeTeamIdentifier alebo awayTeamIdentifier
-        const teamNameForSearch = teamType === 'home' ? match.homeTeamIdentifier : match.awayTeamIdentifier;
+        // 🔥 OPRAVA: Získanie SPRÁVNEHO názvu tímu - použijeme teamNames alebo mappedName
+        // Získame správny zobrazený názov tímu (napr. "ŠKP Topoľčany" namiesto "U12 D E1")
+        let teamNameForSearch = null;
+        if (teamType === 'home') {
+            teamNameForSearch = teamNames?.[match.homeTeamIdentifier] || match.homeTeamIdentifier;
+        } else {
+            teamNameForSearch = teamNames?.[match.awayTeamIdentifier] || match.awayTeamIdentifier;
+        }
         
         console.log(`🔍 Vyhľadávanie userId: teamType=${teamType}, teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForSearch}, member.index=${member.index}, member.typeKey=${member.typeKey}`);
         
@@ -900,7 +906,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                         if (categoryKey !== categoryNameForSearch) continue;
                         
-                        // Hľadáme tím podľa názvu
+                        // Hľadáme tím podľa názvu - používame správny zobrazený názov
                         const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
                         
                         if (foundTeam) {
