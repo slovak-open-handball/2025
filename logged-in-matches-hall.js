@@ -1327,8 +1327,14 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-6' },
-                    'Naozaj chcete ukončiť tento zápas? Po ukončení už nebude možné meniť čas ani výsledok.'
+                    { className: 'text-gray-600 mb-4' },
+                    'Naozaj chcete ukončiť tento zápas?'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-blue-600 bg-blue-50 p-2 rounded-lg mb-6' },
+                    React.createElement('i', { className: 'fa-solid fa-calculator mr-2' }),
+                    'Konečný výsledok bude automaticky vypočítaný z gólových udalostí.'
                 ),
                 React.createElement(
                     'div',
@@ -1417,18 +1423,56 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 let newStatus = 'paused';
                 const maxTotal = totalPeriods * periodDuration * 60;
                 
+                // 🔥 AK SME NA KONCI ZÁPASU, VYPOČÍTAME VÝSLEDOK
                 if (finalSeconds >= maxTotal || isMatchEnd) {
                     newStatus = 'completed';
-                    console.log(`🏆 Zápas bol ukončený`);
+                    console.log(`🏆 Zápas bol ukončený, počítam výsledok z udalostí...`);
+                    
+                    // Načítanie udalostí pre výpočet výsledku
+                    const eventsRef = collection(window.db, 'matchEvents');
+                    const q = query(eventsRef, where('matchId', '==', matchId));
+                    const eventsSnapshot = await getDocs(q);
+                    
+                    let homeGoals = 0;
+                    let awayGoals = 0;
+                    
+                    eventsSnapshot.forEach((eventDoc) => {
+                        const event = eventDoc.data();
+                        if (event.eventType === 'goal') {
+                            if (event.team === 'home') {
+                                homeGoals++;
+                            } else if (event.team === 'away') {
+                                awayGoals++;
+                            }
+                        }
+                    });
+                    
+                    console.log(`🏆 Vypočítaný výsledok: DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
+                    
+                    await updateDoc(matchRef, {
+                        manualTimeOffset: finalSeconds,
+                        status: newStatus,
+                        startedAt: null,
+                        pausedAt: Timestamp.now(),
+                        updatedAt: Timestamp.now(),
+                        homeScore: homeGoals,
+                        awayScore: awayGoals,
+                        finalScore: {
+                            home: homeGoals,
+                            away: awayGoals
+                        },
+                        completedAt: Timestamp.now(),
+                        resultCalculatedFromEvents: true
+                    });
+                } else {
+                    await updateDoc(matchRef, {
+                        manualTimeOffset: finalSeconds,
+                        status: newStatus,
+                        startedAt: null,
+                        pausedAt: Timestamp.now(),
+                        updatedAt: Timestamp.now()
+                    });
                 }
-                
-                await updateDoc(matchRef, {
-                    manualTimeOffset: finalSeconds,
-                    status: newStatus,
-                    startedAt: null,
-                    pausedAt: Timestamp.now(),
-                    updatedAt: Timestamp.now()
-                });
                 
                 if (onTimeUpdate) onTimeUpdate({ 
                     totalSeconds: finalSeconds, 
@@ -1781,6 +1825,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         }
     };
 
+    // Upravená endMatch funkcia - automatický výpočet výsledku z gólových udalostí
     const endMatch = async () => {
         if (window.db && matchId) {
             try {
@@ -1790,20 +1835,82 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     isRunningRef.current = false;
                 }
                 
-                const matchRef = doc(window.db, 'matches', matchId);
-                await updateDoc(matchRef, {
-                    status: 'completed',
-                    updatedAt: Timestamp.now()
+                // 🔥 NAČÍTANIE VŠETKÝCH UDALOSTÍ ZÁPASU PRE VÝPOČET VÝSLEDKU
+                console.log(`📊 Výpočet konečného výsledku z gólových udalostí pre zápas ${matchId}...`);
+                
+                const eventsRef = collection(window.db, 'matchEvents');
+                const q = query(eventsRef, where('matchId', '==', matchId));
+                const eventsSnapshot = await getDocs(q);
+                
+                let homeGoals = 0;
+                let awayGoals = 0;
+                
+                eventsSnapshot.forEach((eventDoc) => {
+                    const event = eventDoc.data();
+                    if (event.eventType === 'goal') {
+                        if (event.team === 'home') {
+                            homeGoals++;
+                        } else if (event.team === 'away') {
+                            awayGoals++;
+                        }
+                    }
                 });
-                console.log(`Zápas ${matchId} bol ukončený`);
+                
+                console.log(`🏆 Vypočítaný výsledok: DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
+                
+                // 🔥 AKTUALIZÁCIA ZÁPASU S VÝSLEDKOM
+                const matchRef = doc(window.db, 'matches', matchId);
+                
+                // Získame aktuálne dáta zápasu pre zachovanie existujúcich údajov
+                const matchSnap = await getDoc(matchRef);
+                const currentMatchData = matchSnap.exists() ? matchSnap.data() : {};
+                
+                const updateData = {
+                    status: 'completed',
+                    updatedAt: Timestamp.now(),
+                    homeScore: homeGoals,
+                    awayScore: awayGoals,
+                    finalScore: {
+                        home: homeGoals,
+                        away: awayGoals
+                    },
+                    completedAt: Timestamp.now(),
+                    resultCalculatedFromEvents: true
+                };
+                
+                // Zachováme existujúce údaje, ktoré nechceme prepísať
+                const fieldsToPreserve = [
+                    'hallId', 'categoryId', 'categoryName', 'groupName', 
+                    'homeTeamIdentifier', 'awayTeamIdentifier', 'matchType',
+                    'isPlacementMatch', 'placementRank', 'scheduledTime',
+                    'manualTimeOffset', 'currentPeriod'
+                ];
+                
+                fieldsToPreserve.forEach(field => {
+                    if (currentMatchData[field] !== undefined) {
+                        updateData[field] = currentMatchData[field];
+                    }
+                });
+                
+                await updateDoc(matchRef, updateData);
+                
+                console.log(`✅ Zápas ${matchId} bol ukončený s výsledkom ${homeGoals}:${awayGoals} (automaticky vypočítaný z udalostí)`);
                 setShowEndMatchModal(false);
-                if (onTimeUpdate) onTimeUpdate({ totalSeconds: displaySeconds, period, isRunning: false });
+                
+                if (onTimeUpdate) onTimeUpdate({ 
+                    totalSeconds: displaySeconds, 
+                    period, 
+                    isRunning: false,
+                    finalScore: { home: homeGoals, away: awayGoals }
+                });
                 
                 if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                     await window.updateTeamNamesGlobally();
                 }
+                
             } catch (err) {
                 console.error('Chyba pri ukončovaní zápasu:', err);
+                alert('Nepodarilo sa ukončiť zápas a vypočítať výsledok');
             }
         }
     };
