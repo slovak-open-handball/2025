@@ -2270,6 +2270,63 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
 
     // Opravená renderMatchEvents funkcia v MatchDetailView komponente
     const renderMatchEvents = () => {
+        const [memberDataCache, setMemberDataCache] = React.useState({});
+        
+        // 🔥 FUNKCIA: Načítanie údajov člena z databázy podľa userId, typeKey a indexu
+        const loadMemberDetails = async (userId, memberTypeKey, memberIndex, eventId) => {
+            if (!userId || !memberTypeKey || memberIndex === undefined) {
+                return { name: 'Neznámy hráč', jerseyNumber: '' };
+            }
+            
+            // Skontrolujeme cache
+            const cacheKey = `${userId}_${memberTypeKey}_${memberIndex}`;
+            if (memberDataCache[cacheKey]) {
+                return memberDataCache[cacheKey];
+            }
+            
+            try {
+                const userRef = doc(window.db, 'users', userId);
+                const userSnap = await getDoc(userRef);
+                
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const teams = userData.teams || {};
+                    
+                    // Prehľadávame všetky kategórie (ale potrebujeme získať správny tím)
+                    // Poznámka: Potrebovali by sme vedieť aj názov kategórie a tímu, ale momentálne nemáme
+                    // Alternatívne by sme mohli prehľadávať všetky tímy vo všetkých kategóriách
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        for (const team of teamsArray) {
+                            let member = null;
+                            
+                            if (memberTypeKey === 'playerDetails' && team.playerDetails && team.playerDetails[memberIndex]) {
+                                member = team.playerDetails[memberIndex];
+                            } else if (memberTypeKey === 'menTeamMemberDetails' && team.menTeamMemberDetails && team.menTeamMemberDetails[memberIndex]) {
+                                member = team.menTeamMemberDetails[memberIndex];
+                            } else if (memberTypeKey === 'womenTeamMemberDetails' && team.womenTeamMemberDetails && team.womenTeamMemberDetails[memberIndex]) {
+                                member = team.womenTeamMemberDetails[memberIndex];
+                            }
+                            
+                            if (member) {
+                                const memberData = {
+                                    name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
+                                    jerseyNumber: member.jerseyNumber || ''
+                                };
+                                
+                                // Uložíme do cache
+                                setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
+                                return memberData;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Chyba pri načítaní člena:', err);
+            }
+            
+            return { name: 'Neznámy hráč', jerseyNumber: '' };
+        };
+        
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
                 case 'goal':
@@ -2288,75 +2345,87 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
         };
         
-        // 🔥 OPRAVENÁ funkcia na formátovanie času - používa totalTime alebo matchTime
+        // 🔥 OPRAVENÁ funkcia na formátovanie času - používa totalTime
         const formatMatchTime = (event) => {
-            // Prioritne použijeme totalTime (celkový čas zápasu)
             let seconds = event.totalTime;
-            
-            // Ak totalTime nie je k dispozícii, skúsime matchTime
             if (seconds === undefined || seconds === null) {
                 seconds = event.matchTime;
             }
-            
-            // Ak stále nemáme čas, vrátime "?:??"
             if (seconds === undefined || seconds === null) {
                 return '?:??';
             }
-            
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         };
         
-        // Funkcia na získanie názvu tímu a čísla dresu pre hráča
-        const getPlayerDisplay = (event) => {
-            const teamName = event.team === 'home' 
-                ? (teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier))
-                : (teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier));
+        // 🔥 FUNKCIA: Získanie zobrazenia pre hráča (načítava údaje z databázy)
+        const PlayerDisplay = ({ event, isHomeEvent }) => {
+            const [memberData, setMemberData] = React.useState({ name: 'Načítavam...', jerseyNumber: '' });
+            const [loading, setLoading] = React.useState(true);
             
-            const playerName = event.memberName || '';
-            const jerseyNumber = event.memberJerseyNumber || '';
+            React.useEffect(() => {
+                const loadData = async () => {
+                    const data = await loadMemberDetails(event.userId, event.memberTypeKey, event.memberIndex, event.id);
+                    setMemberData(data);
+                    setLoading(false);
+                };
+                loadData();
+            }, [event.userId, event.memberTypeKey, event.memberIndex]);
             
-            return { teamName, playerName, jerseyNumber };
+            if (loading) {
+                return React.createElement('span', { className: 'text-gray-400 text-xs' }, 'Načítavam...');
+            }
+            
+            const displayName = memberData.name;
+            const jerseyNumber = memberData.jerseyNumber;
+            
+            if (isHomeEvent) {
+                return React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-end gap-2' },
+                    React.createElement('span', { className: 'text-gray-800' }, displayName),
+                    jerseyNumber && React.createElement(
+                        'span',
+                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
+                        jerseyNumber
+                    )
+                );
+            } else {
+                return React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-2' },
+                    jerseyNumber && React.createElement(
+                        'span',
+                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
+                        jerseyNumber
+                    ),
+                    React.createElement('span', { className: 'text-gray-800' }, displayName)
+                );
+            }
         };
         
         // 🔥 FUNKCIA: Výpočet skóre v čase udalosti (pre góly)
         const getScoreAtEvent = (currentEventIndex, targetEvent) => {
-            // Ak nejde o gól, nevracame nič
             if (targetEvent.eventType !== 'goal') return null;
             
             let homeGoals = 0;
             let awayGoals = 0;
             
-            // Prechádzame udalosti od najstaršej po aktuálnu (vzostupne podľa času)
-            // Keďže matchEvents sú zoradené od najnovšej po najstaršiu (desc),
-            // musíme prejsť v opačnom poradí
             const reversedEvents = [...matchEvents].reverse();
             
             for (let i = 0; i < reversedEvents.length; i++) {
                 const event = reversedEvents[i];
+                if (event.id === targetEvent.id) break;
                 
-                // Ak sme narazili na aktuálnu udalosť, končíme (nezapočítavame ju ešte)
-                if (event.id === targetEvent.id) {
-                    break;
-                }
-                
-                // Počítame góly pred touto udalosťou
                 if (event.eventType === 'goal') {
-                    if (event.team === 'home') {
-                        homeGoals++;
-                    } else if (event.team === 'away') {
-                        awayGoals++;
-                    }
+                    if (event.team === 'home') homeGoals++;
+                    else if (event.team === 'away') awayGoals++;
                 }
             }
             
-            // Pridáme aktuálny gól podľa tímu
-            if (targetEvent.team === 'home') {
-                homeGoals++;
-            } else if (targetEvent.team === 'away') {
-                awayGoals++;
-            }
+            if (targetEvent.team === 'home') homeGoals++;
+            else if (targetEvent.team === 'away') awayGoals++;
             
             return { home: homeGoals, away: awayGoals };
         };
@@ -2405,11 +2474,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 { className: 'divide-y divide-gray-100' },
                                 matchEvents.map((event, idx) => {
                                     const isHomeEvent = event.team === 'home';
-                                    const { teamName, playerName, jerseyNumber } = getPlayerDisplay(event);
                                     const isGoal = event.eventType === 'goal';
                                     const score = isGoal ? getScoreAtEvent(idx, event) : null;
                                     
-                                    // Získanie textu akcie pre tooltip
                                     const getActionTitle = () => {
                                         switch (event.eventType) {
                                             case 'goal': return 'Gól';
@@ -2424,32 +2491,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         }
                                     };
                                     
-                                    // 🔥 Získanie formátovaného času
                                     const formattedTime = formatMatchTime(event);
                                     
                                     return React.createElement(
                                         'tr',
                                         { key: event.id, className: 'hover:bg-gray-50 transition-colors' },
                                         
-                                        // Stĺpec pre domácich (meno + číslo dresu) - zarovnané vpravo
+                                        // Stĺpec pre domácich (meno + číslo dresu)
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-sm text-right' },
                                             isHomeEvent ? 
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center justify-end gap-2' },
-                                                    React.createElement('span', { className: 'text-gray-800' }, playerName),
-                                                    jerseyNumber && React.createElement(
-                                                        'span',
-                                                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
-                                                        jerseyNumber
-                                                    )
-                                                ) :
+                                                React.createElement(PlayerDisplay, { event: event, isHomeEvent: true }) :
                                                 React.createElement('div', {}, '')
                                         ),
                                         
-                                        // 🔥 STĹPEC: Skóre pre domácich (len pre góly domácich)
+                                        // Skóre pre domácich
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-bold' },
@@ -2473,7 +2530,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // 🔥 Čas udalosti - používa opravenú funkciu
+                                        // Čas udalosti
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600' },
@@ -2491,7 +2548,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // 🔥 STĹPEC: Skóre pre hostí (len pre góly hostí)
+                                        // Skóre pre hostí
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-bold' },
@@ -2504,21 +2561,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                 React.createElement('span', { className: 'text-gray-300' }, '')
                                         ),
                                         
-                                        // Stĺpec pre hostí (číslo dresu + meno) - zarovnané vľavo
+                                        // Stĺpec pre hostí (číslo dresu + meno)
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-sm text-left' },
                                             !isHomeEvent ? 
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center gap-2' },
-                                                    jerseyNumber && React.createElement(
-                                                        'span',
-                                                        { className: 'inline-flex items-center justify-center bg-gray-100 text-gray-600 rounded-full w-6 h-6 text-xs font-mono font-bold' },
-                                                        jerseyNumber
-                                                    ),
-                                                    React.createElement('span', { className: 'text-gray-800' }, playerName)
-                                                ) :
+                                                React.createElement(PlayerDisplay, { event: event, isHomeEvent: false }) :
                                                 React.createElement('div', {}, '')
                                         )
                                     );
