@@ -520,9 +520,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         const memberForSave = {
             type: member.type,
             name: `${member.firstName} ${member.lastName}`.trim(),
-            firstName: member.firstName,
-            lastName: member.lastName,
-            jerseyNumber: member.jerseyNumber,
             index: actualIndex,
             typeKey: actualArrayName
         };
@@ -880,6 +877,57 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 return false;
         }
         
+        // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
+        let userId = null;
+        const categoryNameForSearch = categoryDisplayName || match.categoryName;
+        
+        if (window.db && teamName && categoryNameForSearch) {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+                
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+                    
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        if (categoryKey !== categoryNameForSearch) continue;
+                        
+                        // Hľadáme tím podľa názvu (použijeme mappedName alebo pôvodný teamName)
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                        
+                        if (foundTeam) {
+                            // Kontrola, či člen s daným indexom a typom existuje
+                            let memberExists = false;
+                            
+                            if (member.typeKey === 'playerDetails') {
+                                if (foundTeam.playerDetails && foundTeam.playerDetails[member.index]) {
+                                    memberExists = true;
+                                }
+                            } else if (member.typeKey === 'menTeamMemberDetails') {
+                                if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[member.index]) {
+                                    memberExists = true;
+                                }
+                            } else if (member.typeKey === 'womenTeamMemberDetails') {
+                                if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[member.index]) {
+                                    memberExists = true;
+                                }
+                            }
+                            
+                            if (memberExists) {
+                                userId = userDoc.id;
+                                console.log(`✅ Nájdený userId: ${userId} pre člena ${member.name} (index: ${member.index}, typ: ${member.typeKey})`);
+                                break;
+                            }
+                        }
+                    }
+                    if (userId) break;
+                }
+            } catch (err) {
+                console.error('Chyba pri vyhľadávaní userId:', err);
+            }
+        }
+        
         const eventData = {
             matchId: matchId,
             totalTime: currentTotalTime,
@@ -890,10 +938,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             memberType: member.type,
             memberTypeKey: member.typeKey,
             memberIndex: member.index,
-            memberName: member.name,
-            memberFirstName: member.firstName,
-            memberLastName: member.lastName,
-            memberJerseyNumber: member.jerseyNumber || null,
+            userId: userId,  // 🔥 ID POUŽÍVATEĽA, KTORÉMU PATRÍ ČLEN TÍMU
             createdAt: Timestamp.now(),
             timestamp: Timestamp.now()
         };
@@ -901,7 +946,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         try {
             const eventsRef = collection(window.db, 'matchEvents');
             await addDoc(eventsRef, eventData);
-            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v celkovom čase ${currentTotalTime}s (perióda ${currentPeriodNum})`);
+            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v celkovom čase ${currentTotalTime}s (perióda ${currentPeriodNum}), userId: ${userId}`);
             
             setSelectedAction(null);
             if (onActionSelected && typeof onActionSelected === 'function') {
