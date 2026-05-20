@@ -2302,7 +2302,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    // Komponent pre zoznam udalostí (upravený - pridaný stĺpec so skóre na oboch stranách)
+    // Opravená renderMatchEvents funkcia v MatchDetailView komponente
     const renderMatchEvents = () => {
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
@@ -2322,7 +2322,21 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
         };
         
-        const formatMatchTime = (seconds) => {
+        // 🔥 OPRAVENÁ funkcia na formátovanie času - používa totalTime alebo matchTime
+        const formatMatchTime = (event) => {
+            // Prioritne použijeme totalTime (celkový čas zápasu)
+            let seconds = event.totalTime;
+            
+            // Ak totalTime nie je k dispozícii, skúsime matchTime
+            if (seconds === undefined || seconds === null) {
+                seconds = event.matchTime;
+            }
+            
+            // Ak stále nemáme čas, vrátime "?:??"
+            if (seconds === undefined || seconds === null) {
+                return '?:??';
+            }
+            
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -2445,6 +2459,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         }
                                     };
                                     
+                                    // 🔥 Získanie formátovaného času
+                                    const formattedTime = formatMatchTime(event);
+                                    
                                     return React.createElement(
                                         'tr',
                                         { key: event.id, className: 'hover:bg-gray-50 transition-colors' },
@@ -2491,11 +2508,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti
+                                        // 🔥 Čas udalosti - používa opravenú funkciu
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600' },
-                                            formatMatchTime(event.matchTime)
+                                            formattedTime
                                         ),
                                         
                                         // Ikona udalosti (pravá)
