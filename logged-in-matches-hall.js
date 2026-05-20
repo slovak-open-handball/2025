@@ -2301,14 +2301,14 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const renderMatchEvents = () => {
         const [memberDataCache, setMemberDataCache] = React.useState({});
         
-        // 🔥 FUNKCIA: Načítanie údajov člena z databázy podľa userId, typeKey a indexu
-        const loadMemberDetails = async (userId, memberTypeKey, memberIndex, eventId) => {
+        // 🔥 FUNKCIA: Načítanie údajov člena z databázy podľa userId, categoryName, teamName, typeKey a indexu
+        const loadMemberDetails = async (userId, categoryName, teamName, memberTypeKey, memberIndex, eventId) => {
             if (!userId || !memberTypeKey || memberIndex === undefined) {
                 return { name: 'Neznámy hráč', jerseyNumber: '' };
             }
             
-            // Skontrolujeme cache
-            const cacheKey = `${userId}_${memberTypeKey}_${memberIndex}`;
+            // Skontrolujeme cache - pridáme aj categoryName a teamName do cache kľúča
+            const cacheKey = `${userId}_${categoryName}_${teamName}_${memberTypeKey}_${memberIndex}`;
             if (memberDataCache[cacheKey]) {
                 return memberDataCache[cacheKey];
             }
@@ -2321,19 +2321,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     const userData = userSnap.data();
                     const teams = userData.teams || {};
                     
-                    // Prehľadávame všetky kategórie (ale potrebujeme získať správny tím)
-                    // Poznámka: Potrebovali by sme vedieť aj názov kategórie a tímu, ale momentálne nemáme
-                    // Alternatívne by sme mohli prehľadávať všetky tímy vo všetkých kategóriách
+                    // 🔥 HĽADÁME TÍM V SPRÁVNEJ KATEGÓRII A S PRESNÝM NÁZVOM
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        for (const team of teamsArray) {
+                        if (categoryKey !== categoryName) continue;
+                        
+                        // Hľadáme tím s presným názvom
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                        
+                        if (foundTeam) {
                             let member = null;
                             
-                            if (memberTypeKey === 'playerDetails' && team.playerDetails && team.playerDetails[memberIndex]) {
-                                member = team.playerDetails[memberIndex];
-                            } else if (memberTypeKey === 'menTeamMemberDetails' && team.menTeamMemberDetails && team.menTeamMemberDetails[memberIndex]) {
-                                member = team.menTeamMemberDetails[memberIndex];
-                            } else if (memberTypeKey === 'womenTeamMemberDetails' && team.womenTeamMemberDetails && team.womenTeamMemberDetails[memberIndex]) {
-                                member = team.womenTeamMemberDetails[memberIndex];
+                            if (memberTypeKey === 'playerDetails' && foundTeam.playerDetails && foundTeam.playerDetails[memberIndex]) {
+                                member = foundTeam.playerDetails[memberIndex];
+                            } else if (memberTypeKey === 'menTeamMemberDetails' && foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[memberIndex]) {
+                                member = foundTeam.menTeamMemberDetails[memberIndex];
+                            } else if (memberTypeKey === 'womenTeamMemberDetails' && foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[memberIndex]) {
+                                member = foundTeam.womenTeamMemberDetails[memberIndex];
                             }
                             
                             if (member) {
@@ -2393,14 +2396,26 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const [memberData, setMemberData] = React.useState({ name: 'Načítavam...', jerseyNumber: '' });
             const [loading, setLoading] = React.useState(true);
             
+            // Získanie názvu tímu podľa toho, či ide o domáci alebo hosťujúci tím
+            const teamName = isHomeEvent 
+                ? (teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier))
+                : (teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier));
+            
             React.useEffect(() => {
                 const loadData = async () => {
-                    const data = await loadMemberDetails(event.userId, event.memberTypeKey, event.memberIndex, event.id);
+                    const data = await loadMemberDetails(
+                        event.userId, 
+                        event.categoryName,  // 🔥 POUŽIJEME KATEGÓRIU Z UDALOSTI
+                        teamName,            // 🔥 POUŽIJEME NÁZOV TÍMU
+                        event.memberTypeKey, 
+                        event.memberIndex, 
+                        event.id
+                    );
                     setMemberData(data);
                     setLoading(false);
                 };
                 loadData();
-            }, [event.userId, event.memberTypeKey, event.memberIndex]);
+            }, [event.userId, event.categoryName, teamName, event.memberTypeKey, event.memberIndex]);
             
             if (loading) {
                 return React.createElement('span', { className: 'text-gray-400 text-xs' }, 'Načítavam...');
