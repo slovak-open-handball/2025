@@ -1994,7 +1994,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             ),
             React.createElement(
                 'div',
-                { className: 'max-h-96 overflow-y-auto' },
+                { className: 'w-full' },
                 eventsLoading ? 
                     React.createElement('div', { className: 'text-center py-8 text-gray-400' }, 
                         React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
