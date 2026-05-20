@@ -741,6 +741,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const lastServerUpdateRef = useRef(0);
     const displaySecondsRef = useRef(0);
     
+    // 🔥 OPRAVA: Definícia ref pre expose funkcií rodičovi
     const matchTimerRef = useRef(null);
 
     useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
@@ -924,7 +925,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     };
 
     // 🔥 OPRAVA: Expose funkcie cez ref pre rodičovský komponent (MatchDetailView)
-    React.useImperativeHandle(matchTimerRef, () => ({
+    React.useImperativeHandle(ref, () => ({
         saveMatchEvent: saveMatchEvent,
         getSelectedAction: () => selectedAction,
         isTimerRunning: () => isRunningRef.current
@@ -1692,7 +1693,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         );
     };
 
-    // Komponent pre zoznam udalostí
+    // Komponent pre zoznam udalostí (v MatchTimer - pre lepšiu dostupnosť)
     const renderMatchEvents = () => {
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
@@ -1876,7 +1877,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 )
             ),
             
-            // 🔥 TLAČIDLÁ AKCIÍ (len označujú akciu, neotvárajú modál)
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
                 React.createElement('button', { 
                     onClick: () => handleActionClick('goal'), 
@@ -1906,9 +1906,10 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         ),
         renderEndMatchModal(),
         renderForfeitModal(),
-        renderManualResultModal()
+        renderManualResultModal(),
+        renderMatchEvents() // Pridané zobrazenie udalostí priamo v časovači
     );
-};
+});
 
 // Komponent pre detail zápasu (s navigáciou medzi zápasmi a časovačom)
 const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData, allMatches, currentMatchIndex, onNavigate, onMatchUpdate }) => {
@@ -2551,6 +2552,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         // Časovač zápasu
         !loadingSettings && React.createElement(MatchTimer, {
+            ref: matchTimerRef,
             match: { ...match, status: currentMatchStatus, homeScore: currentHomeScore, awayScore: currentAwayScore },
             matchId: match.id,
             onTimeUpdate: handleTimeUpdate,
