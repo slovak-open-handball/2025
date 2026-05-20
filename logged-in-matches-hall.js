@@ -448,28 +448,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
         
-        // 🔥 KONTROLA: Gól môže dať len Hráč (nie člen RT)
-        if (selectedAction === 'goal' && member.type !== 'Hráč') {
-            alert('Gól môže dať iba hráč! Člen realizačného tímu nemôže zaznamenať gól.');
-            return;
-        }
-        
-        // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
-        let actualIndex = index;
-        let actualArrayName = arrayName;
-        
-        if (member.type === 'Člen RT (žena)') {
-            const allRTMembers = members.filter(m => m.type !== 'Hráč');
-            let menCount = 0;
-            for (let i = 0; i < allRTMembers.length; i++) {
-                if (allRTMembers[i].type === 'Člen RT (muž)') menCount++;
-                if (allRTMembers[i] === member) break;
-            }
-            actualIndex = index - menCount;
-            actualArrayName = 'womenTeamMemberDetails';
-            console.log(`🔄 Prepočet indexu pre ženu RT: ${index} -> ${actualIndex}`);
-        }
-        
         // 🔥 KONTROLA, ČI JE VYBRANÁ AKCIA A ČASOVAČ BEŽÍ
         if (!timerRef) {
             console.error('❌ timerRef nie je dostupný');
@@ -486,16 +464,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
             selectedAction = timerCurrent.getSelectedAction();
             console.log('🎯 Aktuálna vybraná akcia z timerRef.current.getSelectedAction():', selectedAction);
-        } else if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
-            selectedAction = timerCurrent.getSelectedAction();
-            console.log('🎯 Aktuálna vybraná akcia z timerRef.current (getSelectedAction):', selectedAction);
-        } else {
-            console.warn('⚠️ timerRef.current nemá metódu getSelectedAction', timerCurrent);
-            // Fallback - skúsime získať z timerRef priamo (ak je to funkcia, nie ref)
-            if (typeof timerRef.getSelectedAction === 'function') {
-                selectedAction = timerRef.getSelectedAction();
-                console.log('🎯 Fallback timerRef.getSelectedAction():', selectedAction);
-            }
+        } else if (typeof timerRef.getSelectedAction === 'function') {
+            selectedAction = timerRef.getSelectedAction();
+            console.log('🎯 Fallback timerRef.getSelectedAction():', selectedAction);
+        }
+        
+        // 🔥 KONTROLA: Gól môže dať len Hráč (nie člen RT)
+        if (selectedAction === 'goal' && member.type !== 'Hráč') {
+            alert('Gól môže dať iba hráč! Člen realizačného tímu nemôže zaznamenať gól.');
+            return;
         }
         
         // Kontrola behu časovača
@@ -514,11 +491,29 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         console.log('⏱️ Časovač beží:', isTimerRunning);
         
         if (!selectedAction) {
+            alert('Najprv vyberte akciu (Gól, 7m, ŽK, ČK, MK, Vylúčenie)');
             return;
         }
         
         if (!isTimerRunning) {
+            alert('Pre zaznamenanie udalosti musí byť časovač spustený!');
             return;
+        }
+        
+        // 🔥 VÝPOČET SPRÁVNEHO INDEXU PRE WORKER
+        let actualIndex = index;
+        let actualArrayName = arrayName;
+        
+        if (member.type === 'Člen RT (žena)') {
+            const allRTMembers = members.filter(m => m.type !== 'Hráč');
+            let menCount = 0;
+            for (let i = 0; i < allRTMembers.length; i++) {
+                if (allRTMembers[i].type === 'Člen RT (muž)') menCount++;
+                if (allRTMembers[i] === member) break;
+            }
+            actualIndex = index - menCount;
+            actualArrayName = 'womenTeamMemberDetails';
+            console.log(`🔄 Prepočet indexu pre ženu RT: ${index} -> ${actualIndex}`);
         }
         
         // 🔥 ULOŽENIE UDALOSTI - použijeme metódu saveEventWithAction ak existuje
@@ -554,6 +549,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         } else {
             console.error('❌ Žiadna metóda na uloženie udalosti nie je dostupná');
             console.log('Dostupné vlastnosti timerRef.current:', timerCurrent ? Object.keys(timerCurrent) : 'null');
+            alert('Chyba: Nie je možné uložiť udalosť');
             return;
         }
         
