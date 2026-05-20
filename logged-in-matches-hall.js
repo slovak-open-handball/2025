@@ -1860,6 +1860,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [matchEvents, setMatchEvents] = React.useState([]);
     const [eventsLoading, setEventsLoading] = React.useState(true);
     
+    // 🔥 NOVÉ: Stavy pre počítanie gólov z udalostí (pre manuálne zadaný výsledok)
+    const [calculatedHomeScore, setCalculatedHomeScore] = React.useState(0);
+    const [calculatedAwayScore, setCalculatedAwayScore] = React.useState(0);
+    const [useCalculatedScore, setUseCalculatedScore] = React.useState(false);
+    
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
         if (match.categoryName) return match.categoryName;
@@ -1870,6 +1875,43 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
     
     const categoryDisplayName = getCategoryDisplayName();
+    
+    // 🔥 FUNKCIA: Výpočet gólov z udalostí
+    const calculateGoalsFromEvents = (events) => {
+        let homeGoals = 0;
+        let awayGoals = 0;
+        
+        events.forEach(event => {
+            if (event.eventType === 'goal') {
+                if (event.team === 'home') {
+                    homeGoals++;
+                } else if (event.team === 'away') {
+                    awayGoals++;
+                }
+            }
+        });
+        
+        return { homeGoals, awayGoals };
+    };
+    
+    // 🔥 EFEKT: Počítanie gólov z udalostí (len ak je zápas v stave 'scheduled' alebo 'in-progress'/'paused' bez manuálneho výsledku)
+    React.useEffect(() => {
+        // Ak zápas nie je completed alebo nemá manuálne zadaný výsledok, počítame góly z udalostí
+        const hasManualResult = match.manualResultEntered === true || 
+                               (currentHomeScore !== undefined && currentHomeScore !== null && 
+                                currentAwayScore !== undefined && currentAwayScore !== null &&
+                                match.status === 'completed');
+        
+        if (!hasManualResult && currentMatchStatus !== 'completed') {
+            const { homeGoals, awayGoals } = calculateGoalsFromEvents(matchEvents);
+            setCalculatedHomeScore(homeGoals);
+            setCalculatedAwayScore(awayGoals);
+            setUseCalculatedScore(true);
+            console.log(`📊 Výpočet gólov z udalostí: DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
+        } else {
+            setUseCalculatedScore(false);
+        }
+    }, [matchEvents, currentMatchStatus, match.manualResultEntered, match.status, currentHomeScore, currentAwayScore]);
     
     // Načítanie udalostí pre zápas
     const loadMatchEvents = async () => {
@@ -1914,6 +1956,26 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return () => unsubscribe();
     }, [match.id]);
+    
+    // 🔥 FUNKCIA: Získanie aktuálneho skóre pre zobrazenie
+    const getDisplayScore = () => {
+        // Ak je zápas ukončený a má výsledok v databáze, zobrazíme ten
+        if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
+            return { home: currentHomeScore, away: currentAwayScore };
+        }
+        
+        // Ak používame vypočítané skóre z udalostí (časovač beží alebo je pozastavený)
+        if (useCalculatedScore) {
+            return { home: calculatedHomeScore, away: calculatedAwayScore };
+        }
+        
+        // Inak zobrazíme pôvodný výsledok (ak existuje)
+        if (currentHomeScore !== undefined && currentHomeScore !== null) {
+            return { home: currentHomeScore, away: currentAwayScore };
+        }
+        
+        return null;
+    };
     
     // Funkcia na získanie textu stavu zápasu
     const getMatchStatusText = () => {
@@ -2120,7 +2182,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
 
     React.useEffect(() => {
-        // Ak sa zmapovaný názov domáceho tímu líši od pôvodného, aktualizujeme ho
         if (homeTeamMappedName !== homeTeamDisplay && match.homeTeamIdentifier) {
             console.log(`🔄 Aktualizujem názov domáceho tímu v zozname: "${homeTeamDisplay}" → "${homeTeamMappedName}"`);
             if (onMatchUpdate) {
@@ -2129,7 +2190,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     homeTeamIdentifier: match.homeTeamIdentifier
                 });
             }
-            // Aktualizujeme aj v globálnom zozname
             if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                 window.updateTeamNamesGlobally();
             }
@@ -2137,7 +2197,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     }, [homeTeamMappedName]);
     
     React.useEffect(() => {
-        // Ak sa zmapovaný názov hosťujúceho tímu líši od pôvodného, aktualizujeme ho
         if (awayTeamMappedName !== awayTeamDisplay && match.awayTeamIdentifier) {
             console.log(`🔄 Aktualizujem názov hosťujúceho tímu v zozname: "${awayTeamDisplay}" → "${awayTeamMappedName}"`);
             if (onMatchUpdate) {
@@ -2146,7 +2205,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     awayTeamIdentifier: match.awayTeamIdentifier
                 });
             }
-            // Aktualizujeme aj v globálnom zozname
             if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                 window.updateTeamNamesGlobally();
             }
@@ -2164,12 +2222,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 const newAwayScore = updatedMatch.awayScore;
                 const newStatus = updatedMatch.status || 'scheduled';
             
-                // Aktualizujeme lokálne stavy
                 setCurrentHomeScore(newHomeScore);
                 setCurrentAwayScore(newAwayScore);
                 setCurrentMatchStatus(newStatus);
             
-                // Aktualizujeme stav v nadradenom komponente
                 if (onMatchUpdate) {
                     onMatchUpdate(match.id, { 
                         homeScore: newHomeScore, 
@@ -2198,10 +2254,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 
                 console.log(`[MatchDetailView] Zmena statusu: ${oldStatus} -> ${newStatus}`);
                 
-                // VŽDY aktualizujeme status, nie len pri zmene
                 setCurrentMatchStatus(newStatus);
                 
-                // Aktualizujeme aj stav v hornom komponente
                 if (onMatchUpdate) {
                     onMatchUpdate(match.id, { status: newStatus });
                 }
@@ -2319,6 +2373,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             });
         }
     };
+    
+    // Získanie aktuálneho skóre pre zobrazenie
+    const displayScore = getDisplayScore();
+    const showScore = displayScore !== null;
     
     return React.createElement(
         'div',
@@ -2484,7 +2542,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 )
             ),
             
-            // Výsledok zápasu
+            // Výsledok zápasu - UPRAVENÝ pre dynamické zobrazenie skóre
             React.createElement(
                 'div',
                 { className: 'px-6 py-6 bg-gradient-to-r from-gray-50 to-white' },
@@ -2500,13 +2558,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     React.createElement(
                         'div',
                         { className: 'text-center' },
-                        isResultAvailable ?
+                        showScore ?
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center justify-center gap-3' },
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, currentHomeScore),
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, displayScore.home),
                                 React.createElement('span', { className: 'text-xl text-gray-400' }, ':'),
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, currentAwayScore)
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, displayScore.away)
                             ) :
                             React.createElement(
                                 'div',
