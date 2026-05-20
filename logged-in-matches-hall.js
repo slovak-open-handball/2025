@@ -1765,64 +1765,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             const secs = seconds % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         };
-        
-        return React.createElement(
-            'div',
-            { className: 'mt-6 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
-            React.createElement(
-                'div',
-                { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-                React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Udalosti zápasu'),
-                React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Chronologický zoznam udalostí (najnovšie hore)')
-            ),
-            React.createElement(
-                'div',
-                { className: 'max-h-64 overflow-y-auto' },
-                eventsLoading ? 
-                    React.createElement('div', { className: 'text-center py-8 text-gray-400' }, 
-                        React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
-                        React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam udalosti...')
-                    ) :
-                    matchEvents.length === 0 ?
-                        React.createElement('div', { className: 'text-center py-8 text-gray-400' },
-                            React.createElement('i', { className: 'fa-regular fa-clock text-3xl mb-2 opacity-50' }),
-                            React.createElement('p', { className: 'text-sm' }, 'Zatiaľ žiadne udalosti')
-                        ) :
-                        React.createElement(
-                            'table',
-                            { className: 'min-w-full divide-y divide-gray-100' },
-                            React.createElement(
-                                'thead',
-                                { className: 'bg-gray-50' },
-                                React.createElement(
-                                    'tr',
-                                    null,
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Čas'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Perióda'),
-                                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500' }, 'Udalosť')
-                                )
-                            ),
-                            React.createElement(
-                                'tbody',
-                                { className: 'divide-y divide-gray-100' },
-                                matchEvents.map((event) => 
-                                    React.createElement(
-                                        'tr',
-                                        { key: event.id, className: 'hover:bg-gray-50' },
-                                        React.createElement('td', { className: 'px-4 py-2 font-mono text-sm text-gray-700' }, formatMatchTime(event.matchTime)),
-                                        React.createElement('td', { className: 'px-4 py-2 text-sm text-gray-500' }, `${event.period}.`),
-                                        React.createElement('td', { className: 'px-4 py-2 text-sm text-gray-700' },
-                                            React.createElement('div', { className: 'flex items-center gap-2' },
-                                                getEventIcon(event.eventType, event.eventSubtype),
-                                                React.createElement('span', {}, getEventText(event))
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-            )
-        );
     };
 
     const isMatchCompleted = match?.status === 'completed';
