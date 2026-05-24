@@ -1213,7 +1213,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const isClickable = !isSuspendedByBlue; 
                         const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
                         const rowClassName = isExcluded 
-                            ? `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100 line-through`
+                            ? `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`
                             : `hover:bg-gray-50 transition-colors ${cursorClass}`;
                         
                         if (isExcludedNormally) {
