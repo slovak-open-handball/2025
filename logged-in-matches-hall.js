@@ -802,13 +802,41 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     // Funkcia pre kliknutie na tlačidlo akcie
     const handleActionClick = (action) => {
         setSelectedActions(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(action)) {
-                newSet.delete(action);
-            } else {
-                newSet.add(action);
+            // Špeciálna logika pre 7m a goal kombináciu
+            if (action === '7m') {
+                const newSet = new Set(prev);
+                if (newSet.has('7m')) {
+                    // Ak už je 7m aktívna, deaktivujeme ju
+                    newSet.delete('7m');
+                    return newSet;
+                } else {
+                    // Pridáme 7m, ale zachováme goal ak je aktívny
+                    newSet.add('7m');
+                    return newSet;
+                }
             }
-            return newSet;
+            
+            if (action === 'goal') {
+                const newSet = new Set(prev);
+                if (newSet.has('goal')) {
+                    // Ak už je goal aktívna, deaktivujeme ju
+                    newSet.delete('goal');
+                    return newSet;
+                } else {
+                    // Pridáme goal, ale zachováme 7m ak je aktívna
+                    newSet.add('goal');
+                    return newSet;
+                }
+            }
+            
+            // 🔥 Pre všetky ostatné akcie (yellow, red, blue, exclusion) - exclusive režim
+            // Ak je vybraná táto akcia, zrušíme ju, inak nastavíme len túto jednu
+            if (prev.has(action)) {
+                return new Set();
+            } else {
+                // Vymažeme všetky akcie (vrátane 7m a goal) a nastavíme len túto jednu
+                return new Set([action]);
+            }
         });
     };
 
