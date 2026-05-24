@@ -380,7 +380,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     return unsubscribe;
 };
 
-// OPRAVENÝ Komponent pre odpočet času vylúčenia - používa celkový čas zápasu
+// OPRAVENÝ Komponent pre odpočet času vylúčenia - NEMÁ ŽIADNU DATABÁZOVÚ INTERAKCIU
 const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTimerRef, match }) => {
     const [exclusionEndTimeSeconds, setExclusionEndTimeSeconds] = useState(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -462,7 +462,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         return () => clearInterval(interval);
     }, [matchTimerRef, match, matchId, periodDurationSec]);
     
-    // Sledovanie udalostí vylúčenia a návratu
+    // 🔥 OPRAVA: Iba čítanie udalostí vylúčenia, ŽIADNE ZAPISOVANIE reentry
     useEffect(() => {
         if (!window.db || !matchId || !member) return;
         
@@ -509,6 +509,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                 }
             });
             
+            // 🔥 IBA VYHODNOTENIE STAVU - ŽIADNE ZAPISOVANIE DO DB
             if (latestExclusion && (!latestReentry || latestReentry.totalTime < latestExclusion.totalTime)) {
                 const exclusionStart = latestExclusion.totalTime;
                 const exclusionEnd = exclusionStart + (exclusionDuration * 60);
@@ -523,7 +524,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         return () => unsubscribe();
     }, [matchId, teamType, member, exclusionDuration]);
     
-    // Odpočet času
+    // 🔥 OPRAVA: IBA VIZUÁLNY ODPOČET - ŽIADNE ZAPISOVANIE DO DB
     useEffect(() => {
         if (!isExcluded || exclusionEndTimeSeconds === null) {
             setRemainingSeconds(0);
@@ -533,43 +534,10 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         const remaining = Math.max(0, exclusionEndTimeSeconds - currentMatchTime);
         setRemainingSeconds(remaining);
         
-        // Ak čas vypršal, uložíme reentry event
-        if (remaining <= 0 && isExcluded) {
-            const currentMember = memberRef.current;
-            if (currentMember && window.db && matchId) {
-                let targetTypeKey = currentMember.dbArrayName;
-                let targetIndex = currentMember.originalIndex;
-                
-                if (!targetTypeKey) {
-                    if (currentMember.type === 'Hráč') targetTypeKey = 'playerDetails';
-                    else if (currentMember.type === 'Člen RT (muž)') targetTypeKey = 'menTeamMemberDetails';
-                    else if (currentMember.type === 'Člen RT (žena)') targetTypeKey = 'womenTeamMemberDetails';
-                    targetIndex = currentMember.originalIndex !== undefined ? currentMember.originalIndex : 0;
-                }
-                
-                // 🔥 OPRAVA: Odstránená categoryName - nie je potrebná a spôsobovala chybu
-                const reentryEvent = {
-                    matchId: matchId,
-                    totalTime: currentMatchTime,
-                    period: 1,
-                    eventType: 'reentry',
-                    team: teamType,
-                    memberType: currentMember.type,
-                    memberTypeKey: targetTypeKey,
-                    memberIndex: targetIndex,
-                    userId: null,
-                    createdAt: Timestamp.now(),
-                    timestamp: Timestamp.now()
-                };
-                
-                const eventsRef = collection(window.db, 'matchEvents');
-                addDoc(eventsRef, reentryEvent).catch(err => console.error('Chyba pri ukladaní návratu:', err));
-            }
-            
-            setIsExcluded(false);
-            setExclusionEndTimeSeconds(null);
-        }
-    }, [currentMatchTime, isExcluded, exclusionEndTimeSeconds, matchId, teamType]);
+        // 🔥 ODSTRÁNENÉ: Žiadne ukladanie reentry eventu do databázy
+        // Vylúčenie sa vyhodnocuje len vizuálne, nie je potrebné zapisovať návrat
+        
+    }, [currentMatchTime, isExcluded, exclusionEndTimeSeconds]);
     
     if (!isExcluded || remainingSeconds <= 0) return null;
     
