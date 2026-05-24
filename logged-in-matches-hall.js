@@ -380,42 +380,39 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     return unsubscribe;
 };
 
-// OPRAVENÝ Komponent pre odpočet času vylúčenia
+// OPRAVENÝ Komponent pre odpočet času vylúčenia - používa čas zápasu
 const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTimerRef }) => {
-    const [exclusionEndTime, setExclusionEndTime] = useState(null);
+    const [exclusionEndTimeSeconds, setExclusionEndTimeSeconds] = useState(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [isExcluded, setIsExcluded] = useState(false);
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
-    const [currentPeriod, setCurrentPeriod] = useState(1);
     
-    // Sledovanie času zápasu (pre správny odpočet)
+    // Sledovanie času zápasu
     useEffect(() => {
         if (!matchTimerRef || !matchTimerRef.current) return;
         
         const timer = matchTimerRef.current;
         
-        // Získanie aktuálneho času
         const updateMatchTime = () => {
             if (timer.getTotalTime) {
-                setCurrentMatchTime(timer.getTotalTime());
-            }
-            if (timer.getCurrentPeriod) {
-                setCurrentPeriod(timer.getCurrentPeriod());
+                const totalTime = timer.getTotalTime();
+                setCurrentMatchTime(totalTime);
             }
         };
         
         updateMatchTime();
         
-        // Interval pre aktualizáciu času
-        const interval = setInterval(updateMatchTime, 500);
+        // Aktualizácia každých 200ms pre plynulý odpočet
+        const interval = setInterval(updateMatchTime, 200);
         
         return () => clearInterval(interval);
     }, [matchTimerRef]);
     
+    // Sledovanie udalostí vylúčenia a návratu
     useEffect(() => {
         if (!window.db || !matchId || !member) return;
         
-        console.log(`🔍 ExclusionTimer: Nastavujem listener pre hráča ${member.firstName} ${member.lastName} (teamType: ${teamType})`);
+        console.log(`🔍 ExclusionTimer: Nastavujem listener pre hráča ${member.firstName} ${member.lastName}`);
         
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where('matchId', '==', matchId));
@@ -425,48 +422,35 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
             let latestReentry = null;
             
             // Získanie správnych hodnôt pre porovnanie
-            let targetTypeKey = null;
-            let targetIndex = null;
+            let targetTypeKey = member.dbArrayName;
+            let targetIndex = member.originalIndex;
             
-            if (member.dbArrayName) {
-                targetTypeKey = member.dbArrayName;
-                targetIndex = member.originalIndex;
-            } else {
-                // Fallback - odvodenie z typu
+            if (!targetTypeKey) {
                 if (member.type === 'Hráč') targetTypeKey = 'playerDetails';
                 else if (member.type === 'Člen RT (muž)') targetTypeKey = 'menTeamMemberDetails';
                 else if (member.type === 'Člen RT (žena)') targetTypeKey = 'womenTeamMemberDetails';
-                targetIndex = member.originalIndex !== undefined ? member.originalIndex : member.index;
+                targetIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
             }
-            
-            console.log(`   Hľadám udalosti pre typeKey=${targetTypeKey}, index=${targetIndex}`);
             
             // Prechádzame všetky udalosti tohto hráča
             snapshot.forEach((doc) => {
                 const event = doc.data();
                 
-                // Kontrola, či udalosť patrí tomuto hráčovi
                 if (event.team === teamType && 
                     event.memberTypeKey === targetTypeKey && 
                     event.memberIndex === targetIndex) {
                     
-                    console.log(`   Nájdená udalosť: ${event.eventType} v čase ${event.totalTime}s`);
-                    
                     if (event.eventType === 'exclusion') {
-                        // Vylúčenie - uložíme najnovšie
                         if (!latestExclusion || (event.totalTime || 0) > (latestExclusion.totalTime || 0)) {
                             latestExclusion = {
-                                timestamp: event.timestamp?.toDate() || new Date(),
                                 totalTime: event.totalTime || 0,
                                 period: event.period || 1
                             };
-                            console.log(`   → Nové vylúčenie v čase ${latestExclusion.totalTime}s`);
+                            console.log(`   → Vylúčenie v čase ${latestExclusion.totalTime}s`);
                         }
                     } else if (event.eventType === 'reentry') {
-                        // Návrat z vylúčenia
                         if (!latestReentry || (event.totalTime || 0) > (latestReentry.totalTime || 0)) {
                             latestReentry = {
-                                timestamp: event.timestamp?.toDate() || new Date(),
                                 totalTime: event.totalTime || 0
                             };
                             console.log(`   → Návrat z vylúčenia v čase ${latestReentry.totalTime}s`);
@@ -475,83 +459,41 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                 }
             });
             
-            // Ak máme vylúčenie a nemáme návrat po ňom (alebo je návrat v nižšom čase), hráč je vylúčený
+            // Výpočet konca vylúčenia podľa herného času
             if (latestExclusion && (!latestReentry || latestReentry.totalTime < latestExclusion.totalTime)) {
-                const exclusionStartTime = latestExclusion.totalTime;
-                const exclusionEndTimeSeconds = exclusionStartTime + (exclusionDuration * 60);
+                const exclusionStart = latestExclusion.totalTime;
+                const exclusionEnd = exclusionStart + (exclusionDuration * 60);
                 
-                console.log(`   ⏱️ Hráč vylúčený od času ${exclusionStartTime}s do ${exclusionEndTimeSeconds}s`);
+                console.log(`   ⏱️ Vylúčenie od ${exclusionStart}s do ${exclusionEnd}s (trvanie ${exclusionDuration} min)`);
                 
-                // Vytvoríme dátumový objekt pre koniec vylúčenia (ak časovač beží, používame reálny čas)
-                const now = Date.now();
-                const exclusionStartDate = latestExclusion.timestamp;
-                const elapsedSinceExclusion = (now - exclusionStartDate) / 1000;
-                const remainingFromDate = Math.max(0, (exclusionDuration * 60) - elapsedSinceExclusion);
-                
-                // Použijeme buď odpočet podľa zápasového času alebo podľa reálneho času
-                let remaining;
-                if (currentMatchTime >= exclusionStartTime && currentMatchTime < exclusionEndTimeSeconds) {
-                    // Zápasový čas je v rozmedzí vylúčenia
-                    remaining = Math.max(0, exclusionEndTimeSeconds - currentMatchTime);
-                } else if (currentMatchTime >= exclusionEndTimeSeconds) {
-                    // Už uplynulo podľa zápasového času
-                    remaining = 0;
-                } else if (remainingFromDate > 0 && remainingFromDate < (exclusionDuration * 60)) {
-                    // Použijeme odpočet podľa reálneho času
-                    remaining = remainingFromDate;
-                } else {
-                    remaining = exclusionDuration * 60;
-                }
-                
-                if (remaining > 0) {
-                    setRemainingSeconds(Math.floor(remaining));
-                    setIsExcluded(true);
-                    setExclusionEndTime(new Date(now + (remaining * 1000)));
-                    console.log(`   ⏱️ Zostávajúci čas vylúčenia: ${Math.floor(remaining / 60)}:${Math.floor(remaining % 60).toString().padStart(2, '0')}`);
-                } else {
-                    setIsExcluded(false);
-                    setExclusionEndTime(null);
-                    console.log(`   ✅ Čas vylúčenia vypršal`);
-                }
+                setExclusionEndTimeSeconds(exclusionEnd);
+                setIsExcluded(true);
             } else {
-                if (isExcluded) {
-                    console.log(`   ✅ Hráč už nie je vylúčený (návrat v čase ${latestReentry?.totalTime}s)`);
-                }
                 setIsExcluded(false);
-                setExclusionEndTime(null);
+                setExclusionEndTimeSeconds(null);
             }
-        }, (error) => {
-            console.error('Chyba pri načítaní udalostí vylúčenia:', error);
         });
         
         return () => unsubscribe();
-    }, [matchId, teamType, member, exclusionDuration, currentMatchTime]);
+    }, [matchId, teamType, member, exclusionDuration]);
     
-    // Odpočet času
+    // Odpočet času podľa aktuálneho času zápasu
     useEffect(() => {
-        if (!isExcluded || !exclusionEndTime) {
+        if (!isExcluded || exclusionEndTimeSeconds === null) {
             setRemainingSeconds(0);
             return;
         }
         
-        const updateRemaining = () => {
-            const now = new Date();
-            const remaining = Math.max(0, Math.floor((exclusionEndTime - now) / 1000));
-            setRemainingSeconds(remaining);
-            
-            // Ak čas vypršal, nastavíme isExcluded na false
-            if (remaining <= 0) {
-                setIsExcluded(false);
-                setExclusionEndTime(null);
-                console.log(`✅ Čas vylúčenia vypršal pre hráča`);
-            }
-        };
+        const remaining = Math.max(0, exclusionEndTimeSeconds - currentMatchTime);
+        setRemainingSeconds(remaining);
         
-        updateRemaining();
-        const interval = setInterval(updateRemaining, 1000);
-        
-        return () => clearInterval(interval);
-    }, [isExcluded, exclusionEndTime]);
+        // Ak čas vypršal, nastavíme isExcluded na false
+        if (remaining <= 0 && isExcluded) {
+            console.log(`✅ Čas vylúčenia vypršal pre hráča v čase ${currentMatchTime}s`);
+            setIsExcluded(false);
+            setExclusionEndTimeSeconds(null);
+        }
+    }, [currentMatchTime, isExcluded, exclusionEndTimeSeconds]);
     
     if (!isExcluded || remainingSeconds <= 0) return null;
     
@@ -1406,15 +1348,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     React.useImperativeHandle(ref, () => ({
         saveMatchEvent: saveMatchEvent,
         getSelectedAction: () => {
-            // 🔥 OPRAVA: Vrátime prvú akciu z množiny alebo null
             if (selectedActions.size > 0) {
-                // Pre spätnú kompatibilitu vrátime prvú akciu
                 return Array.from(selectedActions)[0];
             }
             return null;
         },
         getSelectedActions: () => {
-            // 🔥 NOVÁ METÓDA: Vráti celú množinu akcií
             return selectedActions;
         },
         isTimerRunning: () => {
@@ -1422,6 +1361,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         },
         saveEventWithAction: async (teamType, member, action) => {
             return await saveMatchEventInternalWithAction(teamType, member, action);
+        },
+        getTotalTime: () => {
+            return calculateTotalMatchTime();
+        },
+        getCurrentPeriod: () => {
+            return period;
         }
     }));
 
