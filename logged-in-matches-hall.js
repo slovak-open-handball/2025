@@ -575,7 +575,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - S ODPOČTOM VYLÚČENIA
+// OPRAVENÝ TeamMembersList KOMPONENT - BEZ match PREMENNEJ
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -583,6 +583,21 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [mappedName, setMappedName] = useState(teamName);
     const [membersStats, setMembersStats] = useState({});
     const [exclusionDuration, setExclusionDuration] = useState(2); // Default 2 minúty
+    const [matchData, setMatchData] = useState(null); // Pridané pre ukladanie dát zápasu
+    
+    // Načítanie dát zápasu z Firebase
+    useEffect(() => {
+        if (!window.db || !matchId) return;
+        
+        const matchRef = doc(window.db, 'matches', matchId);
+        const unsubscribe = onSnapshot(matchRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setMatchData(docSnap.data());
+            }
+        });
+        
+        return () => unsubscribe();
+    }, [matchId]);
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -590,7 +605,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             if (!window.db || !matchId) return;
             
             try {
-                // Získame kategóriu zápasu
                 const matchRef = doc(window.db, 'matches', matchId);
                 const matchSnap = await getDoc(matchRef);
                 if (matchSnap.exists()) {
@@ -1003,7 +1017,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                             ),
-                            // Odpočet vylúčenia (len pre hráčov)
+                            // Odpočet vylúčenia (len pre hráčov) - používame matchData z Firebase
                             member.type === 'Hráč' && React.createElement(
                                 'tr',
                                 { className: 'bg-orange-50' },
@@ -1014,7 +1028,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         teamType: teamType,
                                         exclusionDuration: exclusionDuration,
                                         matchTimerRef: timerRef,
-                                        match: { manualTimeOffset: match?.manualTimeOffset, currentPeriod: match?.currentPeriod }
+                                        match: matchData ? { manualTimeOffset: matchData.manualTimeOffset, currentPeriod: matchData.currentPeriod } : null
                                     })
                                 )
                             )
