@@ -9255,6 +9255,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        ) : (
                                                            // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
                                                            (() => {
+                                                               // Získame čas začiatku haly pre tento deň
+                                                               const scheduleId = `${hall.id}_${dateStr}`;
+                                                               const savedSchedule = hallSchedules[scheduleId];
+                                                               const hallStartTime = savedSchedule?.startTime || '08:00'; // Predvolený čas 08:00
+                                                               
                                                                // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
                                                                if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
                                                                    return React.createElement(
@@ -9277,6 +9282,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                },
                                                                                onClick: function(e) {
                                                                                    e.stopPropagation();
+                                                                                   
+                                                                                   // Uložíme do globálnej premennej, že chceme priradiť zápas s týmto časom
+                                                                                   window.__pendingAssignFilters = {
+                                                                                       hallId: hall.id,
+                                                                                       day: dateStr,
+                                                                                       startTime: hallStartTime  // Pridáme čas začiatku
+                                                                                   };
+                                                                                   
                                                                                    setSelectedBreakForAssign({
                                                                                        hallId: hall.id,
                                                                                        date: dateStr,
@@ -9299,7 +9312,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                    React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
                                                                                    React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
-                                                                                       `pridať zápas`
+                                                                                       `od ${hallStartTime}`
                                                                                    )
                                                                                )
                                                                            ),
@@ -9330,6 +9343,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                                    onClick: function(e) {
                                                                                        e.stopPropagation();
+                                                                                       
+                                                                                       // Uložíme do globálnej premennej, že chceme priradiť zápas s týmto časom
+                                                                                       window.__pendingAssignFilters = {
+                                                                                           hallId: hall.id,
+                                                                                           day: dateStr,
+                                                                                           startTime: hallStartTime  // Pridáme čas začiatku
+                                                                                       };
+                                                                                       
                                                                                        setSelectedBreakForAssign({
                                                                                            hallId: hall.id,
                                                                                            date: dateStr,
