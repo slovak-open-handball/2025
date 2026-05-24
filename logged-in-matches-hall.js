@@ -909,6 +909,20 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         return () => unsubscribe();
     }, [matchId]);
 
+    const calculateTotalMatchTime = () => {
+        const periodLengthSeconds = periodDuration * 60;
+        const currentPeriodTime = displaySeconds;
+    
+        if (period <= 1) {
+            return currentPeriodTime;
+        }
+        
+        const totalPreviousPeriodsTime = (period - 1) * periodLengthSeconds;
+        const totalTime = totalPreviousPeriodsTime + currentPeriodTime;
+        
+        return totalTime;
+    };
+
     const saveMatchEventInternalWithAction = async (teamType, member, action) => {
         // Ak nie je žiadna akcia vybraná, nič neukladáme
         if (selectedActions.size === 0 || !window.db || !matchId) {
@@ -929,7 +943,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
         
-        const currentTotalTime = displaySeconds;
+        // 🔥 ZMENA: Namiesto displaySeconds použijeme calculateTotalMatchTime()
+        const totalMatchTime = calculateTotalMatchTime();
         const currentPeriodNum = period;
         const categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
@@ -1028,9 +1043,10 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 eventSubtype = 'converted_penalty'; 
             }
             
+            // 🔥 ZMENA: Používame totalMatchTime namiesto displaySeconds
             const eventData = {
                 matchId: matchId,
-                totalTime: currentTotalTime,
+                totalTime: totalMatchTime,  // Celkový čas zápasu (súčet periód)
                 period: currentPeriodNum,
                 eventType: eventType,
                 eventSubtype: eventSubtype,
@@ -1048,7 +1064,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 const eventsRef = collection(window.db, 'matchEvents');
                 await addDoc(eventsRef, eventData);
                 savedEvents.push(selectedAction);
-                console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType}), eventSubtype: ${eventSubtype}`);
+                console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType}), celkový čas: ${totalMatchTime}s, perióda: ${currentPeriodNum}`);
             } catch (err) {
                 console.error('Chyba pri ukladaní udalosti:', err);
             }
