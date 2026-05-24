@@ -1607,7 +1607,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             
             const eventData = {
                 matchId: matchId,
-                totalTime: totalMatchTime, 
+                totalTime: totalMatchTime,
+                periodTime: displaySeconds,
                 period: currentPeriodNum,
                 eventType: eventType,
                 eventSubtype: eventSubtype,
