@@ -646,7 +646,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 0.5) {
-                    console.log(`[TeamMembersList] Aktualizácia času: ${totalGameTime}s = (perióda ${currentPeriod} - 1) * ${periodLength}s + ${currentPeriodTime}s`);
                     return totalGameTime;
                 }
                 return prev;
@@ -770,8 +769,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     return;
                 }
                 
-                // 🔥 VÝPOČET KONCA POSLEDNÉHO VYLÚČENIA (kumulatívne)
-                // Používame ABSOLÚTNY ČAS (celkový čas zápasu), nie čas v perióde
                 let totalPenaltyEndTotalTime = 0;
                 const penaltyDurationSec = exclusionDuration * 60;
                 
@@ -780,45 +777,30 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     const exclusionStartTotalTime = exclusion.totalTime;
                     
                     if (exclusionStartTotalTime >= totalPenaltyEndTotalTime) {
-                        // Vylúčenie začína po skončení predchádzajúceho
                         totalPenaltyEndTotalTime = exclusionStartTotalTime + penaltyDurationSec;
                     } else {
-                        // Vylúčenie začína počas predchádzajúceho - kumulujeme
                         totalPenaltyEndTotalTime = totalPenaltyEndTotalTime + penaltyDurationSec;
                     }
                 }
                 
-                // 🔥 OPRAVA: ZISTÍME, ČI JE ČLEN MOMENTÁLNE VYLÚČENÝ
-                // currentTotalTime je celkový čas zápasu (vrátane všetkých periód)
                 const isCurrentlyExcluded = currentTotalTime < totalPenaltyEndTotalTime;
                 
                 if (isCurrentlyExcluded) {
-                    // Zostávajúci čas v SEKUNDÁCH (celkový čas zápasu)
                     const remainingTotalSeconds = Math.max(0, Math.ceil(totalPenaltyEndTotalTime - currentTotalTime));
                     
-                    // 🔥 PREVOD NA ČAS V AKTUÁLNEJ PERIÓDE (pre zobrazenie)
-                    // Zistíme, v ktorej perióde sa nachádzame
                     const currentPeriodNum = currentPeriod;
                     const timeInCurrentPeriod = currentTotalTime - ((currentPeriodNum - 1) * periodLength);
                     
-                    // Zistíme, v ktorej perióde končí vylúčenie
                     const endPeriod = Math.floor(totalPenaltyEndTotalTime / periodLength);
                     const timeInEndPeriod = totalPenaltyEndTotalTime - (endPeriod * periodLength);
                     
                     let displayRemainingSeconds = remainingTotalSeconds;
                     
-                    // 🔥 KĽÚČOVÁ OPRAVA: Ak sme v inej perióde ako bola perióda vylúčenia,
-                    // musíme prepočítať zostávajúci čas správne
                     if (endPeriod > currentPeriodNum - 1) {
-                        // Vylúčenie končí v budúcej perióde
-                        // Zostávajúci čas je už správny (je to celkový čas)
                         displayRemainingSeconds = remainingTotalSeconds;
                     } else if (endPeriod === currentPeriodNum - 1) {
-                        // Vylúčenie malo skončiť v predchádzajúcej perióde, ale ešte neskončilo?
-                        // Toto by nemalo nastať, ale pre istotu
                         displayRemainingSeconds = remainingTotalSeconds;
                     } else {
-                        // Rovnaká perióda - zobrazenie je rovnaké
                         displayRemainingSeconds = remainingTotalSeconds;
                     }
                     
@@ -827,9 +809,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         remainingSeconds: displayRemainingSeconds,
                         endTotalTime: totalPenaltyEndTotalTime,
                         exclusionCount: exclusions.length
-                    };
-                    
-                    console.log(`[VYLÚČENIE] ${member.firstName} ${member.lastName || ''}: zostáva ${displayRemainingSeconds}s (aktuálny celkový čas: ${currentTotalTime}s, koniec: ${totalPenaltyEndTotalTime}s, perióda: ${currentPeriodNum})`);
+                    };                    
                 } else {
                     excluded[uniqueKey] = { 
                         isExcluded: false, 
