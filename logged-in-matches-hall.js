@@ -773,16 +773,25 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const baseClass = "px-5 py-2 rounded-lg font-semibold transition-colors text-sm cursor-pointer";
         const isActive = selectedAction === action;
         
-        const colorClasses = {
-            goal: isActive ? "bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white",
-            '7m': isActive ? "bg-teal-700 text-white" : "bg-teal-500 hover:bg-teal-600 text-white",
-            yellow: isActive ? "bg-yellow-600 text-white" : "bg-yellow-500 hover:bg-yellow-600 text-white",
-            red: isActive ? "bg-red-700 text-white" : "bg-red-600 hover:bg-red-700 text-white",
-            blue: isActive ? "bg-blue-600 text-white" : "bg-blue-400 hover:bg-blue-500 text-white",
-            exclusion: isActive ? "bg-orange-600 text-white" : "bg-orange-500 hover:bg-orange-600 text-white"
+        // Definícia farieb pre každý typ akcie (používa sa pre rámik a text pri neaktívnych, a pre výplň pri aktívnych)
+        const colorStyles = {
+            goal: { bg: "bg-green-500", hover: "hover:bg-green-600", border: "border-green-500", text: "text-green-600" },
+            '7m': { bg: "bg-teal-500", hover: "hover:bg-teal-600", border: "border-teal-500", text: "text-teal-600" },
+            yellow: { bg: "bg-yellow-500", hover: "hover:bg-yellow-600", border: "border-yellow-500", text: "text-yellow-600" },
+            red: { bg: "bg-red-600", hover: "hover:bg-red-700", border: "border-red-600", text: "text-red-700" },
+            blue: { bg: "bg-blue-400", hover: "hover:bg-blue-500", border: "border-blue-500", text: "text-blue-600" },
+            exclusion: { bg: "bg-orange-500", hover: "hover:bg-orange-600", border: "border-orange-500", text: "text-orange-600" }
         };
         
-        return `${baseClass} ${colorClasses[action]}`;
+        const style = colorStyles[action];
+        
+        if (isActive) {
+            // AKTÍVNE tlačidlo - pôvodný štýl (farba výplne, biely text)
+            return `${baseClass} ${style.bg} ${style.hover} text-white`;
+        } else {
+            // NEaktívne tlačidlá - biely štýl s farebným rámikom a farebným textom
+            return `${baseClass} bg-white border-2 ${style.border} ${style.text} hover:bg-gray-50`;
+        }
     };
 
     // Načítanie udalostí pre zápas
