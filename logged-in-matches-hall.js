@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNA SYNCHRONIZÁCIA ČASU CEZ HRANICE PERIÓD
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNY VÝPOČET ČASU BEZ PRESTÁVOK
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -587,7 +587,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId]);
     
-    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - SPRÁVNY VÝPOČET
+    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - BEZ PRESTÁVOK
     const matchDataRef = useRef(matchData);
     useEffect(() => {
         matchDataRef.current = matchData;
@@ -607,8 +607,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
-            // 🔥 ZÍSKAME CELKOVÝ ČAS Z APASU
-            // 1. Čas v aktuálnej perióde
+            // 🔥 KĽÚČOVÁ LOGIKA: Čas v aktuálnej perióde (bez prestávok)
             let periodTime = currentMatchData.manualTimeOffset || 0;
             
             // Ak časovač beží, pripočítame uplynutý čas od posledného spustenia
@@ -622,9 +621,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
-            // 🔥 KĽÚČOVÁ LOGIKA: CELKOVÝ čas = (predchádzajúce periódy) + čas v aktuálnej
+            // 🔥 CELKOVÝ čas = súčet časov z predchádzajúcich periód + čas v aktuálnej
+            // Čas prestávky sa NEpočíta!
             let totalMatchTime = periodTime;
             if (currentPeriod > 1) {
+                // Predchádzajúce periódy boli celé odohrané (plný čas)
                 totalMatchTime = ((currentPeriod - 1) * periodLength) + periodTime;
             }
             
@@ -1401,17 +1402,18 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         return () => unsubscribe();
     }, [matchId]);
 
+    // Upravená calculateTotalMatchTime funkcia v MatchTimer komponente
     const calculateTotalMatchTime = () => {
         const periodLengthSeconds = periodDuration * 60;
         const currentPeriodTime = displaySeconds;
-
-        if (period <= 1) {
-            return currentPeriodTime;
+    
+        // 🔥 Celkový čas = súčet časov z predchádzajúcich periód + čas v aktuálnej
+        // Čas prestávky sa NEpočíta
+        let totalTime = currentPeriodTime;
+        if (period > 1) {
+            totalTime = ((period - 1) * periodLengthSeconds) + currentPeriodTime;
         }
         
-        const totalPreviousPeriodsTime = (period - 1) * periodLengthSeconds;
-        const totalTime = totalPreviousPeriodsTime + currentPeriodTime;
-    
         return totalTime;
     };
 
