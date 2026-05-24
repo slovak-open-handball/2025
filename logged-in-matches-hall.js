@@ -2011,15 +2011,15 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const total = localStartOffsetRef.current + elapsed;
         const periodLength = periodDuration * 60;
         let clamped = Math.min(total, periodLength);
-        
+    
         const oldSeconds = displaySecondsRef.current;
         
         // Aktualizujeme čas
         setDisplaySeconds(clamped);
         
-        // 🔥 AK SME DOSIAHLI KONIEC PERIÓDY, ZASTAVÍME ČASOVAČ
-        if (clamped >= periodLength && oldSeconds < periodLength && isRunningRef.current) {
-            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača`);
+        // 🔥 OPRAVENÁ LOGIKA: AK SME DOSIAHLI ALEBO PREKROČILI KONIEC PERIÓDY, ZASTAVÍME ČASOVAČ
+        if (clamped >= periodLength && isRunningRef.current) {
+            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača (čas: ${clamped}s >= ${periodLength}s)`);
             stopTimerAndSave(true);
         }
     };
@@ -2051,15 +2051,13 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 lastServerUpdateRef.current = Date.now();
                 const matchRef = doc(window.db, 'matches', matchId);
                 
-                let newStatus = 'paused';
                 const periodLength = periodDuration * 60;
+                const isMatchComplete = period >= totalPeriods && finalSeconds >= periodLength;
                 
-                // 🔥 AK SME NA KONCI ZÁPASU (všetky periódy odohrané)
-                if (period >= totalPeriods && finalSeconds >= periodLength) {
-                    newStatus = 'completed';
+                if (isMatchComplete) {
+                    // Koniec zápasu
                     console.log(`🏆 Zápas bol ukončený, počítam výsledok z udalostí...`);
                     
-                    // Načítanie udalostí pre výpočet výsledku
                     const eventsRef = collection(window.db, 'matchEvents');
                     const q = query(eventsRef, where('matchId', '==', matchId));
                     const eventsSnapshot = await getDocs(q);
@@ -2070,11 +2068,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     eventsSnapshot.forEach((eventDoc) => {
                         const event = eventDoc.data();
                         if (event.eventType === 'goal') {
-                            if (event.team === 'home') {
-                                homeGoals++;
-                            } else if (event.team === 'away') {
-                                awayGoals++;
-                            }
+                            if (event.team === 'home') homeGoals++;
+                            else if (event.team === 'away') awayGoals++;
                         }
                     });
                     
@@ -2082,7 +2077,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     
                     await updateDoc(matchRef, {
                         manualTimeOffset: finalSeconds,
-                        status: newStatus,
+                        status: 'completed',
                         startedAt: null,
                         pausedAt: Timestamp.now(),
                         updatedAt: Timestamp.now(),
@@ -2096,7 +2091,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         resultCalculatedFromEvents: true
                     });
                 } else {
-                    // 🔥 KONIEC PERIÓDY ALEBO BEŽNÉ ZASTAVENIE - nastavíme status na 'paused'
+                    // Bežné zastavenie alebo koniec periódy
                     await updateDoc(matchRef, {
                         manualTimeOffset: finalSeconds,
                         status: 'paused',
@@ -2104,13 +2099,17 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         pausedAt: Timestamp.now(),
                         updatedAt: Timestamp.now()
                     });
+                    
+                    if (isPeriodEnd) {
+                        console.log(`⏹️ Koniec periódy ${period} - časovač zastavený na čase ${formatTime(finalSeconds)}`);
+                    }
                 }
                 
                 if (onTimeUpdate) onTimeUpdate({ 
                     totalSeconds: finalSeconds, 
                     period, 
                     isRunning: false,
-                    periodEnded: isPeriodEnd && !(period >= totalPeriods && finalSeconds >= periodLength)
+                    periodEnded: isPeriodEnd && !isMatchComplete
                 });
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
@@ -2123,7 +2122,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         if (isRunningRef.current) return;
         const currentSeconds = displaySeconds;
         const periodLength = periodDuration * 60;
-        if (currentSeconds >= periodLength) return;
+        
+        // 🔥 KONTROLA: Nemôžeme spustiť časovač ak sme na konci periódy
+        if (currentSeconds >= periodLength) {
+            console.log(`⚠️ Nemôžete spustiť časovač na konci periódy ${period}`);
+            return;
+        }
         
         startLocalInterval(currentSeconds);
         setIsRunning(true);
@@ -2157,6 +2161,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         if (newSeconds < 0) newSeconds = 0;
         if (newSeconds > periodLength) newSeconds = periodLength;
         setDisplaySeconds(newSeconds);
+        
+        // 🔥 AK SME DOSIAHLI KONIEC PERIÓDY, ZASTAVÍME ČASOVAČ
+        if (newSeconds >= periodLength && isRunningRef.current) {
+            console.log(`⏹️ Koniec periódy ${period} dosiahnutý manuálnym pridaním času - zastavujem časovač`);
+            stopTimerAndSave(true);
+        }
         
         if (isRunningRef.current) {
             startTimeRef.current = Date.now();
@@ -2267,10 +2277,13 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const subtractSecond = () => canSubtractSecond() && addTime(-1);
     const toggleTimer = () => {
         if (match?.status === 'completed') return;
-        
+    
+        const periodLength = periodDuration * 60;
+        const isAtPeriodEnd = displaySeconds >= periodLength;
+    
         // 🔥 KONTROLA: Nemôžeme štartovať na konci periódy
         if (!isRunningRef.current && isAtPeriodEnd) {
-            console.log(`⚠️ Nemôžete spustiť časovač na konci periódy ${period}`);
+            console.log(`⚠️ Nemôžete spustiť časovač na konci periódy ${period} (čas: ${formatTime(displaySeconds)})`);
             return;
         }
         
@@ -2370,9 +2383,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             await stopTimerAndSave();
         }
         
-        // 🔥 PRESUNIEME SA NA ĎALŠIU PERIÓDU - čas zostáva rovnaký (nepočítame prestávku)
-        // Čas sa nevynuluje, pokračuje od rovnakého času (napr. 15:00)
         const newPeriodNum = period + 1;
+        const currentTimeSeconds = displaySeconds;
         
         if (window.db && matchId) {
             try {
@@ -2380,13 +2392,16 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 await updateDoc(matchRef, {
                     currentPeriod: newPeriodNum,
                     status: 'paused',
+                    manualTimeOffset: currentTimeSeconds,  // Zachováme aktuálny čas
                     updatedAt: Timestamp.now()
                 });
                 setPeriod(newPeriodNum);
                 periodRef.current = newPeriodNum;
                 
+                console.log(`⏩ Prepnuté na periódu ${newPeriodNum}, čas zostáva: ${formatTime(currentTimeSeconds)}`);
+                
                 if (onTimeUpdate) onTimeUpdate({ 
-                    totalSeconds: displaySeconds, 
+                    totalSeconds: currentTimeSeconds, 
                     period: newPeriodNum, 
                     isRunning: false 
                 });
