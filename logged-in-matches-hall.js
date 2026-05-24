@@ -380,12 +380,18 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     return unsubscribe;
 };
 
-// OPRAVENÝ Komponent pre odpočet času vylúčenia - plynulý odpočet podľa času zápasu
+// OPRAVENÝ Komponent pre odpočet času vylúčenia - správny odpočet a automatický návrat
 const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTimerRef }) => {
     const [exclusionEndTimeSeconds, setExclusionEndTimeSeconds] = useState(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [isExcluded, setIsExcluded] = useState(false);
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
+    
+    // Získanie referencií na člena pre neskoršie použitie
+    const memberRef = useRef(member);
+    useEffect(() => {
+        memberRef.current = member;
+    }, [member]);
     
     // Sledovanie času zápasu - každých 100ms pre plynulý odpočet
     useEffect(() => {
@@ -402,9 +408,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         
         updateMatchTime();
         
-        // Aktualizácia každých 100ms pre plynulý odpočet
         const interval = setInterval(updateMatchTime, 100);
-        
         return () => clearInterval(interval);
     }, [matchTimerRef]);
     
@@ -442,13 +446,15 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                         if (!latestExclusion || (event.totalTime || 0) > (latestExclusion.totalTime || 0)) {
                             latestExclusion = {
                                 totalTime: event.totalTime || 0,
-                                period: event.period || 1
+                                period: event.period || 1,
+                                docId: doc.id
                             };
                         }
                     } else if (event.eventType === 'reentry') {
                         if (!latestReentry || (event.totalTime || 0) > (latestReentry.totalTime || 0)) {
                             latestReentry = {
-                                totalTime: event.totalTime || 0
+                                totalTime: event.totalTime || 0,
+                                docId: doc.id
                             };
                         }
                     }
@@ -470,7 +476,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         return () => unsubscribe();
     }, [matchId, teamType, member, exclusionDuration]);
     
-    // Odpočet času - aktualizuje sa pri každej zmene currentMatchTime
+    // Odpočet času a automatický návrat
     useEffect(() => {
         if (!isExcluded || exclusionEndTimeSeconds === null) {
             setRemainingSeconds(0);
@@ -482,33 +488,49 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         
         // Ak čas vypršal a hráč bol vylúčený, automaticky ho odhlásime
         if (remaining <= 0 && isExcluded) {
-            setIsExcluded(false);
-            setExclusionEndTimeSeconds(null);
+            console.log(`✅ Čas vylúčenia vypršal pre hráča ${memberRef.current?.firstName} ${memberRef.current?.lastName} v čase ${currentMatchTime}s`);
             
-            // Automaticky uložíme udalosť návratu z vylúčenia do databázy
-            if (window.db && matchId && matchTimerRef && matchTimerRef.current) {
+            // Získame potrebné údaje pre reentry event
+            const currentMember = memberRef.current;
+            if (currentMember && window.db && matchId && matchTimerRef?.current) {
                 const timer = matchTimerRef.current;
+                
+                let targetTypeKey = currentMember.dbArrayName;
+                let targetIndex = currentMember.originalIndex;
+                
+                if (!targetTypeKey) {
+                    if (currentMember.type === 'Hráč') targetTypeKey = 'playerDetails';
+                    else if (currentMember.type === 'Člen RT (muž)') targetTypeKey = 'menTeamMemberDetails';
+                    else if (currentMember.type === 'Člen RT (žena)') targetTypeKey = 'womenTeamMemberDetails';
+                    targetIndex = currentMember.originalIndex !== undefined ? currentMember.originalIndex : 0;
+                }
+                
+                // Uloženie udalosti návratu
                 const reentryEvent = {
                     matchId: matchId,
                     totalTime: currentMatchTime,
                     period: timer.getCurrentPeriod ? timer.getCurrentPeriod() : 1,
                     eventType: 'reentry',
                     team: teamType,
-                    memberType: member.type,
+                    memberType: currentMember.type,
                     memberTypeKey: targetTypeKey,
                     memberIndex: targetIndex,
                     userId: null,
-                    categoryName: member.categoryName,
+                    categoryName: currentMember.categoryName,
                     createdAt: Timestamp.now(),
                     timestamp: Timestamp.now()
                 };
                 
-                // Uloženie udalosti návratu
                 const eventsRef = collection(window.db, 'matchEvents');
-                addDoc(eventsRef, reentryEvent).catch(err => console.error('Chyba pri ukladaní návratu:', err));
+                addDoc(eventsRef, reentryEvent)
+                    .then(() => console.log(`✅ Automaticky uložený návrat z vylúčenia pre hráča`))
+                    .catch(err => console.error('Chyba pri ukladaní návratu:', err));
             }
+            
+            setIsExcluded(false);
+            setExclusionEndTimeSeconds(null);
         }
-    }, [currentMatchTime, isExcluded, exclusionEndTimeSeconds]);
+    }, [currentMatchTime, isExcluded, exclusionEndTimeSeconds, matchId, teamType, matchTimerRef]);
     
     if (!isExcluded || remainingSeconds <= 0) return null;
     
