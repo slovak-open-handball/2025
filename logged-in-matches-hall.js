@@ -2556,9 +2556,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime(displaySeconds)),
                 React.createElement('div', { className: 'text-sm text-gray-500' }, 
                     `Perióda ${period} / ${totalPeriods}`
-                ),
-                isAtPeriodEnd && React.createElement('div', { className: 'mt-1 text-xs text-red-500 font-medium' }, 
-                    '⏹️ Koniec periódy - použite tlačidlo "Ďalšia perióda"'
                 )
             ),
             
