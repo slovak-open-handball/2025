@@ -1435,7 +1435,15 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
         
-        const totalMatchTime = calculateTotalMatchTime();
+        let totalMatchTime = displaySeconds;
+
+        if (period > 1) {
+            // displaySeconds je čas v aktuálnej perióde, ale potrebujeme celkový čas
+            // Takže ho musíme vypočítať správne
+            const periodLengthSeconds = periodDuration * 60;
+            totalMatchTime = ((period - 1) * periodLengthSeconds) + displaySeconds;
+        }
+        
         const currentPeriodNum = period;
         const categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
