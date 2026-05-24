@@ -380,7 +380,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     return unsubscribe;
 };
 
-// Komponent pre zobrazenie štatistík hráča/člena
+// Komponent pre zobrazenie štatistík hráča/člena ako tabuľka
 const TeamStats = ({ memberName, memberType, matchId, teamType, memberTypeKey, memberIndex }) => {
     const [stats, setStats] = useState({
         goals: 0,
@@ -457,7 +457,7 @@ const TeamStats = ({ memberName, memberType, matchId, teamType, memberTypeKey, m
         return () => unsubscribe();
     }, [matchId, teamType, memberTypeKey, memberIndex]);
     
-    // Ak nie sú žiadne štatistiky a nie je loading, nezobrazujeme nič
+    // Zistenie, či má nejaké štatistiky
     const hasStats = stats.goals > 0 || stats.penalties > 0 || stats.convertedPenalties > 0 || 
                      stats.yellowCards > 0 || stats.redCards > 0 || stats.blueCards > 0 || 
                      stats.exclusions > 0;
@@ -465,7 +465,7 @@ const TeamStats = ({ memberName, memberType, matchId, teamType, memberTypeKey, m
     if (loading) {
         return React.createElement(
             'div',
-            { className: 'mt-2 text-xs text-gray-400 animate-pulse' },
+            { className: 'mt-2 text-xs text-gray-400 animate-pulse pl-6' },
             'Načítavam štatistiky...'
         );
     }
@@ -474,47 +474,110 @@ const TeamStats = ({ memberName, memberType, matchId, teamType, memberTypeKey, m
         return null;
     }
     
+    // Dáta pre tabuľku - iba tie, ktoré majú hodnoty
+    const tableRows = [];
+    
+    if (stats.goals > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'goals', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Góly'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-green-600 text-sm' }, stats.goals)
+            )
+        );
+    }
+    
+    if (stats.convertedPenalties > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'penalties', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Premenené 7m'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-teal-600 text-sm' }, stats.convertedPenalties)
+            )
+        );
+    }
+    
+    if (stats.penalties > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'missedPenalties', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Nepremenené 7m'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-red-500 text-sm' }, stats.penalties)
+            )
+        );
+    }
+    
+    if (stats.yellowCards > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'yellowCards', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Žlté karty'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-yellow-600 text-sm' }, stats.yellowCards)
+            )
+        );
+    }
+    
+    if (stats.redCards > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'redCards', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Červené karty'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-red-700 text-sm' }, stats.redCards)
+            )
+        );
+    }
+    
+    if (stats.blueCards > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'blueCards', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Modré karty'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-blue-600 text-sm' }, stats.blueCards)
+            )
+        );
+    }
+    
+    if (stats.exclusions > 0) {
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'exclusions', className: 'border-b border-gray-100' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs' }, 'Vylúčenia'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-orange-600 text-sm' }, stats.exclusions)
+            )
+        );
+    }
+    
+    // Celkové strely (góly + nepremenené 7m)
+    const totalShots = stats.goals + stats.penalties;
+    if (totalShots > stats.goals && totalShots > 0) {
+        const successRate = Math.round((stats.goals / totalShots) * 100);
+        tableRows.push(
+            React.createElement(
+                'tr',
+                { key: 'efficiency', className: 'border-b border-gray-100 bg-gray-50' },
+                React.createElement('td', { className: 'py-1 pr-4 text-gray-600 text-xs font-medium' }, 'Úspešnosť streľby'),
+                React.createElement('td', { className: 'py-1 text-right font-bold text-gray-700 text-sm' }, `${stats.goals}/${totalShots} (${successRate}%)`)
+            )
+        );
+    }
+    
     return React.createElement(
         'div',
-        { className: 'mt-2 pl-6 border-l-2 border-gray-100' },
+        { className: 'mt-2 ml-6 bg-gray-50 rounded-lg overflow-hidden border border-gray-100' },
         React.createElement(
-            'div',
-            { className: 'flex flex-wrap gap-2 text-xs' },
-            stats.goals > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-futbol text-xs' }),
-                React.createElement('span', {}, stats.goals)
-            ),
-            stats.convertedPenalties > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-xs' }),
-                React.createElement('span', {}, `${stats.convertedPenalties}/7m`)
-            ),
-            stats.yellowCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.yellowCards)
-            ),
-            stats.redCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.redCards)
-            ),
-            stats.blueCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.blueCards)
-            ),
-            stats.exclusions > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full' },
-                React.createElement('i', { className: 'fa-solid fa-clock text-xs' }),
-                React.createElement('span', {}, stats.exclusions)
+            'table',
+            { className: 'w-full text-xs' },
+            React.createElement(
+                'tbody',
+                null,
+                tableRows
             )
         )
     );
