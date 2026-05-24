@@ -566,7 +566,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     
     // STATE PRE AKTUÁLNY ČAS (celkový čas zápasu v sekundách)
     const [currentTotalTime, setCurrentTotalTime] = useState(0);
-    const [periodLengthSeconds, setPeriodLengthSeconds] = useState(1200); // 🔥 DEFAULT 20 minút = 1200 sekúnd
+    const [periodLengthSeconds, setPeriodLengthSeconds] = useState(0); 
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
     
