@@ -1,4 +1,4 @@
-// account.js
+// z-account.js
 // Tento súbor predpokladá, že Firebase SDK je už načítané a inicializované
 // v z-account.html a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
