@@ -620,7 +620,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         };
     }, []);
     
-    // Načítanie dát zápasu z Firebase
+    // V useEffect pre načítanie match data:
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -739,7 +739,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        console.log(`[TeamMembersList] Výpočet vylúčených hráčov, currentPeriodTime=${currentPeriodTime}s`);
+        console.log(`[TeamMembersList] Výpočet vylúčených hráčov, currentPeriodTime=${currentPeriodTime}s, currentPeriod=${matchData?.currentPeriod || 1}`);
         
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where('matchId', '==', matchId));
@@ -771,11 +771,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         event.memberIndex === targetIndex &&
                         event.eventType === 'exclusion') {
                         
-                        // 🔥 DÔLEŽITÉ: Teraz potrebujeme aj period a periodTime z udalosti
-                        // Ak nemáme periodTime, musíme ho odvodiť z totalTime
+                        // 🔥 Získame periodTime z udalosti alebo ho odvodíme z totalTime
                         let exclusionPeriodTime = event.periodTime;
                         if (exclusionPeriodTime === undefined && event.totalTime !== undefined) {
-                            // Odvodenie periodTime z totalTime (ak poznáme dĺžku periódy)
                             const periodLength = periodLengthSeconds;
                             const eventPeriod = event.period || 1;
                             exclusionPeriodTime = event.totalTime - ((eventPeriod - 1) * periodLength);
@@ -797,48 +795,86 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     return;
                 }
                 
-                // 🔥 KĽÚČOVÁ LOGIKA: Počítame s periodTime, nie s totalTime
+                const currentPeriodNum = matchData?.currentPeriod || 1;
+                const periodLength = periodLengthSeconds;
+                
+                // 🔥 KĽÚČOVÁ LOGIKA: Počítame s periodTime a prenášame vylúčenia medzi periódami
                 let totalPenaltyEndPeriodTime = 0;
-                let lastExclusionPeriod = 1;
+                let totalPenaltyEndTotalTime = 0;
                 
                 for (let i = 0; i < exclusions.length; i++) {
                     const exclusion = exclusions[i];
-                    const exclusionStartPeriodTime = exclusion.periodTime;
                     const exclusionPeriod = exclusion.period;
+                    const exclusionPeriodTime = exclusion.periodTime;
                     
-                    // 🔥 AK JE VYLÚČENIE Z PREDCHÁDZAJÚCEJ PERIÓDY
-                    if (exclusionPeriod < (matchData?.currentPeriod || 1)) {
-                        // Vylúčenie z minulej periódy už neplatí (prestávka ho vynulovala)
-                        console.log(`[TeamMembersList] Vylúčenie z periódy ${exclusionPeriod} sa ignoruje (sme v perióde ${matchData?.currentPeriod || 1})`);
+                    // 🔥 VYPOČÍTAME, KEDY TOTO VYLÚČENIE KONČÍ V CELKOVOM ČASE
+                    let exclusionEndTotalTime;
+                    let exclusionEndPeriodTime;
+                    
+                    if (exclusionPeriod === currentPeriodNum) {
+                        // Vylúčenie v aktuálnej perióde
+                        if (exclusionPeriodTime >= totalPenaltyEndPeriodTime) {
+                            exclusionEndPeriodTime = exclusionPeriodTime + (exclusionDuration * 60);
+                        } else {
+                            exclusionEndPeriodTime = totalPenaltyEndPeriodTime + (exclusionDuration * 60);
+                        }
+                        exclusionEndTotalTime = ((currentPeriodNum - 1) * periodLength) + exclusionEndPeriodTime;
+                    } else if (exclusionPeriod < currentPeriodNum) {
+                        // Vylúčenie z predchádzajúcej periódy
+                        // Vypočítame, kedy by skončilo v tej perióde
+                        let endPeriodTimeInExclusionPeriod = exclusionPeriodTime + (exclusionDuration * 60);
+                        let endTotalTimeInExclusionPeriod = ((exclusionPeriod - 1) * periodLength) + endPeriodTimeInExclusionPeriod;
+                        
+                        // 🔥 KOĽKO ČASU ZOSTÁVALO NA KONCI TEJ PERIÓDY?
+                        const periodEndTotalTime = exclusionPeriod * periodLength;
+                        let remainingAtPeriodEnd = 0;
+                        
+                        if (endTotalTimeInExclusionPeriod > periodEndTotalTime) {
+                            remainingAtPeriodEnd = endTotalTimeInExclusionPeriod - periodEndTotalTime;
+                        }
+                        
+                        // Ak zostával čas, prenášame ho do aktuálnej periódy
+                        if (remainingAtPeriodEnd > 0) {
+                            // Začiatok v aktuálnej perióde je od 0
+                            let startInCurrentPeriod = 0;
+                            
+                            // Ak už máme nejaký predchádzajúci koniec v aktuálnej perióde
+                            if (totalPenaltyEndPeriodTime > startInCurrentPeriod) {
+                                startInCurrentPeriod = totalPenaltyEndPeriodTime;
+                            }
+                            
+                            exclusionEndPeriodTime = startInCurrentPeriod + remainingAtPeriodEnd;
+                            exclusionEndTotalTime = ((currentPeriodNum - 1) * periodLength) + exclusionEndPeriodTime;
+                        } else {
+                            // Vylúčenie skončilo ešte v predchádzajúcej perióde - ignorujeme ho
+                            continue;
+                        }
+                    } else {
+                        // Vylúčenie z budúcej periódy (nemalo by nastať)
                         continue;
                     }
                     
-                    // Ak sme v rovnakej perióde ako vylúčenie
-                    if (exclusionPeriod === (matchData?.currentPeriod || 1)) {
-                        if (exclusionStartPeriodTime >= totalPenaltyEndPeriodTime) {
-                            totalPenaltyEndPeriodTime = exclusionStartPeriodTime + (exclusionDuration * 60);
-                        } else {
-                            totalPenaltyEndPeriodTime = totalPenaltyEndPeriodTime + (exclusionDuration * 60);
-                        }
-                        lastExclusionPeriod = exclusionPeriod;
-                    }
+                    totalPenaltyEndPeriodTime = exclusionEndPeriodTime;
+                    totalPenaltyEndTotalTime = exclusionEndTotalTime;
                 }
                 
                 // Zistíme, či je hráč momentálne vylúčený (porovnávame periodTime)
-                const isCurrentlyExcluded = currentPeriodTime < totalPenaltyEndPeriodTime;
+                const currentTotalTime = ((currentPeriodNum - 1) * periodLength) + currentPeriodTime;
+                const isCurrentlyExcluded = currentTotalTime < totalPenaltyEndTotalTime;
                 
                 if (isCurrentlyExcluded) {
-                    const remaining = Math.ceil(totalPenaltyEndPeriodTime - currentPeriodTime);
+                    const remaining = Math.ceil(totalPenaltyEndTotalTime - currentTotalTime);
                     excluded[member.originalIndex] = {
                         isExcluded: true,
                         remainingSeconds: remaining,
+                        endTotalTime: totalPenaltyEndTotalTime,
                         endPeriodTime: totalPenaltyEndPeriodTime,
                         exclusionCount: exclusions.length
                     };
-                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: vylúčený, zostáva ${remaining}s (endPeriodTime=${totalPenaltyEndPeriodTime}s, currentPeriodTime=${currentPeriodTime}s)`);
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: vylúčený, zostáva ${remaining}s (endTotalTime=${totalPenaltyEndTotalTime}s, currentTotalTime=${currentTotalTime}s)`);
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
-                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: NIE JE vylúčený (endPeriodTime=${totalPenaltyEndPeriodTime}s, currentPeriodTime=${currentPeriodTime}s)`);
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: NIE JE vylúčený (endTotalTime=${totalPenaltyEndTotalTime}s, currentTotalTime=${currentTotalTime}s)`);
                 }
             });
             
