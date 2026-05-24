@@ -2722,7 +2722,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 ),
                 React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2' },
                     React.createElement('button', { 
-                        onClick: resetTime, 
+                        onClick: () => setShowResetModal(true), 
                         className: 'px-4 py-2 rounded-lg font-semibold transition-colors text-sm bg-yellow-500 hover:bg-yellow-600 text-white cursor-pointer'
                     }, 
                         React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset'
