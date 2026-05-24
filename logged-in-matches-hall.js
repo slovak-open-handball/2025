@@ -1771,7 +1771,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         {
                             onClick: handleResetConfirm,
                             disabled: resetLoading,
-                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+                            className: 'px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-700 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
                         },
                         resetLoading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
                         resetLoading ? 'Resetujem...' : 'Potvrdiť reset'
