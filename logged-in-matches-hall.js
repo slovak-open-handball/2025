@@ -549,7 +549,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         'div',
         { className: 'mt-1 text-xs text-orange-600 bg-orange-50 rounded px-2 py-0.5 inline-block' },
         React.createElement('i', { className: 'fa-solid fa-hourglass-half mr-1' }),
-        `Zostáva vylúčený: ${timeDisplay}`
+        `Zostáva: ${timeDisplay}`
     );
 };
 
@@ -1199,7 +1199,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         'div',
                                         { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
-                                        React.createElement('span', {}, `Zostáva vylúčený: ${timeDisplay}`)
+                                        React.createElement('span', {}, `Zostáva: ${timeDisplay}`)
                                     )
                                 )
                             );
