@@ -957,10 +957,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 const mins = Math.floor(exclusionInfo.remainingSeconds / 60);
                 const secs = exclusionInfo.remainingSeconds % 60;
                 const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-                console.log(`❌ Hráč ${member.firstName} ${member.lastName} je vylúčený! Zostáva vylúčený: ${timeDisplay}`);
-                
-                // Zobrazenie alertu pre používateľa
-                alert(`Hráč ${member.firstName} ${member.lastName} je vylúčený! Zostáva vylúčený: ${timeDisplay}\nNie je možné mu priradiť gól alebo 7m.`);
+                console.log(`❌ Hráč ${member.firstName} ${member.lastName} je vylúčený! Zostáva vylúčený: ${timeDisplay}`);                
                 return;
             }
         }
