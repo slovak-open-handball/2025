@@ -1284,6 +1284,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     
     const matchTimerRef = useRef(null);
 
+    const [editingMode, setEditingMode] = React.useState(false);
+    const [editingEvent, setEditingEvent] = React.useState(null);
+
     useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
     useEffect(() => { periodDurationRef.current = periodDuration; }, [periodDuration]);
     useEffect(() => { totalPeriodsRef.current = totalPeriods; }, [totalPeriods]);
@@ -1492,6 +1495,19 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     };
 
     const saveMatchEventInternalWithAction = async (teamType, member, action) => {
+        // Ak sme v režime editácie, zavoláme funkciu pre editáciu
+        if (editingMode && editingEvent) {
+            if (window.onEventEdited && typeof window.onEventEdited === 'function') {
+                const success = await window.onEventEdited(teamType, member, editingEvent.id);
+                if (success) {
+                    setEditingMode(false);
+                    setEditingEvent(null);
+                    setSelectedActions(new Set());
+                }
+                return success;
+            }
+            return false;
+        }
         // Ak nie je žiadna akcia vybraná, nič neukladáme
         if (selectedActions.size === 0 || !window.db || !matchId) {
             return false;
@@ -1673,6 +1689,41 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         },
         getCurrentPeriod: () => {
             return period;
+        },
+        setEditingMode: (isEditing, event) => {
+            setEditingMode(isEditing);
+            setEditingEvent(event);
+            if (isEditing && event) {
+                // Nastavíme vybrané akcie podľa typu udalosti
+                let actions = new Set();
+                if (event.eventType === 'goal') {
+                    if (event.eventSubtype === 'converted_penalty') {
+                        actions.add('7m');
+                        actions.add('goal');
+                    } else {
+                        actions.add('goal');
+                    }
+                } else if (event.eventType === 'penalty') {
+                    actions.add('7m');
+                } else if (event.eventType === 'card') {
+                    if (event.eventSubtype === 'yellow') actions.add('yellow');
+                    else if (event.eventSubtype === 'red') actions.add('red');
+                    else if (event.eventSubtype === 'blue') actions.add('blue');
+                } else if (event.eventType === 'exclusion') {
+                    actions.add('exclusion');
+                }
+                setSelectedActions(actions);
+            }
+        },
+        clearEditingMode: () => {
+            setEditingMode(false);
+            setEditingEvent(null);
+        },
+        clearSelectedActions: () => {
+            setSelectedActions(new Set());
+        },
+        setSelectedActions: (actions) => {
+            setSelectedActions(actions);
         }
     }));
 
@@ -1727,6 +1778,58 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 console.error('Chyba pri ukladaní manuálneho výsledku:', err);
             }
         }
+    };
+
+    const renderDeleteConfirmModal = () => {
+        if (!showDeleteConfirmModal) return null;
+        
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                onClick: () => !deleteLoading && setShowDeleteConfirmModal(false)
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold text-gray-800 mb-4' },
+                    'Vymazať udalosť'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-6' },
+                    'Naozaj chcete vymazať túto udalosť? Táto akcia je nevratná.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-3 justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowDeleteConfirmModal(false),
+                            disabled: deleteLoading,
+                            className: 'px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer disabled:opacity-50'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleDeleteEvent,
+                            disabled: deleteLoading,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2'
+                        },
+                        deleteLoading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
+                        deleteLoading ? 'Mažem...' : 'Potvrdiť vymazanie'
+                    )
+                )
+            )
+        );
     };
 
     const renderResetModal = () => {
@@ -2894,6 +2997,145 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [calculatedHomeScore, setCalculatedHomeScore] = React.useState(0);
     const [calculatedAwayScore, setCalculatedAwayScore] = React.useState(0);
     const [useCalculatedScore, setUseCalculatedScore] = React.useState(false);
+
+    const [editingEventId, setEditingEventId] = React.useState(null);
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = React.useState(false);
+    const [eventToDelete, setEventToDelete] = React.useState(null);
+    const [deleteLoading, setDeleteLoading] = React.useState(false);
+
+    // Funkcia na zmazanie udalosti
+    const handleDeleteEvent = async () => {
+        if (!eventToDelete || !window.db) return;
+        
+        setDeleteLoading(true);
+        try {
+            const eventRef = doc(window.db, 'matchEvents', eventToDelete.id);
+            await deleteDoc(eventRef);
+            console.log(`✅ Udalosť ${eventToDelete.id} bola vymazaná`);
+            setShowDeleteConfirmModal(false);
+            setEventToDelete(null);
+        } catch (err) {
+            console.error('Chyba pri mazaní udalosti:', err);
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+    
+    // Funkcia na otvorenie modálneho okna pre mazanie
+    const openDeleteConfirmModal = (event, e) => {
+        e.stopPropagation();
+        setEventToDelete(event);
+        setShowDeleteConfirmModal(true);
+    };
+    
+    // Funkcia na začatie editácie udalosti
+    const startEditingEvent = (event, e) => {
+        e.stopPropagation();
+        setEditingEventId(event.id);
+        
+        // Nastavíme timer na editáciu podľa udalosti
+        if (matchTimerRef.current && typeof matchTimerRef.current.setEditingMode === 'function') {
+            matchTimerRef.current.setEditingMode(true, event);
+        }
+        
+        // Nastavíme vybrané akcie podľa typu udalosti
+        if (matchTimerRef.current && typeof matchTimerRef.current.setSelectedActions === 'function') {
+            let actions = new Set();
+            if (event.eventType === 'goal') {
+                if (event.eventSubtype === 'converted_penalty') {
+                    actions.add('7m');
+                    actions.add('goal');
+                } else {
+                    actions.add('goal');
+                }
+            } else if (event.eventType === 'penalty') {
+                actions.add('7m');
+            } else if (event.eventType === 'card') {
+                if (event.eventSubtype === 'yellow') actions.add('yellow');
+                else if (event.eventSubtype === 'red') actions.add('red');
+                else if (event.eventSubtype === 'blue') actions.add('blue');
+            } else if (event.eventType === 'exclusion') {
+                actions.add('exclusion');
+            }
+            matchTimerRef.current.setSelectedActions(actions);
+        }
+    };
+    
+    // Funkcia na uloženie editovanej udalosti (prepíše pôvodnú)
+    const saveEditedEvent = async (teamType, member, eventId) => {
+        if (!window.db || !eventId) return false;
+        
+        try {
+            // Získame aktuálny stav časovača a vybrané akcie
+            const selectedActionsSet = matchTimerRef.current?.getSelectedActions() || new Set();
+            if (selectedActionsSet.size === 0) return false;
+            
+            // Zistíme nový typ udalosti
+            let newEventType = '';
+            let newEventSubtype = null;
+            
+            if (selectedActionsSet.has('7m') && selectedActionsSet.has('goal')) {
+                newEventType = 'goal';
+                newEventSubtype = 'converted_penalty';
+            } else if (selectedActionsSet.has('goal')) {
+                newEventType = 'goal';
+            } else if (selectedActionsSet.has('7m')) {
+                newEventType = 'penalty';
+                newEventSubtype = '7m';
+            } else if (selectedActionsSet.has('yellow')) {
+                newEventType = 'card';
+                newEventSubtype = 'yellow';
+            } else if (selectedActionsSet.has('red')) {
+                newEventType = 'card';
+                newEventSubtype = 'red';
+            } else if (selectedActionsSet.has('blue')) {
+                newEventType = 'card';
+                newEventSubtype = 'blue';
+            } else if (selectedActionsSet.has('exclusion')) {
+                newEventType = 'exclusion';
+            } else {
+                return false;
+            }
+            
+            // Aktualizujeme existujúcu udalosť (bez zmeny času)
+            const eventRef = doc(window.db, 'matchEvents', eventId);
+            await updateDoc(eventRef, {
+                eventType: newEventType,
+                eventSubtype: newEventSubtype,
+                team: teamType,
+                memberType: member.type,
+                memberTypeKey: member.typeKey,
+                memberIndex: member.index,
+                updatedAt: Timestamp.now()
+                // Čas (totalTime, periodTime, period) zostáva nezmenený
+            });
+            
+            // Vyčistíme editáciu
+            setEditingEventId(null);
+            if (matchTimerRef.current && typeof matchTimerRef.current.clearEditingMode === 'function') {
+                matchTimerRef.current.clearEditingMode();
+            }
+            if (matchTimerRef.current && typeof matchTimerRef.current.clearSelectedActions === 'function') {
+                matchTimerRef.current.clearSelectedActions();
+            }
+            
+            return true;
+        } catch (err) {
+            console.error('Chyba pri editácii udalosti:', err);
+            return false;
+        }
+    };
+    
+    // Funkcia na zrušenie editácie
+    const cancelEditing = () => {
+        setEditingEventId(null);
+        if (matchTimerRef.current && typeof matchTimerRef.current.clearEditingMode === 'function') {
+            matchTimerRef.current.clearEditingMode();
+        }
+        if (matchTimerRef.current && typeof matchTimerRef.current.clearSelectedActions === 'function') {
+            matchTimerRef.current.clearSelectedActions();
+        }
+    };
     
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
@@ -2923,6 +3165,16 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return { homeGoals, awayGoals };
     };
+
+    React.useEffect(() => {
+        window.onEventEdited = async (teamType, member, eventId) => {
+            return await saveEditedEvent(teamType, member, eventId);
+        };
+        
+        return () => {
+            delete window.onEventEdited;
+        };
+    }, []);
 
     React.useEffect(() => {
         // Ak je resetComplete a resetEvents, vynulujeme vypočítané skóre
@@ -3289,6 +3541,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     };
                                     
                                     const formattedTime = formatMatchTime(event);
+
+                                    const isEditing = editingEventId === event.id;
+                                    const rowHoverClass = "group hover:bg-blue-50 transition-colors cursor-pointer";
+                                    const rowClass = `${rowHoverClass} ${isEditing ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`;
                                     
                                     return React.createElement(
                                         'tr',
@@ -3327,11 +3583,51 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti
+                                        // Čas udalosti - s hover ikonami
                                         React.createElement(
                                             'td',
-                                            { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600' },
-                                            formattedTime
+                                            { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
+                                            !isEditing ? React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-center gap-2' },
+                                                React.createElement('span', {}, formattedTime),
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'hidden group-hover:flex items-center gap-1 absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-lg shadow-sm px-1 py-0.5' },
+                                                    React.createElement(
+                                                        'button',
+                                                        {
+                                                            onClick: (e) => startEditingEvent(event, e),
+                                                            className: 'text-blue-500 hover:text-blue-700 p-1 rounded transition-colors cursor-pointer',
+                                                            title: 'Upraviť udalosť'
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-pen text-sm' })
+                                                    ),
+                                                    React.createElement(
+                                                        'button',
+                                                        {
+                                                            onClick: (e) => openDeleteConfirmModal(event, e),
+                                                            className: 'text-red-500 hover:text-red-700 p-1 rounded transition-colors cursor-pointer',
+                                                            title: 'Vymazať udalosť'
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                    )
+                                                )
+                                            ) : React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-center gap-1' },
+                                                React.createElement('span', { className: 'text-yellow-600 font-semibold' }, 'EDIT'),
+                                                React.createElement('span', {}, formattedTime),
+                                                React.createElement(
+                                                    'button',
+                                                    {
+                                                        onClick: () => cancelEditing(),
+                                                        className: 'text-gray-500 hover:text-gray-700 ml-1 cursor-pointer',
+                                                        title: 'Zrušiť editáciu'
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-times text-xs' })
+                                                )
+                                            )
                                         ),
                                         
                                         // Ikona udalosti (pravá)
@@ -3854,7 +4150,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         ),
         
         // Box s udalosťami zápasu (pod boxmi členov tímov)
-        renderMatchEvents()
+        renderMatchEvents(),
+        renderDeleteConfirmModal()
     );
 };
 
