@@ -1194,7 +1194,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         // ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - POUŽÍVAME UNIKÁTNY KĽÚČ
                         const uniqueKey = `${member.type}_${member.originalIndex}`;
                         const exclusionInfo = excludedMembers[uniqueKey];
-                        const isExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
 
                         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
                         const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
