@@ -1780,58 +1780,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         }
     };
 
-    const renderDeleteConfirmModal = () => {
-        if (!showDeleteConfirmModal) return null;
-        
-        return React.createElement(
-            'div',
-            { 
-                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
-                onClick: () => !deleteLoading && setShowDeleteConfirmModal(false)
-            },
-            React.createElement(
-                'div',
-                { 
-                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
-                    onClick: (e) => e.stopPropagation()
-                },
-                React.createElement(
-                    'h3',
-                    { className: 'text-xl font-bold text-gray-800 mb-4' },
-                    'Vymazať udalosť'
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-600 mb-6' },
-                    'Naozaj chcete vymazať túto udalosť? Táto akcia je nevratná.'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex gap-3 justify-end' },
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setShowDeleteConfirmModal(false),
-                            disabled: deleteLoading,
-                            className: 'px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer disabled:opacity-50'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: handleDeleteEvent,
-                            disabled: deleteLoading,
-                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2'
-                        },
-                        deleteLoading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
-                        deleteLoading ? 'Mažem...' : 'Potvrdiť vymazanie'
-                    )
-                )
-            )
-        );
-    };
-
     const renderResetModal = () => {
         if (!showResetModal) return null;
         
@@ -2999,9 +2947,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [useCalculatedScore, setUseCalculatedScore] = React.useState(false);
 
     const [editingEventId, setEditingEventId] = React.useState(null);
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = React.useState(false);
-    const [eventToDelete, setEventToDelete] = React.useState(null);
-    const [deleteLoading, setDeleteLoading] = React.useState(false);
 
     // Funkcia na zmazanie udalosti
     const handleDeleteEvent = async () => {
@@ -4150,8 +4095,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         ),
         
         // Box s udalosťami zápasu (pod boxmi členov tímov)
-        renderMatchEvents(),
-        renderDeleteConfirmModal()
+        renderMatchEvents()
     );
 };
 
