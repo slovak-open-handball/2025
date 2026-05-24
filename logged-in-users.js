@@ -16,7 +16,8 @@ import {
   setDoc,
   serverTimestamp,
   deleteField,
-  getDocs // Pridané pre načítanie hál
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
