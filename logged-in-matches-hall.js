@@ -2728,7 +2728,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset'
                     )
                 )
-            )
+            ),
+            renderResetModal()
         );
     }
     
