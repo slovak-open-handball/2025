@@ -2816,24 +2816,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             if (window.__pendingAssignFilters) delete window.__pendingAssignFilters;
         }
     }, [isOpen, match, initialFilters]);
-        
-        // Reset pri zatvorení
-        if (!isOpen) {
-            setInitialized(false);
-            setSelectedHallId('');
-            setSelectedDate('');
-            setSelectedTime('');
-            setHallStartTime(null);
-            setTimeError('');
-            setExistingMatches([]);
-            setOverlappingMatches([]);
-            setSuggestedTime(null);
-            setShouldSetDateFromFilter(false);
-            setAvailableDates([]); // Resetujeme dátumy
-            // Vyčistíme pendingAssignFilters pri zatvorení
-            if (window.__pendingAssignFilters) delete window.__pendingAssignFilters;
-        }
-    }, [isOpen, match, initialFilters]);
 
     // Dodatočný useEffect pre nastavenie dátumu z filtra, keď sa načítajú dátumy
     useEffect(() => {
