@@ -4360,7 +4360,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         hallId: targetHallId,
                         date: !isWholeHall ? targetDate : '',
                         updatedAt: Timestamp.now(),
-                        updatedBy: userProfileData?.email || 'unknown'
                     }, { merge: true });
                 } else if (targetScheduleData && !isWholeHall) {
                     // Ak zdroj nemá nastavenia, ale cieľ áno, odstránime cieľové
@@ -4374,7 +4373,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         hallId: sourceHallId,
                         date: !isWholeHall ? sourceDate : '',
                         updatedAt: Timestamp.now(),
-                        updatedBy: userProfileData?.email || 'unknown'
                     }, { merge: true });
                 } else if (sourceScheduleData && !isWholeHall) {
                     // Ak cieľ nemá nastavenia, ale zdroj áno, odstránime zdrojové
@@ -5106,7 +5104,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 date: dateStr,
                 startTime: startTime,
                 updatedAt: Timestamp.now(),
-                updatedBy: userProfileData?.email || 'unknown'
             }, { merge: true });
 
             // Manuálne aktualizujeme lokálny state pre okamžité zobrazenie
@@ -5116,7 +5113,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     ...prev[scheduleId],
                     startTime: startTime,
                     updatedAt: Timestamp.now(),
-                    updatedBy: userProfileData?.email || 'unknown'
                 }
             }));
 
