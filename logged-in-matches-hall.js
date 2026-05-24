@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - FUNKČNÝ ODPOČET VYLÚČENIA
+// OPRAVENÝ TeamMembersList KOMPONENT - FUNKČNÝ ODPOČET S AUTOMATICKÝM ZMIZENÍM
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -755,14 +755,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     }
                 }
                 
-                // Zistíme, či je hráč momentálne vylúčený (porovnanie s aktuálnym časom)
+                // 🔥 KĽÚČOVÁ OPRAVA: Zistíme, či je hráč momentálne vylúčený (porovnanie s aktuálnym časom)
                 const isCurrentlyExcluded = currentTotalTime < totalPenaltyEndTotalTime;
                 
                 if (isCurrentlyExcluded) {
-                    const remaining = Math.ceil(totalPenaltyEndTotalTime - currentTotalTime);
+                    const remaining = Math.max(0, Math.ceil(totalPenaltyEndTotalTime - currentTotalTime));
                     excluded[member.originalIndex] = {
                         isExcluded: true,
-                        remainingSeconds: remaining > 0 ? remaining : 0,
+                        remainingSeconds: remaining,
                         endTotalTime: totalPenaltyEndTotalTime,
                         exclusionCount: exclusions.length
                     };
@@ -775,6 +775,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             });
             
+            // 🔥 AKTUALIZUJEME STATE - TO SPUSTÍ PREKRESLENIE UI
             setExcludedPlayers(excluded);
         });
         
@@ -1054,6 +1055,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     });
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const allMembersSorted = [...sortedPlayers, ...rtMembers];
+    
+    // Debug log pre sledovanie zmien
+    console.log(`[TeamMembersList] Počet vylúčených hráčov: ${Object.values(excludedPlayers).filter(e => e.isExcluded).length}`);
     
     return React.createElement(
         'div',
