@@ -3582,23 +3582,26 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti - pri hover sa zobrazia ikony namiesto času
+                                        // Čas udalosti - pri hover sa čas nahradí ikonami
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
                                             !isEditing ? React.createElement(
                                                 'div',
-                                                { className: 'relative w-full flex justify-center' },
-                                                // Čas - zobrazí sa normálne, pri hover na riadku sa skryje
+                                                { className: 'relative flex justify-center items-center min-w-[60px]' },
+                                                // Čas - normálne viditeľný
                                                 React.createElement(
                                                     'span', 
-                                                    { className: 'group-hover:hidden block transition-opacity' }, 
+                                                    { className: 'group-hover:hidden' }, 
                                                     formattedTime
                                                 ),
-                                                // Ikony - sú skryté, pri hover na riadku sa zobrazia
+                                                // Ikony - skryté, pri hover sa zobrazia namiesto času
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'hidden group-hover:flex items-center justify-center gap-2 absolute inset-0 bg-gray-50 rounded' },
+                                                    { 
+                                                        className: 'hidden group-hover:flex items-center justify-center gap-3 absolute inset-0 bg-white rounded',
+                                                        style: { backgroundColor: 'inherit' }
+                                                    },
                                                     React.createElement(
                                                         'button',
                                                         {
@@ -3606,7 +3609,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                             className: 'text-blue-500 hover:text-blue-700 p-1 rounded transition-colors cursor-pointer',
                                                             title: 'Upraviť udalosť'
                                                         },
-                                                        React.createElement('i', { className: 'fa-solid fa-pen text-sm' })
+                                                        React.createElement('i', { className: 'fa-solid fa-pen text-base' })
                                                     ),
                                                     React.createElement(
                                                         'button',
@@ -3615,7 +3618,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                             className: 'text-red-500 hover:text-red-700 p-1 rounded transition-colors cursor-pointer',
                                                             title: 'Vymazať udalosť'
                                                         },
-                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-base' })
                                                     )
                                                 )
                                             ) : React.createElement(
