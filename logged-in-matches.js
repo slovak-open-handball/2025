@@ -2788,8 +2788,34 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
+            // 3. Predvyplnenie času - z pendingAssignFilters (ak nie je už nastavený z existujúceho zápasu)
+            if (!selectedTime && window.__pendingAssignFilters?.startTime) {
+                setSelectedTime(window.__pendingAssignFilters.startTime);
+                console.log('Nastavujem čas z pendingAssignFilters:', window.__pendingAssignFilters.startTime);
+                // Vyčistíme po použití
+                delete window.__pendingAssignFilters;
+            }
+            
             setInitialized(true);
         }
+        
+        // Reset pri zatvorení
+        if (!isOpen) {
+            setInitialized(false);
+            setSelectedHallId('');
+            setSelectedDate('');
+            setSelectedTime('');
+            setHallStartTime(null);
+            setTimeError('');
+            setExistingMatches([]);
+            setOverlappingMatches([]);
+            setSuggestedTime(null);
+            setShouldSetDateFromFilter(false);
+            setAvailableDates([]); // Resetujeme dátumy
+            // Vyčistíme pendingAssignFilters pri zatvorení
+            if (window.__pendingAssignFilters) delete window.__pendingAssignFilters;
+        }
+    }, [isOpen, match, initialFilters]);
         
         // Reset pri zatvorení
         if (!isOpen) {
