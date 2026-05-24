@@ -3582,7 +3582,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti - pri hover sa čas nahradí ikonami
+                                        // Čas udalosti - pri hover sa čas nahradí ikonami, v režime editácie sa nezobrazuje čas
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
@@ -3623,17 +3623,19 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                 )
                                             ) : React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center gap-1' },
-                                                React.createElement('span', { className: 'text-yellow-600 font-semibold' }, 'EDIT'),
-                                                React.createElement('span', {}, formattedTime),
+                                                { 
+                                                    className: 'flex items-center justify-center gap-2',
+                                                    style: { backgroundColor: '#FEF3C7', padding: '4px 8px', borderRadius: '8px' }
+                                                },
+                                                React.createElement('span', { className: 'text-yellow-700 font-semibold text-xs' }, 'EDIT'),
                                                 React.createElement(
                                                     'button',
                                                     {
                                                         onClick: () => cancelEditing(),
-                                                        className: 'text-gray-500 hover:text-gray-700 ml-1 cursor-pointer',
+                                                        className: 'text-gray-500 hover:text-gray-700 cursor-pointer',
                                                         title: 'Zrušiť editáciu'
                                                     },
-                                                    React.createElement('i', { className: 'fa-solid fa-times text-xs' })
+                                                    React.createElement('i', { className: 'fa-solid fa-times text-sm' })
                                                 )
                                             )
                                         ),
