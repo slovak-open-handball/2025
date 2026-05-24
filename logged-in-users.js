@@ -736,16 +736,23 @@ function UsersManagementApp() {
           regSeconds: u.registrationDate?.seconds,
           regDate: u.registrationDate?.seconds ? new Date(u.registrationDate.seconds * 1000).toLocaleString() : 'bez dátumu'
         })));
-        
+
         if (adminUsers.length > 0) {
-          adminUsers.sort((a, b) => {
-            const dateA = a.registrationDate?.seconds || 0;
-            const dateB = b.registrationDate?.seconds || 0;
-            console.log(`Porovnanie: ${a.firstName} (${dateA}) vs ${b.firstName} (${dateB}) = ${dateA - dateB}`);
-            return dateA - dateB;
-          });
-          console.log("🏆 Najstarší admin (Superadmin):", adminUsers[0].firstName, adminUsers[0].lastName, "s dátumom", adminUsers[0].registrationDate?.seconds);
-          setOldestAdminId(adminUsers[0].id);
+          // 🔧 Ignorovať adminov s registrationDate = 0 alebo undefined
+          const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
+          
+          if (validAdminUsers.length > 0) {
+            validAdminUsers.sort((a, b) => {
+              const dateA = a.registrationDate?.seconds || 0;
+              const dateB = b.registrationDate?.seconds || 0;
+              return dateA - dateB;
+            });
+            console.log("🏆 Najstarší admin (Superadmin):", validAdminUsers[0].firstName, validAdminUsers[0].lastName);
+            setOldestAdminId(validAdminUsers[0].id);
+          } else {
+            // Fallback: ak všetci majú chybný dátum, zober prvého
+            setOldestAdminId(adminUsers[0].id);
+          }
         }
 
         setUsers(usersList);
