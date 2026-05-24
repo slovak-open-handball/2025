@@ -1143,7 +1143,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         'tr',
                         { className: 'border-b border-gray-200' },
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Č. dresu'),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, ''),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
                             React.createElement('div', { className: 'flex flex-col items-center' },
