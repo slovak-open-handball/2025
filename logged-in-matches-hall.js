@@ -705,6 +705,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const [selectedAction, setSelectedAction] = useState(externalSelectedAction || null);
     const [matchEvents, setMatchEvents] = useState([]);
     const [eventsLoading, setEventsLoading] = useState(true);
+
+    const [selectedActions, setSelectedActions] = useState(new Set());
+    const [externalActionSync, setExternalActionSync] = useState(null);
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -746,6 +749,28 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         return period > totalPeriods;
     };
 
+    useEffect(() => {
+        if (onActionSelected && typeof onActionSelected === 'function') {
+            // Ak je vybratá presne jedna akcia, odošleme ju, inak null
+            const singleAction = selectedActions.size === 1 ? Array.from(selectedActions)[0] : null;
+            onActionSelected(singleAction);
+        }
+    }, [selectedActions, onActionSelected]);
+
+    // Synchronizácia s externým selectedAction (pre spätnú kompatibilitu)
+    useEffect(() => {
+        if (externalSelectedAction !== undefined && externalSelectedAction !== externalActionSync) {
+            setExternalActionSync(externalSelectedAction);
+            if (externalSelectedAction) {
+                // Pridáme externú akciu do množiny
+                setSelectedActions(prev => new Set([...prev, externalSelectedAction]));
+            } else {
+                // Vyčistíme všetky akcie
+                setSelectedActions(new Set());
+            }
+        }
+    }, [externalSelectedAction]);
+
     // Notifikácia rodičovi o zmene vybranej akcie
     useEffect(() => {
         if (onActionSelected && typeof onActionSelected === 'function') {
@@ -762,18 +787,25 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     // Funkcia pre kliknutie na tlačidlo akcie
     const handleActionClick = (action) => {
-        if (selectedAction === action) {
-            setSelectedAction(null);
-        } else {
-            setSelectedAction(action);
-        }
+        setSelectedActions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(action)) {
+                newSet.delete(action);
+            } else {
+                newSet.add(action);
+            }
+            return newSet;
+        });
+    };
+
+    const isActionSelected = (action) => {
+        return selectedActions.has(action);
     };
 
     const getActionButtonClass = (action) => {
         const baseClass = "px-5 py-2 rounded-lg font-semibold transition-colors text-sm cursor-pointer";
-        const isActive = selectedAction === action;
+        const isActive = isActionSelected(action);
         
-        // Definícia farieb pre každý typ akcie (používa sa pre rámik a text pri neaktívnych, a pre výplň pri aktívnych)
         const colorStyles = {
             goal: { bg: "bg-green-500", hover: "hover:bg-green-600", border: "border-green-500", text: "text-green-600" },
             '7m': { bg: "bg-teal-500", hover: "hover:bg-teal-600", border: "border-teal-500", text: "text-teal-600" },
@@ -782,7 +814,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             blue: { bg: "bg-blue-400", hover: "hover:bg-blue-500", border: "border-blue-500", text: "text-blue-600" },
             exclusion: { bg: "bg-orange-500", hover: "hover:bg-orange-600", border: "border-orange-500", text: "text-orange-600" }
         };
-        
+    
         const style = colorStyles[action];
         
         if (isActive) {
@@ -839,7 +871,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     }, [matchId]);
 
     const saveMatchEventInternalWithAction = async (teamType, member, action) => {
-        if (!action || !window.db || !matchId) {
+        // Ak nie je žiadna akcia vybraná, nič neukladáme
+        if (selectedActions.size === 0 || !window.db || !matchId) {
             return false;
         }
         
@@ -847,57 +880,30 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
         
-        // 🔥 Celkový čas zápasu (iba hrací čas, bez prestávok)
-        const currentTotalTime = displaySeconds;
-        const currentPeriodNum = period;
-        
-        let eventType = '';
-        let eventSubtype = null;
-        
-        switch (action) {
-            case 'goal':
-                eventType = 'goal';
-                break;
-            case '7m':
-                eventType = 'penalty';
-                eventSubtype = '7m';
-                break;
-            case 'yellow':
-                eventType = 'card';
-                eventSubtype = 'yellow';
-                break;
-            case 'red':
-                eventType = 'card';
-                eventSubtype = 'red';
-                break;
-            case 'blue':
-                eventType = 'card';
-                eventSubtype = 'blue';
-                break;
-            case 'exclusion':
-                eventType = 'exclusion';
-                break;
-            default:
-                console.error('Neznáma akcia:', action);
-                return false;
+        // Kontrola: Gól môže dať len Hráč
+        if (selectedActions.has('goal') && member.type !== 'Hráč') {
+            console.log('❌ Gól môže dať len hráč, nie člen RT');
+            return false;
         }
         
-        // 🔥 Získanie názvu kategórie pre tento zápas
+        // Kontrola: 7m môže kopať len Hráč (pre istotu)
+        if (selectedActions.has('7m') && member.type !== 'Hráč') {
+            console.log('❌ 7m môže kopať len hráč, nie člen RT');
+            return false;
+        }
+        
+        const currentTotalTime = displaySeconds;
+        const currentPeriodNum = period;
         const categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
-        // 🔥 ZÍSKAME userId POUŽÍVATEĽA, KTORÉMU PATRÍ TENTO ČLEN TÍMU
+        // Získanie userId
         let userId = null;
-        
-        // 🔥 Získanie SPRÁVNEHO názvu tímu - použijeme teamNames alebo mappedName
-        // Získame správny zobrazený názov tímu (napr. "ŠKP Topoľčany" namiesto "U12 D E1")
         let teamNameForSearch = null;
         if (teamType === 'home') {
             teamNameForSearch = teamNames?.[match.homeTeamIdentifier] || match.homeTeamIdentifier;
         } else {
             teamNameForSearch = teamNames?.[match.awayTeamIdentifier] || match.awayTeamIdentifier;
         }
-        
-        console.log(`🔍 Vyhľadávanie userId: teamType=${teamType}, teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForMatch}, member.index=${member.index}, member.typeKey=${member.typeKey}`);
         
         if (window.db && teamNameForSearch && categoryNameForMatch) {
             try {
@@ -908,89 +914,122 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
-                    // 🔥 HĽADÁME TÍM V SPRÁVNEJ KATEGÓRII (podľa názvu kategórie zápasu)
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                         if (categoryKey !== categoryNameForMatch) continue;
                         
-                        // Hľadáme tím podľa názvu - používame správny zobrazený názov
                         const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
                         
                         if (foundTeam) {
-                            console.log(`✅ Nájdený tím: ${foundTeam.teamName} v kategórii ${categoryKey}`);
-                            
-                            // Kontrola, či člen s daným indexom a typom existuje
                             let memberExists = false;
                             
                             if (member.typeKey === 'playerDetails') {
                                 if (foundTeam.playerDetails && foundTeam.playerDetails[member.index]) {
                                     memberExists = true;
-                                    console.log(`   Hráč na indexe ${member.index}: ${foundTeam.playerDetails[member.index].firstName} ${foundTeam.playerDetails[member.index].lastName}`);
                                 }
                             } else if (member.typeKey === 'menTeamMemberDetails') {
                                 if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[member.index]) {
                                     memberExists = true;
-                                    console.log(`   Člen RT (muž) na indexe ${member.index}: ${foundTeam.menTeamMemberDetails[member.index].firstName} ${foundTeam.menTeamMemberDetails[member.index].lastName}`);
                                 }
                             } else if (member.typeKey === 'womenTeamMemberDetails') {
                                 if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[member.index]) {
                                     memberExists = true;
-                                    console.log(`   Člen RT (žena) na indexe ${member.index}: ${foundTeam.womenTeamMemberDetails[member.index].firstName} ${foundTeam.womenTeamMemberDetails[member.index].lastName}`);
                                 }
                             }
                             
                             if (memberExists) {
                                 userId = userDoc.id;
-                                console.log(`✅ Nájdený userId: ${userId} pre člena ${member.name} (index: ${member.index}, typ: ${member.typeKey})`);
                                 break;
-                            } else {
-                                console.log(`❌ Člen na indexe ${member.index} v ${member.typeKey} neexistuje`);
                             }
                         }
                     }
                     if (userId) break;
                 }
-                
-                if (!userId) {
-                    console.log(`❌ Nepodarilo sa nájsť userId pre team=${teamNameForSearch}, category=${categoryNameForMatch}, index=${member.index}, typeKey=${member.typeKey}`);
-                }
             } catch (err) {
                 console.error('Chyba pri vyhľadávaní userId:', err);
             }
-        } else {
-            console.log(`❌ Chýbajú údaje pre vyhľadanie userId: teamNameForSearch=${teamNameForSearch}, categoryNameForSearch=${categoryNameForMatch}`);
         }
         
-        // 🔥 UDALOSŤ - ukladáme aj názov kategórie zápasu
-        const eventData = {
-            matchId: matchId,
-            totalTime: currentTotalTime,
-            period: currentPeriodNum,
-            eventType: eventType,
-            eventSubtype: eventSubtype,
-            team: teamType,
-            memberType: member.type,
-            memberTypeKey: member.typeKey,
-            memberIndex: member.index,
-            userId: userId,
-            categoryName: categoryNameForMatch,  // 🔥 PRIDANÉ: názov kategórie zápasu
-            createdAt: Timestamp.now(),
-            timestamp: Timestamp.now()
-        };
+        // Uloženie udalostí pre každú vybranú akciu
+        const savedEvents = [];
         
-        try {
-            const eventsRef = collection(window.db, 'matchEvents');
-            await addDoc(eventsRef, eventData);
-            console.log(`Udalosť uložená: ${action} pre ${member.name} (${teamType}) v celkovom čase ${currentTotalTime}s (perióda ${currentPeriodNum}), userId: ${userId}, category: ${categoryNameForMatch}`);
+        for (const selectedAction of selectedActions) {
+            let eventType = '';
+            let eventSubtype = null;
             
-            setSelectedAction(null);
+            switch (selectedAction) {
+                case 'goal':
+                    eventType = 'goal';
+                    break;
+                case '7m':
+                    eventType = 'penalty';
+                    eventSubtype = '7m';
+                    break;
+                case 'yellow':
+                    eventType = 'card';
+                    eventSubtype = 'yellow';
+                    break;
+                case 'red':
+                    eventType = 'card';
+                    eventSubtype = 'red';
+                    break;
+                case 'blue':
+                    eventType = 'card';
+                    eventSubtype = 'blue';
+                    break;
+                case 'exclusion':
+                    eventType = 'exclusion';
+                    break;
+                default:
+                    continue;
+            }
+            
+            // 🔥 ŠPECIÁLNA LOGIKA: Ak sú vybrané obe '7m' a 'goal', uložíme IBA 'goal' (premenená 7m)
+            if (selectedActions.has('7m') && selectedActions.has('goal')) {
+                if (selectedAction === '7m') {
+                    // Preskočíme ukladanie samostatnej 7m, keď je aj gól
+                    continue;
+                }
+                // Ak je to 'goal', uložíme ho ako normálny gól (zelená ikona)
+                eventType = 'goal';
+                eventSubtype = null;
+            }
+            
+            const eventData = {
+                matchId: matchId,
+                totalTime: currentTotalTime,
+                period: currentPeriodNum,
+                eventType: eventType,
+                eventSubtype: eventSubtype,
+                team: teamType,
+                memberType: member.type,
+                memberTypeKey: member.typeKey,
+                memberIndex: member.index,
+                userId: userId,
+                categoryName: categoryNameForMatch,
+                createdAt: Timestamp.now(),
+                timestamp: Timestamp.now()
+            };
+            
+            try {
+                const eventsRef = collection(window.db, 'matchEvents');
+                await addDoc(eventsRef, eventData);
+                savedEvents.push(selectedAction);
+                console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType})`);
+            } catch (err) {
+                console.error('Chyba pri ukladaní udalosti:', err);
+            }
+        }
+        
+        // Po úspešnom uložení vyčistíme vybrané akcie
+        if (savedEvents.length > 0) {
+            setSelectedActions(new Set());
             if (onActionSelected && typeof onActionSelected === 'function') {
                 onActionSelected(null);
             }
             return true;
-        } catch (err) {
-            console.error('Chyba pri ukladaní udalosti:', err);
-            return false;
         }
+        
+        return false;
     };
 
     const saveMatchEvent = async (teamType, member) => {
@@ -2366,9 +2405,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
                 case 'goal':
-                    return React.createElement('i', { className: 'fa-solid fa-futbol text-black', style: { fontSize: '18px' } });
-                case 'penalty':
                     return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
+                case 'penalty':
+                    return React.createElement('i', { className: 'fa-solid fa-futbol text-red-600', style: { fontSize: '18px' } });
                 case 'card':
                     if (eventSubtype === 'yellow') return React.createElement('i', { className: 'fa-solid fa-square text-yellow-500', style: { fontSize: '18px' } });
                     if (eventSubtype === 'red') return React.createElement('i', { className: 'fa-solid fa-square text-red-600', style: { fontSize: '18px' } });
@@ -2527,15 +2566,20 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     
                                     const getActionTitle = () => {
                                         switch (event.eventType) {
-                                            case 'goal': return 'Gól';
-                                            case 'penalty': return '7m';
+                                            case 'goal': 
+                                                if (event.eventSubtype === '7m') return '7m (nepremenená)';
+                                                return 'Gól';
+                                            case 'penalty': 
+                                                return '7m (nepremenená)';
                                             case 'card':
                                                 if (event.eventSubtype === 'yellow') return 'Žltá karta';
                                                 if (event.eventSubtype === 'red') return 'Červená karta';
                                                 if (event.eventSubtype === 'blue') return 'Modrá karta';
                                                 return 'Karta';
-                                            case 'exclusion': return 'Vylúčenie';
-                                            default: return 'Udalosť';
+                                            case 'exclusion': 
+                                                return 'Vylúčenie';
+                                            default: 
+                                                return 'Udalosť';
                                         }
                                     };
                                     
