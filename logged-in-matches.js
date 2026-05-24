@@ -148,7 +148,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
                 category: t.category,
                 groupName: t.groupName,
                 order: t.order,
-                createdBy: t.createdBy,
                 createdByUid: t.createdByUid,
                 createdAt: t.createdAt,
                 ...t
@@ -4445,7 +4444,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 placementRank: matchData.placementRank, // Uložíme umiestnenie
                 matchTitle: matchData.matchTitle,
                 createdAt: Timestamp.now(),
-                createdBy: userProfileData?.email || 'unknown',
                 createdByUid: userProfileData?.uid || null
             };
     
@@ -6401,7 +6399,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     groupName: match.groupName,
                     status: match.status,
                     createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 };
     
