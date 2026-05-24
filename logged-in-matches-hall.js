@@ -2009,14 +2009,36 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const periodLength = periodDuration * 60;
         let clamped = Math.min(total, periodLength);
     
-        const oldSeconds = displaySecondsRef.current;
-        
         // Aktualizujeme čas
         setDisplaySeconds(clamped);
-        
-        // 🔥 OPRAVENÁ LOGIKA: AK SME DOSIAHLI ALEBO PREKROČILI KONIEC PERIÓDY, ZASTAVÍME ČASOVAČ
+        displaySecondsRef.current = clamped;
+    
+        // 🔥 KONTROLA: AK SME DOSIAHLI KONIEC PERIÓDY, ZASTAVÍME ČASOVAČ
         if (clamped >= periodLength && isRunningRef.current) {
-            stopTimerAndSave(true);
+            console.log(`⏹️ Koniec periódy ${periodRef.current} - automatické zastavenie časovača (čas: ${clamped}s >= ${periodLength}s)`);
+            // Zastavíme lokálny interval
+            stopLocalInterval();
+            setIsRunning(false);
+            isRunningRef.current = false;
+            
+            // Aktualizujeme stav v databáze
+            if (window.db && matchId) {
+                const matchRef = doc(window.db, 'matches', matchId);
+                updateDoc(matchRef, {
+                    manualTimeOffset: clamped,
+                    status: 'paused',
+                    startedAt: null,
+                    pausedAt: Timestamp.now(),
+                    updatedAt: Timestamp.now()
+                }).catch(console.error);
+            }
+            
+            if (onTimeUpdate) onTimeUpdate({ 
+                totalSeconds: clamped, 
+                period: periodRef.current, 
+                isRunning: false,
+                periodEnded: true
+            });
         }
     };
 
@@ -2052,6 +2074,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 
                 if (isMatchComplete) {
                     // Koniec zápasu
+                    console.log(`🏆 Zápas bol ukončený, počítam výsledok z udalostí...`);
                     
                     const eventsRef = collection(window.db, 'matchEvents');
                     const q = query(eventsRef, where('matchId', '==', matchId));
@@ -2066,7 +2089,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                             if (event.team === 'home') homeGoals++;
                             else if (event.team === 'away') awayGoals++;
                         }
-                    });                    
+                    });
+                    
+                    console.log(`🏆 Vypočítaný výsledok: DOMÁCI ${homeGoals} : ${awayGoals} HOSTIA`);
                     
                     await updateDoc(matchRef, {
                         manualTimeOffset: finalSeconds,
@@ -2092,6 +2117,10 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         pausedAt: Timestamp.now(),
                         updatedAt: Timestamp.now()
                     });
+                    
+                    if (isPeriodEnd) {
+                        console.log(`⏹️ Koniec periódy ${period} - časovač zastavený na čase ${formatTime(finalSeconds)}`);
+                    }
                 }
                 
                 if (onTimeUpdate) onTimeUpdate({ 
@@ -2102,7 +2131,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 });
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error('Chyba pri zastavovaní časovača:', err);
+            }
         }
     };
 
