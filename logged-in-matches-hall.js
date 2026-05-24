@@ -398,14 +398,12 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     useEffect(() => {
         if (matchTimerRef?.current) {
             const timer = matchTimerRef.current;
-            // Skúsime získať periodDuration z timeru
             if (timer.getPeriodDuration) {
                 setPeriodDurationSec(timer.getPeriodDuration());
             }
         } else if (match?.periodDuration) {
             setPeriodDurationSec(match.periodDuration * 60);
         } else if (match?.categoryId && window.categoriesData) {
-            // Fallback: skúsime získať z nastavení kategórie
             const categoryId = match.categoryId;
             if (window.categorySettings && window.categorySettings[categoryId]) {
                 setPeriodDurationSec(window.categorySettings[categoryId].periodDuration * 60);
@@ -415,11 +413,9 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     
     // Sledovanie času zápasu - z MatchTimer aj z Firebase
     useEffect(() => {
-        // Aktualizácia času z rôznych zdrojov
         const updateMatchTime = () => {
             let totalTime = 0;
             
-            // Skúsime získať čas z timeru
             if (matchTimerRef?.current) {
                 const timer = matchTimerRef.current;
                 if (timer.getTotalTime) {
@@ -431,7 +427,6 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                 }
             }
             
-            // Fallback: použitie dát z match objektu
             if (totalTime === 0 && match) {
                 if (match.manualTimeOffset) {
                     totalTime = match.manualTimeOffset;
@@ -446,10 +441,8 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         
         updateMatchTime();
         
-        // Aktualizácia každých 100ms
         const interval = setInterval(updateMatchTime, 100);
         
-        // Počúvanie na zmeny v match objekte
         if (window.db && matchId) {
             const matchRef = doc(window.db, 'matches', matchId);
             const unsubscribe = onSnapshot(matchRef, (docSnap) => {
@@ -554,6 +547,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                     targetIndex = currentMember.originalIndex !== undefined ? currentMember.originalIndex : 0;
                 }
                 
+                // 🔥 OPRAVA: Odstránená categoryName - nie je potrebná a spôsobovala chybu
                 const reentryEvent = {
                     matchId: matchId,
                     totalTime: currentMatchTime,
@@ -564,7 +558,6 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                     memberTypeKey: targetTypeKey,
                     memberIndex: targetIndex,
                     userId: null,
-                    categoryName: currentMember.categoryName,
                     createdAt: Timestamp.now(),
                     timestamp: Timestamp.now()
                 };
