@@ -386,12 +386,32 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [isExcluded, setIsExcluded] = useState(false);
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
+    const [periodDurationSec, setPeriodDurationSec] = useState(900); // Default 15 minút = 900 sekúnd
     
     // Získanie referencií na člena
     const memberRef = useRef(member);
     useEffect(() => {
         memberRef.current = member;
     }, [member]);
+    
+    // Získanie dĺžky periódy z timeru alebo z match objektu
+    useEffect(() => {
+        if (matchTimerRef?.current) {
+            const timer = matchTimerRef.current;
+            // Skúsime získať periodDuration z timeru
+            if (timer.getPeriodDuration) {
+                setPeriodDurationSec(timer.getPeriodDuration());
+            }
+        } else if (match?.periodDuration) {
+            setPeriodDurationSec(match.periodDuration * 60);
+        } else if (match?.categoryId && window.categoriesData) {
+            // Fallback: skúsime získať z nastavení kategórie
+            const categoryId = match.categoryId;
+            if (window.categorySettings && window.categorySettings[categoryId]) {
+                setPeriodDurationSec(window.categorySettings[categoryId].periodDuration * 60);
+            }
+        }
+    }, [matchTimerRef, match]);
     
     // Sledovanie času zápasu - z MatchTimer aj z Firebase
     useEffect(() => {
@@ -405,10 +425,8 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                 if (timer.getTotalTime) {
                     totalTime = timer.getTotalTime();
                 } else if (timer.getPeriodTime) {
-                    // Ak nemáme celkový čas, použijeme čas v perióde + výpočet z periód
                     const periodTime = timer.getPeriodTime();
                     const currentPeriod = timer.getCurrentPeriod ? timer.getCurrentPeriod() : 1;
-                    const periodDurationSec = periodDuration || 900; // 15 min default
                     totalTime = ((currentPeriod - 1) * periodDurationSec) + periodTime;
                 }
             }
@@ -419,7 +437,6 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
                     totalTime = match.manualTimeOffset;
                 }
                 if (match.currentPeriod && match.currentPeriod > 1) {
-                    const periodDurationSec = periodDuration || 900;
                     totalTime = ((match.currentPeriod - 1) * periodDurationSec) + (match.manualTimeOffset || 0);
                 }
             }
@@ -450,7 +467,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
         }
         
         return () => clearInterval(interval);
-    }, [matchTimerRef, match, matchId, periodDuration]);
+    }, [matchTimerRef, match, matchId, periodDurationSec]);
     
     // Sledovanie udalostí vylúčenia a návratu
     useEffect(() => {
