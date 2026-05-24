@@ -554,7 +554,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
 };
 
 // OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE NAČÍTA DĹŽKU PERIÓDY
-const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -580,12 +580,18 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 const data = docSnap.data();
                 setMatchData(data);
                 
-                // 🔥 NASTAVENIE DĹŽKY PERIÓDY - POUŽIJEME HODNOTU Z DATABÁZY ALEBO DEFAULT 20 minút
-                if (data.periodDuration) {
+                // 🔥 NAJPRV POUŽIJEME HODNOTU Z PROPS (z nastavení kategórie)
+                if (propPeriodDuration) {
+                    setPeriodLengthSeconds(propPeriodDuration * 60);
+                    console.log(`[TeamMembersList] Nastavená dĺžka periódy z props: ${propPeriodDuration} minút (${propPeriodDuration * 60} sekúnd)`);
+                }
+                // Ak nemáme z props, skúsime z databázy
+                else if (data.periodDuration) {
                     setPeriodLengthSeconds(data.periodDuration * 60);
-                    console.log(`[TeamMembersList] Nastavená dĺžka periódy: ${data.periodDuration} minút (${data.periodDuration * 60} sekúnd)`);
-                } else {
-                    // Ak nemáme periodDuration v match, skúsime získať z kategórie
+                    console.log(`[TeamMembersList] Nastavená dĺžka periódy z databázy: ${data.periodDuration} minút (${data.periodDuration * 60} sekúnd)`);
+                } 
+                // Inak z kategórie
+                else {
                     const categoryId = data.categoryId;
                     if (categoryId && window.categorySettings && window.categorySettings[categoryId]) {
                         const periodDuration = window.categorySettings[categoryId].periodDuration || 20;
@@ -597,14 +603,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         });
     
         return () => unsubscribe();
-    }, [matchId]);
+    }, [matchId, propPeriodDuration]);
     
     // Aktualizácia referencie na matchData
     useEffect(() => {
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // 🔥 OPRAVENÝ useEffect pre aktuálny čas - SPRÁVNY VÝPOČET CELKOVÉHO ČASU
+    // 🔥 OPRAVENÝ useEffect pre aktuálny čas
     useEffect(() => {
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
@@ -612,26 +618,30 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 return;
             }
             
-            // 🔥 POUŽIJEME AKTUÁLNU HODNOTU periodLengthSeconds (už má default 1200)
+            // 🔥 POUŽIJEME AKTUÁLNU HODNOTU periodLengthSeconds
             const periodLength = periodLengthSeconds;
+            
+            // 🔥 DÔLEŽITÉ: Ak je periodLength stále 0, nemôžeme správne vypočítať čas
+            if (periodLength === 0) {
+                console.warn(`[TeamMembersList] periodLengthSeconds je 0, čakám na nastavenie...`);
+                return;
+            }
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             
-            // 🔥 DÔLEŽITÉ: Čas v aktuálnej perióde (v sekundách)
+            // Čas v aktuálnej perióde (v sekundách)
             let currentPeriodTime = currentMatchData.manualTimeOffset || 0;
             
-            // Ak zápas beží, pripočítame uplynutý čas od posledného štartu
+            // Ak zápas beží, pripočítame uplynutý čas
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
-                // Obmedzíme na dĺžku periódy
                 if (currentPeriodTime > periodLength) {
                     currentPeriodTime = periodLength;
                 }
             }
             
-            // 🔥 KĽÚČOVÁ OPRAVA: Celkový čas = (aktuálna perióda - 1) * dĺžka periódy + čas v aktuálnej perióde
-            // Toto je ABSOLÚTNY ČAS ZÁPASU v sekundách (napr. 2. perióda, čas 8s = 1200 + 8 = 1208s)
+            // 🔥 CELKOVÝ ČAS = (aktuálna perióda - 1) * dĺžka periódy + čas v aktuálnej perióde
             const totalGameTime = ((currentPeriod - 1) * periodLength) + currentPeriodTime;
             
             setCurrentTotalTime(prev => {
@@ -646,8 +656,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         // Okamžité spustenie
         updateGameTime();
         
-        // Pravidelná aktualizácia každých 200ms pre hladký odpočet
-        timerIntervalRef.current = setInterval(updateGameTime, 200);
+        // Pravidelná aktualizácia
+        const interval = setInterval(updateGameTime, 200);
+        timerIntervalRef.current = interval;
         
         return () => {
             if (timerIntervalRef.current) {
@@ -655,7 +666,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 timerIntervalRef.current = null;
             }
         };
-    }, [matchId, periodLengthSeconds]);
+    }, [matchId, periodLengthSeconds]); // 🔥 ZÁVISLOSŤ NA periodLengthSeconds
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -3774,7 +3785,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 teamType: 'home',
                 timerRef: matchTimerRef,
                 onMappedNameUpdate: setHomeTeamMappedName,
-                matchId: match.id
+                matchId: match.id,
+                periodDuration: categorySettings?.periodDuration || 15
             }),
             React.createElement(TeamMembersList, {
                 teamName: awayTeamDisplay,
@@ -3782,7 +3794,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 teamType: 'away',
                 timerRef: matchTimerRef,
                 onMappedNameUpdate: setAwayTeamMappedName,
-                matchId: match.id
+                matchId: match.id,
+                periodDuration: categorySettings?.periodDuration || 15
             })
         ),
         
