@@ -159,18 +159,18 @@ const setupFirebase = () => {
         db = getFirestore(app);
         auth = getAuth(app);
         
-        // 🆕 Inicializácia App Check
-        if (isAppCheckSupported()) {
-            setupAppCheckDebug();
-            
-            appCheck = initializeAppCheck(app, {
-                provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
-                isTokenAutoRefreshEnabled: true   // Automatické obnovovanie tokenov
-            });
-            console.log("AuthManager: ✅ Firebase App Check inicializovaný s reCAPTCHA Enterprise.");
-        } else {
-            console.warn("AuthManager: ⚠️ App Check nie je podporovaný, pokračujem bez neho.");
-        }
+        // 🆕 Dočasne vypnutý App Check - aktivuj neskôr
+        // if (isAppCheckSupported()) {
+        //     setupAppCheckDebug();
+        //     
+        //     appCheck = initializeAppCheck(app, {
+        //         provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+        //         isTokenAutoRefreshEnabled: true
+        //     });
+        //     console.log("AuthManager: ✅ Firebase App Check inicializovaný s reCAPTCHA Enterprise.");
+        // } else {
+        //     console.warn("AuthManager: ⚠️ App Check nie je podporovaný, pokračujem bez neho.");
+        // }
         
         console.log("AuthManager: Firebase inicializovaný.");
 
@@ -182,7 +182,7 @@ const setupFirebase = () => {
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
-        window.appCheck = appCheck;  // 🆕 Sprístupnenie App Check pre ladenie
+        window.appCheck = appCheck;
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
