@@ -487,9 +487,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // Kontrola: 7m môže kopať len Hráč
         if (selectedActionsSet.has('7m') && member.type !== 'Hráč') {
-            console.log('❌ 7m môže kopať len hráč, nie člen RT');
             return;
         }
         
@@ -927,9 +925,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
         
-        // Kontrola: 7m môže kopať len Hráč (pre istotu)
         if (selectedActions.has('7m') && member.type !== 'Hráč') {
-            console.log('❌ 7m môže kopať len hráč, nie člen RT');
             return false;
         }
         
@@ -1024,18 +1020,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     continue;
             }
             
-            // 🔥 ŠPECIÁLNA LOGIKA: 
-            // - Ak sú vybrané obe '7m' a 'goal' → uložíme ako premenenú 7m (eventType = 'goal', eventSubtype = 'converted_penalty')
-            // - Ak je vybraný len 'goal' → klasický gól (eventType = 'goal', eventSubtype = null)
-            // - Ak je vybraný len '7m' → nepremenená 7m (eventType = 'penalty', eventSubtype = '7m')
             if (selectedActions.has('7m') && selectedActions.has('goal')) {
                 if (selectedAction === '7m') {
-                    // Preskočíme ukladanie samostatnej 7m, keď je aj gól
                     continue;
                 }
-                // 🔥 PREMENENÁ 7m - uložíme ako goal s flagom converted_penalty
                 eventType = 'goal';
-                eventSubtype = 'converted_penalty';  // Špeciálny flag pre premenenú 7m
+                eventSubtype = 'converted_penalty'; 
             }
             
             const eventData = {
@@ -2092,7 +2082,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             // 🔥 Zobrazenie času - čas v perióde (bez prestávok)
             React.createElement('div', { className: 'text-center mb-4' },
                 React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime(displaySeconds)),
-                React.createElement('div', { className: 'mt-1 text-sm text-gray-500' }, `Čas v perióde ${period}`),
                 React.createElement('div', { className: 'text-sm text-gray-500' }, 
                     `Perióda ${period} / ${totalPeriods}`
                 ),
@@ -2622,10 +2611,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     const getActionTitle = () => {
                                         switch (event.eventType) {
                                             case 'goal': 
-                                                if (event.eventSubtype === 'converted_penalty') return 'Premenená 7m';
+                                                if (event.eventSubtype === 'converted_penalty') return '7m (premenený)';
                                                 return 'Gól';
                                             case 'penalty': 
-                                                return '7m (nepremenená)';
+                                                return '7m (nepremenený)';
                                             case 'card':
                                                 if (event.eventSubtype === 'yellow') return 'Žltá karta';
                                                 if (event.eventSubtype === 'red') return 'Červená karta';
