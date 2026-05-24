@@ -991,7 +991,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const allMembersSorted = [...sortedPlayers, ...rtMembers];
     
-    // OPRAVENÁ časť TeamMembersList - správne zobrazenie odpočtu vylúčenia v tabuľke
+    // OPRAVENÁ časť TeamMembersList - správne odstránenie štýlu po skončení vylúčenia
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
@@ -1071,13 +1071,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
-                        const isPlayerExcluded = member.type === 'Hráč' && excludedPlayers[member.originalIndex]?.isExcluded;
+                        // 🔥 OPRAVA: Skontrolujeme, či je hráč naozaj vylúčený (remainingSeconds > 0)
+                        const exclusionInfo = member.type === 'Hráč' ? excludedPlayers[member.originalIndex] : null;
+                        const isPlayerExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
                         
                         let exclusionTooltip = '';
                         let exclusionDisplay = null;
                         
                         if (isPlayerExcluded) {
-                            const exclusionInfo = excludedPlayers[member.originalIndex];
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
@@ -1099,7 +1100,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         }
                         
-                        const rowClassName = isPlayerExcluded ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' : 'hover:bg-gray-50 transition-colors cursor-pointer';
+                        // 🔥 OPRAVA: CSS štýl sa aplikuje LEN ak je hráč naozaj vylúčený (remainingSeconds > 0)
+                        const rowClassName = isPlayerExcluded 
+                            ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' 
+                            : 'hover:bg-gray-50 transition-colors cursor-pointer';
                         
                         return React.createElement(
                             React.Fragment,
