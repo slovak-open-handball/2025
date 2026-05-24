@@ -913,7 +913,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         
         const timerCurrent = timerRef.current;
         let selectedActionsSet = new Set();
-        let isTimerRunning = false;
         
         if (timerCurrent && typeof timerCurrent.getSelectedActions === 'function') {
             const actions = timerCurrent.getSelectedActions();
@@ -954,17 +953,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             }
         }
         
-        if (timerCurrent && typeof timerCurrent.isTimerRunning === 'function') {
-            isTimerRunning = timerCurrent.isTimerRunning();
-        } else if (typeof timerRef.isTimerRunning === 'function') {
-            isTimerRunning = timerRef.isTimerRunning();
-        }
-        
         if (selectedActionsSet.size === 0) {
-            return;
-        }
-        
-        if (!isTimerRunning) {
             return;
         }
         
@@ -981,6 +970,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             success = await timerCurrent.saveMatchEvent(teamType, memberForSave);
         } else if (typeof timerRef.saveMatchEvent === 'function') {
             success = await timerRef.saveMatchEvent(teamType, memberForSave);
+        }
+        
+        if (success) {
+            console.log(`✅ Udalosť úspešne uložená`);
         }
     };
     
