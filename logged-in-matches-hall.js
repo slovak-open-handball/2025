@@ -802,35 +802,34 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     // Funkcia pre kliknutie na tlačidlo akcie
     const handleActionClick = (action) => {
         setSelectedActions(prev => {
-            // Špeciálna logika pre 7m a goal kombináciu
+            // 🔥 ŠPECIÁLNA LOGIKA PRE GÓL: klik na gól VŽDY zruší 7m
+            if (action === 'goal') {
+                const newSet = new Set(prev);
+                if (newSet.has('goal')) {
+                    // Ak už je goal aktívny, deaktivujeme ho
+                    newSet.delete('goal');
+                } else {
+                    // Pridáme goal a ZÁROVEŇ ODSTRÁNIME 7m
+                    newSet.clear();  // Vyčistíme všetko
+                    newSet.add('goal');
+                }
+                return newSet;
+            }
+            
+            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m: môže byť aktívna spolu s goal
             if (action === '7m') {
                 const newSet = new Set(prev);
                 if (newSet.has('7m')) {
                     // Ak už je 7m aktívna, deaktivujeme ju
                     newSet.delete('7m');
-                    return newSet;
                 } else {
-                    // Pridáme 7m, ale zachováme goal ak je aktívny
+                    // Pridáme 7m (goal zostane ak je aktívny)
                     newSet.add('7m');
-                    return newSet;
                 }
-            }
-            
-            if (action === 'goal') {
-                const newSet = new Set(prev);
-                if (newSet.has('goal')) {
-                    // Ak už je goal aktívna, deaktivujeme ju
-                    newSet.delete('goal');
-                    return newSet;
-                } else {
-                    // Pridáme goal, ale zachováme 7m ak je aktívna
-                    newSet.add('goal');
-                    return newSet;
-                }
+                return newSet;
             }
             
             // 🔥 Pre všetky ostatné akcie (yellow, red, blue, exclusion) - exclusive režim
-            // Ak je vybraná táto akcia, zrušíme ju, inak nastavíme len túto jednu
             if (prev.has(action)) {
                 return new Set();
             } else {
