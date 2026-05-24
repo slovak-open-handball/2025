@@ -983,15 +983,18 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     continue;
             }
             
-            // 🔥 ŠPECIÁLNA LOGIKA: Ak sú vybrané obe '7m' a 'goal', uložíme IBA 'goal' (premenená 7m)
+            // 🔥 ŠPECIÁLNA LOGIKA: 
+            // - Ak sú vybrané obe '7m' a 'goal' → uložíme ako premenenú 7m (eventType = 'goal', eventSubtype = 'converted_penalty')
+            // - Ak je vybraný len 'goal' → klasický gól (eventType = 'goal', eventSubtype = null)
+            // - Ak je vybraný len '7m' → nepremenená 7m (eventType = 'penalty', eventSubtype = '7m')
             if (selectedActions.has('7m') && selectedActions.has('goal')) {
                 if (selectedAction === '7m') {
                     // Preskočíme ukladanie samostatnej 7m, keď je aj gól
                     continue;
                 }
-                // Ak je to 'goal', uložíme ho ako normálny gól (zelená ikona)
+                // 🔥 PREMENENÁ 7m - uložíme ako goal s flagom converted_penalty
                 eventType = 'goal';
-                eventSubtype = null;
+                eventSubtype = 'converted_penalty';  // Špeciálny flag pre premenenú 7m
             }
             
             const eventData = {
@@ -1014,7 +1017,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 const eventsRef = collection(window.db, 'matchEvents');
                 await addDoc(eventsRef, eventData);
                 savedEvents.push(selectedAction);
-                console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType})`);
+                console.log(`Udalosť uložená: ${selectedAction} pre ${member.name} (${teamType}), eventSubtype: ${eventSubtype}`);
             } catch (err) {
                 console.error('Chyba pri ukladaní udalosti:', err);
             }
@@ -2405,7 +2408,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
                 case 'goal':
-                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
+                    if (eventSubtype === 'converted_penalty') {
+                        return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
+                    }
+                    return React.createElement('i', { className: 'fa-solid fa-futbol text-black', style: { fontSize: '18px' } });
                 case 'penalty':
                     return React.createElement('i', { className: 'fa-solid fa-futbol text-red-600', style: { fontSize: '18px' } });
                 case 'card':
@@ -2420,7 +2426,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
         };
         
-        // 🔥 OPRAVENÁ funkcia na formátovanie času - používa totalTime
         const formatMatchTime = (event) => {
             let seconds = event.totalTime;
             if (seconds === undefined || seconds === null) {
@@ -2567,7 +2572,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     const getActionTitle = () => {
                                         switch (event.eventType) {
                                             case 'goal': 
-                                                if (event.eventSubtype === '7m') return '7m (nepremenená)';
+                                                if (event.eventSubtype === 'converted_penalty') return 'Premenená 7m';
                                                 return 'Gól';
                                             case 'penalty': 
                                                 return '7m (nepremenená)';
