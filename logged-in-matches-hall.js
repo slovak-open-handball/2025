@@ -3761,6 +3761,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const renderMatchEvents = () => {
         const [memberDataCache, setMemberDataCache] = React.useState({});
         
+        // 🔥 ZISTÍME, ČI JE ZÁPAS UKONČENÝ
+        const isMatchCompleted = currentMatchStatus === 'completed';
+        
         // 🔥 FUNKCIA: Načítanie údajov člena z databázy podľa userId, categoryName, teamName, typeKey a indexu
         const loadMemberDetails = async (userId, categoryName, teamName, memberTypeKey, memberIndex, eventId) => {
             if (!userId || !memberTypeKey || memberIndex === undefined) {
@@ -4003,14 +4006,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     };
                                     
                                     const formattedTime = formatMatchTime(event);
-
                                     const isEditing = editingEventId === event.id;
-                                    const rowHoverClass = "group hover:bg-blue-50 transition-colors cursor-pointer";
+                                    
+                                    // 🔥 PRE UKONČENÝ ZÁPAS: ŽIADNE HOVER EFEKTY, ŽIADNE IKONY
+                                    const rowHoverClass = isMatchCompleted ? '' : "group hover:bg-blue-50 transition-colors cursor-pointer";
                                     const rowClass = `${rowHoverClass} ${isEditing ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`;
                                     
                                     return React.createElement(
                                         'tr',
-                                        { key: event.id, className: 'group hover:bg-gray-50 transition-colors' },
+                                        { key: event.id, className: rowClass },
                                         
                                         // Stĺpec pre domácich (meno + číslo dresu)
                                         React.createElement(
@@ -4045,21 +4049,17 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti - pri hover sa čas nahradí ikonami, v režime editácie sa nezobrazuje čas
+                                        // 🔥 Čas udalosti - PRE UKONČENÝ ZÁPAS BEZ IKON
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
                                             !isEditing ? React.createElement(
                                                 'div',
                                                 { className: 'relative flex justify-center items-center min-w-[60px]' },
-                                                // Čas - normálne viditeľný
-                                                React.createElement(
-                                                    'span', 
-                                                    { className: 'group-hover:hidden' }, 
-                                                    formattedTime
-                                                ),
-                                                // Ikony - skryté, pri hover sa zobrazia namiesto času
-                                                React.createElement(
+                                                // Čas - vždy viditeľný
+                                                React.createElement('span', {}, formattedTime),
+                                                // 🔥 IKONY SA ZOBRAZIA LEN AK ZÁPAS NIE JE UKONČENÝ
+                                                !isMatchCompleted && React.createElement(
                                                     'div',
                                                     { 
                                                         className: 'hidden group-hover:flex items-center justify-center gap-3 absolute inset-0 bg-white rounded',
