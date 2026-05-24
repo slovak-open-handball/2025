@@ -604,7 +604,7 @@ const TeamStats = ({ membersList, teamType, matchId }) => {
     );
 };
 
-// UPRAVENÝ TeamMembersList KOMPONENT - ŠTATISTIKY PRIAMO V RIADKOCH
+// UPRAVENÝ TeamMembersList KOMPONENT - ŠTATISTIKY AKO TABUĽKA V RIADKOCH
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -866,61 +866,18 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return React.createElement('i', { className: 'fa-solid fa-user text-gray-500 mr-2', style: { width: '16px' } });
     };
     
-    // Funkcia na vykreslenie štatistík pre člena
-    const renderMemberStats = (member, idx) => {
+    // Funkcia na získanie štatistík pre člena
+    const getMemberStats = (member, idx) => {
         const memberKey = `${member.type}_${idx}`;
-        const stats = membersStats[memberKey];
-        
-        if (!stats) return null;
-        
-        const hasStats = stats.goals > 0 || stats.convertedPenalties > 0 || stats.missedPenalties > 0 ||
-                         stats.yellowCards > 0 || stats.redCards > 0 || stats.blueCards > 0 || stats.exclusions > 0;
-        
-        if (!hasStats) return null;
-        
-        const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
-        const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : null;
-        
-        return React.createElement(
-            'div',
-            { className: 'flex flex-wrap gap-1 ml-6 mt-0.5' },
-            stats.goals > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-futbol text-xs' }),
-                React.createElement('span', {}, stats.goals)
-            ),
-            penaltiesDisplay && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-xs' }),
-                React.createElement('span', {}, penaltiesDisplay)
-            ),
-            stats.yellowCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.yellowCards)
-            ),
-            stats.redCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.redCards)
-            ),
-            stats.blueCards > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
-                React.createElement('span', {}, stats.blueCards)
-            ),
-            stats.exclusions > 0 && React.createElement(
-                'span',
-                { className: 'inline-flex items-center gap-0.5 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full text-xs' },
-                React.createElement('i', { className: 'fa-solid fa-clock text-xs' }),
-                React.createElement('span', {}, stats.exclusions)
-            )
-        );
+        return membersStats[memberKey] || {
+            goals: 0,
+            convertedPenalties: 0,
+            missedPenalties: 0,
+            yellowCards: 0,
+            redCards: 0,
+            blueCards: 0,
+            exclusions: 0
+        };
     };
     
     if (loading) {
@@ -948,12 +905,17 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         );
     }
     
-    // Rozdelenie členov pre zobrazenie v skupinách
-    const rtMembers = members.filter(m => m.type !== 'Hráč');
-    const players = members.filter(m => m.type === 'Hráč');
-    
     // Zobrazený názov tímu
     const displayTeamName = mappedName !== teamName ? mappedName : teamName;
+    
+    // Zoradenie členov: najprv hráči podľa čísla dresu, potom RT
+    const sortedPlayers = [...members.filter(m => m.type === 'Hráč')].sort((a, b) => {
+        const aNum = parseInt(a.jerseyNumber) || 999;
+        const bNum = parseInt(b.jerseyNumber) || 999;
+        return aNum - bNum;
+    });
+    const rtMembers = members.filter(m => m.type !== 'Hráč');
+    const allMembersSorted = [...sortedPlayers, ...rtMembers];
     
     return React.createElement(
         'div',
@@ -974,87 +936,102 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         ),
         React.createElement(
             'div',
-            { className: 'p-3 max-h-[600px] overflow-y-auto' },
-            // Členovia RT
-            rtMembers.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-4' },
+            { className: 'overflow-x-auto' },
+            React.createElement(
+                'table',
+                { className: 'min-w-full text-sm' },
                 React.createElement(
-                    'div',
-                    { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2' },
-                    'Realizačný tím (' + rtMembers.length + ')'
+                    'thead',
+                    { className: 'bg-gray-100 sticky top-0' },
+                    React.createElement(
+                        'tr',
+                        { className: 'border-b border-gray-200' },
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Č. dresu'),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, 'Gól')
+                            )
+                        ),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, '7m')
+                            )
+                        ),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-square text-yellow-500 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, 'ŽK')
+                            )
+                        ),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-square text-red-600 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, 'ČK')
+                            )
+                        ),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-square text-blue-500 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, 'MK')
+                            )
+                        ),
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                            React.createElement('div', { className: 'flex flex-col items-center' },
+                                React.createElement('i', { className: 'fa-solid fa-clock text-orange-500 text-sm' }),
+                                React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vylúč.')
+                            )
+                        )
+                    )
                 ),
                 React.createElement(
-                    'div',
-                    { className: 'space-y-2' },
-                    rtMembers.map((member, idx) => {
+                    'tbody',
+                    { className: 'divide-y divide-gray-100' },
+                    allMembersSorted.map((member, idx) => {
+                        const originalIndex = members.findIndex(m => m === member);
+                        const stats = getMemberStats(member, originalIndex);
                         const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        const arrayName = member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails';
-                        const jerseyDisplay = member.jerseyNumber ? member.jerseyNumber + ' ' : '';
+                        const jerseyDisplay = member.jerseyNumber || '';
+                        const arrayName = member.type === 'Hráč' ? 'playerDetails' : 
+                                        (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails');
+                        
+                        const memberIcon = member.type === 'Hráč' 
+                            ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
+                            : (member.type === 'Člen RT (muž)' 
+                                ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 text-sm' })
+                                : React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-sm' }));
+                        
+                        const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
+                        const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '—';
                         
                         return React.createElement(
-                            'div',
-                            { key: 'rt-' + idx, className: 'border-b border-gray-100 pb-1 last:border-0' },
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center justify-between flex-wrap gap-1',
-                                    onClick: () => handleMemberClick(member, idx, arrayName)
-                                },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center' },
-                                    getMemberIcon(member.type),
-                                    React.createElement('span', {}, jerseyDisplay + fullName)
-                                )
-                            ),
-                            renderMemberStats(member, idx)
+                            'tr',
+                            { 
+                                key: idx,
+                                className: 'hover:bg-gray-50 transition-colors cursor-pointer',
+                                onClick: () => handleMemberClick(member, originalIndex, arrayName)
+                            },
+                            React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
+                            React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, jerseyDisplay || '—'),
+                            React.createElement('td', { className: 'px-2 py-2 text-gray-800' }, fullName),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : '—'),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : '—'),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : '—'),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : '—'),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '—')
                         );
                     })
                 )
-            ),
-            // Hráči
-            players.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-2' },
-                React.createElement(
-                    'div',
-                    { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2' },
-                    'Hráči (' + players.length + ')'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'space-y-2' },
-                    players.map((member, idx) => {
-                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        const jerseyDisplay = member.jerseyNumber ? member.jerseyNumber + ' ' : '';
-                        
-                        return React.createElement(
-                            'div',
-                            { key: 'player-' + idx, className: 'border-b border-gray-100 pb-1 last:border-0' },
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center justify-between flex-wrap gap-1',
-                                    onClick: () => handleMemberClick(member, idx, 'playerDetails')
-                                },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center' },
-                                    getMemberIcon(member.type),
-                                    React.createElement('span', {}, jerseyDisplay + fullName)
-                                )
-                            ),
-                            renderMemberStats(member, idx)
-                        );
-                    })
-                )
-            ),
-            members.length === 0 && React.createElement(
-                'div',
-                { className: 'text-center py-4 text-gray-400 text-sm' },
-                'Žiadni členovia tímu'
             )
+        ),
+        members.length === 0 && React.createElement(
+            'div',
+            { className: 'text-center py-8 text-gray-400 text-sm' },
+            'Žiadni členovia tímu'
         )
     );
 };
