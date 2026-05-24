@@ -386,7 +386,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [isExcluded, setIsExcluded] = useState(false);
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
-    const [periodDurationSec, setPeriodDurationSec] = useState(900); // Default 15 minút = 900 sekúnd
+    const [periodDurationSec, setPeriodDurationSec] = useState(0);
     
     // Získanie referencií na člena
     const memberRef = useRef(member);
