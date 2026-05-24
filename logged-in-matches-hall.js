@@ -454,23 +454,42 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 OPRAVA: Použijeme priamo aktuálnu akciu z timerRef.current
-        let selectedAction = null;
+        const timerCurrent = timerRef.current;
+        let selectedActionsSet = new Set();
         let isTimerRunning = false;
         
-        // Správny prístup k metódam je cez timerRef.current
-        const timerCurrent = timerRef.current;
-        
-        if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
-            selectedAction = timerCurrent.getSelectedAction();
-            console.log('🎯 Aktuálna vybraná akcia z timerRef.current.getSelectedAction():', selectedAction);
+        // 🔥 POUŽIJEME NOVÚ METÓDU getSelectedActions ak existuje
+        if (timerCurrent && typeof timerCurrent.getSelectedActions === 'function') {
+            const actions = timerCurrent.getSelectedActions();
+            if (actions && actions.size > 0) {
+                selectedActionsSet = actions;
+                console.log('🎯 Aktuálne vybrané akcie z timerRef.current.getSelectedActions():', Array.from(selectedActionsSet));
+            }
+        } 
+        // Fallback na starú getSelectedAction pre spätnú kompatibilitu
+        else if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
+            const action = timerCurrent.getSelectedAction();
+            if (action) {
+                selectedActionsSet.add(action);
+                console.log('🎯 Aktuálna vybraná akcia z timerRef.current.getSelectedAction():', action);
+            }
         } else if (typeof timerRef.getSelectedAction === 'function') {
-            selectedAction = timerRef.getSelectedAction();
-            console.log('🎯 Fallback timerRef.getSelectedAction():', selectedAction);
+            const action = timerRef.getSelectedAction();
+            if (action) {
+                selectedActionsSet.add(action);
+                console.log('🎯 Fallback timerRef.getSelectedAction():', action);
+            }
         }
         
-        // 🔥 KONTROLA: Gól môže dať len Hráč (nie člen RT)
-        if (selectedAction === 'goal' && member.type !== 'Hráč') {
+        // Kontrola: Gól môže dať len Hráč (nie člen RT)
+        if (selectedActionsSet.has('goal') && member.type !== 'Hráč') {
+            console.log('❌ Gól môže dať len hráč, nie člen RT');
+            return;
+        }
+        
+        // Kontrola: 7m môže kopať len Hráč
+        if (selectedActionsSet.has('7m') && member.type !== 'Hráč') {
+            console.log('❌ 7m môže kopať len hráč, nie člen RT');
             return;
         }
         
@@ -486,14 +505,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             console.log('⏱️ isTimerRunning: default false');
         }
         
-        console.log('🎯 Výsledná akcia:', selectedAction);
+        console.log('🎯 Vybrané akcie:', Array.from(selectedActionsSet));
         console.log('⏱️ Časovač beží:', isTimerRunning);
         
-        if (!selectedAction) {
+        if (selectedActionsSet.size === 0) {
+            console.log('❌ Nie je vybraná žiadna akcia');
             return;
         }
         
         if (!isTimerRunning) {
+            console.log('❌ Časovač nebeží');
             return;
         }
         
@@ -513,7 +534,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             console.log(`🔄 Prepočet indexu pre ženu RT: ${index} -> ${actualIndex}`);
         }
         
-        // 🔥 ULOŽENIE UDALOSTI - použijeme metódu saveEventWithAction ak existuje
+        // 🔥 ULOŽENIE UDALOSTI - použijeme metódu saveEventWithAction (bez odovzdávania akcie, pretože je už v selectedActions)
         const memberForSave = {
             type: member.type,
             name: `${member.firstName} ${member.lastName}`.trim(),
@@ -521,20 +542,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             typeKey: actualArrayName
         };
         
-        console.log(`💾 Ukladám udalosť: ${selectedAction} pre ${memberForSave.name} (${teamType})`);
+        console.log(`💾 Ukladám udalosť pre ${memberForSave.name} (${teamType}) s akciami:`, Array.from(selectedActionsSet));
         
         let success = false;
         
-        // Skúsime použiť metódu saveEventWithAction (priorita)
-        if (timerCurrent && typeof timerCurrent.saveEventWithAction === 'function') {
-            console.log('📞 Volám timerCurrent.saveEventWithAction()');
-            success = await timerCurrent.saveEventWithAction(teamType, memberForSave, selectedAction);
-        } else if (typeof timerRef.saveEventWithAction === 'function') {
-            console.log('📞 Volám timerRef.saveEventWithAction()');
-            success = await timerRef.saveEventWithAction(teamType, memberForSave, selectedAction);
-        } 
-        // Fallback na saveMatchEvent
-        else if (timerCurrent && typeof timerCurrent.saveMatchEvent === 'function') {
+        // 🔥 POUŽIJEME saveEventWithAction BEZ odovzdávania akcie
+        // Pretože selectedActions je už nastavené v MatchTimer
+        if (timerCurrent && typeof timerCurrent.saveMatchEvent === 'function') {
             console.log('📞 Volám timerCurrent.saveMatchEvent()');
             success = await timerCurrent.saveMatchEvent(teamType, memberForSave);
         } else if (typeof timerRef.saveMatchEvent === 'function') {
@@ -1042,7 +1056,16 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     React.useImperativeHandle(ref, () => ({
         saveMatchEvent: saveMatchEvent,
         getSelectedAction: () => {
-            return selectedAction;
+            // 🔥 OPRAVA: Vrátime prvú akciu z množiny alebo null
+            if (selectedActions.size > 0) {
+                // Pre spätnú kompatibilitu vrátime prvú akciu
+                return Array.from(selectedActions)[0];
+            }
+            return null;
+        },
+        getSelectedActions: () => {
+            // 🔥 NOVÁ METÓDA: Vráti celú množinu akcií
+            return selectedActions;
         },
         isTimerRunning: () => {
             return isRunningRef.current;
