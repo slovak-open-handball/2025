@@ -1395,10 +1395,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             return false;
         }
         
-        if (!isRunningRef.current) {
-            return false;
-        }
-        
         if (selectedActions.has('goal') && member.type !== 'Hráč') {
             return false;
         }
