@@ -593,7 +593,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // V TeamMembersList komponente - UPRAVENÝ useEffect pre aktuálny čas
+    // V TeamMembersList komponente - OPRAVENÝ useEffect pre aktuálny čas
     useEffect(() => {
         let intervalId = null;
         let isMounted = true;
@@ -607,28 +607,35 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
-            // Čas v aktuálnej perióde (čistý čas hry)
-            let periodTime = currentMatchData.manualTimeOffset || 0;
+            // 🔥 KĽÚČOVÁ OPRAVA: Zistíme, či boli predchádzajúce periódy úplne odohrané
+            // Ak sme na 2. perióde, znamená to že 1. perióda bola ukončená (odohraných celých 20 minút)
+            let totalTimeFromPreviousPeriods = 0;
+            
+            if (currentPeriod > 1) {
+                // Všetky predchádzajúce periódy boli úplne odohrané (celá dĺžka)
+                totalTimeFromPreviousPeriods = (currentPeriod - 1) * periodLength;
+            }
+            
+            // Čas v aktuálnej perióde
+            let currentPeriodTime = currentMatchData.manualTimeOffset || 0;
             
             // Ak časovač beží, pripočítame uplynutý čas
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
-                periodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
+                currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
                 
-                if (periodTime > periodLength) {
-                    periodTime = periodLength;
+                // Nesmieme prekročiť dĺžku periódy
+                if (currentPeriodTime > periodLength) {
+                    currentPeriodTime = periodLength;
                 }
             }
             
-            // 🔥 CELKOVÝ ČAS HRY (bez prestávok)
-            let totalGameTime = periodTime;
-            if (currentPeriod > 1) {
-                totalGameTime = ((currentPeriod - 1) * periodLength) + periodTime;
-            }
+            // 🔥 CELKOVÝ ČAS HRY = čas z predchádzajúcich periód + čas v aktuálnej perióde
+            const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime;
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 1) {
-                    console.log(`[TeamMembersList] Celkový čas hry: ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
+                    console.log(`[TeamMembersList] Celkový čas hry: ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${currentPeriodTime}s, čas z predchádzajúcich periód: ${totalTimeFromPreviousPeriods}s)`);
                     return totalGameTime;
                 }
                 return prev;
@@ -1403,15 +1410,16 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         return () => unsubscribe();
     }, [matchId]);
 
-    // Upravená calculateTotalMatchTime funkcia v MatchTimer komponente
+    // V MatchTimer komponente - OPRAVENÁ funkcia pre výpočet celkového času zápasu
     const calculateTotalMatchTime = () => {
         const periodLengthSeconds = periodDuration * 60;
         const currentPeriodTime = displaySeconds;
     
-        // 🔥 CELKOVÝ ČAS = súčet časov hry z predchádzajúcich periód + čas v aktuálnej perióde
-        // Čas prestávok sa NEPOČÍTA - je to čistý čas hry
+        // 🔥 KĽÚČOVÁ OPRAVA: Celkový čas = (počet ukončených periód × dĺžka periódy) + čas v aktuálnej perióde
+        // Počet ukončených periód = period - 1 (lebo aktuálna perióda ešte nie je ukončená)
         let totalTime = currentPeriodTime;
         if (period > 1) {
+            // Všetky predchádzajúce periódy boli úplne odohrané
             totalTime = ((period - 1) * periodLengthSeconds) + currentPeriodTime;
         }
         
