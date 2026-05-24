@@ -3582,17 +3582,23 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // Čas udalosti - s hover ikonami
+                                        // Čas udalosti - pri hover sa zobrazia ikony namiesto času
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
                                             !isEditing ? React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center gap-2' },
-                                                React.createElement('span', {}, formattedTime),
+                                                { className: 'relative w-full flex justify-center' },
+                                                // Čas - zobrazí sa normálne, pri hover na riadku sa skryje
+                                                React.createElement(
+                                                    'span', 
+                                                    { className: 'group-hover:hidden block transition-opacity' }, 
+                                                    formattedTime
+                                                ),
+                                                // Ikony - sú skryté, pri hover na riadku sa zobrazia
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'hidden group-hover:flex items-center gap-1 absolute right-2 top-1/2 -translate-y-1/2 bg-white rounded-lg shadow-sm px-1 py-0.5' },
+                                                    { className: 'hidden group-hover:flex items-center justify-center gap-2 absolute inset-0 bg-gray-50 rounded' },
                                                     React.createElement(
                                                         'button',
                                                         {
