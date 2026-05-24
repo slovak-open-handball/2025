@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// UPRAVENÝ TeamMembersList KOMPONENT - PODPORUJE VYLÚČENIE PRE HRÁČOV AJ ČLENOV RT
+// UPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE ROZLIŠUJE HRÁČOV A ČLENOV RT
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -678,7 +678,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - PODPORUJE HRÁČOV AJ ČLENOV RT
+    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - POUŽÍVA UNIKÁTNY KĽÚČ (type + index)
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) {
             return;
@@ -693,8 +693,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const periodLength = periodLengthSeconds || (currentMatchData?.periodDuration * 60) || 1200;
             
             members.forEach((member) => {
-                // 🔥 PODPORA PRE HRÁČOV AJ ČLENOV RT
-                // Vylúčenie sa môže týkať každého člena (hráč aj RT)
+                // 🔥 Vytvoríme unikátny kľúč pre každého člena (typ + pôvodný index)
+                const uniqueKey = `${member.type}_${member.originalIndex}`;
+                
+                // Získanie správneho typu pre vyhľadávanie v databáze
                 let targetTypeKey = member.dbArrayName;
                 let targetIndex = member.originalIndex;
                 
@@ -730,7 +732,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 exclusions.sort((a, b) => a.totalTime - b.totalTime);
                 
                 if (exclusions.length === 0) {
-                    excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0, endTotalTime: 0 };
+                    excluded[uniqueKey] = { isExcluded: false, remainingSeconds: 0, endTotalTime: 0 };
                     return;
                 }
                 
@@ -754,14 +756,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 
                 if (isCurrentlyExcluded) {
                     const remaining = Math.max(0, Math.ceil(totalPenaltyEndTotalTime - currentTotalTime));
-                    excluded[member.originalIndex] = {
+                    excluded[uniqueKey] = {
                         isExcluded: true,
                         remainingSeconds: remaining,
                         endTotalTime: totalPenaltyEndTotalTime,
                         exclusionCount: exclusions.length
                     };
                 } else {
-                    excluded[member.originalIndex] = { 
+                    excluded[uniqueKey] = { 
                         isExcluded: false, 
                         remainingSeconds: 0, 
                         endTotalTime: 0 
@@ -977,8 +979,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // Kontrola vylúčenia pre HRÁČOV aj pre ČLENOV RT
-        const exclusionInfo = excludedMembers[member.originalIndex];
+        // 🔥 KONTROLA VYLÚČENIA - POUŽÍVAME UNIKÁTNY KĽÚČ
+        const uniqueKey = `${member.type}_${member.originalIndex}`;
+        const exclusionInfo = excludedMembers[uniqueKey];
         if (exclusionInfo && exclusionInfo.isExcluded) {
             if (selectedActionsSet.has('goal')) {
                 return;
@@ -1126,8 +1129,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
-                        // 🔥 ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - PRE HRÁČOV AJ ČLENOV RT
-                        const exclusionInfo = excludedMembers[member.originalIndex];
+                        // 🔥 ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - POUŽÍVAME UNIKÁTNY KĽÚČ
+                        const uniqueKey = `${member.type}_${member.originalIndex}`;
+                        const exclusionInfo = excludedMembers[uniqueKey];
                         const isExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
                         
                         let exclusionDisplayRow = null;
