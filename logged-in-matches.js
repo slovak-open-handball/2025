@@ -8334,1038 +8334,1038 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                },
                                                // Toto je kompletná náhrada za časť od "dayCards.map((dayCard, index) => {" až po koniec karty dňa
 
-dayCards.map((dayCard, index) => {
-    const date = dayCard.date;
-    const dateStr = dayCard.dateStr;
-    const hallMatches = dayCard.matches;
-    const matchesCount = dayCard.matchesCount;
-    const isEmpty = dayCard.isEmpty;
-    
-    // ** NOVÉ: Zistíme, či existujú nepriradené zápasy **
-    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
-    
-    // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
-    const showEmptyMessage = isEmpty && isFilterActiveLocal;
-    
-    const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-    
-    const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
-    const groupsCount = uniqueGroups.length;
-    
-    const groupAlignmentMap = {};
-    
-    if (groupsCount === 1) {
-        groupAlignmentMap[uniqueGroups[0]] = 'center';
-    } else if (groupsCount === 2) {
-        groupAlignmentMap[uniqueGroups[0]] = 'left';
-        groupAlignmentMap[uniqueGroups[1]] = 'right';
-    } else if (groupsCount === 3) {
-        groupAlignmentMap[uniqueGroups[0]] = 'left';
-        groupAlignmentMap[uniqueGroups[1]] = 'center';
-        groupAlignmentMap[uniqueGroups[2]] = 'right';
-    } else if (groupsCount === 4) {
-        groupAlignmentMap[uniqueGroups[0]] = 'left';
-        groupAlignmentMap[uniqueGroups[1]] = 'center-left';
-        groupAlignmentMap[uniqueGroups[2]] = 'center-right';
-        groupAlignmentMap[uniqueGroups[3]] = 'right';
-    } else if (groupsCount >= 5) {
-        uniqueGroups.forEach((group, index) => {
-            if (index === 0) groupAlignmentMap[group] = 'left';
-            else if (index === groupsCount - 1) groupAlignmentMap[group] = 'right';
-            else groupAlignmentMap[group] = 'center';
-        });
-    }
-    
-    const cardId = `${hall.id}_${dateStr}`;
-    const dateKey = dateStr;
-    const maxHeightForDate = maxHeightsByDate[dateKey] || 0;
-    
-    return React.createElement(
-        'div',
-        {
-            key: index,
-            className: `day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 ${
-                hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
-            } transition-all group/day ${
-                hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
-            }`,
-            style: {
-                width: '100%',
-                minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto',
-                cursor: 'default'
-            },
-            'data-card-id': cardId,
-            'data-date-key': dateKey,
-        },
-        // Hlavička dňa
-        React.createElement(
-            'div',
-            {
-                className: `flex items-center justify-between mb-2 pb-1 border-b border-gray-100 ${
-                    hasCompletedMatch ? 'cursor-default' : 'cursor-pointer hover:bg-blue-50'
-                } p-2 -m-2 rounded transition-colors`,
-                onClick: hasCompletedMatch ? undefined : (e) => {
-                    e.stopPropagation();
-                    handleHallDayHeaderClick(hall, date, dateStr);
-                },
-                title: hasCompletedMatch ? 'Nie je možné nastaviť čas, pretože už existuje ukončený zápas v systéme.' : 'Kliknite pre nastavenie času začiatku prvého zápasu',
-                style: { width: '100%' }
-            },
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2 whitespace-nowrap' },
-                React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
-                React.createElement(
-                    'span',
-                    { className: 'text-sm font-semibold text-gray-800' },
-                    formatDateWithDay(date)
-                ),
-                (() => {
-                    const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
-                    const savedSchedule = hallSchedules[scheduleId];
-                    if (savedSchedule?.startTime) {
-                        return React.createElement(
-                            'span',
-                            { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
-                            React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
-                            savedSchedule.startTime
-                        );
-                    }
-                    return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
-                })()
-            ),
-            // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
-            !isEmpty && userProfileData?.role === 'admin' && !hasCompletedMatch && React.createElement(
-                'div',
-                { className: 'flex gap-1 ml-2' },
-                React.createElement(
-                    'button',
-                    {
-                        className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            setPendingSwap({
-                                sourceHallId: hall.id,
-                                sourceDate: dateStr,
-                                isWholeHall: false
-                            });
-                            setIsSwapMatchesModalOpen(true);
-                        },
-                        title: 'Vymeniť zápasy s iným dňom/halou (vzájomná výmena)'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-arrows-spin text-xs' })
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            handleBulkUnassign(hall.id, dateStr, false);
-                        },
-                        title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2 flex-shrink-0' },
-                isEmpty ? React.createElement(
-                    'span',
-                    { className: 'text-xs text-gray-400 whitespace-nowrap' },
-                    showEmptyMessage ? 'Filtrované' : 'Žiadne zápasy'
-                ) : React.createElement(
-                    React.Fragment,
-                    null,
-                    React.createElement(
-                        'span',
-                        { className: 'text-xs text-gray-500 whitespace-nowrap' },
-                        (() => {
-                            if (matchesCount === 1) return `${matchesCount} zápas`;
-                            if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
-                            return `${matchesCount} zápasov`;
-                        })()
-                    ),
-                    React.createElement(
-                        'span',
-                        { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
-                    )
-                )
-            )
-        ),
-        
-        // ** HLAVNÁ ČASŤ - ZOBRAZENIE OBSAHU DŇA **
-        !isEmpty ? (
-            // Normálne zobrazenie zápasov (pôvodný kód, ktorý funguje)
-            React.createElement(
-                'div',
-                {
-                    className: 'space-y-0',
-                    style: { width: '100%' }
-                },
-                (function() {
-                    const sortedMatches = hallMatches.sort((a, b) => {
-                        if (!a.scheduledTime) return 1;
-                        if (!b.scheduledTime) return -1;
-                        try {
-                            const timeA = a.scheduledTime.toDate().getTime();
-                            const timeB = b.scheduledTime.toDate().getTime();
-                            return timeA - timeB;
-                        } catch (e) {
-                            return 0;
-                        }
-                    });
-                    
-                    const allElements = [];
-                    
-                    // Pomocná funkcia na formátovanie času z minút
-                    const formatTimeFromMinutes = (minutes) => {
-                        const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                        const mins = (minutes % 60).toString().padStart(2, '0');
-                        return `${hours}:${mins}`;
-                    };
-                    
-                    // Kontrola, či existuje aspoň jeden nepriradený zápas
-                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
-                    
-                    if (sortedMatches.length > 0) {
-                        const firstMatch = sortedMatches[0];
-                        if (firstMatch.scheduledTime) {
-                            try {
-                                const firstMatchDate = firstMatch.scheduledTime.toDate();
-                                const firstMatchStartMinutes = firstMatchDate.getHours() * 60 + firstMatchDate.getMinutes();
-                                
-                                const scheduleId = `${hall.id}_${getLocalDateStr(firstMatchDate)}`;
-                                const savedSchedule = hallSchedules[scheduleId];
-                                const hallStartTimeStr = savedSchedule?.startTime;
-                                
-                                if (hallStartTimeStr) {
-                                    const [hallStartHours, hallStartMinutes] = hallStartTimeStr.split(':').map(Number);
-                                    const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
-                                    
-                                    let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
-                                    const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                    
-                                    if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
-                                        const dateStr = getLocalDateStr(firstMatchDate);
-                                        const gapStartTime = formatTimeFromMinutes(hallStartMinutesTotal);
-                                        const gapEndTime = formatTimeFromMinutes(firstMatchStartMinutes);
-                                        const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hall.id}_${dateStr}_${gapStartTime}`] : false;
-                    
-                                        allElements.push(
-                                            React.createElement(
-                                                'div',
-                                                {
-                                                    key: `gap-before-first-${firstMatch.id}`,
-                                                    className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                        hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                    } transition-all relative group/gap`,
-                                                    style: { 
-                                                        width: '100%',
-                                                        backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
-                                                    }
-                                                },
-                                                React.createElement(
-                                                    'div', 
-                                                    { 
-                                                        className: 'grid items-center text-xs',
-                                                        style: { 
-                                                            gridTemplateColumns: '130px 1fr',
-                                                            width: '100%'
-                                                        }
-                                                    },
-                                                    React.createElement(
-                                                        'div', 
-                                                        { 
-                                                            className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                            style: { minWidth: '130px', textAlign: 'center' }
-                                                        },
-                                                        React.createElement(
-                                                            'div', 
-                                                            { className: 'flex items-center justify-center gap-1 w-full' },
-                                                            React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
-                                                            React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                `${gapStartTime} - ${gapEndTime}`
-                                                            )
-                                                        )
-                                                    ),
-                                                    React.createElement(
-                                                        'div', 
-                                                        { 
-                                                            className: 'px-0 py-0 flex items-center justify-center',
-                                                            style: { 
-                                                                textAlign: 'center',
-                                                                fontWeight: '500',
-                                                                color: '#d97706'
-                                                            }
-                                                        },
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm font-medium' },
-                                                            isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
-                                                        ),
-                                                        React.createElement(
-                                                            'div', 
-                                                            { className: 'text-[10px] text-amber-600 ml-1' },
-                                                            `(${gapBeforeFirstMatch} min)`
-                                                        )
-                                                    )
-                                                ),
-                                                !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                                    'div',
-                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
-                                                    React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                toggleBlockBreak(hall.id, dateStr, gapStartTime, gapEndTime, gapBeforeFirstMatch);
-                                                            },
-                                                            title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
-                                                        },
-                                                        React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
-                                                    ),
-                                                    !isGapBlocked && React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                setSelectedBreakForAssign({
-                                                                    hallId: hall.id,
-                                                                    date: dateStr,
-                                                                    breakStartTime: gapStartTime,
-                                                                    breakEndTime: gapEndTime,
-                                                                    breakDuration: gapBeforeFirstMatch,
-                                                                    availableMatches: filteredUnassignedMatches
-                                                                });
-                                                                setIsAssignToBreakModalOpen(true);
-                                                            },
-                                                            title: 'Priradiť zápas do voľného času'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                    ),
-                                                    !isGapBlocked && React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                handleDeleteBreakBefore({
-                                                                    matchId: firstMatch.id,
-                                                                    breakDuration: gapBeforeFirstMatch
-                                                                });
-                                                            },
-                                                            title: 'Odstrániť medzeru (posunúť prvý zápas skôr)'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                                    )
-                                                ) : null
-                                            )
-                                        );
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Chyba pri výpočte medzery pred prvým zápasom:', e);
-                            }
-                        }
-                    }
-                    
-                    sortedMatches.forEach(function(match, idx, sortedArray) {
-                        let matchTime = '--:--';
-                        let endTime = '--:--';
-                        
-                        if (match.scheduledTime) {
-                            try {
-                                var date = match.scheduledTime.toDate();
-                                matchTime = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-                                
-                                var matchCategory = categories.find(function(c) { return c.name === match.categoryName; });
-                                var matchDuration = 0;
-                                
-                                if (matchCategory) {
-                                    var periods = matchCategory.periods || 2;
-                                    var periodDuration = matchCategory.periodDuration || 20;
-                                    var breakDuration = matchCategory.breakDuration || 2;
-                                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                }
-                                
-                                var endDateTime = new Date(date.getTime() + matchDuration * 60000);
-                                endTime = endDateTime.getHours().toString().padStart(2, '0') + ':' + endDateTime.getMinutes().toString().padStart(2, '0');
-                                
-                            } catch (e) {
-                                console.error('Chyba pri formátovaní času:', e);
-                            }
-                        }
-                        
-                        var homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
-                        var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
-                        
-                        var categoryColor = '#f3f4f6';
-                        if (match.categoryName) {
-                            var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
-                            if (foundCategory && foundCategory.drawColor) {
-                                categoryColor = foundCategory.drawColor;
-                            }
-                        }
-                        
-                        var isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
-                        
-                        var specialMatchText = '';
-                        if (match.isPlacementMatch && match.placementRank) {
-                            specialMatchText = `o ${match.placementRank}. miesto`;
-                        } else if (match.matchType && !match.isPlacementMatch) {
-                            var matchTypeText = match.matchType;
-                            var lastChar = matchTypeText.charAt(matchTypeText.length - 1);
-                            if (lastChar >= 'A' && lastChar <= 'Z') {
-                                matchTypeText = matchTypeText.substring(0, matchTypeText.length - 1).trim();
-                            }
-                            specialMatchText = matchTypeText;
-                        }
-                        
-                        var extractLetterAndNumber = function(identifier) {
-                            if (!identifier) return { letter: '', number: '' };
-                            
-                            var parts = identifier.split(' ');
-                            var lastPart = parts[parts.length - 1];
-                            
-                            var letter = '';
-                            var number = '';
-                            
-                            for (var i = 0; i < lastPart.length; i++) {
-                                var char = lastPart[i];
-                                if (char >= '0' && char <= '9') {
-                                    letter = lastPart.substring(0, i);
-                                    number = lastPart.substring(i);
-                                    break;
-                                }
-                            }
-                            
-                            if (number === '') {
-                                letter = lastPart;
-                            }
-                            
-                            return { letter: letter, number: number };
-                        };
-                        
-                        var homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
-                        var awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
-                        
-                        var combinedNumbers = homeExtracted.number && awayExtracted.number 
-                            ? homeExtracted.number + '-' + awayExtracted.number 
-                            : (homeExtracted.number || awayExtracted.number || '');
-                        
-                        var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
-                        var letterToShow = lettersAreSame ? homeExtracted.letter : '';
-                        
-                        const homeTeamColor = match.homeTeamColor || '#f3f4f6';
-                        const homeTextColor = match.homeTextColor || '#000000';
-                        const awayTeamColor = match.awayTeamColor || '#f3f4f6';
-                        const awayTextColor = match.awayTextColor || '#000000';
-                        
-                        allElements.push(
-                            React.createElement(
-                                'div',
-                                {
-                                     key: 'match-' + match.id,
-                                     className: `p-0 rounded border border-gray-200 ${
-                                         hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
-                                     } transition-all relative group/match bg-white ${
-                                         hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
-                                     }`,
-                                     style: { 
-                                         width: '100%',
-                                         backgroundColor: 'white'
-                                     }
-                                 },
-                                React.createElement(
-                                    'div', 
-                                    { 
-                                        className: 'grid items-center text-xs',
-                                        style: { 
-                                            gridTemplateColumns: '130px 200px 10px 200px 10px 50px 30px',
-                                            width: '100%'
-                                        },
-                                        onClick: function(e) {
-                                            e.stopPropagation();
-                                            handleMatchCardClick(match);
-                                        },
-                                        title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu'
-                                    },
-                                    React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                            style: { minWidth: '130px', textAlign: 'center' }
-                                        },
-                                        React.createElement(
-                                            'div', 
-                                            { className: 'flex items-center justify-center gap-1 w-full' },
-                                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                            React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                            style: { 
-                                                textAlign: 'center',
-                                                backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent',
-                                                fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
-                                            }
-                                        },
-                                        React.createElement(
-                                            'span',
-                                            { 
-                                                className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                style: { 
-                                                    color: match.homeTeamInConflict ? '#ffffff' : '#000000'
-                                                },
-                                                title: homeDisplay.name 
-                                            },
-                                            homeDisplay.name
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                            style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
-                                        },
-                                        React.createElement('div', { style: { width: '10px', height: '20px' } })
-                                    ),
-                                    React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                            style: { 
-                                                textAlign: 'center',
-                                                backgroundColor: match.awayTeamInConflict ? '#dc2626' : 'transparent',
-                                                fontWeight: match.awayTeamInConflict ? 'bold' : 'normal'
-                                            }
-                                        },
-                                        React.createElement(
-                                            'span',
-                                            { 
-                                                className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                style: { 
-                                                    color: match.awayTeamInConflict ? '#ffffff' : '#000000'
-                                                },
-                                                title: awayDisplay.name 
-                                            },
-                                            awayDisplay.name
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                            style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
-                                        },
-                                        React.createElement('div', { style: { width: '10px', height: '20px' } })
-                                    ),
-                                    !isSpecialMatch && React.createElement(
-                                        React.Fragment,
-                                        null,
-                                        React.createElement(
-                                            'div', 
-                                            { 
-                                                className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                style: { textAlign: 'center', backgroundColor: 'transparent' }
-                                            },
-                                            React.createElement(
-                                                'span',
-                                                { 
-                                                    className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full'
-                                                },
-                                                combinedNumbers
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'div', 
-                                            { 
-                                                className: 'px-2 py-0 flex items-center justify-center',
-                                                style: { textAlign: 'center', backgroundColor: categoryColor, fontWeight: 'bold', borderRadius: '4px' }
-                                            },
-                                            React.createElement(
-                                                'span',
-                                                { 
-                                                    className: 'text-black font-bold text-xs truncate block w-full',
-                                                    style: { color: '#000', textShadow: 'none' }
-                                                },
-                                                letterToShow || ''
-                                            )
-                                        )
-                                    ),
-                                    isSpecialMatch && React.createElement(
-                                        'div', 
-                                        { 
-                                            className: 'px-3 py-0 flex items-center justify-center',
-                                            colSpan: 2,
-                                            style: { 
-                                                textAlign: 'center',
-                                                backgroundColor: categoryColor,
-                                                fontWeight: 'bold',
-                                                borderRadius: '4px',
-                                                gridColumn: 'span 2',
-                                                whiteSpace: 'nowrap',
-                                                wordBreak: 'keep-all',
-                                                minWidth: '80px',
-                                                maxWidth: 'none'
-                                            }
-                                        },
-                                        React.createElement(
-                                            'span',
-                                            { 
-                                                className: 'text-black font-bold text-[10px] block w-full',
-                                                style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
-                                            },
-                                            specialMatchText
-                                        )
-                                    )
-                                ),
-                                !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                    'div',
-                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                            onClick: function(e) {
-                                                e.stopPropagation();
-                                                setSelectedMatchForBreak(match);
-                                                setSelectedMatchCurrentTime(matchTime);
-                                                setIsBreakModalOpen(true);
-                                            },
-                                            title: 'Pridať medzeru pred/za zápas'
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                    ),
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                            onClick: function(e) {
-                                                e.stopPropagation();
-                                                handleSwapClick(match);
-                                            },
-                                            title: 'Vymeniť domáci a hosťovský tím'
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
-                                    ),
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                            onClick: function(e) {
-                                                e.stopPropagation();
-                                                handleUnassignMatch(match);
-                                            },
-                                            title: 'Odstrániť priradenie (miesto a čas)'
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                    )
-                                ) : null
-                            )
-                        );
-                        
-                        const currentMatch = sortedArray[idx];
-                        const nextMatch = sortedArray[idx + 1];
-                        
-                        if (nextMatch && currentMatch.scheduledTime && nextMatch.scheduledTime) {
-                            try {
-                                const currentMatchDate = currentMatch.scheduledTime.toDate();
-                                const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
-                                
-                                let currentMatchDuration = 0;
-                                let currentMatchBreak = 5;
-                                if (currentMatchCategory) {
-                                    const periods = currentMatchCategory.periods || 2;
-                                    const periodDuration = currentMatchCategory.periodDuration || 20;
-                                    const breakDuration = currentMatchCategory.breakDuration || 2;
-                                    currentMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                    currentMatchBreak = currentMatchCategory.matchBreak || 5;
-                                }
-                                
-                                const currentMatchEndTime = new Date(currentMatchDate.getTime() + (currentMatchDuration + currentMatchBreak) * 60000);
-                                const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
-                                
-                                const nextMatchDate = nextMatch.scheduledTime.toDate();
-                                const nextStartMinutes = nextMatchDate.getHours() * 60 + nextMatchDate.getMinutes();
-                                
-                                let gapMinutes = nextStartMinutes - currentEndMinutes;
-                                
-                                const dateStr = getLocalDateStr(currentMatchDate);
-                                const hallId = currentMatch.hallId;
-                                const gapStartTime = formatTimeFromMinutes(currentEndMinutes);
-                                const gapEndTime = formatTimeFromMinutes(nextStartMinutes);
-                                
-                                const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hallId}_${dateStr}_${gapStartTime}`] : false;
-                                const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                
-                                if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
-                                    if (gapMinutes >= 0) {
-                                        allElements.push(
-                                            React.createElement(
-                                                'div',
-                                                {
-                                                    key: `gap-${currentMatch.id}-${nextMatch.id}`,
-                                                    className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                        hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                    } transition-all relative group/gap`,
-                                                    style: { 
-                                                        width: '100%',
-                                                        backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
-                                                    }
-                                                },
-                                                React.createElement(
-                                                    'div', 
-                                                    { 
-                                                        className: 'grid items-center text-xs',
-                                                        style: { 
-                                                            gridTemplateColumns: '130px 1fr',
-                                                            width: '100%',
-                                                        }
-                                                    },
-                                                    React.createElement(
-                                                        'div', 
-                                                        { 
-                                                            className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                            style: { minWidth: '130px', textAlign: 'center' }
-                                                        },
-                                                        React.createElement(
-                                                            'div', 
-                                                            { className: 'flex items-center justify-center gap-1 w-full' },
-                                                            React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
-                                                            React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                `${gapStartTime} - ${gapEndTime}`
-                                                            )
-                                                        )
-                                                    ),
-                                                    React.createElement(
-                                                        'div', 
-                                                        { 
-                                                            className: 'px-0 py-0 flex items-center justify-center',
-                                                            style: { textAlign: 'center', fontWeight: '500', color: '#d97706' }
-                                                        },
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm font-medium' },
-                                                            isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
-                                                        ),
-                                                        React.createElement(
-                                                            'div', 
-                                                            { className: 'text-[10px] text-amber-600 ml-1' },
-                                                            `(${gapMinutes} min)`
-                                                        )
-                                                    )
-                                                ),
-                                                !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                                    'div',
-                                                    { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
-                                                    React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                toggleBlockBreak(hallId, dateStr, gapStartTime, gapEndTime, gapMinutes);
-                                                            },
-                                                            title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (zamedziť priradeniu zápasu)'
-                                                        },
-                                                        React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
-                                                    ),
-                                                    !isGapBlocked && React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                setSelectedBreakForAssign({
-                                                                    hallId: hallId,
-                                                                    date: dateStr,
-                                                                    breakStartTime: gapStartTime,
-                                                                    breakEndTime: gapEndTime,
-                                                                    breakDuration: gapMinutes,
-                                                                    availableMatches: filteredUnassignedMatches
-                                                                });
-                                                                setIsAssignToBreakModalOpen(true);
-                                                            },
-                                                            title: 'Priradiť zápas do voľného času'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                    ),
-                                                    !isGapBlocked && React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                            onClick: function(e) {
-                                                                e.stopPropagation();
-                                                                handleDeleteBreak({
-                                                                    matchId: currentMatch.id,
-                                                                    nextMatchId: nextMatch.id,
-                                                                    breakDuration: gapMinutes
-                                                                });
-                                                            },
-                                                            title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                                    )
-                                                ) : null
-                                            )
-                                        );
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Chyba pri výpočte medzery:', e);
-                            }
-                        }
-                    });
-
-                    // ** ZELENÝ RIADOK ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
-                    if (hasUnassignedMatches && sortedMatches.length > 0 && userProfileData?.role === 'admin' && !hasCompletedMatch) {
-                        const lastMatch = sortedMatches[sortedMatches.length - 1];
-                        if (lastMatch && lastMatch.scheduledTime) {
-                            try {
-                                const lastMatchDate = lastMatch.scheduledTime.toDate();
-                                const dateStr = getLocalDateStr(lastMatchDate);
-                                const hallId = lastMatch.hallId;
-                                
-                                // Vypočítame koniec posledného zápasu vrátane prestávky
-                                const lastMatchCategory = categories.find(c => c.name === lastMatch.categoryName);
-                                let lastMatchDuration = 0;
-                                let lastMatchBreak = 5;
-                                if (lastMatchCategory) {
-                                    const periods = lastMatchCategory.periods || 2;
-                                    const periodDuration = lastMatchCategory.periodDuration || 20;
-                                    const breakDuration = lastMatchCategory.breakDuration || 2;
-                                    lastMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                    lastMatchBreak = lastMatchCategory.matchBreak || 5;
-                                }
-                                
-                                const lastMatchEndTime = new Date(lastMatchDate.getTime() + (lastMatchDuration + lastMatchBreak) * 60000);
-                                const lastMatchEndMinutes = lastMatchEndTime.getHours() * 60 + lastMatchEndTime.getMinutes();
-                                const endTimeStr = formatTimeFromMinutes(lastMatchEndMinutes);
-                                
-                                // Koniec voľného času nastavíme na 23:59
-                                const breakEndTimeStr = '23:59';
-                                
-                                allElements.push(
-                                    React.createElement(
-                                        'div',
-                                        {
-                                            key: 'add-match-button',
-                                            className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
-                                            style: { 
-                                                width: '100%',
-                                                backgroundColor: '#f0fdf4'
-                                            }
-                                        },
-                                        React.createElement(
-                                            'div', 
-                                            { 
-                                                className: 'grid items-center text-xs',
-                                                style: { 
-                                                    gridTemplateColumns: '130px 1fr',
-                                                    width: '100%'
-                                                },
-                                                onClick: function(e) {
-                                                    e.stopPropagation();
-                                                    setSelectedBreakForAssign({
-                                                        hallId: hallId,
-                                                        date: dateStr,
-                                                        breakStartTime: endTimeStr,
-                                                        breakEndTime: breakEndTimeStr,
-                                                        breakDuration: 0,
-                                                        availableMatches: filteredUnassignedMatches
-                                                    });
-                                                    setIsAssignToBreakModalOpen(true);
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                    style: { minWidth: '130px', textAlign: 'center' }
-                                                },
-                                                React.createElement(
-                                                    'div', 
-                                                    { className: 'flex items-center justify-center gap-1 w-full' },
-                                                    React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
-                                                        `po ${endTimeStr}`
-                                                    )
-                                                )
-                                            ),
-                                            React.createElement(
-                                                'div', 
-                                                { 
-                                                    className: 'px-0 py-0 flex items-center justify-center',
-                                                    style: { 
-                                                        textAlign: 'center',
-                                                        fontWeight: '500',
-                                                        color: '#16a34a'
-                                                    }
-                                                },
-                                                React.createElement(
-                                                    'span',
-                                                    { className: 'text-sm font-medium' },
-                                                    'PRIDAŤ ZÁPAS'
-                                                )
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'div',
-                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                    onClick: function(e) {
-                                                        e.stopPropagation();
-                                                        setSelectedBreakForAssign({
-                                                            hallId: hallId,
-                                                            date: dateStr,
-                                                            breakStartTime: endTimeStr,
-                                                            breakEndTime: breakEndTimeStr,
-                                                            breakDuration: 0,
-                                                            availableMatches: filteredUnassignedMatches
-                                                        });
-                                                        setIsAssignToBreakModalOpen(true);
-                                                    },
-                                                    title: 'Priradiť zápas'
-                                                },
-                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                            )
-                                        )
-                                    )
-                                );
-                            } catch (e) {
-                                console.error('Chyba pri vytváraní tlačidla pre pridanie zápasu:', e);
-                            }
-                        }
-                    }
-                    
-                    return allElements;
-                })()
-            )
-        ) : (
-            // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
-            (() => {
-                // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
-                if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
-                    return React.createElement(
-                        'div',
-                        {
-                            key: 'empty-day-add-button',
-                            className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
-                            style: { 
-                                width: '100%',
-                                backgroundColor: '#f0fdf4'
-                            }
-                        },
-                        React.createElement(
-                            'div', 
-                            { 
-                                className: 'grid items-center text-xs',
-                                style: { 
-                                    gridTemplateColumns: '130px 1fr',
-                                    width: '100%'
-                                },
-                                onClick: function(e) {
-                                    e.stopPropagation();
-                                    setSelectedBreakForAssign({
-                                        hallId: hall.id,
-                                        date: dateStr,
-                                        breakStartTime: '00:00',
-                                        breakEndTime: '23:59',
-                                        breakDuration: 0,
-                                        availableMatches: filteredUnassignedMatches
-                                    });
-                                    setIsAssignToBreakModalOpen(true);
-                                }
-                            },
-                            React.createElement(
-                                'div', 
-                                { 
-                                    className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                    style: { minWidth: '130px', textAlign: 'center' }
-                                },
-                                React.createElement(
-                                    'div', 
-                                    { className: 'flex items-center justify-center gap-1 w-full' },
-                                    React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
-                                    React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
-                                        `pridať zápas`
-                                    )
-                                )
-                            ),
-                            React.createElement(
-                                'div', 
-                                { 
-                                    className: 'px-0 py-0 flex items-center justify-center',
-                                    style: { 
-                                        textAlign: 'center',
-                                        fontWeight: '500',
-                                        color: '#16a34a'
-                                    }
-                                },
-                                React.createElement(
-                                    'span',
-                                    { className: 'text-sm font-medium' },
-                                    'PRIDAŤ ZÁPAS'
-                                )
-                            )
-                        ),
-                        // Tlačidlo "+" vpravo
-                        React.createElement(
-                            'div',
-                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
-                            React.createElement(
-                                'button',
-                                {
-                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                    onClick: function(e) {
-                                        e.stopPropagation();
-                                        setSelectedBreakForAssign({
-                                            hallId: hall.id,
-                                            date: dateStr,
-                                            breakStartTime: '00:00',
-                                            breakEndTime: '23:59',
-                                            breakDuration: 0,
-                                            availableMatches: filteredUnassignedMatches
-                                        });
-                                        setIsAssignToBreakModalOpen(true);
-                                    },
-                                    title: 'Priradiť zápas'
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                            )
-                        )
-                    );
-                }
-                
-                // Inak zobrazíme pôvodný text (žiadne zápasy)
-                return React.createElement(
-                    'div',
-                    {
-                        className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
-                        style: { minWidth: '500px' }
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-sm flex-shrink-0' }),
-                    React.createElement('span', { className: 'text-center' }, 
-                        showEmptyMessage 
-                            ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
-                            : 'Žiadne zápasy'
-                    )
-                );
-            })()
-        )
-    );
-})
+                                               dayCards.map((dayCard, index) => {
+                                                   const date = dayCard.date;
+                                                   const dateStr = dayCard.dateStr;
+                                                   const hallMatches = dayCard.matches;
+                                                   const matchesCount = dayCard.matchesCount;
+                                                   const isEmpty = dayCard.isEmpty;
+                                                   
+                                                   // ** NOVÉ: Zistíme, či existujú nepriradené zápasy **
+                                                   const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
+                                                   
+                                                   // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
+                                                   const showEmptyMessage = isEmpty && isFilterActiveLocal;
+                                                   
+                                                   const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                   
+                                                   const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
+                                                   const groupsCount = uniqueGroups.length;
+                                                   
+                                                   const groupAlignmentMap = {};
+                                                   
+                                                   if (groupsCount === 1) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'center';
+                                                   } else if (groupsCount === 2) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'right';
+                                                   } else if (groupsCount === 3) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'center';
+                                                       groupAlignmentMap[uniqueGroups[2]] = 'right';
+                                                   } else if (groupsCount === 4) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'center-left';
+                                                       groupAlignmentMap[uniqueGroups[2]] = 'center-right';
+                                                       groupAlignmentMap[uniqueGroups[3]] = 'right';
+                                                   } else if (groupsCount >= 5) {
+                                                       uniqueGroups.forEach((group, index) => {
+                                                           if (index === 0) groupAlignmentMap[group] = 'left';
+                                                           else if (index === groupsCount - 1) groupAlignmentMap[group] = 'right';
+                                                           else groupAlignmentMap[group] = 'center';
+                                                       });
+                                                   }
+                                                   
+                                                   const cardId = `${hall.id}_${dateStr}`;
+                                                   const dateKey = dateStr;
+                                                   const maxHeightForDate = maxHeightsByDate[dateKey] || 0;
+                                                   
+                                                   return React.createElement(
+                                                       'div',
+                                                       {
+                                                           key: index,
+                                                           className: `day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 ${
+                                                               hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
+                                                           } transition-all group/day ${
+                                                               hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
+                                                           }`,
+                                                           style: {
+                                                               width: '100%',
+                                                               minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto',
+                                                               cursor: 'default'
+                                                           },
+                                                           'data-card-id': cardId,
+                                                           'data-date-key': dateKey,
+                                                       },
+                                                       // Hlavička dňa
+                                                       React.createElement(
+                                                           'div',
+                                                           {
+                                                               className: `flex items-center justify-between mb-2 pb-1 border-b border-gray-100 ${
+                                                                   hasCompletedMatch ? 'cursor-default' : 'cursor-pointer hover:bg-blue-50'
+                                                               } p-2 -m-2 rounded transition-colors`,
+                                                               onClick: hasCompletedMatch ? undefined : (e) => {
+                                                                   e.stopPropagation();
+                                                                   handleHallDayHeaderClick(hall, date, dateStr);
+                                                               },
+                                                               title: hasCompletedMatch ? 'Nie je možné nastaviť čas, pretože už existuje ukončený zápas v systéme.' : 'Kliknite pre nastavenie času začiatku prvého zápasu',
+                                                               style: { width: '100%' }
+                                                           },
+                                                           React.createElement(
+                                                               'div',
+                                                               { className: 'flex items-center gap-2 whitespace-nowrap' },
+                                                               React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
+                                                               React.createElement(
+                                                                   'span',
+                                                                   { className: 'text-sm font-semibold text-gray-800' },
+                                                                   formatDateWithDay(date)
+                                                               ),
+                                                               (() => {
+                                                                   const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
+                                                                   const savedSchedule = hallSchedules[scheduleId];
+                                                                   if (savedSchedule?.startTime) {
+                                                                       return React.createElement(
+                                                                           'span',
+                                                                           { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
+                                                                           React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
+                                                                           savedSchedule.startTime
+                                                                       );
+                                                                   }
+                                                                   return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
+                                                               })()
+                                                           ),
+                                                           // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
+                                                           !isEmpty && userProfileData?.role === 'admin' && !hasCompletedMatch && React.createElement(
+                                                               'div',
+                                                               { className: 'flex gap-1 ml-2' },
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           setPendingSwap({
+                                                                               sourceHallId: hall.id,
+                                                                               sourceDate: dateStr,
+                                                                               isWholeHall: false
+                                                                           });
+                                                                           setIsSwapMatchesModalOpen(true);
+                                                                       },
+                                                                       title: 'Vymeniť zápasy s iným dňom/halou (vzájomná výmena)'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrows-spin text-xs' })
+                                                               ),
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           handleBulkUnassign(hall.id, dateStr, false);
+                                                                       },
+                                                                       title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                               )
+                                                           ),
+                                                           React.createElement(
+                                                               'div',
+                                                               { className: 'flex items-center gap-2 flex-shrink-0' },
+                                                               isEmpty ? React.createElement(
+                                                                   'span',
+                                                                   { className: 'text-xs text-gray-400 whitespace-nowrap' },
+                                                                   showEmptyMessage ? 'Filtrované' : 'Žiadne zápasy'
+                                                               ) : React.createElement(
+                                                                   React.Fragment,
+                                                                   null,
+                                                                   React.createElement(
+                                                                       'span',
+                                                                       { className: 'text-xs text-gray-500 whitespace-nowrap' },
+                                                                       (() => {
+                                                                           if (matchesCount === 1) return `${matchesCount} zápas`;
+                                                                           if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
+                                                                           return `${matchesCount} zápasov`;
+                                                                       })()
+                                                                   ),
+                                                                   React.createElement(
+                                                                       'span',
+                                                                       { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
+                                                                   )
+                                                               )
+                                                           )
+                                                       ),
+                                                       
+                                                       // ** HLAVNÁ ČASŤ - ZOBRAZENIE OBSAHU DŇA **
+                                                       !isEmpty ? (
+                                                           // Normálne zobrazenie zápasov (pôvodný kód, ktorý funguje)
+                                                           React.createElement(
+                                                               'div',
+                                                               {
+                                                                   className: 'space-y-0',
+                                                                   style: { width: '100%' }
+                                                               },
+                                                               (function() {
+                                                                   const sortedMatches = hallMatches.sort((a, b) => {
+                                                                       if (!a.scheduledTime) return 1;
+                                                                       if (!b.scheduledTime) return -1;
+                                                                       try {
+                                                                           const timeA = a.scheduledTime.toDate().getTime();
+                                                                           const timeB = b.scheduledTime.toDate().getTime();
+                                                                           return timeA - timeB;
+                                                                       } catch (e) {
+                                                                           return 0;
+                                                                       }
+                                                                   });
+                                                                   
+                                                                   const allElements = [];
+                                                                   
+                                                                   // Pomocná funkcia na formátovanie času z minút
+                                                                   const formatTimeFromMinutes = (minutes) => {
+                                                                       const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                       const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                       return `${hours}:${mins}`;
+                                                                   };
+                                                                   
+                                                                   // Kontrola, či existuje aspoň jeden nepriradený zápas
+                                                                   const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
+                                                                   
+                                                                   if (sortedMatches.length > 0) {
+                                                                       const firstMatch = sortedMatches[0];
+                                                                       if (firstMatch.scheduledTime) {
+                                                                           try {
+                                                                               const firstMatchDate = firstMatch.scheduledTime.toDate();
+                                                                               const firstMatchStartMinutes = firstMatchDate.getHours() * 60 + firstMatchDate.getMinutes();
+                                                                               
+                                                                               const scheduleId = `${hall.id}_${getLocalDateStr(firstMatchDate)}`;
+                                                                               const savedSchedule = hallSchedules[scheduleId];
+                                                                               const hallStartTimeStr = savedSchedule?.startTime;
+                                                                               
+                                                                               if (hallStartTimeStr) {
+                                                                                   const [hallStartHours, hallStartMinutes] = hallStartTimeStr.split(':').map(Number);
+                                                                                   const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
+                                                                                   
+                                                                                   let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
+                                                                                   const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                                   
+                                                                                   if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
+                                                                                       const dateStr = getLocalDateStr(firstMatchDate);
+                                                                                       const gapStartTime = formatTimeFromMinutes(hallStartMinutesTotal);
+                                                                                       const gapEndTime = formatTimeFromMinutes(firstMatchStartMinutes);
+                                                                                       const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hall.id}_${dateStr}_${gapStartTime}`] : false;
+                                                                   
+                                                                                       allElements.push(
+                                                                                           React.createElement(
+                                                                                               'div',
+                                                                                               {
+                                                                                                   key: `gap-before-first-${firstMatch.id}`,
+                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                   } transition-all relative group/gap`,
+                                                                                                   style: { 
+                                                                                                       width: '100%',
+                                                                                                       backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                   }
+                                                                                               },
+                                                                                               React.createElement(
+                                                                                                   'div', 
+                                                                                                   { 
+                                                                                                       className: 'grid items-center text-xs',
+                                                                                                       style: { 
+                                                                                                           gridTemplateColumns: '130px 1fr',
+                                                                                                           width: '100%'
+                                                                                                       }
+                                                                                                   },
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                           style: { minWidth: '130px', textAlign: 'center' }
+                                                                                                       },
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                           React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                           React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                               `${gapStartTime} - ${gapEndTime}`
+                                                                                                           )
+                                                                                                       )
+                                                                                                   ),
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                           style: { 
+                                                                                                               textAlign: 'center',
+                                                                                                               fontWeight: '500',
+                                                                                                               color: '#d97706'
+                                                                                                           }
+                                                                                                       },
+                                                                                                       React.createElement(
+                                                                                                           'span',
+                                                                                                           { className: 'text-sm font-medium' },
+                                                                                                           isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                       ),
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                           `(${gapBeforeFirstMatch} min)`
+                                                                                                       )
+                                                                                                   )
+                                                                                               ),
+                                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                                   'div',
+                                                                                                   { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                   React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               toggleBlockBreak(hall.id, dateStr, gapStartTime, gapEndTime, gapBeforeFirstMatch);
+                                                                                                           },
+                                                                                                           title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                   ),
+                                                                                                   !isGapBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               setSelectedBreakForAssign({
+                                                                                                                   hallId: hall.id,
+                                                                                                                   date: dateStr,
+                                                                                                                   breakStartTime: gapStartTime,
+                                                                                                                   breakEndTime: gapEndTime,
+                                                                                                                   breakDuration: gapBeforeFirstMatch,
+                                                                                                                   availableMatches: filteredUnassignedMatches
+                                                                                                               });
+                                                                                                               setIsAssignToBreakModalOpen(true);
+                                                                                                           },
+                                                                                                           title: 'Priradiť zápas do voľného času'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                                   ),
+                                                                                                   !isGapBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               handleDeleteBreakBefore({
+                                                                                                                   matchId: firstMatch.id,
+                                                                                                                   breakDuration: gapBeforeFirstMatch
+                                                                                                               });
+                                                                                                           },
+                                                                                                           title: 'Odstrániť medzeru (posunúť prvý zápas skôr)'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                   )
+                                                                                               ) : null
+                                                                                           )
+                                                                                       );
+                                                                                   }
+                                                                               }
+                                                                           } catch (e) {
+                                                                               console.error('Chyba pri výpočte medzery pred prvým zápasom:', e);
+                                                                           }
+                                                                       }
+                                                                   }
+                                                                   
+                                                                   sortedMatches.forEach(function(match, idx, sortedArray) {
+                                                                       let matchTime = '--:--';
+                                                                       let endTime = '--:--';
+                                                                       
+                                                                       if (match.scheduledTime) {
+                                                                           try {
+                                                                               var date = match.scheduledTime.toDate();
+                                                                               matchTime = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+                                                                               
+                                                                               var matchCategory = categories.find(function(c) { return c.name === match.categoryName; });
+                                                                               var matchDuration = 0;
+                                                                               
+                                                                               if (matchCategory) {
+                                                                                   var periods = matchCategory.periods || 2;
+                                                                                   var periodDuration = matchCategory.periodDuration || 20;
+                                                                                   var breakDuration = matchCategory.breakDuration || 2;
+                                                                                   matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                               }
+                                                                               
+                                                                               var endDateTime = new Date(date.getTime() + matchDuration * 60000);
+                                                                               endTime = endDateTime.getHours().toString().padStart(2, '0') + ':' + endDateTime.getMinutes().toString().padStart(2, '0');
+                                                                               
+                                                                           } catch (e) {
+                                                                               console.error('Chyba pri formátovaní času:', e);
+                                                                           }
+                                                                       }
+                                                                       
+                                                                       var homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                                                       var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+                                                                       
+                                                                       var categoryColor = '#f3f4f6';
+                                                                       if (match.categoryName) {
+                                                                           var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
+                                                                           if (foundCategory && foundCategory.drawColor) {
+                                                                               categoryColor = foundCategory.drawColor;
+                                                                           }
+                                                                       }
+                                                                       
+                                                                       var isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
+                                                                       
+                                                                       var specialMatchText = '';
+                                                                       if (match.isPlacementMatch && match.placementRank) {
+                                                                           specialMatchText = `o ${match.placementRank}. miesto`;
+                                                                       } else if (match.matchType && !match.isPlacementMatch) {
+                                                                           var matchTypeText = match.matchType;
+                                                                           var lastChar = matchTypeText.charAt(matchTypeText.length - 1);
+                                                                           if (lastChar >= 'A' && lastChar <= 'Z') {
+                                                                               matchTypeText = matchTypeText.substring(0, matchTypeText.length - 1).trim();
+                                                                           }
+                                                                           specialMatchText = matchTypeText;
+                                                                       }
+                                                                       
+                                                                       var extractLetterAndNumber = function(identifier) {
+                                                                           if (!identifier) return { letter: '', number: '' };
+                                                                           
+                                                                           var parts = identifier.split(' ');
+                                                                           var lastPart = parts[parts.length - 1];
+                                                                           
+                                                                           var letter = '';
+                                                                           var number = '';
+                                                                           
+                                                                           for (var i = 0; i < lastPart.length; i++) {
+                                                                               var char = lastPart[i];
+                                                                               if (char >= '0' && char <= '9') {
+                                                                                   letter = lastPart.substring(0, i);
+                                                                                   number = lastPart.substring(i);
+                                                                                   break;
+                                                                               }
+                                                                           }
+                                                                           
+                                                                           if (number === '') {
+                                                                               letter = lastPart;
+                                                                           }
+                                                                           
+                                                                           return { letter: letter, number: number };
+                                                                       };
+                                                                       
+                                                                       var homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
+                                                                       var awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
+                                                                       
+                                                                       var combinedNumbers = homeExtracted.number && awayExtracted.number 
+                                                                           ? homeExtracted.number + '-' + awayExtracted.number 
+                                                                           : (homeExtracted.number || awayExtracted.number || '');
+                                                                       
+                                                                       var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
+                                                                       var letterToShow = lettersAreSame ? homeExtracted.letter : '';
+                                                                       
+                                                                       const homeTeamColor = match.homeTeamColor || '#f3f4f6';
+                                                                       const homeTextColor = match.homeTextColor || '#000000';
+                                                                       const awayTeamColor = match.awayTeamColor || '#f3f4f6';
+                                                                       const awayTextColor = match.awayTextColor || '#000000';
+                                                                       
+                                                                       allElements.push(
+                                                                           React.createElement(
+                                                                               'div',
+                                                                               {
+                                                                                    key: 'match-' + match.id,
+                                                                                    className: `p-0 rounded border border-gray-200 ${
+                                                                                        hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
+                                                                                    } transition-all relative group/match bg-white ${
+                                                                                        hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
+                                                                                    }`,
+                                                                                    style: { 
+                                                                                        width: '100%',
+                                                                                        backgroundColor: 'white'
+                                                                                    }
+                                                                                },
+                                                                               React.createElement(
+                                                                                   'div', 
+                                                                                   { 
+                                                                                       className: 'grid items-center text-xs',
+                                                                                       style: { 
+                                                                                           gridTemplateColumns: '130px 200px 10px 200px 10px 50px 30px',
+                                                                                           width: '100%'
+                                                                                       },
+                                                                                       onClick: function(e) {
+                                                                                           e.stopPropagation();
+                                                                                           handleMatchCardClick(match);
+                                                                                       },
+                                                                                       title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu'
+                                                                                   },
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                           style: { minWidth: '130px', textAlign: 'center' }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'div', 
+                                                                                           { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                           React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
+                                                                                           React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
+                                                                                       )
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent',
+                                                                                               fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
+                                                                                           }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'span',
+                                                                                           { 
+                                                                                               className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.homeTeamInConflict ? '#ffffff' : '#000000'
+                                                                                               },
+                                                                                               title: homeDisplay.name 
+                                                                                           },
+                                                                                           homeDisplay.name
+                                                                                       )
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
+                                                                                       },
+                                                                                       React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               backgroundColor: match.awayTeamInConflict ? '#dc2626' : 'transparent',
+                                                                                               fontWeight: match.awayTeamInConflict ? 'bold' : 'normal'
+                                                                                           }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'span',
+                                                                                           { 
+                                                                                               className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                               style: { 
+                                                                                                   color: match.awayTeamInConflict ? '#ffffff' : '#000000'
+                                                                                               },
+                                                                                               title: awayDisplay.name 
+                                                                                           },
+                                                                                           awayDisplay.name
+                                                                                       )
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                           style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
+                                                                                       },
+                                                                                       React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                                                                   ),
+                                                                                   !isSpecialMatch && React.createElement(
+                                                                                       React.Fragment,
+                                                                                       null,
+                                                                                       React.createElement(
+                                                                                           'div', 
+                                                                                           { 
+                                                                                               className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                               style: { textAlign: 'center', backgroundColor: 'transparent' }
+                                                                                           },
+                                                                                           React.createElement(
+                                                                                               'span',
+                                                                                               { 
+                                                                                                   className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full'
+                                                                                               },
+                                                                                               combinedNumbers
+                                                                                           )
+                                                                                       ),
+                                                                                       React.createElement(
+                                                                                           'div', 
+                                                                                           { 
+                                                                                               className: 'px-2 py-0 flex items-center justify-center',
+                                                                                               style: { textAlign: 'center', backgroundColor: categoryColor, fontWeight: 'bold', borderRadius: '4px' }
+                                                                                           },
+                                                                                           React.createElement(
+                                                                                               'span',
+                                                                                               { 
+                                                                                                   className: 'text-black font-bold text-xs truncate block w-full',
+                                                                                                   style: { color: '#000', textShadow: 'none' }
+                                                                                               },
+                                                                                               letterToShow || ''
+                                                                                           )
+                                                                                       )
+                                                                                   ),
+                                                                                   isSpecialMatch && React.createElement(
+                                                                                       'div', 
+                                                                                       { 
+                                                                                           className: 'px-3 py-0 flex items-center justify-center',
+                                                                                           colSpan: 2,
+                                                                                           style: { 
+                                                                                               textAlign: 'center',
+                                                                                               backgroundColor: categoryColor,
+                                                                                               fontWeight: 'bold',
+                                                                                               borderRadius: '4px',
+                                                                                               gridColumn: 'span 2',
+                                                                                               whiteSpace: 'nowrap',
+                                                                                               wordBreak: 'keep-all',
+                                                                                               minWidth: '80px',
+                                                                                               maxWidth: 'none'
+                                                                                           }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'span',
+                                                                                           { 
+                                                                                               className: 'text-black font-bold text-[10px] block w-full',
+                                                                                               style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
+                                                                                           },
+                                                                                           specialMatchText
+                                                                                       )
+                                                                                   )
+                                                                               ),
+                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                   'div',
+                                                                                   { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
+                                                                                   React.createElement(
+                                                                                       'button',
+                                                                                       {
+                                                                                           className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                           onClick: function(e) {
+                                                                                               e.stopPropagation();
+                                                                                               setSelectedMatchForBreak(match);
+                                                                                               setSelectedMatchCurrentTime(matchTime);
+                                                                                               setIsBreakModalOpen(true);
+                                                                                           },
+                                                                                           title: 'Pridať medzeru pred/za zápas'
+                                                                                       },
+                                                                                       React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'button',
+                                                                                       {
+                                                                                           className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                           onClick: function(e) {
+                                                                                               e.stopPropagation();
+                                                                                               handleSwapClick(match);
+                                                                                           },
+                                                                                           title: 'Vymeniť domáci a hosťovský tím'
+                                                                                       },
+                                                                                       React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                                                   ),
+                                                                                   React.createElement(
+                                                                                       'button',
+                                                                                       {
+                                                                                           className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                           onClick: function(e) {
+                                                                                               e.stopPropagation();
+                                                                                               handleUnassignMatch(match);
+                                                                                           },
+                                                                                           title: 'Odstrániť priradenie (miesto a čas)'
+                                                                                       },
+                                                                                       React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                   )
+                                                                               ) : null
+                                                                           )
+                                                                       );
+                                                                       
+                                                                       const currentMatch = sortedArray[idx];
+                                                                       const nextMatch = sortedArray[idx + 1];
+                                                                       
+                                                                       if (nextMatch && currentMatch.scheduledTime && nextMatch.scheduledTime) {
+                                                                           try {
+                                                                               const currentMatchDate = currentMatch.scheduledTime.toDate();
+                                                                               const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
+                                                                               
+                                                                               let currentMatchDuration = 0;
+                                                                               let currentMatchBreak = 5;
+                                                                               if (currentMatchCategory) {
+                                                                                   const periods = currentMatchCategory.periods || 2;
+                                                                                   const periodDuration = currentMatchCategory.periodDuration || 20;
+                                                                                   const breakDuration = currentMatchCategory.breakDuration || 2;
+                                                                                   currentMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                   currentMatchBreak = currentMatchCategory.matchBreak || 5;
+                                                                               }
+                                                                               
+                                                                               const currentMatchEndTime = new Date(currentMatchDate.getTime() + (currentMatchDuration + currentMatchBreak) * 60000);
+                                                                               const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
+                                                                               
+                                                                               const nextMatchDate = nextMatch.scheduledTime.toDate();
+                                                                               const nextStartMinutes = nextMatchDate.getHours() * 60 + nextMatchDate.getMinutes();
+                                                                               
+                                                                               let gapMinutes = nextStartMinutes - currentEndMinutes;
+                                                                               
+                                                                               const dateStr = getLocalDateStr(currentMatchDate);
+                                                                               const hallId = currentMatch.hallId;
+                                                                               const gapStartTime = formatTimeFromMinutes(currentEndMinutes);
+                                                                               const gapEndTime = formatTimeFromMinutes(nextStartMinutes);
+                                                                               
+                                                                               const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hallId}_${dateStr}_${gapStartTime}`] : false;
+                                                                               const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                               
+                                                                               if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
+                                                                                   if (gapMinutes >= 0) {
+                                                                                       allElements.push(
+                                                                                           React.createElement(
+                                                                                               'div',
+                                                                                               {
+                                                                                                   key: `gap-${currentMatch.id}-${nextMatch.id}`,
+                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                   } transition-all relative group/gap`,
+                                                                                                   style: { 
+                                                                                                       width: '100%',
+                                                                                                       backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                   }
+                                                                                               },
+                                                                                               React.createElement(
+                                                                                                   'div', 
+                                                                                                   { 
+                                                                                                       className: 'grid items-center text-xs',
+                                                                                                       style: { 
+                                                                                                           gridTemplateColumns: '130px 1fr',
+                                                                                                           width: '100%',
+                                                                                                       }
+                                                                                                   },
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                           style: { minWidth: '130px', textAlign: 'center' }
+                                                                                                       },
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                           React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                           React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                               `${gapStartTime} - ${gapEndTime}`
+                                                                                                           )
+                                                                                                       )
+                                                                                                   ),
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                           style: { textAlign: 'center', fontWeight: '500', color: '#d97706' }
+                                                                                                       },
+                                                                                                       React.createElement(
+                                                                                                           'span',
+                                                                                                           { className: 'text-sm font-medium' },
+                                                                                                           isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                       ),
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                           `(${gapMinutes} min)`
+                                                                                                       )
+                                                                                                   )
+                                                                                               ),
+                                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                                   'div',
+                                                                                                   { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                   React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               toggleBlockBreak(hallId, dateStr, gapStartTime, gapEndTime, gapMinutes);
+                                                                                                           },
+                                                                                                           title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (zamedziť priradeniu zápasu)'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                   ),
+                                                                                                   !isGapBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               setSelectedBreakForAssign({
+                                                                                                                   hallId: hallId,
+                                                                                                                   date: dateStr,
+                                                                                                                   breakStartTime: gapStartTime,
+                                                                                                                   breakEndTime: gapEndTime,
+                                                                                                                   breakDuration: gapMinutes,
+                                                                                                                   availableMatches: filteredUnassignedMatches
+                                                                                                               });
+                                                                                                               setIsAssignToBreakModalOpen(true);
+                                                                                                           },
+                                                                                                           title: 'Priradiť zápas do voľného času'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                                   ),
+                                                                                                   !isGapBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: function(e) {
+                                                                                                               e.stopPropagation();
+                                                                                                               handleDeleteBreak({
+                                                                                                                   matchId: currentMatch.id,
+                                                                                                                   nextMatchId: nextMatch.id,
+                                                                                                                   breakDuration: gapMinutes
+                                                                                                               });
+                                                                                                           },
+                                                                                                           title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                   )
+                                                                                               ) : null
+                                                                                           )
+                                                                                       );
+                                                                                   }
+                                                                               }
+                                                                           } catch (e) {
+                                                                               console.error('Chyba pri výpočte medzery:', e);
+                                                                           }
+                                                                       }
+                                                                   });
+                                               
+                                                                   // ** ZELENÝ RIADOK ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
+                                                                   if (hasUnassignedMatches && sortedMatches.length > 0 && userProfileData?.role === 'admin' && !hasCompletedMatch) {
+                                                                       const lastMatch = sortedMatches[sortedMatches.length - 1];
+                                                                       if (lastMatch && lastMatch.scheduledTime) {
+                                                                           try {
+                                                                               const lastMatchDate = lastMatch.scheduledTime.toDate();
+                                                                               const dateStr = getLocalDateStr(lastMatchDate);
+                                                                               const hallId = lastMatch.hallId;
+                                                                               
+                                                                               // Vypočítame koniec posledného zápasu vrátane prestávky
+                                                                               const lastMatchCategory = categories.find(c => c.name === lastMatch.categoryName);
+                                                                               let lastMatchDuration = 0;
+                                                                               let lastMatchBreak = 5;
+                                                                               if (lastMatchCategory) {
+                                                                                   const periods = lastMatchCategory.periods || 2;
+                                                                                   const periodDuration = lastMatchCategory.periodDuration || 20;
+                                                                                   const breakDuration = lastMatchCategory.breakDuration || 2;
+                                                                                   lastMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                   lastMatchBreak = lastMatchCategory.matchBreak || 5;
+                                                                               }
+                                                                               
+                                                                               const lastMatchEndTime = new Date(lastMatchDate.getTime() + (lastMatchDuration + lastMatchBreak) * 60000);
+                                                                               const lastMatchEndMinutes = lastMatchEndTime.getHours() * 60 + lastMatchEndTime.getMinutes();
+                                                                               const endTimeStr = formatTimeFromMinutes(lastMatchEndMinutes);
+                                                                               
+                                                                               // Koniec voľného času nastavíme na 23:59
+                                                                               const breakEndTimeStr = '23:59';
+                                                                               
+                                                                               allElements.push(
+                                                                                   React.createElement(
+                                                                                       'div',
+                                                                                       {
+                                                                                           key: 'add-match-button',
+                                                                                           className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                                                           style: { 
+                                                                                               width: '100%',
+                                                                                               backgroundColor: '#f0fdf4'
+                                                                                           }
+                                                                                       },
+                                                                                       React.createElement(
+                                                                                           'div', 
+                                                                                           { 
+                                                                                               className: 'grid items-center text-xs',
+                                                                                               style: { 
+                                                                                                   gridTemplateColumns: '130px 1fr',
+                                                                                                   width: '100%'
+                                                                                               },
+                                                                                               onClick: function(e) {
+                                                                                                   e.stopPropagation();
+                                                                                                   setSelectedBreakForAssign({
+                                                                                                       hallId: hallId,
+                                                                                                       date: dateStr,
+                                                                                                       breakStartTime: endTimeStr,
+                                                                                                       breakEndTime: breakEndTimeStr,
+                                                                                                       breakDuration: 0,
+                                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                                   });
+                                                                                                   setIsAssignToBreakModalOpen(true);
+                                                                                               }
+                                                                                           },
+                                                                                           React.createElement(
+                                                                                               'div', 
+                                                                                               { 
+                                                                                                   className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                   style: { minWidth: '130px', textAlign: 'center' }
+                                                                                               },
+                                                                                               React.createElement(
+                                                                                                   'div', 
+                                                                                                   { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                   React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
+                                                                                                   React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
+                                                                                                       `po ${endTimeStr}`
+                                                                                                   )
+                                                                                               )
+                                                                                           ),
+                                                                                           React.createElement(
+                                                                                               'div', 
+                                                                                               { 
+                                                                                                   className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                   style: { 
+                                                                                                       textAlign: 'center',
+                                                                                                       fontWeight: '500',
+                                                                                                       color: '#16a34a'
+                                                                                                   }
+                                                                                               },
+                                                                                               React.createElement(
+                                                                                                   'span',
+                                                                                                   { className: 'text-sm font-medium' },
+                                                                                                   'PRIDAŤ ZÁPAS'
+                                                                                               )
+                                                                                           )
+                                                                                       ),
+                                                                                       React.createElement(
+                                                                                           'div',
+                                                                                           { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
+                                                                                           React.createElement(
+                                                                                               'button',
+                                                                                               {
+                                                                                                   className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                   onClick: function(e) {
+                                                                                                       e.stopPropagation();
+                                                                                                       setSelectedBreakForAssign({
+                                                                                                           hallId: hallId,
+                                                                                                           date: dateStr,
+                                                                                                           breakStartTime: endTimeStr,
+                                                                                                           breakEndTime: breakEndTimeStr,
+                                                                                                           breakDuration: 0,
+                                                                                                           availableMatches: filteredUnassignedMatches
+                                                                                                       });
+                                                                                                       setIsAssignToBreakModalOpen(true);
+                                                                                                   },
+                                                                                                   title: 'Priradiť zápas'
+                                                                                               },
+                                                                                               React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                           )
+                                                                                       )
+                                                                                   )
+                                                                               );
+                                                                           } catch (e) {
+                                                                               console.error('Chyba pri vytváraní tlačidla pre pridanie zápasu:', e);
+                                                                           }
+                                                                       }
+                                                                   }
+                                                                   
+                                                                   return allElements;
+                                                               })()
+                                                           )
+                                                       ) : (
+                                                           // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
+                                                           (() => {
+                                                               // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
+                                                               if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
+                                                                   return React.createElement(
+                                                                       'div',
+                                                                       {
+                                                                           key: 'empty-day-add-button',
+                                                                           className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                                           style: { 
+                                                                               width: '100%',
+                                                                               backgroundColor: '#f0fdf4'
+                                                                           }
+                                                                       },
+                                                                       React.createElement(
+                                                                           'div', 
+                                                                           { 
+                                                                               className: 'grid items-center text-xs',
+                                                                               style: { 
+                                                                                   gridTemplateColumns: '130px 1fr',
+                                                                                   width: '100%'
+                                                                               },
+                                                                               onClick: function(e) {
+                                                                                   e.stopPropagation();
+                                                                                   setSelectedBreakForAssign({
+                                                                                       hallId: hall.id,
+                                                                                       date: dateStr,
+                                                                                       breakStartTime: '00:00',
+                                                                                       breakEndTime: '23:59',
+                                                                                       breakDuration: 0,
+                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                   });
+                                                                                   setIsAssignToBreakModalOpen(true);
+                                                                               }
+                                                                           },
+                                                                           React.createElement(
+                                                                               'div', 
+                                                                               { 
+                                                                                   className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                   style: { minWidth: '130px', textAlign: 'center' }
+                                                                               },
+                                                                               React.createElement(
+                                                                                   'div', 
+                                                                                   { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                   React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
+                                                                                   React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
+                                                                                       `pridať zápas`
+                                                                                   )
+                                                                               )
+                                                                           ),
+                                                                           React.createElement(
+                                                                               'div', 
+                                                                               { 
+                                                                                   className: 'px-0 py-0 flex items-center justify-center',
+                                                                                   style: { 
+                                                                                       textAlign: 'center',
+                                                                                       fontWeight: '500',
+                                                                                       color: '#16a34a'
+                                                                                   }
+                                                                               },
+                                                                               React.createElement(
+                                                                                   'span',
+                                                                                   { className: 'text-sm font-medium' },
+                                                                                   'PRIDAŤ ZÁPAS'
+                                                                               )
+                                                                           )
+                                                                       ),
+                                                                       // Tlačidlo "+" vpravo
+                                                                       React.createElement(
+                                                                           'div',
+                                                                           { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
+                                                                           React.createElement(
+                                                                               'button',
+                                                                               {
+                                                                                   className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                   onClick: function(e) {
+                                                                                       e.stopPropagation();
+                                                                                       setSelectedBreakForAssign({
+                                                                                           hallId: hall.id,
+                                                                                           date: dateStr,
+                                                                                           breakStartTime: '00:00',
+                                                                                           breakEndTime: '23:59',
+                                                                                           breakDuration: 0,
+                                                                                           availableMatches: filteredUnassignedMatches
+                                                                                       });
+                                                                                       setIsAssignToBreakModalOpen(true);
+                                                                                   },
+                                                                                   title: 'Priradiť zápas'
+                                                                               },
+                                                                               React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                           )
+                                                                       )
+                                                                   );
+                                                               }
+                                                               
+                                                               // Inak zobrazíme pôvodný text (žiadne zápasy)
+                                                               return React.createElement(
+                                                                   'div',
+                                                                   {
+                                                                       className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
+                                                                       style: { minWidth: '500px' }
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-sm flex-shrink-0' }),
+                                                                   React.createElement('span', { className: 'text-center' }, 
+                                                                       showEmptyMessage 
+                                                                           ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
+                                                                           : 'Žiadne zápasy'
+                                                                   )
+                                                               );
+                                                           })()
+                                                       )
+                                                   );
+                                               })
                                            ),
                                            
                                            // Ak nie sú nastavené dátumy turnaja
