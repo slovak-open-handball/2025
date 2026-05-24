@@ -556,51 +556,42 @@ function AddCategoriesApp() {
 
   const sendAdminNotification = async (notificationData) => {
     if (!db) { 
-      console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
-      return;
+        console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
+        return;
     }
     try {
-      const notificationsCollectionRef = collection(db, 'notifications');
-      const userEmail = user.email; // Používame priamo user.email, ktorý by mal byť dostupný
-      const currentTimestamp = new Date().toISOString(); 
-      const changesToAdd = []; 
+        const notificationsCollectionRef = collection(db, 'notifications');
+        const userId = user.uid;          // Používame UID namiesto emailu
+        const currentTimestamp = new Date().toISOString(); 
+        const changesToAdd = []; 
 
-      if (notificationData.type === 'create') {
-        const { newCategoryName } = notificationData.data;
-
-        changesToAdd.push(`Vytvorenie kategórie: '''${newCategoryName}'`);
-
-      } else if (notificationData.type === 'edit') {
-        const {
-          originalCategoryName,
-          newCategoryName
-        } = notificationData.data;
-
-        if (originalCategoryName !== newCategoryName) {
-          changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
+        if (notificationData.type === 'create') {
+            const { newCategoryName } = notificationData.data;
+            changesToAdd.push(`Vytvorenie kategórie: '''${newCategoryName}'`);
+        } else if (notificationData.type === 'edit') {
+            const { originalCategoryName, newCategoryName } = notificationData.data;
+            if (originalCategoryName !== newCategoryName) {
+                changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
+            }
+        } else if (notificationData.type === 'delete') {
+            changesToAdd.push(`Zmazanie kategórie: '''${notificationData.data.categoryName}'`);
         }
-      } else if (notificationData.type === 'delete') {
-        changesToAdd.push(
-          `Zmazanie kategórie: '''${notificationData.data.categoryName}'`
-        );
-      }
 
-      if (changesToAdd.length > 0) {
-        await addDoc(notificationsCollectionRef, {
-          userEmail: userEmail,
-          timestamp: currentTimestamp,
-          changes: arrayUnion(...changesToAdd) // Používame arrayUnion na pridanie viacerých zmien
-        });
-        console.log("Notifikácia pre administrátorov uložená do kolekcie 'notifications'.");
-      } else {
-        console.log("Žiadne zmeny na uloženie notifikácií.");
-      }
-
+        if (changesToAdd.length > 0) {
+            await addDoc(notificationsCollectionRef, {
+                userId: userId,           // ✅ UID namiesto emailu
+                timestamp: currentTimestamp,
+                changes: arrayUnion(...changesToAdd)
+            });
+            console.log("Notifikácia pre administrátorov uložená do kolekcie 'notifications'.");
+        } else {
+            console.log("Žiadne zmeny na uloženie notifikácií.");
+        }
     } catch (e) {
-      console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
-      if (typeof showLocalNotification === 'function') {
-        showLocalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
-      }
+        console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
+        if (typeof showLocalNotification === 'function') {
+            showLocalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
+        }
     }
   };
 
