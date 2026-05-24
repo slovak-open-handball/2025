@@ -1202,13 +1202,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         let exclusionDisplayRow = null;
                         
-                        if (isExcluded) {
+                        if (isExcludedNormally) {
+                            // Normálne vylúčenie (2 minúty) - zobraziť odpočet
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `0:${secs.toString().padStart(2, '0')}`;
                             
-                            // Riadok s odpočtom vylúčenia (pre každého člena)
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `exclusion-${idx}`, className: 'bg-orange-50' },
@@ -1218,6 +1218,23 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
                                         React.createElement('span', {}, `Zostáva: ${timeDisplay}`)
+                                    )
+                                )
+                            );
+                        } else if (isSuspendedByBlue) {
+                            // Vylúčenie za modrú kartu - zobraziť informáciu
+                            const blueInfo = window.blueCardSuspensions?.[`${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`];
+                            const remainingMatches = blueInfo?.remainingMatches || 0;
+                            
+                            exclusionDisplayRow = React.createElement(
+                                'tr',
+                                { key: `blue-suspension-${idx}`, className: 'bg-blue-50' },
+                                React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'text-xs text-blue-600 font-medium flex items-center justify-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-ban' }),
+                                        React.createElement('span', {}, `Vylúčený na ${remainingMatches} zápasov za modrú kartu`)
                                     )
                                 )
                             );
