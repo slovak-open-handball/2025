@@ -800,23 +800,23 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     // Funkcia pre kliknutie na tlačidlo akcie (UPRAVENÁ)
     const handleActionClick = (action) => {
         setSelectedActions(prev => {
-            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m + GÓL: obe môžu byť vybraté spolu
-            // Ak je aktívna 7m a kliknem na gól -> pridáme gól (7m zostáva)
-            // Ak je aktívny gól a kliknem na 7m -> pridáme 7m (gól zostáva)
-            if ((action === '7m' && prev.has('goal')) || (action === 'goal' && prev.has('7m'))) {
+            // 🔥 ŠPECIÁLNA LOGIKA:
+            // Ak je vybratý GÓL a kliknem na 7m -> GÓL sa zruší, vyberie sa len 7m
+            if (action === '7m' && prev.has('goal')) {
+                const newSet = new Set();
+                newSet.add('7m');
+                return newSet;
+            }
+            
+            // Ak je vybratá 7m a kliknem na GÓL -> obe ostanú vybraté (7m + gól)
+            if (action === 'goal' && prev.has('7m')) {
                 const newSet = new Set(prev);
-                if (newSet.has(action)) {
-                    // Ak už je akcia aktívna, deaktivujeme ju
-                    newSet.delete(action);
-                } else {
-                    // Inak ju pridáme
-                    newSet.add(action);
-                }
+                newSet.add('goal');
                 return newSet;
             }
             
             // 🔥 PRE VŠETKY OSTATNÉ PRÍPADY: exclusive režim
-            // Ak klikneme na akúkoľvek akciu (okrem prípadu 7m+gól vyššie)
+            // Ak klikneme na akúkoľvek akciu (yellow, red, blue, exclusion, alebo samostatný goal/7m)
             const newSet = new Set();
             
             // Ak je kliknutá akcia už aktívna, zrušíme ju (prázdna množina)
