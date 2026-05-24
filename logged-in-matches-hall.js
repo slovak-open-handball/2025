@@ -1268,6 +1268,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     const [selectedActions, setSelectedActions] = useState(new Set());
     const [externalActionSync, setExternalActionSync] = useState(null);
+
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetLoading, setResetLoading] = useState(false);
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -1286,6 +1289,32 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     useEffect(() => { totalPeriodsRef.current = totalPeriods; }, [totalPeriods]);
     useEffect(() => { periodRef.current = period; }, [period]);
     useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
+
+    const handleResetConfirm = async () => {
+        setResetLoading(true);
+        try {
+            if (isRunningRef.current) {
+                stopLocalInterval();
+                setIsRunning(false);
+                isRunningRef.current = false;
+            }
+
+            // Zastavíme časovač ak beží
+            if (isRunningRef.current) {
+                await stopTimerAndSave();
+            }
+    
+            // Vykonáme reset
+            await resetTime();
+            
+            // Zatvoríme modal
+            setShowResetModal(false);
+        } catch (err) {
+            console.error('Chyba pri resetovaní:', err);
+        } finally {
+            setResetLoading(false);
+        }
+    };
 
     const getPeriodTime = (totalSeconds) => {
         return totalSeconds;
@@ -1698,6 +1727,58 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 console.error('Chyba pri ukladaní manuálneho výsledku:', err);
             }
         }
+    };
+
+    const renderResetModal = () => {
+        if (!showResetModal) return null;
+        
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                onClick: () => !resetLoading && setShowResetModal(false)
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold text-gray-800 mb-4' },
+                    'Resetovať zápas'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-6' },
+                    'Naozaj chcete resetovať celý zápas? Všetky údaje (čas, výsledky, udalosti, vylúčenia) budú vymazané.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-3 justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowResetModal(false),
+                            disabled: resetLoading,
+                            className: 'px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleResetConfirm,
+                            disabled: resetLoading,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+                        },
+                        resetLoading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
+                        resetLoading ? 'Resetujem...' : 'Potvrdiť reset'
+                    )
+                )
+            )
+        );
     };
 
     const renderManualResultModal = () => {
@@ -2378,12 +2459,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const resetTime = async () => {
         if (!canReset()) return;
     
-        if (isRunningRef.current) {
-            stopLocalInterval();
-            setIsRunning(false);
-            isRunningRef.current = false;
-        }
-    
         setDisplaySeconds(0);
         setPeriod(1);
         
@@ -2725,7 +2800,10 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     className: `px-3 py-2 rounded-lg font-semibold transition-colors text-sm ${period >= totalPeriods || isRunning ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer'}` 
                 }, React.createElement('i', { className: 'fa-solid fa-chevron-right' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement('button', { onClick: resetTime, className: 'px-4 py-2 rounded-lg font-semibold transition-colors text-sm bg-yellow-500 hover:bg-yellow-600 text-white cursor-pointer' }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
+                React.createElement('button', { 
+                    onClick: () => setShowResetModal(true), 
+                    className: 'px-4 py-2 rounded-lg font-semibold transition-colors text-sm bg-yellow-500 hover:bg-yellow-600 text-white cursor-pointer' 
+                }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
             ),
             
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
@@ -2778,7 +2856,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         ),
         renderEndMatchModal(),
         renderForfeitModal(),
-        renderManualResultModal()
+        renderManualResultModal(),
+        renderResetModal()
     );
 });
 
