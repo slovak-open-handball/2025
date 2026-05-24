@@ -593,37 +593,22 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // V TeamMembersList komponente - OPRAVENÝ useEffect pre aktuálny čas (INICIALIZÁCIA)
+    // V TeamMembersList komponente - OPRAVA PRE VYLÚČENIA BEZ PRESTÁVOK
     useEffect(() => {
         let intervalId = null;
         let isMounted = true;
         
-        // 🔥 FUNKCIA NA VÝPOČET ČASU (aby sme ju mohli zavolať hneď aj v intervale)
         const updateGameTime = () => {
             if (!isMounted) return;
             
             const currentMatchData = matchDataRef.current;
-            if (!currentMatchData) {
-                // Ak ešte nemáme dáta, ale máme matchId, skúsime ich získať
-                if (matchId && window.db && !currentMatchData) {
-                    const matchRef = doc(window.db, 'matches', matchId);
-                    getDoc(matchRef).then((docSnap) => {
-                        if (docSnap.exists() && isMounted) {
-                            const data = docSnap.data();
-                            matchDataRef.current = data;
-                            setMatchData(data);
-                            updateGameTime(); // Rekurzívne volanie po načítaní dát
-                        }
-                    });
-                }
-                return;
-            }
+            if (!currentMatchData) return;
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
+            // 🔥 CELKOVÝ ČAS BEZ PRESTÁVOK (čistý čas hry)
             let totalTimeFromPreviousPeriods = 0;
-            
             if (currentPeriod > 1) {
                 totalTimeFromPreviousPeriods = (currentPeriod - 1) * periodLength;
             }
@@ -633,34 +618,39 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
-                
                 if (currentPeriodTime > periodLength) {
                     currentPeriodTime = periodLength;
                 }
             }
             
-            const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime;
+            // 🔥 PRIDANÉ: Odpočítanie prestávky pre výpočet vylúčení
+            // Ak chceme, aby vylúčenie nebežalo počas prestávky, musíme odpočítať čas prestávky
+            // Ale toto je NEŠTANDARDNÉ pre hádzanú!
+            let breakTime = 0;
+            if (currentMatchData.breakDuration && currentPeriod > 1) {
+                // Prestávka medzi periódami (napr. 5 minút = 300 sekúnd)
+                breakTime = (currentPeriod - 1) * (currentMatchData.breakDuration * 60);
+            }
+            
+            const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime - breakTime;
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 1 || prev === 0) {
-                    console.log(`[TeamMembersList] Celkový čas hry: ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${currentPeriodTime}s, čas z predchádzajúcich periód: ${totalTimeFromPreviousPeriods}s)`);
+                    console.log(`[TeamMembersList] Celkový čas hry (bez prestávok pre vylúčenia): ${totalGameTime}s`);
                     return totalGameTime;
                 }
                 return prev;
             });
         };
         
-        // 🔥 OKAMŽITÉ SPUSTENIE (nie až po 1 sekunde)
         updateGameTime();
-        
-        // Potom interval každú sekundu
         intervalId = setInterval(updateGameTime, 1000);
         
         return () => {
             isMounted = false;
             if (intervalId) clearInterval(intervalId);
         };
-    }, [matchId]); // Pridáme matchId ako dependency, aby sa spustil znovu pri zmene zápasu
+    }, [matchId]);
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
