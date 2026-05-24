@@ -1014,6 +1014,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
+        // 🔥 PRVÁ KONTROLA: Ak je hráč vylúčený za modrú kartu, NEDOVOLÍME ŽIADNU AKCIU
+        const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
+        if (isSuspendedByBlue) {
+            console.log(`⛔ Hráč ${member.firstName} ${member.lastName} je vylúčený za modrú kartu, nemôže vykonávať žiadne akcie`);
+            // Zobrazíme alert alebo notifikáciu
+            alert(`Hráč ${member.firstName} ${member.lastName} je vylúčený za modrú kartu a nemôže vykonávať žiadne akcie!`);
+            return;
+        }
+        
         const timerCurrent = timerRef.current;
         let selectedActionsSet = new Set();
         
@@ -1043,7 +1052,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // Kontrola vylúčenia - POUŽÍVAME UNIKÁTNY KĽÚČ
+        // Kontrola normálneho vylúčenia (2 minúty)
         const uniqueKey = `${member.type}_${member.originalIndex}`;
         const exclusionInfo = excludedMembers[uniqueKey];
         if (exclusionInfo && exclusionInfo.isExcluded) {
@@ -1202,6 +1211,20 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const isExcluded = isExcludedNormally || isSuspendedByBlue;
                         
                         let exclusionDisplayRow = null;
+
+                        const uniqueKey = `${member.type}_${member.originalIndex}`;
+                        const exclusionInfo = excludedMembers[uniqueKey];
+
+                        const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
+                        const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+                        const isExcluded = isExcludedNormally || isSuspendedByBlue;
+
+                        // 🔥 ŠPECIÁLNE SPRACOVANIE KURZORA A SPRÁVANIA
+                        const isClickable = !isSuspendedByBlue;  // Hráči vylúčení za modrú kartu NIE SÚ KLIKATEĽNÍ
+                        const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
+                        const rowClassName = isExcluded 
+                            ? `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100 line-through`
+                            : `hover:bg-gray-50 transition-colors ${cursorClass}`;
                         
                         if (isExcludedNormally) {
                             // Normálne vylúčenie (2 minúty) - zobraziť odpočet
@@ -1242,18 +1265,17 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         }
                         
-                        // ŠTÝL - PRE VYLÚČENÝCH ČLENOV (sivý/opacity)
-                        const rowClassName = isExcluded 
-                            ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-gray-100 line-through' 
-                            : 'hover:bg-gray-50 transition-colors cursor-pointer';
-                        
                         // Hlavný riadok člena
                         const mainRow = React.createElement(
                             'tr',
                             { 
                                 key: `member-${idx}`,
                                 className: rowClassName,
-                                onClick: () => handleMemberClick(member)
+                                onClick: () => {
+                                    if (isClickable) {
+                                        handleMemberClick(member);
+                                    }
+                                }
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
                             React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, jerseyDisplay || ''),
