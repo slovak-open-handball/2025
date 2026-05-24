@@ -802,29 +802,29 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     // Funkcia pre kliknutie na tlačidlo akcie
     const handleActionClick = (action) => {
         setSelectedActions(prev => {
-            // 🔥 ŠPECIÁLNA LOGIKA PRE GÓL: klik na gól VŽDY zruší 7m
-            if (action === 'goal') {
-                const newSet = new Set(prev);
-                if (newSet.has('goal')) {
-                    // Ak už je goal aktívny, deaktivujeme ho
-                    newSet.delete('goal');
-                } else {
-                    // Pridáme goal a ZÁROVEŇ ODSTRÁNIME 7m
-                    newSet.clear();  // Vyčistíme všetko
-                    newSet.add('goal');
-                }
-                return newSet;
-            }
-            
-            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m: môže byť aktívna spolu s goal
+            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m: klik na 7m ZRUŠÍ goal ak je aktívny
             if (action === '7m') {
                 const newSet = new Set(prev);
                 if (newSet.has('7m')) {
                     // Ak už je 7m aktívna, deaktivujeme ju
                     newSet.delete('7m');
                 } else {
-                    // Pridáme 7m (goal zostane ak je aktívny)
+                    // Pridáme 7m a ZÁROVEŇ ODSTRÁNIME goal
+                    newSet.clear();
                     newSet.add('7m');
+                }
+                return newSet;
+            }
+            
+            // 🔥 ŠPECIÁLNA LOGIKA PRE GÓL: ak je aktívna 7m, PONEChÁME ju (vzniká kombinácia)
+            if (action === 'goal') {
+                const newSet = new Set(prev);
+                if (newSet.has('goal')) {
+                    // Ak už je goal aktívny, deaktivujeme ho
+                    newSet.delete('goal');
+                } else {
+                    // Pridáme goal, ale zachováme 7m ak je aktívna
+                    newSet.add('goal');
                 }
                 return newSet;
             }
