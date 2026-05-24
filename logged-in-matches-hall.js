@@ -736,7 +736,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         endTime: totalPenaltyEndTime,
                         exclusionCount: exclusions.length
                     };
-                    console.log(`Hráč ${member.firstName} ${member.lastName}: vylúčený do ${totalPenaltyEndTime}s, zostáva ${remaining}s, počet vylúčení: ${exclusions.length}`);
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
                 }
@@ -1120,7 +1119,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
-                            const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+                            const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `0:${secs.toString().padStart(2, '0')}`;
+
                             exclusionTooltip = `Zostáva: ${timeDisplay}`;
                             
                             // Vytvoríme riadok s odpočtom
