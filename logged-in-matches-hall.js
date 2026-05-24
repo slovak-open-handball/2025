@@ -564,7 +564,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [matchData, setMatchData] = useState(null);
     const [excludedPlayers, setExcludedPlayers] = useState({});
     
-    // 🔥 NOVÝ STATE PRE AKTUÁLNY ČAS ZÁPASU (aktualizuje sa každú sekundu)
+    // 🔥 NOVÝ STATE PRE AKTUÁLNY ČAS ZÁPASU
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
     const [periodLengthSeconds, setPeriodLengthSeconds] = useState(20 * 60);
     
@@ -587,7 +587,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId]);
     
-    // 🔥 REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU (každú sekundu) - SPRÁVNE CEZ HRANICE PERIÓD
+    // 🔥 REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - SPRÁVNE CEZ HRANICE PERIÓD
     useEffect(() => {
         const updateMatchTime = () => {
             if (!matchData) return;
@@ -611,17 +611,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             let totalMatchTime = periodTime;
             
             // Ak sme v druhej alebo ďalšej perióde, pripočítame predchádzajúce periódy
-            if (matchData.currentPeriod && matchData.currentPeriod > 1) {
+            const currentPeriod = matchData.currentPeriod || 1;
+            if (currentPeriod > 1) {
                 const periodLength = (matchData.periodDuration || 20) * 60;
-                totalMatchTime = ((matchData.currentPeriod - 1) * periodLength) + periodTime;
-            }
-            
-            // Ak máme uložený celkový čas v matchData (pre prípad, že by bol)
-            if (matchData.totalMatchTime !== undefined) {
-                totalMatchTime = matchData.totalMatchTime;
+                totalMatchTime = ((currentPeriod - 1) * periodLength) + periodTime;
             }
             
             setCurrentMatchTime(totalMatchTime);
+            console.log(`[TeamMembersList] Aktuálny čas zápasu: ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
         };
         
         updateMatchTime();
@@ -630,7 +627,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         const interval = setInterval(updateMatchTime, 1000);
         
         return () => clearInterval(interval);
-    }, [matchData]);
+    }, [matchData]); // 🔥 PRIDANÁ ZÁVISLOSŤ NA matchData (obsahuje currentPeriod)
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -723,8 +720,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     } else {
                         totalPenaltyEndTime = totalPenaltyEndTime + (exclusionDuration * 60);
                     }
-                    
-                    console.log(`Vylúčenie #${i+1}: start=${exclusionStartTime}s, end=${totalPenaltyEndTime}s`);
                 }
                 
                 // Zistíme, či je hráč momentálne vylúčený
@@ -738,10 +733,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         endTime: totalPenaltyEndTime,
                         exclusionCount: exclusions.length
                     };
-                    console.log(`Hráč ${member.firstName} ${member.lastName}: vylúčený do ${totalPenaltyEndTime}s, aktuálny čas ${currentMatchTime}s, zostáva ${remaining}s`);
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: vylúčený do ${totalPenaltyEndTime}s, aktuálny čas ${currentMatchTime}s, zostáva ${remaining}s`);
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
-                    console.log(`Hráč ${member.firstName} ${member.lastName}: už nie je vylúčený (koniec ${totalPenaltyEndTime}s < aktuálny čas ${currentMatchTime}s)`);
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: už nie je vylúčený (koniec ${totalPenaltyEndTime}s < aktuálny čas ${currentMatchTime}s)`);
                 }
             });
             
