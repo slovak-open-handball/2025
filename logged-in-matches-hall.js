@@ -604,7 +604,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // 🔥 OPRAVENÝ useEffect pre aktuálny čas - BEZ PODMIENKY NA periodLengthSeconds
+    // 🔥 OPRAVENÝ useEffect pre aktuálny čas - SPRÁVNY VÝPOČET CELKOVÉHO ČASU
     useEffect(() => {
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
@@ -617,30 +617,26 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             
-            // Čas z predchádzajúcich periód
-            let totalTimeFromPreviousPeriods = 0;
-            if (currentPeriod > 1) {
-                totalTimeFromPreviousPeriods = (currentPeriod - 1) * periodLength;
-            }
-            
-            // Čas v aktuálnej perióde
+            // 🔥 DÔLEŽITÉ: Čas v aktuálnej perióde (v sekundách)
             let currentPeriodTime = currentMatchData.manualTimeOffset || 0;
             
-            // Ak zápas beží, pripočítame uplynutý čas
+            // Ak zápas beží, pripočítame uplynutý čas od posledného štartu
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
+                // Obmedzíme na dĺžku periódy
                 if (currentPeriodTime > periodLength) {
                     currentPeriodTime = periodLength;
                 }
             }
             
-            // CELKOVÝ ČAS ZÁPASU
-            const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime;
+            // 🔥 KĽÚČOVÁ OPRAVA: Celkový čas = (aktuálna perióda - 1) * dĺžka periódy + čas v aktuálnej perióde
+            // Toto je ABSOLÚTNY ČAS ZÁPASU v sekundách (napr. 2. perióda, čas 8s = 1200 + 8 = 1208s)
+            const totalGameTime = ((currentPeriod - 1) * periodLength) + currentPeriodTime;
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 0.5) {
-                    console.log(`[TeamMembersList] Aktualizácia času: ${totalGameTime}s (perióda: ${currentPeriod}, čas v perióde: ${currentPeriodTime}s, dĺžka periódy: ${periodLength}s)`);
+                    console.log(`[TeamMembersList] Aktualizácia času: ${totalGameTime}s = (perióda ${currentPeriod} - 1) * ${periodLength}s + ${currentPeriodTime}s`);
                     return totalGameTime;
                 }
                 return prev;
@@ -659,7 +655,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 timerIntervalRef.current = null;
             }
         };
-    }, [matchId, periodLengthSeconds]); // 🔥 PRIDANÁ ZÁVISLOSŤ NA periodLengthSeconds
+    }, [matchId, periodLengthSeconds]);
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -1464,12 +1460,11 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const calculateTotalMatchTime = () => {
         const periodLengthSeconds = periodDuration * 60;
         const currentPeriodTime = displaySeconds;
-    
-        // 🔥 KĽÚČOVÁ OPRAVA: Celkový čas = (počet ukončených periód × dĺžka periódy) + čas v aktuálnej perióde
-        // Počet ukončených periód = period - 1 (lebo aktuálna perióda ešte nie je ukončená)
+
+        // 🔥 KĽÚČOVÁ OPRAVA: Celkový čas = (aktuálna perióda - 1) × dĺžka periódy + čas v aktuálnej perióde
+        // Toto je ABSOLÚTNY ČAS ZÁPASU v sekundách
         let totalTime = currentPeriodTime;
         if (period > 1) {
-            // Všetky predchádzajúce periódy boli úplne odohrané
             totalTime = ((period - 1) * periodLengthSeconds) + currentPeriodTime;
         }
         
@@ -1491,9 +1486,9 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         }
         
         let totalMatchTime = displaySeconds;
+        const periodLengthSeconds = periodDuration * 60;
 
         if (period > 1) {
-            const periodLengthSeconds = periodDuration * 60;
             totalMatchTime = ((period - 1) * periodLengthSeconds) + displaySeconds;
         }
         
