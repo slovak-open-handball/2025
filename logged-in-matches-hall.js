@@ -3067,7 +3067,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         // 🔥 FUNKCIA: Získanie zobrazenia pre hráča (načítava údaje z databázy)
         const PlayerDisplay = ({ event, isHomeEvent }) => {
-            const [memberData, setMemberData] = React.useState({ name: 'Načítavam...', jerseyNumber: '' });
+            const [memberData, setMemberData] = React.useState({ name: '', jerseyNumber: '' });
             const [loading, setLoading] = React.useState(true);
             
             // Získanie názvu tímu podľa toho, či ide o domáci alebo hosťujúci tím
@@ -3092,7 +3092,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }, [event.userId, event.categoryName, teamName, event.memberTypeKey, event.memberIndex]);
             
             if (loading) {
-                return React.createElement('span', { className: 'text-gray-400 text-xs' }, 'Načítavam...');
+                return React.createElement('span', { className: 'text-gray-400 text-xs' }, '');
             }
             
             const displayName = memberData.name;
