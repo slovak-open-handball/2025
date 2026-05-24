@@ -991,6 +991,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const allMembersSorted = [...sortedPlayers, ...rtMembers];
     
+    // OPRAVENÁ časť TeamMembersList - správne zobrazenie odpočtu vylúčenia v tabuľke
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
@@ -1073,12 +1074,29 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const isPlayerExcluded = member.type === 'Hráč' && excludedPlayers[member.originalIndex]?.isExcluded;
                         
                         let exclusionTooltip = '';
+                        let exclusionDisplay = null;
+                        
                         if (isPlayerExcluded) {
                             const exclusionInfo = excludedPlayers[member.originalIndex];
-                            const mins = Math.floor(exclusionInfo.remainingSeconds / 60);
-                            const secs = exclusionInfo.remainingSeconds % 60;
+                            const remainingSeconds = exclusionInfo.remainingSeconds;
+                            const mins = Math.floor(remainingSeconds / 60);
+                            const secs = remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
                             exclusionTooltip = `Vylúčený! Zostáva: ${timeDisplay}`;
+                            
+                            // Vytvoríme odpočet pre zobrazenie pod riadkom
+                            exclusionDisplay = React.createElement(
+                                'tr',
+                                { key: `exclusion-${idx}`, className: 'bg-orange-50' },
+                                React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
+                                        React.createElement('span', {}, `Vylúčený! Zostáva: ${timeDisplay}`)
+                                    )
+                                )
+                            );
                         }
                         
                         const rowClassName = isPlayerExcluded ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' : 'hover:bg-gray-50 transition-colors cursor-pointer';
@@ -1103,31 +1121,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                             ),
-                            // 🔥 OPRAVENÝ Odpočet vylúčenia - zobrazuje LEN zostávajúci čas (nie poradie)
-                            member.type === 'Hráč' && (() => {
-                                const exclusionInfo = excludedPlayers[member.originalIndex];
-                                const isPlayerExcluded = exclusionInfo?.isExcluded;
-                                const remainingSeconds = exclusionInfo?.remainingSeconds || 0;
-                                
-                                if (!isPlayerExcluded || remainingSeconds <= 0) return null;
-                                
-                                const mins = Math.floor(remainingSeconds / 60);
-                                const secs = remainingSeconds % 60;
-                                const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-                                
-                                return React.createElement(
-                                    'tr',
-                                    { key: `exclusion-${idx}`, className: 'bg-orange-50' },
-                                    React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
-                                            React.createElement('span', {}, `Vylúčený! Zostáva: ${timeDisplay}`)
-                                        )
-                                    )
-                                );
-                            })()
+                            exclusionDisplay
                         );
                     })
                 )
