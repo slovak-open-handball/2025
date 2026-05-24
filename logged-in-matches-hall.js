@@ -1212,22 +1212,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         let exclusionDisplayRow = null;
 
-                        const uniqueKey = `${member.type}_${member.originalIndex}`;
-                        const exclusionInfo = excludedMembers[uniqueKey];
-
-                        const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
-                        const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
-                        const isExcluded = isExcludedNormally || isSuspendedByBlue;
-
-                        // 🔥 ŠPECIÁLNE SPRACOVANIE KURZORA A SPRÁVANIA
-                        const isClickable = !isSuspendedByBlue;  // Hráči vylúčení za modrú kartu NIE SÚ KLIKATEĽNÍ
+                        const isClickable = !isSuspendedByBlue; 
                         const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
                         const rowClassName = isExcluded 
                             ? `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100 line-through`
                             : `hover:bg-gray-50 transition-colors ${cursorClass}`;
                         
                         if (isExcludedNormally) {
-                            // Normálne vylúčenie (2 minúty) - zobraziť odpočet
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
