@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// UPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE ROZLIŠUJE HRÁČOV A ČLENOV RT
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE ROZLIŠUJE HRÁČOV A ČLENOV RT S FUNKČNÝM ODPOČTOM
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -598,10 +598,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     useEffect(() => {
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
-            if (!currentMatchData) return;
+            if (!currentMatchData) {
+                return;
+            }
             
             const periodLength = periodLengthSeconds;
-            if (!periodLength) return;
+            if (!periodLength) {
+                return;
+            }
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             
@@ -634,6 +638,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             });
         };
         
+        // Okamžité spustenie
         updateGameTime();
         
         // Pravidelná aktualizácia každých 200ms pre hladký odpočet
@@ -666,6 +671,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const categoryData = settingsSnap.data()[categoryId];
                             if (categoryData && categoryData.exclusionTime) {
                                 setExclusionDuration(categoryData.exclusionTime);
+                                console.log(`[TeamMembersList] Nastavená dĺžka vylúčenia: ${categoryData.exclusionTime} minút`);
                             }
                         }
                     }
@@ -678,7 +684,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - POUŽÍVA UNIKÁTNY KĽÚČ (type + index)
+    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - S REÁLNOU AKTUALIZÁCIOU
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) {
             return;
@@ -693,7 +699,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const periodLength = periodLengthSeconds || (currentMatchData?.periodDuration * 60) || 1200;
             
             members.forEach((member) => {
-                // 🔥 Vytvoríme unikátny kľúč pre každého člena (typ + pôvodný index)
+                // Vytvoríme unikátny kľúč pre každého člena (typ + pôvodný index)
                 const uniqueKey = `${member.type}_${member.originalIndex}`;
                 
                 // Získanie správneho typu pre vyhľadávanie v databáze
@@ -762,6 +768,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         endTotalTime: totalPenaltyEndTotalTime,
                         exclusionCount: exclusions.length
                     };
+                    // Debug výpis pre sledovanie
+                    if (member.type === 'Hráč' && member.firstName) {
+                        console.log(`[VYLÚČENIE] ${member.firstName} ${member.lastName}: zostáva ${remaining}s (aktuálny čas: ${currentTotalTime}s, koniec: ${totalPenaltyEndTotalTime}s)`);
+                    }
                 } else {
                     excluded[uniqueKey] = { 
                         isExcluded: false, 
@@ -979,7 +989,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 KONTROLA VYLÚČENIA - POUŽÍVAME UNIKÁTNY KĽÚČ
+        // Kontrola vylúčenia - POUŽÍVAME UNIKÁTNY KĽÚČ
         const uniqueKey = `${member.type}_${member.originalIndex}`;
         const exclusionInfo = excludedMembers[uniqueKey];
         if (exclusionInfo && exclusionInfo.isExcluded) {
@@ -1129,7 +1139,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
-                        // 🔥 ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - POUŽÍVAME UNIKÁTNY KĽÚČ
+                        // ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - POUŽÍVAME UNIKÁTNY KĽÚČ
                         const uniqueKey = `${member.type}_${member.originalIndex}`;
                         const exclusionInfo = excludedMembers[uniqueKey];
                         const isExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
@@ -1142,7 +1152,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const secs = remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `0:${secs.toString().padStart(2, '0')}`;
                             
-                            // 🔥 Riadok s odpočtom vylúčenia (pre každého člena)
+                            // Riadok s odpočtom vylúčenia (pre každého člena)
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `exclusion-${idx}`, className: 'bg-orange-50' },
@@ -1157,7 +1167,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         }
                         
-                        // 🔥 ŠTÝL - PRE VYLÚČENÝCH ČLENOV (sivý/opacity)
+                        // ŠTÝL - PRE VYLÚČENÝCH ČLENOV (sivý/opacity)
                         const rowClassName = isExcluded 
                             ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-gray-100' 
                             : 'hover:bg-gray-50 transition-colors cursor-pointer';
