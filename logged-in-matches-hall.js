@@ -1017,9 +1017,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         // 🔥 PRVÁ KONTROLA: Ak je hráč vylúčený za modrú kartu, NEDOVOLÍME ŽIADNU AKCIU
         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
         if (isSuspendedByBlue) {
-            console.log(`⛔ Hráč ${member.firstName} ${member.lastName} je vylúčený za modrú kartu, nemôže vykonávať žiadne akcie`);
             // Zobrazíme alert alebo notifikáciu
-            alert(`Hráč ${member.firstName} ${member.lastName} je vylúčený za modrú kartu a nemôže vykonávať žiadne akcie!`);
             return;
         }
         
@@ -1237,7 +1235,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 )
                             );
                         } else if (isSuspendedByBlue) {
-                            // Vylúčenie za modrú kartu - zobraziť informáciu
                             const suspensions = propBlueCardSuspensions || window.blueCardSuspensions;
                             const blueInfo = suspensions?.[`${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`];
                             const remainingMatches = blueInfo?.remainingMatches || 0;
@@ -1250,7 +1247,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         'div',
                                         { className: 'text-xs text-blue-600 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-ban' }),
-                                        React.createElement('span', {}, `Vylúčený na ${remainingMatches} zápasov za modrú kartu`)
+                                        React.createElement('span', {}, `Hráč vylúčený za modrú kartu v predchádzajúcom zápase.`)
                                     )
                                 )
                             );
