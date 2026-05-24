@@ -3056,62 +3056,48 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             console.error('Chyba pri načítaní zápasov tímu:', err);
             return [];
         }
-    };
+    };    
 
     const calculateBlueCardSuspensions = async () => {
-        if (!window.db || !match.id) {
-            console.log('[BlueCard] Chýba db alebo match.id');
-            return;
-        }
-        
-        console.log('[BlueCard] ========== ZAČIATOK VÝPOČTU ==========');
-        console.log('[BlueCard] Zápas ID:', match.id);
-        console.log('[BlueCard] Domáci tím:', homeTeamDisplay);
-        console.log('[BlueCard] Hosťujúci tím:', awayTeamDisplay);
-        console.log('[BlueCard] Nastavenie suspensionMatchesCount:', suspensionMatchesCount);
-        
+        if (!window.db || !match.id) return;
+    
         try {
-            // Získame všetky zápasy pre domáci a hosťujúci tím
             const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier);
             const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier);
+        
+            await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
+        } catch (err) {
+            console.error('Chyba pri výpočte vylúčení:', err);
+        }
+    };
+
+    const calculateBlueCardSuspensionsRealTime = async (homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal) => {
+        if (!window.db || !match.id) return;
+        
+        try {
+            // Načítame všetky udalosti (modré karty)
+            const eventsRef = collection(window.db, 'matchEvents');
+            const eventsSnapshot = await getDocs(eventsRef);
             
-            console.log('[BlueCard] Domáce zápasy (počet):', homeTeamMatches.length);
-            console.log('[BlueCard] Hosťujúce zápasy (počet):', awayTeamMatches.length);
+            // Načítame všetkých používateľov (kluby)
+            const usersSnapshot = await getDocs(collection(window.db, 'users'));
+            
+            const suspensions = {};
             
             // Zistíme poradie aktuálneho zápasu v zozname pre každý tím
             const currentMatchIndexHome = homeTeamMatches.findIndex(m => m.id === match.id);
             const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
             
-            console.log('[BlueCard] Index aktuálneho zápasu pre domácich:', currentMatchIndexHome);
-            console.log('[BlueCard] Index aktuálneho zápasu pre hostí:', currentMatchIndexAway);
-            
-            // Načítame všetky udalosti (modré karty)
-            const eventsRef = collection(window.db, 'matchEvents');
-            const eventsSnapshot = await getDocs(eventsRef);
-            
-            console.log('[BlueCard] Počet všetkých udalostí:', eventsSnapshot.size);
-            
-            // Načítame všetkých používateľov (kluby)
-            const usersSnapshot = await getDocs(collection(window.db, 'users'));
-            console.log('[BlueCard] Počet klubov:', usersSnapshot.size);
-            
-            const suspensions = {};
-            
             // ========== SPRACOVANIE PRE DOMÁCI TÍM ==========
             if (currentMatchIndexHome !== -1) {
-                console.log('[BlueCard] ===== SPRACOVANIE DOMÁCICH =====');
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === homeTeamDisplay);
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === homeTeamDisplayLocal);
                         
                         if (foundTeam) {
-                            console.log('[BlueCard] Našiel som domáci tím u používateľa:', userDoc.id);
-                            console.log('[BlueCard] Meno tímu v DB:', foundTeam.teamName);
-                            
-                            // Zozbierame všetkých členov tímu
                             const allMembers = [];
                             
                             if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
@@ -3153,11 +3139,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 });
                             }
                             
-                            console.log('[BlueCard] Počet členov domáceho tímu:', allMembers.length);
-                            
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
-                                
                                 const blueCardEvents = [];
                                 
                                 eventsSnapshot.forEach((eventDoc) => {
@@ -3171,25 +3154,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         const matchIdOfEvent = event.matchId;
                                         const matchIndex = homeTeamMatches.findIndex(m => m.id === matchIdOfEvent);
                                         
-                                        console.log(`[BlueCard] Našiel som modrú kartu pre ${member.name} v zápase ${matchIdOfEvent}, index: ${matchIndex}`);
-                                        
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexHome) {
                                             blueCardEvents.push({
                                                 matchIndex: matchIndex,
-                                                matchId: matchIdOfEvent,
-                                                matchDate: homeTeamMatches[matchIndex]?.scheduledTimeDate
+                                                matchId: matchIdOfEvent
                                             });
                                         }
                                     }
                                 });
                                 
-                                console.log(`[BlueCard] Hráč ${member.name} má ${blueCardEvents.length} modrých kariet v predchádzajúcich zápasoch`);
-                                
                                 if (blueCardEvents.length > 0) {
                                     const lastBlueEvent = blueCardEvents[blueCardEvents.length - 1];
                                     const matchesSinceLastBlue = currentMatchIndexHome - lastBlueEvent.matchIndex;
-                                    
-                                    console.log(`[BlueCard] Posledná modrá karta pre ${member.name} bola pred ${matchesSinceLastBlue} zápasmi`);
                                     
                                     if (matchesSinceLastBlue >= 1 && matchesSinceLastBlue <= suspensionMatchesCount) {
                                         const remainingMatches = suspensionMatchesCount - (matchesSinceLastBlue - 1);
@@ -3203,8 +3179,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
                                         };
-                                        
-                                        console.log(`[BlueCard] ✅ HRÁČ VYLÚČENÝ: ${member.name} na ${remainingMatches} zápasov`);
                                     }
                                 }
                             }
@@ -3216,17 +3190,14 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             
             // ========== SPRACOVANIE PRE HOSŤUJÚCI TÍM ==========
             if (currentMatchIndexAway !== -1) {
-                console.log('[BlueCard] ===== SPRACOVANIE HOSTÍ =====');
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === awayTeamDisplay);
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === awayTeamDisplayLocal);
                         
                         if (foundTeam) {
-                            console.log('[BlueCard] Našiel som hosťujúci tím u používateľa:', userDoc.id);
-                            
                             const allMembers = [];
                             
                             if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
@@ -3268,11 +3239,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 });
                             }
                             
-                            console.log('[BlueCard] Počet členov hosťujúceho tímu:', allMembers.length);
-                            
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
-                                
                                 const blueCardEvents = [];
                                 
                                 eventsSnapshot.forEach((eventDoc) => {
@@ -3289,8 +3257,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexAway) {
                                             blueCardEvents.push({
                                                 matchIndex: matchIndex,
-                                                matchId: matchIdOfEvent,
-                                                matchDate: awayTeamMatches[matchIndex]?.scheduledTimeDate
+                                                matchId: matchIdOfEvent
                                             });
                                         }
                                     }
@@ -3312,8 +3279,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
                                         };
-                                        
-                                        console.log(`[BlueCard] ✅ HRÁČ VYLÚČENÝ (hostia): ${member.name} na ${remainingMatches} zápasov`);
                                     }
                                 }
                             }
@@ -3324,11 +3289,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             setBlueCardSuspensions(suspensions);
-            console.log('[BlueCard] ========== KONIEC VÝPOČTU ==========');
-            console.log('[BlueCard] Celkovo vylúčených hráčov:', Object.keys(suspensions).length);
+            console.log('[BlueCard] Real-time aktualizácia vylúčení:', Object.keys(suspensions).length);
             
         } catch (err) {
-            console.error('Chyba pri výpočte vylúčení za modré karty:', err);
+            console.error('Chyba pri real-time výpočte vylúčení:', err);
         }
     };
 
@@ -3550,6 +3514,40 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return { homeGoals, awayGoals };
     };
+
+    React.useEffect(() => {
+        if (!window.db || !match.id) return;
+        
+        console.log('[BlueCard] Nastavujem real-time listener pre modré karty...');
+        
+        // Listener pre všetky udalosti (modré karty)
+        const eventsRef = collection(window.db, 'matchEvents');
+        const q = query(eventsRef, where('eventType', '==', 'card'), where('eventSubtype', '==', 'blue'));
+        
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            console.log('[BlueCard] Real-time zmena v modrých kartách, prepočítavam vylúčenia...');
+            
+            // Znovu načítame zápasy tímu a prepočítame vylúčenia
+            if (match.homeTeamIdentifier && match.awayTeamIdentifier) {
+                // Získame aktuálne dáta pre výpočet
+                const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier);
+                const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier);
+                
+                const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                
+                // Prepočítame vylúčenia s aktuálnymi dátami
+                await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
+            }
+        }, (error) => {
+            console.error('[BlueCard] Chyba pri real-time počúvaní modrých kariet:', error);
+        });
+        
+        return () => {
+            console.log('[BlueCard] Ruším real-time listener pre modré karty');
+            unsubscribe();
+        };
+    }, [match.id, match.homeTeamIdentifier, match.awayTeamIdentifier, teamNames]);
 
     // Načítanie nastavení a výpočet vylúčení pri načítaní komponentu
     React.useEffect(() => {
