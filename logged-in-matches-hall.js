@@ -1752,7 +1752,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 React.createElement(
                     'p',
                     { className: 'text-gray-600 mb-6' },
-                    'Naozaj chcete resetovať celý zápas? Všetky údaje (čas, výsledky, udalosti, vylúčenia) budú vymazané.'
+                    'Naozaj chcete resetovať celý zápas? Všetky udalosti budú vymazané.'
                 ),
                 React.createElement(
                     'div',
