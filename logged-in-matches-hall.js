@@ -655,7 +655,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÉ: Načítanie vylúčených hráčov s použitím currentMatchTime
+    // 🔥 OPRAVENÉ: Načítanie vylúčených hráčov s kumulatívnym pripočítavaním času
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) return;
         
@@ -695,7 +695,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     }
                 });
                 
-                // Zoradíme vylúčenia podľa času
+                // Zoradíme vylúčenia podľa času (od najstaršieho po najnovšie)
                 exclusions.sort((a, b) => a.totalTime - b.totalTime);
                 
                 if (exclusions.length === 0) {
@@ -703,36 +703,40 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     return;
                 }
                 
-                // 🔥 KĽÚČOVÁ LOGIKA: Vypočítame celkový čas vylúčenia
-                let activeExclusionEndTime = null;
-                let currentPenaltyEnd = 0;
+                // 🔥 KĽÚČOVÁ LOGIKA: Kumulatívne pripočítavanie času vylúčenia
+                // Príklad: Hráč dostane vylúčenie v čase 10:00 (2 minúty) -> koniec 12:00
+                // Potom dostane ďalšie vylúčenie v čase 11:00 -> koniec sa posunie na 13:00 (11:00 + 2 minúty)
+                let totalPenaltyEndTime = 0;
                 
                 for (let i = 0; i < exclusions.length; i++) {
                     const exclusion = exclusions[i];
-                    const exclusionStart = exclusion.totalTime;
+                    const exclusionStartTime = exclusion.totalTime;
                     
-                    // Ak je začiatok tohto vylúčenia neskôr ako koniec predchádzajúceho trestu
-                    if (exclusionStart >= currentPenaltyEnd) {
-                        currentPenaltyEnd = exclusionStart + (exclusionDuration * 60);
+                    // Ak toto vylúčenie začína po skončení predchádzajúceho trestu
+                    if (exclusionStartTime >= totalPenaltyEndTime) {
+                        // Nový trest začína od času vylúčenia
+                        totalPenaltyEndTime = exclusionStartTime + (exclusionDuration * 60);
                     } else {
-                        // Inak sa pripočítava k existujúcemu trestu
-                        currentPenaltyEnd = currentPenaltyEnd + (exclusionDuration * 60);
+                        // Toto vylúčenie sa udeľuje POČAS existujúceho trestu
+                        // Pripočítame dĺžku trestu k aktuálnemu koncu
+                        totalPenaltyEndTime = totalPenaltyEndTime + (exclusionDuration * 60);
                     }
                     
-                    // Ak sme ešte nenašli aktívny trest a aktuálny čas je pred koncom tohto trestu
-                    if (activeExclusionEndTime === null && currentMatchTime < currentPenaltyEnd) {
-                        activeExclusionEndTime = currentPenaltyEnd;
-                    }
+                    console.log(`Vylúčenie #${i+1}: začiatok=${exclusionStartTime}s, nový koniec trestu=${totalPenaltyEndTime}s`);
                 }
                 
-                // Ak máme aktívny trest
-                if (activeExclusionEndTime !== null && currentMatchTime < activeExclusionEndTime) {
-                    const remaining = Math.ceil(activeExclusionEndTime - currentMatchTime);
+                // Zistíme, či je hráč momentálne vylúčený
+                const isCurrentlyExcluded = currentMatchTime < totalPenaltyEndTime;
+                
+                if (isCurrentlyExcluded) {
+                    const remaining = Math.ceil(totalPenaltyEndTime - currentMatchTime);
                     excluded[member.originalIndex] = {
                         isExcluded: true,
                         remainingSeconds: remaining,
-                        endTime: activeExclusionEndTime
+                        endTime: totalPenaltyEndTime,
+                        exclusionCount: exclusions.length
                     };
+                    console.log(`Hráč ${member.firstName} ${member.lastName}: vylúčený do ${totalPenaltyEndTime}s, zostáva ${remaining}s, počet vylúčení: ${exclusions.length}`);
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
                 }
@@ -742,7 +746,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         });
         
         return () => unsubscribe();
-    }, [matchId, teamType, members, exclusionDuration, currentMatchTime]); // 🔥 PRIDANÉ currentMatchTime ako dependency
+    }, [matchId, teamType, members, exclusionDuration, currentMatchTime]);
     
     // Načítanie členov tímu (zachované z pôvodného kódu)
     useEffect(() => {
