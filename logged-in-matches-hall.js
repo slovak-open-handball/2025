@@ -967,9 +967,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     // Funkcia na kontrolu, či je hráč vylúčený kvôli modrej karte
     const isPlayerSuspendedByBlueCard = (member) => {
         if (!window.blueCardSuspensions) return false;
-        
+    
         // Kľúč pre vyhľadanie v suspensions objekte
-        const playerKey = `${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`;
+        // Musíme použiť správne hodnoty z member objektu
+        const userId = member.userId || '';
+        const dbArrayName = member.dbArrayName || (member.type === 'Hráč' ? 'playerDetails' : 
+                              (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'));
+        const originalIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
+        
+        const playerKey = `${userId}_${dbArrayName}_${originalIndex}`;
         const suspension = window.blueCardSuspensions[playerKey];
         
         if (suspension && suspension.isExcludedByBlueCard) {
