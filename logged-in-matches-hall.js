@@ -1121,7 +1121,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
-                            exclusionTooltip = `Vylúčený! Zostáva: ${timeDisplay}`;
+                            exclusionTooltip = `Zostáva: ${timeDisplay}`;
                             
                             // Vytvoríme riadok s odpočtom
                             exclusionDisplayRow = React.createElement(
@@ -1132,7 +1132,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         'div',
                                         { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
-                                        React.createElement('span', {}, `Vylúčený! Zostáva: ${timeDisplay}`)
+                                        React.createElement('span', {}, `Zostáva: ${timeDisplay}`)
                                     )
                                 )
                             );
