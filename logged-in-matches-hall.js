@@ -380,7 +380,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     return unsubscribe;
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE MAPOVANIE ČLENOV PRE ŠTATISTIKY
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE ŠTATISTIKY PRE VŠETKÝCH ČLENOV (HRÁČOV AJ RT)
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -407,23 +407,46 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const players = filteredMembers.filter(m => m.type === 'Hráč');
             const sortedMembers = [...rtMembers, ...players];
             
-            // PRIDANÉ: Uložíme si pôvodný index pre každého člena
-            const membersWithOriginalIndex = sortedMembers.map((member, idx) => {
-                // Nájdeme pôvodný index v pôvodnom zozname pred filtrovaním
-                const originalIndex = updatedMembers.findIndex(m => 
-                    m.firstName === member.firstName && 
-                    m.lastName === member.lastName && 
-                    m.type === member.type
-                );
+            // Uložíme si pôvodný index pre každého člena (index v databáze)
+            const membersWithOriginalIndex = sortedMembers.map((member, displayIdx) => {
+                // Nájdeme pôvodný index v pôvodnom zozname (podľa poradia v databáze)
+                let originalIndex = displayIdx;
+                
+                if (member.type === 'Hráč') {
+                    // Pre hráčov - hľadáme medzi všetkými hráčmi
+                    const allPlayers = updatedMembers.filter(m => m.type === 'Hráč');
+                    originalIndex = allPlayers.findIndex(m => 
+                        m.firstName === member.firstName && 
+                        m.lastName === member.lastName
+                    );
+                } else if (member.type === 'Člen RT (muž)') {
+                    // Pre mužov RT - hľadáme medzi všetkými mužmi RT
+                    const allMenRT = updatedMembers.filter(m => m.type === 'Člen RT (muž)');
+                    originalIndex = allMenRT.findIndex(m => 
+                        m.firstName === member.firstName && 
+                        m.lastName === member.lastName
+                    );
+                } else if (member.type === 'Člen RT (žena)') {
+                    // Pre ženy RT - hľadáme medzi všetkými ženami RT
+                    const allWomenRT = updatedMembers.filter(m => m.type === 'Člen RT (žena)');
+                    originalIndex = allWomenRT.findIndex(m => 
+                        m.firstName === member.firstName && 
+                        m.lastName === member.lastName
+                    );
+                }
+                
                 return {
                     ...member,
-                    originalIndex: originalIndex !== -1 ? originalIndex : idx
+                    originalIndex: originalIndex !== -1 ? originalIndex : displayIdx,
+                    // Uložíme aj typ poľa pre ukladanie udalostí
+                    dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
+                                (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails')
                 };
             });
             
             console.log(`📋 Načítaných ${membersWithOriginalIndex.length} členov tímu ${teamType}:`);
             membersWithOriginalIndex.forEach((m, i) => {
-                console.log(`   ${i}: ${m.type} - ${m.firstName} ${m.lastName} (pôvodný index: ${m.originalIndex})`);
+                console.log(`   ${i}: ${m.type} - ${m.firstName} ${m.lastName} (db index: ${m.originalIndex}, arrayName: ${m.dbArrayName})`);
             });
             
             setMembers(membersWithOriginalIndex);
@@ -463,10 +486,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             // Inicializácia štatistík pre každého člena
             members.forEach((member, idx) => {
-                const memberTypeKey = member.type === 'Hráč' ? 'playerDetails' : 
-                                    (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails');
-                
-                // DÔLEŽITÉ: Používame originalIndex, nie idx!
+                // Kľúč pre štatistiky: typ + db index
                 const memberKey = `${member.type}_${member.originalIndex}`;
                 newStats[memberKey] = {
                     goals: 0,
@@ -476,8 +496,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     redCards: 0,
                     blueCards: 0,
                     exclusions: 0,
-                    memberTypeKey: memberTypeKey,
-                    memberIndex: member.originalIndex,  // Používame originalIndex
+                    // Dôležité pre mapovanie udalostí
+                    dbArrayName: member.dbArrayName,
+                    dbIndex: member.originalIndex,
                     name: `${member.firstName} ${member.lastName}`.trim(),
                     jerseyNumber: member.jerseyNumber || '',
                     memberType: member.type
@@ -497,19 +518,19 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 // Kontrola, či udalosť patrí nášmu tímu
                 if (event.team !== teamType) return;
                 
-                console.log(`   Udalosť: ${event.eventType} pre typeKey=${event.memberTypeKey}, index=${event.memberIndex}`);
+                console.log(`   Udalosť: ${event.eventType} pre memberTypeKey=${event.memberTypeKey}, memberIndex=${event.memberIndex}`);
                 
                 // Nájdenie správneho člena podľa memberTypeKey a memberIndex
                 let foundMemberKey = null;
                 for (const [memberKey, stat] of Object.entries(newStats)) {
-                    if (stat.memberTypeKey === event.memberTypeKey && stat.memberIndex === event.memberIndex) {
+                    if (stat.dbArrayName === event.memberTypeKey && stat.dbIndex === event.memberIndex) {
                         foundMemberKey = memberKey;
                         break;
                     }
                 }
                 
                 if (!foundMemberKey) {
-                    console.log(`⚠️ Nenašiel sa člen pre udalosť: typeKey=${event.memberTypeKey}, index=${event.memberIndex}`);
+                    console.log(`⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${event.memberTypeKey}, memberIndex=${event.memberIndex}`);
                     return;
                 }
                 
@@ -543,7 +564,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             Object.values(newStats).forEach(stat => {
                 if (stat.goals > 0 || stat.convertedPenalties > 0 || stat.missedPenalties > 0 ||
                     stat.yellowCards > 0 || stat.redCards > 0 || stat.blueCards > 0 || stat.exclusions > 0) {
-                    console.log(`   ✅ ${stat.name} (${stat.memberType}): ${stat.goals} gólov, ${stat.convertedPenalties}/${stat.convertedPenalties + stat.missedPenalties} 7m`);
+                    console.log(`   ✅ ${stat.name} (${stat.memberType}): ${stat.goals} gólov, ${stat.convertedPenalties}/${stat.convertedPenalties + stat.missedPenalties} 7m, ŽK:${stat.yellowCards}, ČK:${stat.redCards}, MK:${stat.blueCards}, Vyl:${stat.exclusions}`);
                 }
             });
             
@@ -585,12 +606,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return stats;
     };
     
-    // handleMemberClick - používa originalIndex!
+    // handleMemberClick - používa dbArrayName a originalIndex
     const handleMemberClick = async (member) => {
         console.log(`=== KLIKNUTÉ NA ČLENA ===`);
         console.log(`Meno: ${member.firstName} ${member.lastName}`);
         console.log(`Typ: ${member.type}`);
-        console.log(`Original index: ${member.originalIndex}`);
+        console.log(`DB index: ${member.originalIndex}`);
+        console.log(`DB arrayName: ${member.dbArrayName}`);
         console.log(`Tím (pôvodný): ${teamName}`);
         console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
@@ -650,34 +672,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // Určenie správneho arrayName a indexu
-        let actualArrayName;
-        let actualIndex = member.originalIndex;
-        
-        if (member.type === 'Hráč') {
-            actualArrayName = 'playerDetails';
-        } else if (member.type === 'Člen RT (muž)') {
-            actualArrayName = 'menTeamMemberDetails';
-        } else if (member.type === 'Člen RT (žena)') {
-            actualArrayName = 'womenTeamMemberDetails';
-            // Pre ženy v RT potrebujeme prepočítať index (len medzi ženami)
-            const womenRTMembers = members.filter(m => m.type === 'Člen RT (žena)');
-            const womenIndex = womenRTMembers.findIndex(m => m.originalIndex === member.originalIndex);
-            actualIndex = womenIndex !== -1 ? womenIndex : member.originalIndex;
-            console.log(`🔄 Prepočet indexu pre ženu RT: pôvodný ${member.originalIndex} -> ${actualIndex}`);
-        } else {
-            console.error(`❌ Neznámy typ člena: ${member.type}`);
-            return;
-        }
-        
+        // Pre ženy v RT - index už máme správny (originalIndex je index v poli womenTeamMemberDetails)
+        // Pre všetkých používame priamo originalIndex a dbArrayName
         const memberForSave = {
             type: member.type,
             name: `${member.firstName} ${member.lastName}`.trim(),
-            index: actualIndex,
-            typeKey: actualArrayName
+            index: member.originalIndex,  // Používame originalIndex priamo
+            typeKey: member.dbArrayName   // Používame dbArrayName
         };
         
-        console.log(`💾 Ukladám udalosť pre ${memberForSave.name} (${teamType}) s indexom ${actualIndex} a typeKey ${actualArrayName}`);
+        console.log(`💾 Ukladám udalosť pre ${memberForSave.name} (${teamType}) s indexom ${memberForSave.index} a typeKey ${memberForSave.typeKey}`);
         
         let success = false;
         
@@ -755,7 +759,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         'tr',
                         { className: 'border-b border-gray-200' },
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, ''),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Č. dresu'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
                             React.createElement('div', { className: 'flex flex-col items-center' },
