@@ -226,7 +226,7 @@ const getCategoryNameById = (categoryId) => {
     return null;
 };
 
-// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a NÁZVU kategórie (s real-time aktualizáciou)
+// Funkcia na načítanie členov tímu z databázy (s real-time aktualizáciou)
 const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         console.log("Chýba db, teamName alebo categoryName");
@@ -235,47 +235,27 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
         return () => {};
     }
     
-    // 🔥 PRVÝ KROK: Prevedieme teamName cez matchTracker na správny názov
+    // Prevod názvu tímu (existujúci kód...)
     let actualTeamName = teamName;
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
         try {
-            console.log(`🔄 Prevod názvu tímu: "${teamName}" → cez matchTracker`);
             const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
             if (convertedName && convertedName !== teamName) {
                 actualTeamName = convertedName;
-                console.log(`✅ Prevedený názov: "${teamName}" → "${actualTeamName}"`);
-                // 🔥 ODOŠLEME ZMAPOVANÝ NÁZOV HORE
-                if (onMappedName) {
-                    onMappedName(actualTeamName);
-                }
+                if (onMappedName) onMappedName(actualTeamName);
             } else {
-                console.log(`ℹ️ Názov tímu sa nezmenil: "${teamName}"`);
-                if (onMappedName) {
-                    onMappedName(teamName);
-                }
+                if (onMappedName) onMappedName(teamName);
             }
         } catch (err) {
             console.error(`Chyba pri prevode názvu tímu "${teamName}":`, err);
-            if (onMappedName) {
-                onMappedName(teamName);
-            }
+            if (onMappedName) onMappedName(teamName);
         }
     } else {
-        console.log(`⚠️ window.matchTracker.getTeamNameByDisplayId nie je dostupný, používam pôvodný názov: "${teamName}"`);
-        if (onMappedName) {
-            onMappedName(teamName);
-        }
+        if (onMappedName) onMappedName(teamName);
     }
     
-    console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU (real-time) ===`);
-    console.log(`Pôvodný názov: "${teamName}"`);
-    console.log(`Skutočný názov na vyhľadávanie: "${actualTeamName}"`);
-    console.log(`Kategória: "${categoryName}"`);
-    
-    // Prehľadávame všetkých používateľov (kluby)
     const usersRef = collection(window.db, 'users');
     
-    // Vytvoríme unsubscribe funkciu pre real-time počúvanie
     const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
         console.log(`Real-time aktualizácia: Načítavam členov pre tím ${actualTeamName}`);
         
@@ -284,80 +264,87 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
             const userData = userDoc.data();
             const teams = userData.teams || {};
             
-            // Prehľadávame všetky kategórie tohto používateľa
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                 if (categoryKey !== categoryName) continue;
                 
-                // Hľadáme tím s daným názvom - používame actualTeamName
                 const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName);
                 
                 if (foundTeam) {
                     console.log(`✅ Našiel som tím: "${actualTeamName}" v kategórii ${categoryKey} (real-time)`);
                     
-                    // Získame všetkých členov tímu
                     const members = [];
                     
-                    // Hráči
+                    // Hráči - pridáme userId
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
-                        foundTeam.playerDetails.forEach(player => {
+                        foundTeam.playerDetails.forEach((player, idx) => {
                             members.push({
                                 type: 'Hráč',
                                 firstName: player.firstName || '',
                                 lastName: player.lastName || '',
                                 jerseyNumber: player.jerseyNumber || '',
-                                registrationNumber: player.registrationNumber || ''
+                                registrationNumber: player.registrationNumber || '',
+                                userId: userId,  // 🔥 PRIDANÉ userId
+                                originalIndex: idx  // 🔥 PRIDANÉ originalIndex
                             });
                         });
                     }
                     
                     // Členovia realizačného tímu (muži)
                     if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
-                        foundTeam.menTeamMemberDetails.forEach(member => {
+                        foundTeam.menTeamMemberDetails.forEach((member, idx) => {
                             members.push({
                                 type: 'Člen RT (muž)',
                                 firstName: member.firstName || '',
                                 lastName: member.lastName || '',
                                 jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || ''
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,  // 🔥 PRIDANÉ userId
+                                originalIndex: idx  // 🔥 PRIDANÉ originalIndex
                             });
                         });
                     }
                     
                     // Členovia realizačného tímu (ženy)
                     if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
-                        foundTeam.womenTeamMemberDetails.forEach(member => {
+                        foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
                             members.push({
                                 type: 'Člen RT (žena)',
                                 firstName: member.firstName || '',
                                 lastName: member.lastName || '',
                                 jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || ''
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,  // 🔥 PRIDANÉ userId
+                                originalIndex: idx  // 🔥 PRIDANÉ originalIndex
                             });
                         });
                     }
                     
-                    // Šoféri (muži)
+                    // Šoféri (muži) - ak ich chcete zobraziť
                     if (foundTeam.driverDetailsMale && Array.isArray(foundTeam.driverDetailsMale)) {
-                        foundTeam.driverDetailsMale.forEach(driver => {
+                        foundTeam.driverDetailsMale.forEach((driver, idx) => {
                             members.push({
                                 type: 'Šofér (muž)',
                                 firstName: driver.firstName || '',
                                 lastName: driver.lastName || '',
                                 jerseyNumber: '',
-                                registrationNumber: driver.registrationNumber || ''
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx
                             });
                         });
                     }
                     
                     // Šoféri (ženy)
                     if (foundTeam.driverDetailsFemale && Array.isArray(foundTeam.driverDetailsFemale)) {
-                        foundTeam.driverDetailsFemale.forEach(driver => {
+                        foundTeam.driverDetailsFemale.forEach((driver, idx) => {
                             members.push({
                                 type: 'Šofér (žena)',
                                 firstName: driver.firstName || '',
                                 lastName: driver.lastName || '',
                                 jerseyNumber: '',
-                                registrationNumber: driver.registrationNumber || ''
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx
                             });
                         });
                     }
@@ -376,7 +363,6 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
         if (onUpdate) onUpdate([]);
     });
     
-    // Vrátime unsubscribe funkciu pre zrušenie odberu
     return unsubscribe;
 };
 
@@ -842,39 +828,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const sortedMembers = [...rtMembers, ...players];
             
             const membersWithOriginalIndex = sortedMembers.map((member, displayIdx) => {
-                let originalIndex = displayIdx;
-                let userId = null;
-                
-                if (member.type === 'Hráč') {
-                    const allPlayers = updatedMembers.filter(m => m.type === 'Hráč');
-                    originalIndex = allPlayers.findIndex(m => 
-                        m.firstName === member.firstName && 
-                        m.lastName === member.lastName
-                    );
-                } else if (member.type === 'Člen RT (muž)') {
-                    const allMenRT = updatedMembers.filter(m => m.type === 'Člen RT (muž)');
-                    originalIndex = allMenRT.findIndex(m => 
-                        m.firstName === member.firstName && 
-                        m.lastName === member.lastName
-                    );
-                } else if (member.type === 'Člen RT (žena)') {
-                    const allWomenRT = updatedMembers.filter(m => m.type === 'Člen RT (žena)');
-                    originalIndex = allWomenRT.findIndex(m => 
-                        m.firstName === member.firstName && 
-                        m.lastName === member.lastName
-                    );
-                }
-                
-                // 🔥 PRIDAJTE: Získanie userId z pôvodného member objektu
-                // Musíte získať userId z loadTeamMembers - to je zložitejšie
-                // Alternatívne môžete prejsť všetkých používateľov a nájsť userId podľa mena
-                
+                // Ak už member má originalIndex z loadTeamMembers, použite ho
+                // Inak ho vypočítame
+                let originalIndex = member.originalIndex !== undefined ? member.originalIndex : displayIdx;
+        
                 return {
                     ...member,
-                    originalIndex: originalIndex !== -1 ? originalIndex : displayIdx,
+                    originalIndex: originalIndex,
                     dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
                                 (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
-                    userId: member.userId || null  // 🔥 PRIDAJTE userId ak existuje
+                    userId: member.userId  // 🔥 ZACHOVÁME userId Z loadTeamMembers
                 };
             });
             
@@ -973,18 +936,24 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     // Funkcia na kontrolu, či je hráč vylúčený kvôli modrej karte
     const isPlayerSuspendedByBlueCard = (member) => {
         if (!window.blueCardSuspensions) return false;
-    
-        // Kľúč pre vyhľadanie v suspensions objekte
-        // Musíme použiť správne hodnoty z member objektu
-        const userId = member.userId || '';
+
+        // 🔥 POUŽIJEME HODNOTY PRIAMO Z MEMBER OBJEKTU (ktorý teraz obsahuje userId)
+        const userId = member.userId;
         const dbArrayName = member.dbArrayName || (member.type === 'Hráč' ? 'playerDetails' : 
                               (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'));
         const originalIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
+        
+        // 🔥 AK NEMÁME userId, NEMÔŽEME SKONTROLOVAŤ VYLÚČENIE
+        if (!userId) {
+            console.log(`[BlueCard] Žiadne userId pre ${member.firstName} ${member.lastName}, preskakujem`);
+            return false;
+        }
         
         const playerKey = `${userId}_${dbArrayName}_${originalIndex}`;
         const suspension = window.blueCardSuspensions[playerKey];
         
         if (suspension && suspension.isExcludedByBlueCard) {
+            console.log(`[BlueCard] Hráč ${member.firstName} ${member.lastName} JE VYLÚČENÝ (kľúč: ${playerKey})`);
             return true;
         }
         return false;
