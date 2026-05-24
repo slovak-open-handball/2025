@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - FUNKČNÝ ODPOČET S AUTOMATICKÝM ZMIZENÍM
+// UPRAVENÝ TeamMembersList KOMPONENT - PODPORUJE VYLÚČENIE PRE HRÁČOV AJ ČLENOV RT
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -562,7 +562,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [membersStats, setMembersStats] = useState({});
     const [exclusionDuration, setExclusionDuration] = useState(2);
     const [matchData, setMatchData] = useState(null);
-    const [excludedPlayers, setExcludedPlayers] = useState({});
+    const [excludedMembers, setExcludedMembers] = useState({});
     
     // STATE PRE AKTUÁLNY ČAS (celkový čas zápasu v sekundách)
     const [currentTotalTime, setCurrentTotalTime] = useState(0);
@@ -596,7 +596,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     
     // 🔥 OPRAVENÝ useEffect pre aktuálny čas - POUŽÍVA setInterval PRE PRAVIDELNÚ AKTUALIZÁCIU
     useEffect(() => {
-        // Funkcia na aktualizáciu času
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
             if (!currentMatchData) return;
@@ -624,7 +623,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
-            // 🔥 CELKOVÝ ČAS ZÁPASU (bez prestávok medzi periódami)
+            // CELKOVÝ ČAS ZÁPASU
             const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime;
             
             setCurrentTotalTime(prev => {
@@ -635,10 +634,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             });
         };
         
-        // Okamžité spustenie
         updateGameTime();
         
-        // 🔥 PRAVIDELNÁ AKTUALIZÁCIA KAŽDÝCH 200ms (pre hladký odpočet)
+        // Pravidelná aktualizácia každých 200ms pre hladký odpočet
         timerIntervalRef.current = setInterval(updateGameTime, 200);
         
         return () => {
@@ -680,7 +678,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH HRÁČOV - S REÁLNOU AKTUALIZÁCIOU
+    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - PODPORUJE HRÁČOV AJ ČLENOV RT
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) {
             return;
@@ -692,24 +690,22 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const excluded = {};
             const currentMatchData = matchDataRef.current;
-            const currentPeriod = currentMatchData?.currentPeriod || 1;
             const periodLength = periodLengthSeconds || (currentMatchData?.periodDuration * 60) || 1200;
             
             members.forEach((member) => {
-                if (member.type !== 'Hráč') {
-                    excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0, endTotalTime: 0 };
-                    return;
-                }
-                
+                // 🔥 PODPORA PRE HRÁČOV AJ ČLENOV RT
+                // Vylúčenie sa môže týkať každého člena (hráč aj RT)
                 let targetTypeKey = member.dbArrayName;
                 let targetIndex = member.originalIndex;
                 
                 if (!targetTypeKey) {
-                    targetTypeKey = 'playerDetails';
+                    if (member.type === 'Hráč') targetTypeKey = 'playerDetails';
+                    else if (member.type === 'Člen RT (muž)') targetTypeKey = 'menTeamMemberDetails';
+                    else if (member.type === 'Člen RT (žena)') targetTypeKey = 'womenTeamMemberDetails';
                     targetIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
                 }
                 
-                // Zozbierame všetky vylúčenia pre tohto hráča
+                // Zozbierame všetky vylúčenia pre tohto člena
                 const exclusions = [];
                 
                 snapshot.forEach((doc) => {
@@ -738,7 +734,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     return;
                 }
                 
-                // 🔥 VÝPOČET KONCA POSLEDNÉHO VYLÚČENIA (kumulatívne)
+                // VÝPOČET KONCA POSLEDNÉHO VYLÚČENIA (kumulatívne)
                 let totalPenaltyEndTotalTime = 0;
                 const penaltyDurationSec = exclusionDuration * 60;
                 
@@ -747,15 +743,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     const exclusionStartTotalTime = exclusion.totalTime;
                     
                     if (exclusionStartTotalTime >= totalPenaltyEndTotalTime) {
-                        // Vylúčenie začína po skončení predchádzajúceho
                         totalPenaltyEndTotalTime = exclusionStartTotalTime + penaltyDurationSec;
                     } else {
-                        // Vylúčenie začína ešte počas predchádzajúceho - kumulujeme
                         totalPenaltyEndTotalTime = totalPenaltyEndTotalTime + penaltyDurationSec;
                     }
                 }
                 
-                // 🔥 KĽÚČOVÁ OPRAVA: Zistíme, či je hráč momentálne vylúčený (porovnanie s aktuálnym časom)
+                // Zistíme, či je člen momentálne vylúčený
                 const isCurrentlyExcluded = currentTotalTime < totalPenaltyEndTotalTime;
                 
                 if (isCurrentlyExcluded) {
@@ -775,8 +769,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             });
             
-            // 🔥 AKTUALIZUJEME STATE - TO SPUSTÍ PREKRESLENIE UI
-            setExcludedPlayers(excluded);
+            setExcludedMembers(excluded);
         });
         
         return () => unsubscribe();
@@ -984,16 +977,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        if (member.type === 'Hráč') {
-            const exclusionInfo = excludedPlayers[member.originalIndex];
-            
-            if (exclusionInfo && exclusionInfo.isExcluded) {
-                if (selectedActionsSet.has('goal')) {
-                    return;
-                }
-                if (selectedActionsSet.has('7m')) {
-                    return;
-                }
+        // Kontrola vylúčenia pre HRÁČOV aj pre ČLENOV RT
+        const exclusionInfo = excludedMembers[member.originalIndex];
+        if (exclusionInfo && exclusionInfo.isExcluded) {
+            if (selectedActionsSet.has('goal')) {
+                return;
+            }
+            if (selectedActionsSet.has('7m')) {
+                return;
             }
         }
         
@@ -1055,9 +1046,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     });
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const allMembersSorted = [...sortedPlayers, ...rtMembers];
-    
-    // Debug log pre sledovanie zmien
-    console.log(`[TeamMembersList] Počet vylúčených hráčov: ${Object.values(excludedPlayers).filter(e => e.isExcluded).length}`);
     
     return React.createElement(
         'div',
@@ -1138,19 +1126,19 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
-                        // 🔥 ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ
-                        const exclusionInfo = member.type === 'Hráč' ? excludedPlayers[member.originalIndex] : null;
-                        const isPlayerExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+                        // 🔥 ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ - PRE HRÁČOV AJ ČLENOV RT
+                        const exclusionInfo = excludedMembers[member.originalIndex];
+                        const isExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
                         
                         let exclusionDisplayRow = null;
                         
-                        if (isPlayerExcluded) {
+                        if (isExcluded) {
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `0:${secs.toString().padStart(2, '0')}`;
                             
-                            // 🔥 Riadok s odpočtom vylúčenia
+                            // 🔥 Riadok s odpočtom vylúčenia (pre každého člena)
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `exclusion-${idx}`, className: 'bg-orange-50' },
@@ -1165,16 +1153,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         }
                         
-                        // 🔥 ŠTÝL - IBA PRE VYLÚČENÝCH HRÁČOV (sivý/opacity)
-                        const rowClassName = isPlayerExcluded 
+                        // 🔥 ŠTÝL - PRE VYLÚČENÝCH ČLENOV (sivý/opacity)
+                        const rowClassName = isExcluded 
                             ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-gray-100' 
                             : 'hover:bg-gray-50 transition-colors cursor-pointer';
                         
-                        // Hlavný riadok hráča
+                        // Hlavný riadok člena
                         const mainRow = React.createElement(
                             'tr',
                             { 
-                                key: `player-${idx}`,
+                                key: `member-${idx}`,
                                 className: rowClassName,
                                 onClick: () => handleMemberClick(member)
                             },
@@ -1189,7 +1177,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                         );
                         
-                        // 🔥 Vrátime hlavný riadok + riadok s odpočtom (ak existuje)
+                        // Vrátime hlavný riadok + riadok s odpočtom (ak existuje)
                         if (exclusionDisplayRow) {
                             return React.createElement(React.Fragment, { key: `fragment-${idx}` }, mainRow, exclusionDisplayRow);
                         }
