@@ -593,7 +593,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // 🔥 JEDEN useEffect PRE AKTUALIZÁCIU ČASU (BEZ DUPLICITY)
+    // V TeamMembersList komponente - UPRAVENÝ useEffect pre aktuálny čas
     useEffect(() => {
         let intervalId = null;
         let isMounted = true;
@@ -607,7 +607,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
-            // Čas v aktuálnej perióde
+            // Čas v aktuálnej perióde (čistý čas hry)
             let periodTime = currentMatchData.manualTimeOffset || 0;
             
             // Ak časovač beží, pripočítame uplynutý čas
@@ -620,7 +620,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
-            // 🔥 CELKOVÝ ČAS (pre porovnanie s totalTime v udalostiach)
+            // 🔥 CELKOVÝ ČAS HRY (bez prestávok)
             let totalGameTime = periodTime;
             if (currentPeriod > 1) {
                 totalGameTime = ((currentPeriod - 1) * periodLength) + periodTime;
@@ -628,7 +628,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 1) {
-                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
+                    console.log(`[TeamMembersList] Celkový čas hry: ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
                     return totalGameTime;
                 }
                 return prev;
@@ -1243,15 +1243,12 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     useEffect(() => { periodRef.current = period; }, [period]);
     useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
 
-    // 🔥 FUNKCIA: Výpočet času v rámci aktuálnej periódy
     const getPeriodTime = (totalSeconds) => {
         return totalSeconds;
     };
 
-    // 🔥 FUNKCIA: Získanie celkového času (pre celý zápas)
     const getTotalTime = () => {
-        // Celkový čas je jednoducho displaySeconds (neobsahuje prestávky)
-        return displaySeconds;
+        return calculateTotalMatchTime();
     };
 
     // 🔥 FUNKCIA: Kontrola, či sme na konci periódy
@@ -1411,8 +1408,8 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const periodLengthSeconds = periodDuration * 60;
         const currentPeriodTime = displaySeconds;
     
-        // 🔥 Celkový čas = súčet časov z predchádzajúcich periód + čas v aktuálnej
-        // Čas prestávky sa NEpočíta
+        // 🔥 CELKOVÝ ČAS = súčet časov hry z predchádzajúcich periód + čas v aktuálnej perióde
+        // Čas prestávok sa NEPOČÍTA - je to čistý čas hry
         let totalTime = currentPeriodTime;
         if (period > 1) {
             totalTime = ((period - 1) * periodLengthSeconds) + currentPeriodTime;
