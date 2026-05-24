@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE ROZLIŠUJE HRÁČOV A ČLENOV RT S FUNKČNÝM ODPOČTOM
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE NAČÍTA DĹŽKU PERIÓDY
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -566,7 +566,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     
     // STATE PRE AKTUÁLNY ČAS (celkový čas zápasu v sekundách)
     const [currentTotalTime, setCurrentTotalTime] = useState(0);
-    const [periodLengthSeconds, setPeriodLengthSeconds] = useState(null);
+    const [periodLengthSeconds, setPeriodLengthSeconds] = useState(1200); // 🔥 DEFAULT 20 minút = 1200 sekúnd
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
     
@@ -580,8 +580,18 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 const data = docSnap.data();
                 setMatchData(data);
                 
+                // 🔥 NASTAVENIE DĹŽKY PERIÓDY - POUŽIJEME HODNOTU Z DATABÁZY ALEBO DEFAULT 20 minút
                 if (data.periodDuration) {
                     setPeriodLengthSeconds(data.periodDuration * 60);
+                    console.log(`[TeamMembersList] Nastavená dĺžka periódy: ${data.periodDuration} minút (${data.periodDuration * 60} sekúnd)`);
+                } else {
+                    // Ak nemáme periodDuration v match, skúsime získať z kategórie
+                    const categoryId = data.categoryId;
+                    if (categoryId && window.categorySettings && window.categorySettings[categoryId]) {
+                        const periodDuration = window.categorySettings[categoryId].periodDuration || 20;
+                        setPeriodLengthSeconds(periodDuration * 60);
+                        console.log(`[TeamMembersList] Nastavená dĺžka periódy z kategórie: ${periodDuration} minút`);
+                    }
                 }
             }
         });
@@ -594,7 +604,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // 🔥 OPRAVENÝ useEffect pre aktuálny čas - POUŽÍVA setInterval PRE PRAVIDELNÚ AKTUALIZÁCIU
+    // 🔥 OPRAVENÝ useEffect pre aktuálny čas - BEZ PODMIENKY NA periodLengthSeconds
     useEffect(() => {
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
@@ -602,10 +612,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 return;
             }
             
+            // 🔥 POUŽIJEME AKTUÁLNU HODNOTU periodLengthSeconds (už má default 1200)
             const periodLength = periodLengthSeconds;
-            if (!periodLength) {
-                return;
-            }
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             
@@ -632,6 +640,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             setCurrentTotalTime(prev => {
                 if (Math.abs(prev - totalGameTime) >= 0.5) {
+                    console.log(`[TeamMembersList] Aktualizácia času: ${totalGameTime}s (perióda: ${currentPeriod}, čas v perióde: ${currentPeriodTime}s, dĺžka periódy: ${periodLength}s)`);
                     return totalGameTime;
                 }
                 return prev;
@@ -650,7 +659,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 timerIntervalRef.current = null;
             }
         };
-    }, [matchId, periodLengthSeconds]);
+    }, [matchId, periodLengthSeconds]); // 🔥 PRIDANÁ ZÁVISLOSŤ NA periodLengthSeconds
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -684,7 +693,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - S REÁLNOU AKTUALIZÁCIOU
+    // 🔥 VÝPOČET VYLÚČENÝCH ČLENOV - S REÁLNOU AKTUALIZÁCIOU
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) {
             return;
@@ -769,8 +778,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         exclusionCount: exclusions.length
                     };
                     // Debug výpis pre sledovanie
-                    if (member.type === 'Hráč' && member.firstName) {
-                        console.log(`[VYLÚČENIE] ${member.firstName} ${member.lastName}: zostáva ${remaining}s (aktuálny čas: ${currentTotalTime}s, koniec: ${totalPenaltyEndTotalTime}s)`);
+                    if (member.firstName) {
+                        console.log(`[VYLÚČENIE] ${member.firstName} ${member.lastName || ''}: zostáva ${remaining}s (aktuálny čas: ${currentTotalTime}s, koniec: ${totalPenaltyEndTotalTime}s)`);
                     }
                 } else {
                     excluded[uniqueKey] = { 
