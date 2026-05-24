@@ -587,7 +587,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId]);
     
-    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - POUŽÍVA useRef PRE SYNCHRONIZÁCIU
+    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - SPRÁVNY VÝPOČET
     const matchDataRef = useRef(matchData);
     useEffect(() => {
         matchDataRef.current = matchData;
@@ -603,35 +603,35 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const currentMatchData = matchDataRef.current;
             if (!currentMatchData) return;
             
-            // Základný čas v aktuálnej perióde
+            // Získame aktuálnu periódu
+            const currentPeriod = currentMatchData.currentPeriod || 1;
+            const periodLength = (currentMatchData.periodDuration || 20) * 60;
+            
+            // 🔥 ZÍSKAME CELKOVÝ ČAS Z APASU
+            // 1. Čas v aktuálnej perióde
             let periodTime = currentMatchData.manualTimeOffset || 0;
             
-            // Ak časovač beží, pripočítame uplynutý čas
+            // Ak časovač beží, pripočítame uplynutý čas od posledného spustenia
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 periodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
                 
                 // Obmedzíme na dĺžku periódy
-                const periodLength = (currentMatchData.periodDuration || 20) * 60;
                 if (periodTime > periodLength) {
                     periodTime = periodLength;
                 }
             }
             
-            // 🔥 KĽÚČOVÁ LOGIKA: Vypočítame CELKOVÝ čas zápasu (súčet všetkých periód)
+            // 🔥 KĽÚČOVÁ LOGIKA: CELKOVÝ čas = (predchádzajúce periódy) + čas v aktuálnej
             let totalMatchTime = periodTime;
-            
-            // Ak sme v druhej alebo ďalšej perióde, pripočítame predchádzajúce periódy
-            const currentPeriod = currentMatchData.currentPeriod || 1;
             if (currentPeriod > 1) {
-                const periodLength = (currentMatchData.periodDuration || 20) * 60;
                 totalMatchTime = ((currentPeriod - 1) * periodLength) + periodTime;
             }
             
-            // Aktualizujeme len ak sa hodnota zmenila
+            // Aktualizujeme len ak sa hodnota výrazne zmenila
             setCurrentMatchTime(prev => {
                 if (Math.abs(prev - totalMatchTime) >= 1) {
-                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
+                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s, periodLength=${periodLength}s)`);
                     return totalMatchTime;
                 }
                 return prev;
@@ -648,7 +648,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             isMounted = false;
             if (intervalId) clearInterval(intervalId);
         };
-    }, []); // 🔥 PRÁZDNE POLE ZÁVISLOSTÍ - používame ref pre aktuálne dáta
+    }, []);
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
