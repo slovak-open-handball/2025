@@ -3538,6 +3538,26 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         return { homeGoals, awayGoals };
     };
 
+    // Načítanie nastavení a výpočet vylúčení pri načítaní komponentu
+    React.useEffect(() => {
+        console.log('[BlueCard] Spúšťam loadSuspensionSettings...');
+        loadSuspensionSettings();
+    }, []);
+
+    React.useEffect(() => {
+        console.log('[BlueCard] Spúšťam calculateBlueCardSuspensions...');
+        console.log('[BlueCard] match.id:', match.id);
+        console.log('[BlueCard] homeTeamDisplay:', homeTeamDisplay);
+        console.log('[BlueCard] awayTeamDisplay:', awayTeamDisplay);
+        console.log('[BlueCard] suspensionMatchesCount:', suspensionMatchesCount);
+        
+        if (match.id && homeTeamDisplay && awayTeamDisplay) {
+            calculateBlueCardSuspensions();
+        } else {
+            console.log('[BlueCard] Chýbajú údaje pre výpočet, čakám...');
+        }
+    }, [match.id, homeTeamDisplay, awayTeamDisplay, suspensionMatchesCount]);
+    
     React.useEffect(() => {
         window.blueCardSuspensions = blueCardSuspensions;
         return () => {
