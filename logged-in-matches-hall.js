@@ -569,6 +569,14 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [periodLengthSeconds, setPeriodLengthSeconds] = useState(0); 
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
+
+    const { blueCardSuspensions } = props;
+
+    const isSuspendedByBlueCard = () => {
+        if (!window.blueCardSuspensions) return false;
+        const playerKey = `${member.userId}_${member.dbArrayName}_${member.originalIndex}`;
+        return window.blueCardSuspensions[playerKey]?.isExcludedByBlueCard || false;
+    };
     
     // Načítanie match data z Firebase
     useEffect(() => {
@@ -3495,6 +3503,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return { homeGoals, awayGoals };
     };
+
+    React.useEffect(() => {
+        window.blueCardSuspensions = blueCardSuspensions;
+        return () => {
+            delete window.blueCardSuspensions;
+        };
+    }, [blueCardSuspensions]);
 
     React.useEffect(() => {
         window.onEventEdited = async (teamType, member, eventId) => {
