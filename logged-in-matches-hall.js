@@ -4049,16 +4049,16 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             )
                                         ),
                                         
-                                        // 🔥 Čas udalosti - PRE UKONČENÝ ZÁPAS BEZ IKON
+                                        // 🔥 Čas udalosti - pri hover sa čas nahradí ikonami (len pre neukončený zápas)
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
                                             !isEditing ? React.createElement(
                                                 'div',
                                                 { className: 'relative flex justify-center items-center min-w-[60px]' },
-                                                // Čas - vždy viditeľný
-                                                React.createElement('span', {}, formattedTime),
-                                                // 🔥 IKONY SA ZOBRAZIA LEN AK ZÁPAS NIE JE UKONČENÝ
+                                                // Čas - normálne viditeľný, pri hover sa skryje
+                                                React.createElement('span', { className: 'group-hover:hidden' }, formattedTime),
+                                                // 🔥 IKONY SA ZOBRAZIA LEN AK ZÁPAS NIE JE UKONČENÝ A NIE SME V REŽIME EDITÁCIE
                                                 !isMatchCompleted && React.createElement(
                                                     'div',
                                                     { 
