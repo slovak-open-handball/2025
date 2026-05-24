@@ -3547,7 +3547,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     
                                     return React.createElement(
                                         'tr',
-                                        { key: event.id, className: 'hover:bg-gray-50 transition-colors' },
+                                        { key: event.id, className: 'group hover:bg-gray-50 transition-colors' },
                                         
                                         // Stĺpec pre domácich (meno + číslo dresu)
                                         React.createElement(
