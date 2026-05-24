@@ -88,11 +88,7 @@ const { useState, useEffect, useRef } = React;
 const copyToClipboard = (text) => {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text)
-      .then(() => {
-        console.log('E-mail bol skopírovaný do schránky:', text);
-      })
       .catch(err => {
-        console.error('Chyba pri kopírovaní do schránky:', err);
         fallbackCopyTextToClipboard(text);
       });
   } else {
@@ -110,13 +106,6 @@ const fallbackCopyTextToClipboard = (text) => {
   document.body.appendChild(textArea);
   textArea.focus();
   textArea.select();
-  
-  try {
-    document.execCommand('copy');
-    console.log('E-mail bol skopírovaný do schránky (fallback):', text);
-  } catch (err) {
-    console.error('Chyba pri kopírovaní do schránky (fallback):', err);
-  }
   
   document.body.removeChild(textArea);
 };
@@ -245,7 +234,6 @@ function AssignHallModal({ user, onClose, onAssign }) {
         hallsList.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
         setHalls(hallsList);
       } catch (error) {
-        console.error('Chyba pri načítaní hál:', error);
         window.showGlobalNotification('Nepodarilo sa načítať zoznam hál', 'error');
       } finally {
         setLoading(false);
@@ -561,7 +549,6 @@ function UsersManagementApp() {
             newHallNames[hallId] = 'Neznáma hala';
           }
         } catch (error) {
-          console.error('Chyba pri načítaní názvu haly:', error);
           newHallNames[hallId] = 'Chyba načítania';
         }
       }
@@ -592,7 +579,6 @@ function UsersManagementApp() {
   const logChanges = async (changes) => {
     try {
       if (!auth.currentUser || !globalUserProfileData || !db) {
-        console.error("Not able to log changes: User not authenticated or global data not available.");
         return;
       }
       const notificationsRef = collection(db, `notifications`);
@@ -604,7 +590,6 @@ function UsersManagementApp() {
         userName: `${globalUserProfileData.firstName} ${globalUserProfileData.lastName}`
       });
     } catch (error) {
-      console.error("Error logging changes:", error);
     }
   };
 
@@ -626,7 +611,6 @@ function UsersManagementApp() {
   const fetchData = async () => {
     setLoading(true);
     if (!globalUserProfileData || !defaultDeadlines.dataEditDeadline || !defaultDeadlines.rosterEditDeadline) {
-      console.log("UsersManagementApp: Data uživatele nebo defaultDeadlines nejsou k dispozici.");
       setLoading(false);
       return;
     }
@@ -641,13 +625,7 @@ function UsersManagementApp() {
 
       const adminCountRef = doc(db, `settings`, `adminCount`);
       const unsubscribeAdminCount = onSnapshot(adminCountRef, (adminCountSnap) => {
-        if (adminCountSnap.exists()) {
-          console.log('Aktuální hodnota adminCount:', adminCountSnap.data().count);
-        } else {
-          console.log('Dokument adminCount neexistuje.');
-        }
       }, (error) => {
-        console.error("Chyba při načítání adminCount:", error);
       });
 
       const q = query(usersCol);
@@ -731,7 +709,6 @@ function UsersManagementApp() {
         }));
 
         const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
-        console.log("🔍 Nájdení schválení admini:", adminUsers.map(u => ({
           id: u.id,
           name: `${u.firstName} ${u.lastName}`,
           regSeconds: u.registrationDate?.seconds,
@@ -748,7 +725,6 @@ function UsersManagementApp() {
               const dateB = b.registrationDate?.seconds || 0;
               return dateA - dateB;
             });
-            console.log("🏆 Najstarší admin (Superadmin):", validAdminUsers[0].firstName, validAdminUsers[0].lastName);
             setOldestAdminId(validAdminUsers[0].id);
           } else {
             // Fallback: ak všetci majú chybný dátum, zober prvého
@@ -766,7 +742,6 @@ function UsersManagementApp() {
         
         setLoading(false);
       }, (error) => {
-        console.error("Chyba při načítání uživatelů:", error);
         setLoading(false);
         setNotification({ message: 'Chyba při načítání uživatelů.', type: 'error' });
       });
@@ -800,10 +775,7 @@ function UsersManagementApp() {
         const adminCountSnap = await getDoc(adminCountRef);
 
         const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-        const newCount = Math.max(1, currentAdminCount - 1);
-        
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-        console.log(`Nová hodnota adminCount: ${newCount}`);
+        const newCount = Math.max(1, currentAdminCount - 1);        
           
         await updateDoc(adminCountRef, {
             count: newCount
@@ -834,7 +806,6 @@ function UsersManagementApp() {
       // Log notification s preloženými názvami
       await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${getTranslatedRole(oldRole)}' na '${getTranslatedRole(newRole)}'`]);
     } catch (error) {
-      console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
@@ -859,7 +830,6 @@ function UsersManagementApp() {
             }));
           }
         } catch (error) {
-          console.error('Chyba pri načítaní názvu haly:', error);
         }
       }
       
@@ -878,7 +848,6 @@ function UsersManagementApp() {
       
       await logChanges([`Zmena priradenej haly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldHallName}' na: '${hallNameForLog}'`]);
     } catch (error) {
-      console.error('Chyba pri priradení haly:', error);
       setNotification({ message: 'Nepodarilo sa priradiť halu.', type: 'error' });
     }
   };
@@ -902,9 +871,6 @@ function UsersManagementApp() {
         
         const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
         const newCount = Math.max(1, currentAdminCount - 1);
-
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-        console.log(`Nová hodnota adminCount: ${newCount}`);
         
         await updateDoc(adminCountRef, {
             count: newCount
@@ -919,8 +885,6 @@ function UsersManagementApp() {
         const projectId = window.firebaseConfig.projectId;
         const firebaseConsoleUrl = `https://console.firebase.google.com/project/${projectId}/authentication/users`;
         window.open(firebaseConsoleUrl, '_blank');
-      } else {
-        console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
 
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený. E-mail bol skopírovaný do schránky.`, type: 'success' });
@@ -928,7 +892,6 @@ function UsersManagementApp() {
       // Log changes
       await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}. E-mail: ${userToDelete.email}`]);
     } catch (error) {
-      console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
     } finally {
       setUserToDelete(null);
@@ -937,7 +900,6 @@ function UsersManagementApp() {
 
   const sendApprovalEmail = async (userEmail) => {
     if (!googleScriptUrl_for_email) {
-      console.error("Google Apps Script URL nie je definovaná.");
       setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
       return;
     }
@@ -960,10 +922,8 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
   
-      console.log('Požiadavka na odoslanie e-mailu odoslaná.');
       setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri odosielaní e-mailu o schválení:", error);
       setNotification({ message: 'Nepodarilo sa odoslať e-mail o schválení.', type: 'error' });
     }
   };
@@ -982,13 +942,11 @@ function UsersManagementApp() {
       
       if (adminCountSnap.exists()) {
         const currentAdminCount = adminCountSnap.data().count;
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
         
         await updateDoc(adminCountRef, {
           count: increment(1)
         });
       } else {
-        console.log('Dokument adminCount neexistuje, vytvárame ho s hodnotou 1.');
         await setDoc(adminCountRef, {
           count: 1
         });
@@ -1004,7 +962,6 @@ function UsersManagementApp() {
         await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
       }
     } catch (error) {
-      console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
     }
   };
@@ -1087,7 +1044,6 @@ function UsersManagementApp() {
       const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
       await logChanges([change]);
     } catch (error) {
-      console.error("Chyba pri aktualizácii dátumu:", error);
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
     } finally {
       setShowDateEditModal(false);
@@ -1325,14 +1281,12 @@ const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
-    console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
     return;
   }
 
   window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
 
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
     if (rootElement) {
       rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
     }
@@ -1341,7 +1295,6 @@ const initializeAndRenderApp = () => {
 
   const root = ReactDOM.createRoot(rootElement);
   root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 };
 
 // Pridanie štýlov pre hnedú farbu (ak ešte nie sú definované)
@@ -1369,6 +1322,5 @@ window.addEventListener('globalDataUpdated', initializeAndRenderApp);
 
 // Pre prípad, že udalosť už prebehla
 if (window.isGlobalAuthReady && window.globalUserProfileData) {
-    console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
     initializeAndRenderApp();
 }
