@@ -563,6 +563,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [exclusionDuration, setExclusionDuration] = useState(2);
     const [matchData, setMatchData] = useState(null);
     const [excludedPlayers, setExcludedPlayers] = useState({});
+    const [pureGameTime, setPureGameTime] = useState(0);
     
     // 🔥 NOVÝ STATE PRE AKTUÁLNY ČAS ZÁPASU
     const [currentMatchTime, setCurrentMatchTime] = useState(0);
@@ -587,7 +588,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId]);
     
-    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - BEZ PRESTÁVOK
+    // 🔥 SPRÁVNY VÝPOČET ČISTÉHO HRACIEHO ČASU (bez prestávok)
     const matchDataRef = useRef(matchData);
     useEffect(() => {
         matchDataRef.current = matchData;
@@ -597,7 +598,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         let intervalId = null;
         let isMounted = true;
         
-        const updateMatchTime = () => {
+        const updateGameTime = () => {
             if (!isMounted) return;
             
             const currentMatchData = matchDataRef.current;
@@ -607,10 +608,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
-            // 🔥 KĽÚČOVÁ LOGIKA: Čas v aktuálnej perióde (bez prestávok)
+            // 🔥 Čas v aktuálnej perióde (to je už čistý hrací čas)
             let periodTime = currentMatchData.manualTimeOffset || 0;
             
-            // Ak časovač beží, pripočítame uplynutý čas od posledného spustenia
+            // Ak časovač beží, pripočítame uplynutý čas
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 periodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
@@ -621,29 +622,28 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
-            // 🔥 CELKOVÝ čas = súčet časov z predchádzajúcich periód + čas v aktuálnej
-            // Čas prestávky sa NEpočíta!
-            let totalMatchTime = periodTime;
+            // 🔥 KĽÚČOVÁ ZMENA: Čistý hrací čas je IBA čas v aktuálnej perióde
+            // Nepridávame predchádzajúce periódy, pretože počas prestávky sa vylúčenie neodpočítava
+            // Ale pre porovnanie s totalTime v udalostiach (ktoré je celkový čas) potrebujeme celkový čas
+            let totalGameTime = periodTime;
+            
+            // POZNÁMKA: totalTime v udalostiach sa ukladá ako celkový čas zápasu (súčet periód)
+            // Takže pre správne porovnanie musíme použiť rovnaký formát
             if (currentPeriod > 1) {
-                // Predchádzajúce periódy boli celé odohrané (plný čas)
-                totalMatchTime = ((currentPeriod - 1) * periodLength) + periodTime;
+                totalGameTime = ((currentPeriod - 1) * periodLength) + periodTime;
             }
             
-            // Aktualizujeme len ak sa hodnota výrazne zmenila
             setCurrentMatchTime(prev => {
-                if (Math.abs(prev - totalMatchTime) >= 1) {
-                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s, periodLength=${periodLength}s)`);
-                    return totalMatchTime;
+                if (Math.abs(prev - totalGameTime) >= 1) {
+                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
+                    return totalGameTime;
                 }
                 return prev;
             });
         };
         
-        // Okamžité spustenie
-        updateMatchTime();
-        
-        // Interval na aktualizáciu času každú sekundu
-        intervalId = setInterval(updateMatchTime, 1000);
+        updateGameTime();
+        intervalId = setInterval(updateGameTime, 1000);
         
         return () => {
             isMounted = false;
