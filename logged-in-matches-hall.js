@@ -557,7 +557,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
 };
 
 // OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE NAČÍTA DĹŽKU PERIÓDY
-const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -572,6 +572,12 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [periodLengthSeconds, setPeriodLengthSeconds] = useState(0); 
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
+
+    useEffect(() => {
+        if (propBlueCardSuspensions && Object.keys(propBlueCardSuspensions).length > 0) {
+            console.log(`[TeamMembersList] Prijaté vylúčenia pre ${teamName}:`, propBlueCardSuspensions);
+        }
+    }, [propBlueCardSuspensions]);
     
     // Načítanie match data z Firebase
     useEffect(() => {
@@ -952,25 +958,23 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
 
     // Funkcia na kontrolu, či je hráč vylúčený kvôli modrej karte
     const isPlayerSuspendedByBlueCard = (member) => {
-        if (!window.blueCardSuspensions) return false;
+        // 🔥 POUŽIJEME PROP NAMIESTO WINDOW
+        const suspensions = propBlueCardSuspensions || window.blueCardSuspensions;
+        if (!suspensions) return false;
 
-        // 🔥 POUŽIJEME HODNOTY PRIAMO Z MEMBER OBJEKTU (ktorý teraz obsahuje userId)
         const userId = member.userId;
         const dbArrayName = member.dbArrayName || (member.type === 'Hráč' ? 'playerDetails' : 
                               (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'));
         const originalIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
         
-        // 🔥 AK NEMÁME userId, NEMÔŽEME SKONTROLOVAŤ VYLÚČENIE
         if (!userId) {
-            console.log(`[BlueCard] Žiadne userId pre ${member.firstName} ${member.lastName}, preskakujem`);
             return false;
         }
         
         const playerKey = `${userId}_${dbArrayName}_${originalIndex}`;
-        const suspension = window.blueCardSuspensions[playerKey];
+        const suspension = suspensions[playerKey];
         
         if (suspension && suspension.isExcludedByBlueCard) {
-            console.log(`[BlueCard] Hráč ${member.firstName} ${member.lastName} JE VYLÚČENÝ (kľúč: ${playerKey})`);
             return true;
         }
         return false;
@@ -1220,7 +1224,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         } else if (isSuspendedByBlue) {
                             // Vylúčenie za modrú kartu - zobraziť informáciu
-                            const blueInfo = window.blueCardSuspensions?.[`${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`];
+                            const suspensions = propBlueCardSuspensions || window.blueCardSuspensions;
+                            const blueInfo = suspensions?.[`${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`];
                             const remainingMatches = blueInfo?.remainingMatches || 0;
                             
                             exclusionDisplayRow = React.createElement(
@@ -4596,7 +4601,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 timerRef: matchTimerRef,
                 onMappedNameUpdate: setHomeTeamMappedName,
                 matchId: match.id,
-                periodDuration: categorySettings?.periodDuration || 15
+                periodDuration: categorySettings?.periodDuration || 15,
+                blueCardSuspensions: blueCardSuspensions
             }),
             React.createElement(TeamMembersList, {
                 teamName: awayTeamDisplay,
@@ -4605,9 +4611,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 timerRef: matchTimerRef,
                 onMappedNameUpdate: setAwayTeamMappedName,
                 matchId: match.id,
-                periodDuration: categorySettings?.periodDuration || 15
+                periodDuration: categorySettings?.periodDuration || 15,
+                blueCardSuspensions: blueCardSuspensions
             })
-        ),
+        )
         
         // Box s udalosťami zápasu (pod boxmi členov tímov)
         renderMatchEvents(),
