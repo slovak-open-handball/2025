@@ -2034,12 +2034,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     'Naozaj chcete ukončiť tento zápas?'
                 ),
                 React.createElement(
-                    'p',
-                    { className: 'text-sm text-blue-600 bg-blue-50 p-2 rounded-lg mb-6' },
-                    React.createElement('i', { className: 'fa-solid fa-calculator mr-2' }),
-                    'Konečný výsledok bude automaticky vypočítaný z gólových udalostí.'
-                ),
-                React.createElement(
                     'div',
                     { className: 'flex gap-3 justify-end' },
                     React.createElement(
