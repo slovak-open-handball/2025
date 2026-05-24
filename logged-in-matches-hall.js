@@ -797,43 +797,36 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         }
     }, [externalSelectedAction]);
 
-    // Funkcia pre kliknutie na tlačidlo akcie
+    // Funkcia pre kliknutie na tlačidlo akcie (UPRAVENÁ)
     const handleActionClick = (action) => {
         setSelectedActions(prev => {
-            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m: klik na 7m ZRUŠÍ goal ak je aktívny
-            if (action === '7m') {
+            // 🔥 ŠPECIÁLNA LOGIKA PRE 7m + GÓL: obe môžu byť vybraté spolu
+            // Ak je aktívna 7m a kliknem na gól -> pridáme gól (7m zostáva)
+            // Ak je aktívny gól a kliknem na 7m -> pridáme 7m (gól zostáva)
+            if ((action === '7m' && prev.has('goal')) || (action === 'goal' && prev.has('7m'))) {
                 const newSet = new Set(prev);
-                if (newSet.has('7m')) {
-                    // Ak už je 7m aktívna, deaktivujeme ju
-                    newSet.delete('7m');
+                if (newSet.has(action)) {
+                    // Ak už je akcia aktívna, deaktivujeme ju
+                    newSet.delete(action);
                 } else {
-                    // Pridáme 7m a ZÁROVEŇ ODSTRÁNIME goal
-                    newSet.clear();
-                    newSet.add('7m');
+                    // Inak ju pridáme
+                    newSet.add(action);
                 }
                 return newSet;
             }
             
-            // 🔥 ŠPECIÁLNA LOGIKA PRE GÓL: ak je aktívna 7m, PONEChÁME ju (vzniká kombinácia)
-            if (action === 'goal') {
-                const newSet = new Set(prev);
-                if (newSet.has('goal')) {
-                    // Ak už je goal aktívny, deaktivujeme ho
-                    newSet.delete('goal');
-                } else {
-                    // Pridáme goal, ale zachováme 7m ak je aktívna
-                    newSet.add('goal');
-                }
-                return newSet;
-            }
+            // 🔥 PRE VŠETKY OSTATNÉ PRÍPADY: exclusive režim
+            // Ak klikneme na akúkoľvek akciu (okrem prípadu 7m+gól vyššie)
+            const newSet = new Set();
             
-            // 🔥 Pre všetky ostatné akcie (yellow, red, blue, exclusion) - exclusive režim
+            // Ak je kliknutá akcia už aktívna, zrušíme ju (prázdna množina)
             if (prev.has(action)) {
-                return new Set();
-            } else {
-                // Vymažeme všetky akcie (vrátane 7m a goal) a nastavíme len túto jednu
-                return new Set([action]);
+                return newSet;
             }
+            
+            // Inak vyberieme len túto jednu akciu
+            newSet.add(action);
+            return newSet;
         });
     };
 
