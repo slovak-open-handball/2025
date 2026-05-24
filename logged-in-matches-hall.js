@@ -1443,8 +1443,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         let totalMatchTime = displaySeconds;
 
         if (period > 1) {
-            // displaySeconds je čas v aktuálnej perióde, ale potrebujeme celkový čas
-            // Takže ho musíme vypočítať správne
             const periodLengthSeconds = periodDuration * 60;
             totalMatchTime = ((period - 1) * periodLengthSeconds) + displaySeconds;
         }
