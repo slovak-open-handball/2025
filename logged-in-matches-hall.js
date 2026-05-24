@@ -575,26 +575,26 @@ const TeamStats = ({ membersList, teamType, matchId }) => {
                             { key: idx, className: 'hover:bg-gray-50 transition-colors' },
                             React.createElement('td', { className: 'px-3 py-2 text-center' }, memberIcon),
                             React.createElement('td', { className: 'px-3 py-2 font-mono font-medium text-gray-700' }, 
-                                member.jerseyNumber || '—'
+                                member.jerseyNumber || ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-gray-800' }, member.name),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-green-600' }, 
-                                member.goals > 0 ? member.goals : '—'
+                                member.goals > 0 ? member.goals : ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-medium text-teal-600' }, 
-                                penaltiesDisplay || '—'
+                                penaltiesDisplay || ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-yellow-600' }, 
-                                member.yellowCards > 0 ? member.yellowCards : '—'
+                                member.yellowCards > 0 ? member.yellowCards : ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-red-600' }, 
-                                member.redCards > 0 ? member.redCards : '—'
+                                member.redCards > 0 ? member.redCards : ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-blue-600' }, 
-                                member.blueCards > 0 ? member.blueCards : '—'
+                                member.blueCards > 0 ? member.blueCards : ''
                             ),
                             React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-orange-600' }, 
-                                member.exclusions > 0 ? member.exclusions : '—'
+                                member.exclusions > 0 ? member.exclusions : ''
                             )
                         );
                     })
