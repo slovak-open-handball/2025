@@ -569,14 +569,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [periodLengthSeconds, setPeriodLengthSeconds] = useState(0); 
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
-
-    const { blueCardSuspensions } = props;
-
-    const isSuspendedByBlueCard = () => {
-        if (!window.blueCardSuspensions) return false;
-        const playerKey = `${member.userId}_${member.dbArrayName}_${member.originalIndex}`;
-        return window.blueCardSuspensions[playerKey]?.isExcludedByBlueCard || false;
-    };
     
     // Načítanie match data z Firebase
     useEffect(() => {
@@ -971,6 +963,20 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         
         return () => unsubscribe();
     }, [matchId, teamType, members]);
+
+    // Funkcia na kontrolu, či je hráč vylúčený kvôli modrej karte
+    const isPlayerSuspendedByBlueCard = (member) => {
+        if (!window.blueCardSuspensions) return false;
+        
+        // Kľúč pre vyhľadanie v suspensions objekte
+        const playerKey = `${member.userId || ''}_${member.dbArrayName || ''}_${member.originalIndex || 0}`;
+        const suspension = window.blueCardSuspensions[playerKey];
+        
+        if (suspension && suspension.isExcludedByBlueCard) {
+            return true;
+        }
+        return false;
+    };
     
     const getMemberIcon = (memberType) => {
         if (memberType === 'Hráč') {
@@ -1189,6 +1195,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const uniqueKey = `${member.type}_${member.originalIndex}`;
                         const exclusionInfo = excludedMembers[uniqueKey];
                         const isExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+
+                        const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
+                        const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+                        const isExcluded = isExcludedNormally || isSuspendedByBlue;
                         
                         let exclusionDisplayRow = null;
                         
@@ -1215,7 +1225,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         // ŠTÝL - PRE VYLÚČENÝCH ČLENOV (sivý/opacity)
                         const rowClassName = isExcluded 
-                            ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-gray-100' 
+                            ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-gray-100 line-through' 
                             : 'hover:bg-gray-50 transition-colors cursor-pointer';
                         
                         // Hlavný riadok člena
