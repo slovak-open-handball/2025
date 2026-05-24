@@ -3044,7 +3044,62 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return false;
             }
             
-            // Aktualizujeme existujúcu udalosť (bez zmeny času)
+            // 🔥 ZÍSKAME userId a categoryName pre člena (rovnako ako pri ukladaní)
+            let userId = null;
+            let categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+            let teamNameForSearch = null;
+            
+            if (teamType === 'home') {
+                teamNameForSearch = teamNames?.[match.homeTeamIdentifier] || match.homeTeamIdentifier;
+            } else {
+                teamNameForSearch = teamNames?.[match.awayTeamIdentifier] || match.awayTeamIdentifier;
+            }
+            
+            if (window.db && teamNameForSearch && categoryNameForMatch) {
+                try {
+                    const usersRef = collection(window.db, 'users');
+                    const usersSnapshot = await getDocs(usersRef);
+                    
+                    for (const userDoc of usersSnapshot.docs) {
+                        const userData = userDoc.data();
+                        const teams = userData.teams || {};
+                        
+                        for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                            if (categoryKey !== categoryNameForMatch) continue;
+                            
+                            const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
+                            
+                            if (foundTeam) {
+                                let memberExists = false;
+                                
+                                if (member.typeKey === 'playerDetails') {
+                                    if (foundTeam.playerDetails && foundTeam.playerDetails[member.index]) {
+                                        memberExists = true;
+                                    }
+                                } else if (member.typeKey === 'menTeamMemberDetails') {
+                                    if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[member.index]) {
+                                        memberExists = true;
+                                    }
+                                } else if (member.typeKey === 'womenTeamMemberDetails') {
+                                    if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[member.index]) {
+                                        memberExists = true;
+                                    }
+                                }
+                                
+                                if (memberExists) {
+                                    userId = userDoc.id;
+                                    break;
+                                }
+                            }
+                        }
+                        if (userId) break;
+                    }
+                } catch (err) {
+                    console.error('Chyba pri vyhľadávaní userId:', err);
+                }
+            }
+            
+            // Aktualizujeme existujúcu udalosť
             const eventRef = doc(window.db, 'matchEvents', eventId);
             await updateDoc(eventRef, {
                 eventType: newEventType,
@@ -3053,6 +3108,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 memberType: member.type,
                 memberTypeKey: member.typeKey,
                 memberIndex: member.index,
+                userId: userId,  // 🔥 PRIDANÉ: aktualizujeme userId
+                categoryName: categoryNameForMatch,  // 🔥 PRIDANÉ: aktualizujeme categoryName
                 updatedAt: Timestamp.now()
                 // Čas (totalTime, periodTime, period) zostáva nezmenený
             });
