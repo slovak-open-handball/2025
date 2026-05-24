@@ -2357,9 +2357,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const getEventIcon = (eventType, eventSubtype) => {
             switch (eventType) {
                 case 'goal':
-                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-futbol text-black', style: { fontSize: '18px' } });
                 case 'penalty':
-                    return React.createElement('i', { className: 'fa-solid fa-circle-dot text-teal-600', style: { fontSize: '18px' } });
+                    return React.createElement('i', { className: 'fa-solid fa-futbol text-green-600', style: { fontSize: '18px' } });
                 case 'card':
                     if (eventSubtype === 'yellow') return React.createElement('i', { className: 'fa-solid fa-square text-yellow-500', style: { fontSize: '18px' } });
                     if (eventSubtype === 'red') return React.createElement('i', { className: 'fa-solid fa-square text-red-600', style: { fontSize: '18px' } });
