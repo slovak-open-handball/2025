@@ -4614,7 +4614,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 periodDuration: categorySettings?.periodDuration || 15,
                 blueCardSuspensions: blueCardSuspensions
             })
-        )
+        ),
         
         // Box s udalosťami zápasu (pod boxmi členov tímov)
         renderMatchEvents(),
