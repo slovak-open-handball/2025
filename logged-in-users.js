@@ -730,15 +730,22 @@ function UsersManagementApp() {
         }));
 
         const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+        console.log("🔍 Nájdení schválení admini:", adminUsers.map(u => ({
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          regSeconds: u.registrationDate?.seconds,
+          regDate: u.registrationDate?.seconds ? new Date(u.registrationDate.seconds * 1000).toLocaleString() : 'bez dátumu'
+        })));
+        
         if (adminUsers.length > 0) {
           adminUsers.sort((a, b) => {
-            const dateA = a.registrationDate?.seconds ? new Date(a.registrationDate.seconds * 1000 + (a.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
-            const dateB = b.registrationDate?.seconds ? new Date(b.registrationDate.seconds * 1000 + (b.registrationDate.nanoseconds || 0) / 1000000) : new Date(0);
+            const dateA = a.registrationDate?.seconds || 0;
+            const dateB = b.registrationDate?.seconds || 0;
+            console.log(`Porovnanie: ${a.firstName} (${dateA}) vs ${b.firstName} (${dateB}) = ${dateA - dateB}`);
             return dateA - dateB;
           });
+          console.log("🏆 Najstarší admin (Superadmin):", adminUsers[0].firstName, adminUsers[0].lastName, "s dátumom", adminUsers[0].registrationDate?.seconds);
           setOldestAdminId(adminUsers[0].id);
-        } else {
-          setOldestAdminId(null);
         }
 
         setUsers(usersList);
