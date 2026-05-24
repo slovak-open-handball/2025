@@ -991,7 +991,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const allMembersSorted = [...sortedPlayers, ...rtMembers];
     
-    // OPRAVENÁ časť TeamMembersList - správne odstránenie štýlu po skončení vylúčenia
+    // OPRAVENÁ časť TeamMembersList - správne zobrazenie odpočtu vylúčenia
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
@@ -1071,12 +1071,12 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
-                        // 🔥 OPRAVA: Skontrolujeme, či je hráč naozaj vylúčený (remainingSeconds > 0)
+                        // 🔥 SPRÁVNE ZÍSKANIE INFORMÁCIÍ O VYLÚČENÍ PRE TOHTO HRÁČA
                         const exclusionInfo = member.type === 'Hráč' ? excludedPlayers[member.originalIndex] : null;
                         const isPlayerExcluded = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
                         
                         let exclusionTooltip = '';
-                        let exclusionDisplay = null;
+                        let exclusionDisplayRow = null;
                         
                         if (isPlayerExcluded) {
                             const remainingSeconds = exclusionInfo.remainingSeconds;
@@ -1085,8 +1085,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
                             exclusionTooltip = `Vylúčený! Zostáva: ${timeDisplay}`;
                             
-                            // Vytvoríme odpočet pre zobrazenie pod riadkom
-                            exclusionDisplay = React.createElement(
+                            // 🔥 VYTVORENIE RIADKU S ODPOČTOM
+                            exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `exclusion-${idx}`, className: 'bg-orange-50' },
                                 React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
@@ -1100,33 +1100,35 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             );
                         }
                         
-                        // 🔥 OPRAVA: CSS štýl sa aplikuje LEN ak je hráč naozaj vylúčený (remainingSeconds > 0)
                         const rowClassName = isPlayerExcluded 
                             ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' 
                             : 'hover:bg-gray-50 transition-colors cursor-pointer';
                         
-                        return React.createElement(
-                            React.Fragment,
-                            { key: idx },
-                            React.createElement(
-                                'tr',
-                                { 
-                                    className: rowClassName,
-                                    onClick: () => handleMemberClick(member),
-                                    title: exclusionTooltip || undefined
-                                },
-                                React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
-                                React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, jerseyDisplay || ''),
-                                React.createElement('td', { className: 'px-2 py-2 text-gray-800' }, fullName),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : ''),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : ''),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
-                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
-                            ),
-                            exclusionDisplay
+                        // 🔥 HLAVNÝ RIADOK HRÁČA
+                        const mainRow = React.createElement(
+                            'tr',
+                            { 
+                                key: `player-${idx}`,
+                                className: rowClassName,
+                                onClick: () => handleMemberClick(member),
+                                title: exclusionTooltip || undefined
+                            },
+                            React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
+                            React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, jerseyDisplay || ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-gray-800' }, fullName),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                         );
+                        
+                        // 🔥 VÝSLEDOK: HLAVNÝ RIADOK + RIADOK S ODPOČTOM (ak existuje)
+                        if (exclusionDisplayRow) {
+                            return React.createElement(React.Fragment, { key: `fragment-${idx}` }, mainRow, exclusionDisplayRow);
+                        }
+                        return mainRow;
                     })
                 )
             )
