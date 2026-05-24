@@ -1121,7 +1121,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         // Zistenie, či je hráč vylúčený pre CSS efekt
                         const isPlayerExcluded = member.type === 'Hráč' && excludedPlayers[member.originalIndex]?.isExcluded;
-                        const rowClassName = isPlayerExcluded ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60 bg-red-50' : 'hover:bg-gray-50 transition-colors cursor-pointer';
+                        const rowClassName = isPlayerExcluded ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' : 'hover:bg-gray-50 transition-colors cursor-pointer';
                         
                         return React.createElement(
                             React.Fragment,
