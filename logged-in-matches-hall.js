@@ -843,6 +843,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             const membersWithOriginalIndex = sortedMembers.map((member, displayIdx) => {
                 let originalIndex = displayIdx;
+                let userId = null;
                 
                 if (member.type === 'Hráč') {
                     const allPlayers = updatedMembers.filter(m => m.type === 'Hráč');
@@ -864,11 +865,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     );
                 }
                 
+                // 🔥 PRIDAJTE: Získanie userId z pôvodného member objektu
+                // Musíte získať userId z loadTeamMembers - to je zložitejšie
+                // Alternatívne môžete prejsť všetkých používateľov a nájsť userId podľa mena
+                
                 return {
                     ...member,
                     originalIndex: originalIndex !== -1 ? originalIndex : displayIdx,
                     dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
-                                (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails')
+                                (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
+                    userId: member.userId || null  // 🔥 PRIDAJTE userId ak existuje
                 };
             });
             
