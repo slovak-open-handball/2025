@@ -593,48 +593,56 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // V TeamMembersList komponente - OPRAVENÝ useEffect pre aktuálny čas
+    // V TeamMembersList komponente - OPRAVENÝ useEffect pre aktuálny čas (INICIALIZÁCIA)
     useEffect(() => {
         let intervalId = null;
         let isMounted = true;
         
+        // 🔥 FUNKCIA NA VÝPOČET ČASU (aby sme ju mohli zavolať hneď aj v intervale)
         const updateGameTime = () => {
             if (!isMounted) return;
             
             const currentMatchData = matchDataRef.current;
-            if (!currentMatchData) return;
+            if (!currentMatchData) {
+                // Ak ešte nemáme dáta, ale máme matchId, skúsime ich získať
+                if (matchId && window.db && !currentMatchData) {
+                    const matchRef = doc(window.db, 'matches', matchId);
+                    getDoc(matchRef).then((docSnap) => {
+                        if (docSnap.exists() && isMounted) {
+                            const data = docSnap.data();
+                            matchDataRef.current = data;
+                            setMatchData(data);
+                            updateGameTime(); // Rekurzívne volanie po načítaní dát
+                        }
+                    });
+                }
+                return;
+            }
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
             const periodLength = (currentMatchData.periodDuration || 20) * 60;
             
-            // 🔥 KĽÚČOVÁ OPRAVA: Zistíme, či boli predchádzajúce periódy úplne odohrané
-            // Ak sme na 2. perióde, znamená to že 1. perióda bola ukončená (odohraných celých 20 minút)
             let totalTimeFromPreviousPeriods = 0;
             
             if (currentPeriod > 1) {
-                // Všetky predchádzajúce periódy boli úplne odohrané (celá dĺžka)
                 totalTimeFromPreviousPeriods = (currentPeriod - 1) * periodLength;
             }
             
-            // Čas v aktuálnej perióde
             let currentPeriodTime = currentMatchData.manualTimeOffset || 0;
             
-            // Ak časovač beží, pripočítame uplynutý čas
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
                 
-                // Nesmieme prekročiť dĺžku periódy
                 if (currentPeriodTime > periodLength) {
                     currentPeriodTime = periodLength;
                 }
             }
             
-            // 🔥 CELKOVÝ ČAS HRY = čas z predchádzajúcich periód + čas v aktuálnej perióde
             const totalGameTime = totalTimeFromPreviousPeriods + currentPeriodTime;
             
             setCurrentTotalTime(prev => {
-                if (Math.abs(prev - totalGameTime) >= 1) {
+                if (Math.abs(prev - totalGameTime) >= 1 || prev === 0) {
                     console.log(`[TeamMembersList] Celkový čas hry: ${totalGameTime}s (perióda ${currentPeriod}, čas v perióde: ${currentPeriodTime}s, čas z predchádzajúcich periód: ${totalTimeFromPreviousPeriods}s)`);
                     return totalGameTime;
                 }
@@ -642,14 +650,17 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             });
         };
         
+        // 🔥 OKAMŽITÉ SPUSTENIE (nie až po 1 sekunde)
         updateGameTime();
+        
+        // Potom interval každú sekundu
         intervalId = setInterval(updateGameTime, 1000);
         
         return () => {
             isMounted = false;
             if (intervalId) clearInterval(intervalId);
         };
-    }, []);
+    }, [matchId]); // Pridáme matchId ako dependency, aby sa spustil znovu pri zmene zápasu
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
