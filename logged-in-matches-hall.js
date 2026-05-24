@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - KONTROLA VYLÚČENIA PRE GÓLY A 7M
+// OPRAVENÝ TeamMembersList KOMPONENT - S PRIPOČÍTAVANÍM ČASU VYLÚČENIA
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -611,6 +611,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     }, [matchId]);
     
     // 🔥 OPRAVENÉ: Načítanie vylúčených hráčov z udalostí s real-time aktualizáciou
+    // A SPRÁVNYM PRIPOČÍTAVANÍM ČASU PRI VIACNÁSOBNÝCH VYLÚČENIACH
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) return;
         
@@ -635,8 +636,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             members.forEach((member) => {
                 if (member.type !== 'Hráč') return;
                 
-                let latestExclusion = null;
-                let latestReentry = null;
+                // Zozbierame VŠETKY vylúčenia a návraty pre tohto hráča
+                const exclusions = [];
+                const reentries = [];
                 
                 let targetTypeKey = member.dbArrayName;
                 let targetIndex = member.originalIndex;
@@ -656,43 +658,84 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         event.memberIndex === targetIndex) {
                         
                         if (event.eventType === 'exclusion') {
-                            if (!latestExclusion || (event.totalTime || 0) > (latestExclusion.totalTime || 0)) {
-                                latestExclusion = {
-                                    totalTime: event.totalTime || 0,
-                                    timestamp: event.timestamp?.toDate() || new Date()
-                                };
-                            }
+                            exclusions.push({
+                                totalTime: event.totalTime || 0,
+                                timestamp: event.timestamp?.toDate() || new Date(),
+                                docId: doc.id
+                            });
                         } else if (event.eventType === 'reentry') {
-                            if (!latestReentry || (event.totalTime || 0) > (latestReentry.totalTime || 0)) {
-                                latestReentry = {
-                                    totalTime: event.totalTime || 0
-                                };
-                            }
+                            reentries.push({
+                                totalTime: event.totalTime || 0,
+                                timestamp: event.timestamp?.toDate() || new Date(),
+                                docId: doc.id
+                            });
                         }
                     }
                 });
                 
-                // Ak máme vylúčenie a nemáme návrat po ňom, hráč je vylúčený
-                if (latestExclusion && (!latestReentry || latestReentry.totalTime < latestExclusion.totalTime)) {
-                    const exclusionStartTime = latestExclusion.totalTime;
-                    const exclusionEndTime = exclusionStartTime + (exclusionDuration * 60);
+                // Zoradíme vylúčenia podľa času
+                exclusions.sort((a, b) => a.totalTime - b.totalTime);
+                reentries.sort((a, b) => a.totalTime - b.totalTime);
+                
+                if (exclusions.length === 0) {
+                    excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
+                    return;
+                }
+                
+                // 🔥 KĽÚČOVÁ LOGIKA: Vypočítame efektívny koniec vylúčenia
+                // Berieme do úvahy všetky vylúčenia a návraty
+                let effectiveEndTime = null;
+                let lastReentryTime = null;
+                
+                // Prejdeme všetky vylúčenia v poradí
+                for (let i = 0; i < exclusions.length; i++) {
+                    const exclusion = exclusions[i];
+                    let exclusionStart = exclusion.totalTime;
+                    let exclusionEnd = exclusionStart + (exclusionDuration * 60);
                     
-                    // Ak je aktuálny čas v rozmedzí vylúčenia, hráč je vylúčený
-                    if (currentMatchTime >= exclusionStartTime && currentMatchTime < exclusionEndTime) {
-                        const remaining = Math.ceil(exclusionEndTime - currentMatchTime);
-                        excluded[member.originalIndex] = {
-                            isExcluded: true,
-                            remainingSeconds: remaining,
-                            endTime: exclusionEndTime,
-                            startTime: exclusionStartTime
-                        };
-                    } else if (currentMatchTime >= exclusionEndTime) {
-                        // Čas vylúčenia vypršal
-                        excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
-                    } else {
-                        // Čas vylúčenia ešte nezačal (zápas je pozastavený pred začiatkom vylúčenia)
-                        excluded[member.originalIndex] = { isExcluded: true, remainingSeconds: exclusionDuration * 60 };
+                    // Ak máme predchádzajúci návrat, ktorý je neskôr ako začiatok tohto vylúčenia
+                    // Tak toto vylúčenie začína po návrate
+                    if (lastReentryTime !== null && lastReentryTime > exclusionStart) {
+                        exclusionStart = lastReentryTime;
+                        exclusionEnd = exclusionStart + (exclusionDuration * 60);
                     }
+                    
+                    // Ak je aktuálny čas medzi začiatkom a koncom vylúčenia
+                    if (currentMatchTime >= exclusionStart && currentMatchTime < exclusionEnd) {
+                        // Toto vylúčenie je aktívne
+                        effectiveEndTime = exclusionEnd;
+                        break;
+                    }
+                    
+                    // Ak sme za koncom tohto vylúčenia, hľadáme návrat po ňom
+                    if (currentMatchTime >= exclusionEnd) {
+                        // Nájdeme najbližší návrat po tomto vylúčení
+                        const nextReentry = reentries.find(r => r.totalTime >= exclusionEnd);
+                        if (nextReentry) {
+                            lastReentryTime = nextReentry.totalTime;
+                        } else {
+                            lastReentryTime = exclusionEnd;
+                        }
+                    } else if (currentMatchTime < exclusionStart) {
+                        // Vylúčenie ešte nezačalo, ale je naplánované do budúcnosti
+                        // Necháme ho na neskôr
+                        if (effectiveEndTime === null) {
+                            effectiveEndTime = exclusionEnd;
+                        }
+                        break;
+                    }
+                }
+                
+                // Ak sme našli aktívne vylúčenie
+                if (effectiveEndTime !== null && currentMatchTime < effectiveEndTime) {
+                    const remaining = Math.ceil(effectiveEndTime - currentMatchTime);
+                    excluded[member.originalIndex] = {
+                        isExcluded: true,
+                        remainingSeconds: remaining,
+                        endTime: effectiveEndTime,
+                        // Uložíme aj zoznam vylúčení pre debug
+                        exclusionCount: exclusions.length
+                    };
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
                 }
@@ -930,7 +973,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 const secs = exclusionInfo.remainingSeconds % 60;
                 const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
                 
-                // Ak je vybraná akcia GÓL alebo 7m, zablokujeme ju
+                // 🔥 POZNÁMKA: Pre vylúčenie (akciu 'exclusion') je povolené aj pre už vylúčeného hráča
+                // Čas sa pripočíta v logike spracovania v MatchTimer
                 if (selectedActionsSet.has('goal')) {
                     console.log(`❌ Hráč ${member.firstName} ${member.lastName} je vylúčený! NEMÔŽE dať GÓL. Zostáva vylúčený: ${timeDisplay}`);
                     return;
@@ -941,7 +985,12 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     return;
                 }
                 
-                // Pre ostatné akcie (ŽK, ČK, MK, Vylúčenie) - vylúčený hráč môže dostať ďalšiu kartu
+                // Pre vylúčenie - povolené, čas sa pripočíta
+                if (selectedActionsSet.has('exclusion')) {
+                    console.log(`⚠️ Hráč ${member.firstName} ${member.lastName} je už vylúčený, nové vylúčenie predĺži trest. Zostáva: ${timeDisplay}`);
+                }
+                
+                // Pre ostatné akcie (ŽK, ČK, MK) - vylúčený hráč môže dostať kartu
                 console.log(`⚠️ Hráč ${member.firstName} ${member.lastName} je vylúčený, ale môže dostať kartu. Zostáva vylúčený: ${timeDisplay}`);
             }
         }
@@ -1105,12 +1154,16 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         // 🔥 Pridanie tooltipu pre vylúčeného hráča
                         let exclusionTooltip = '';
+                        let exclusionCountText = '';
                         if (isPlayerExcluded) {
                             const exclusionInfo = excludedPlayers[member.originalIndex];
                             const mins = Math.floor(exclusionInfo.remainingSeconds / 60);
                             const secs = exclusionInfo.remainingSeconds % 60;
                             const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
                             exclusionTooltip = `Vylúčený! Zostáva: ${timeDisplay}`;
+                            if (exclusionInfo.exclusionCount && exclusionInfo.exclusionCount > 1) {
+                                exclusionCountText = ` (${exclusionInfo.exclusionCount}. vylúčenie)`;
+                            }
                         }
                         
                         const rowClassName = isPlayerExcluded ? 'hover:bg-gray-50 transition-colors cursor-pointer opacity-60' : 'hover:bg-gray-50 transition-colors cursor-pointer';
@@ -1135,7 +1188,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                             ),
-                            // 🔥 Odpočet vylúčenia (len pre hráčov)
+                            // 🔥 Odpočet vylúčenia (len pre hráčov) - zobrazenie aj pre viacnásobné vylúčenia
                             member.type === 'Hráč' && isPlayerExcluded && React.createElement(
                                 'tr',
                                 { className: 'bg-orange-50' },
@@ -1144,7 +1197,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         'div',
                                         { className: 'text-xs text-orange-600 font-medium' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half mr-1' }),
-                                        `Vylúčený! Návrat za: ${Math.floor(excludedPlayers[member.originalIndex]?.remainingSeconds / 60)}:${(excludedPlayers[member.originalIndex]?.remainingSeconds % 60).toString().padStart(2, '0')}`
+                                        `Vylúčený! Návrat za: ${Math.floor(excludedPlayers[member.originalIndex]?.remainingSeconds / 60)}:${(excludedPlayers[member.originalIndex]?.remainingSeconds % 60).toString().padStart(2, '0')}${exclusionCountText}`
                                     )
                                 )
                             )
