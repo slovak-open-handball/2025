@@ -1247,7 +1247,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                         'div',
                                         { className: 'text-xs text-blue-600 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-ban' }),
-                                        React.createElement('span', {}, `Hráč vylúčený za modrú kartu v predchádzajúcom zápase.`)
+                                        React.createElement('span', {}, `Vylúčenie za modrú kartu v predchádzajúcom zápase.`)
                                     )
                                 )
                             );
