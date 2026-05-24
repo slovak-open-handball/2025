@@ -553,7 +553,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNY ODPOČET VYLÚČENIA CEZ HRANICE PERIÓD
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNA SYNCHRONIZÁCIA ČASU CEZ HRANICE PERIÓD
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -587,21 +587,32 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId]);
     
-    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - SPRÁVNE CEZ HRANICE PERIÓD
+    // 🔥 OPRAVENÁ REAL-TIME AKTUALIZÁCIA ČASU ZÁPASU - POUŽÍVA useRef PRE SYNCHRONIZÁCIU
+    const matchDataRef = useRef(matchData);
     useEffect(() => {
+        matchDataRef.current = matchData;
+    }, [matchData]);
+    
+    useEffect(() => {
+        let intervalId = null;
+        let isMounted = true;
+        
         const updateMatchTime = () => {
-            if (!matchData) return;
+            if (!isMounted) return;
+            
+            const currentMatchData = matchDataRef.current;
+            if (!currentMatchData) return;
             
             // Základný čas v aktuálnej perióde
-            let periodTime = matchData.manualTimeOffset || 0;
+            let periodTime = currentMatchData.manualTimeOffset || 0;
             
             // Ak časovač beží, pripočítame uplynutý čas
-            if (matchData.status === 'in-progress' && matchData.startedAt) {
-                const elapsed = Math.floor((Date.now() - matchData.startedAt.toDate().getTime()) / 1000);
-                periodTime = (matchData.manualTimeOffset || 0) + elapsed;
+            if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
+                const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
+                periodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
                 
                 // Obmedzíme na dĺžku periódy
-                const periodLength = (matchData.periodDuration || 20) * 60;
+                const periodLength = (currentMatchData.periodDuration || 20) * 60;
                 if (periodTime > periodLength) {
                     periodTime = periodLength;
                 }
@@ -611,26 +622,33 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             let totalMatchTime = periodTime;
             
             // Ak sme v druhej alebo ďalšej perióde, pripočítame predchádzajúce periódy
-            const currentPeriod = matchData.currentPeriod || 1;
+            const currentPeriod = currentMatchData.currentPeriod || 1;
             if (currentPeriod > 1) {
-                const periodLength = (matchData.periodDuration || 20) * 60;
+                const periodLength = (currentMatchData.periodDuration || 20) * 60;
                 totalMatchTime = ((currentPeriod - 1) * periodLength) + periodTime;
             }
             
-            // 🔥 AKTUALIZUJEME LEN AK SA HODNOTA ZMENILA (aby sme zbytočne neprekresľovali)
-            if (Math.abs(totalMatchTime - currentMatchTime) >= 1) {
-                console.log(`[TeamMembersList] Aktualizácia času: ${currentMatchTime}s -> ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
-                setCurrentMatchTime(totalMatchTime);
-            }
+            // Aktualizujeme len ak sa hodnota zmenila
+            setCurrentMatchTime(prev => {
+                if (Math.abs(prev - totalMatchTime) >= 1) {
+                    console.log(`[TeamMembersList] Aktualizácia času: ${prev}s -> ${totalMatchTime}s (perióda ${currentPeriod}, čas v perióde: ${periodTime}s)`);
+                    return totalMatchTime;
+                }
+                return prev;
+            });
         };
         
+        // Okamžité spustenie
         updateMatchTime();
         
         // Interval na aktualizáciu času každú sekundu
-        const interval = setInterval(updateMatchTime, 1000);
+        intervalId = setInterval(updateMatchTime, 1000);
         
-        return () => clearInterval(interval);
-    }, [matchData]); // 🔥 ZÁVISLOSŤ NA matchData
+        return () => {
+            isMounted = false;
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, []); // 🔥 PRÁZDNE POLE ZÁVISLOSTÍ - používame ref pre aktuálne dáta
     
     // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
@@ -663,14 +681,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 OPRAVENÉ: Načítanie vylúčených hráčov s kumulatívnym pripočítavaním času
+    // 🔥 OPRAVENÉ: Načítanie vylúčených hráčov - používa currentMatchTime z state
     useEffect(() => {
         if (!window.db || !matchId || members.length === 0) {
-            console.log(`[TeamMembersList] Skip - chýba db, matchId alebo members`);
             return;
         }
         
-        console.log(`[TeamMembersList] Spúšťam výpočet vylúčených hráčov, currentMatchTime=${currentMatchTime}s`);
+        console.log(`[TeamMembersList] Výpočet vylúčených hráčov, currentMatchTime=${currentMatchTime}s`);
         
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where('matchId', '==', matchId));
@@ -728,14 +745,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     } else {
                         totalPenaltyEndTime = totalPenaltyEndTime + (exclusionDuration * 60);
                     }
-                    
-                    console.log(`[TeamMembersList] Vylúčenie #${i+1} pre ${member.firstName} ${member.lastName}: start=${exclusionStartTime}s, end=${totalPenaltyEndTime}s`);
                 }
                 
                 // Zistíme, či je hráč momentálne vylúčený
                 const isCurrentlyExcluded = currentMatchTime < totalPenaltyEndTime;
-                
-                console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: currentTime=${currentMatchTime}s, endTime=${totalPenaltyEndTime}s, isExcluded=${isCurrentlyExcluded}`);
                 
                 if (isCurrentlyExcluded) {
                     const remaining = Math.ceil(totalPenaltyEndTime - currentMatchTime);
@@ -745,8 +758,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         endTime: totalPenaltyEndTime,
                         exclusionCount: exclusions.length
                     };
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: vylúčený, zostáva ${remaining}s (endTime=${totalPenaltyEndTime}s, currentTime=${currentMatchTime}s)`);
                 } else {
                     excluded[member.originalIndex] = { isExcluded: false, remainingSeconds: 0 };
+                    console.log(`[TeamMembersList] Hráč ${member.firstName} ${member.lastName}: NIE JE vylúčený (endTime=${totalPenaltyEndTime}s, currentTime=${currentMatchTime}s)`);
                 }
             });
             
