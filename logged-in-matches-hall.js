@@ -1188,19 +1188,33 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
                                 React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
                             ),
-                            // 🔥 Odpočet vylúčenia (len pre hráčov) - zobrazenie aj pre viacnásobné vylúčenia
-                            member.type === 'Hráč' && isPlayerExcluded && React.createElement(
-                                'tr',
-                                { className: 'bg-orange-50' },
-                                React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'text-xs text-orange-600 font-medium' },
-                                        React.createElement('i', { className: 'fa-solid fa-hourglass-half mr-1' }),
-                                        `Vylúčený! Návrat za: ${Math.floor(excludedPlayers[member.originalIndex]?.remainingSeconds / 60)}:${(excludedPlayers[member.originalIndex]?.remainingSeconds % 60).toString().padStart(2, '0')}${exclusionCountText}`
+                            // 🔥 OPRAVENÝ Odpočet vylúčenia (len pre hráčov) - používame ExclusionTimer komponent
+                            member.type === 'Hráč' && (() => {
+                                const exclusionInfo = excludedPlayers[member.originalIndex];
+                                const isPlayerExcluded = exclusionInfo?.isExcluded;
+                                const remainingSeconds = exclusionInfo?.remainingSeconds || 0;
+                                
+                                if (!isPlayerExcluded || remainingSeconds <= 0) return null;
+                                
+                                const mins = Math.floor(remainingSeconds / 60);
+                                const secs = remainingSeconds % 60;
+                                const timeDisplay = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+                                const exclusionCount = exclusionInfo?.exclusionCount || 1;
+                                const exclusionCountText = exclusionCount > 1 ? ` (${exclusionCount}. vylúčenie)` : '';
+                                
+                                return React.createElement(
+                                    'tr',
+                                    { key: `exclusion-${idx}`, className: 'bg-orange-50' },
+                                    React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
+                                            React.createElement('span', {}, `Vylúčený! Návrat za: ${timeDisplay}${exclusionCountText}`)
+                                        )
                                     )
-                                )
-                            )
+                                );
+                            })()
                         );
                     })
                 )
