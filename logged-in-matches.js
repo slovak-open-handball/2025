@@ -9298,14 +9298,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        startTime: hallStartTime
                                                                                    };
                                                                                    
-                                                                                   // Otvoríme modálne okno AssignMatchModal (nie AssignMatchToBreakModal)
-                                                                                   // Musíme nájsť nejaký match na priradenie, ale lepšie je otvoriť rovno AssignMatchModal
-                                                                                   // Pretože AssignMatchToBreakModal je určený pre voľné časy medzi zápasmi
-                                                                                   // Namiesto toho nájdeme prvý nepriradený zápas a otvoríme jeho priradenie
-                                                                                   const firstUnassignedMatch = filteredUnassignedMatches[0];
-                                                                                   if (firstUnassignedMatch) {
-                                                                                       handleMatchCardClick(firstUnassignedMatch);
-                                                                                   }
+                                                                                   // Otvoríme modálne okno AssignMatchToBreakModal so správnym časom
+                                                                                   setSelectedBreakForAssign({
+                                                                                       hallId: hall.id,
+                                                                                       date: dateStr,
+                                                                                       breakStartTime: hallStartTime,  // POUŽIJEME ČAS ZAČIATKU HALY
+                                                                                       breakEndTime: '23:59',
+                                                                                       breakDuration: 0,
+                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                   });
+                                                                                   setIsAssignToBreakModalOpen(true);
                                                                                }
                                                                            },
                                                                            React.createElement(
@@ -9358,11 +9360,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            startTime: hallStartTime
                                                                                        };
                                                                                        
-                                                                                       // Otvoríme modálne okno AssignMatchModal
-                                                                                       const firstUnassignedMatch = filteredUnassignedMatches[0];
-                                                                                       if (firstUnassignedMatch) {
-                                                                                           handleMatchCardClick(firstUnassignedMatch);
-                                                                                       }
+                                                                                       // Otvoríme modálne okno AssignMatchToBreakModal so správnym časom
+                                                                                       setSelectedBreakForAssign({
+                                                                                           hallId: hall.id,
+                                                                                           date: dateStr,
+                                                                                           breakStartTime: hallStartTime,  // POUŽIJEME ČAS ZAČIATKU HALY
+                                                                                           breakEndTime: '23:59',
+                                                                                           breakDuration: 0,
+                                                                                           availableMatches: filteredUnassignedMatches
+                                                                                       });
+                                                                                       setIsAssignToBreakModalOpen(true);
                                                                                    },
                                                                                    title: 'Priradiť zápas'
                                                                                },
