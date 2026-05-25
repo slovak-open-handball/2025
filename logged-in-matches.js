@@ -6487,7 +6487,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         name: t.teamName || t.name,
                         hasId: !!t.id 
                     })));
-                
+    
                 if (teamsInGroup.length < 2) {
                     window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
                     setGenerationInProgress(false);
@@ -6497,11 +6497,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                 // Zistíme typ skupiny (či je nadstavbová)
                 const groupInfo = groupsByCategory[category.id]?.find(g => g.name === groupName);
                 const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
+    
+                // PRE NADSTAVBOVÚ SKUPINU NAČÍTAME HODNOTU carryOverPoints PRIAMO Z KATEGÓRIE
+                let shouldTransferFromBasicGroup = false;
                 
-                // Ak je to nadstavbová skupina a je zaškrtnutý transferFromBasicGroup, použijeme ho, inak false
-                const shouldTransferFromBasicGroup = isAdvancedGroup && (transferFromBasicGroup || false);
-                
-                // Generovanie zápasov pre túto skupinu - ODOVZDÁME PARAMETER
+                if (isAdvancedGroup) {
+                    // Načítame carryOverPoints z nastavení kategórie (ignorujeme parameter transferFromBasicGroup)
+                    const categoryFromSettings = categories.find(c => c.id === category.id);
+                    if (categoryFromSettings) {
+                        shouldTransferFromBasicGroup = categoryFromSettings.carryOverPoints ?? false;
+                        console.log(`Skupina ${groupName} (nadstavbová) - carryOverPoints z nastavení: ${shouldTransferFromBasicGroup}`);
+                    }
+                }
+    
+                // Generovanie zápasov pre túto skupinu
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
                 
                 // Pridanie informácií o skupine ku každému zápasu
@@ -6531,10 +6540,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 console.log(`Našiel som ${groups.length} skupín v kategórii ${category.name}:`, 
                     groups.map(g => g.name));
             
-                // Pre každú skupinu vygenerujeme zápasy
+                // OPRAVENÝ KÓD - načíta carryOverPoints z nastavení kategórie pre každú skupinu individuálne:
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
-    
+                
                     if (teamsInGroup.length >= 2) {
                         console.log(`Generujem zápasy pre skupinu ${group.name} s ${teamsInGroup.length} tímami`);
                         
@@ -6542,8 +6551,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                         const groupInfo = groupsByCategory[category.id]?.find(g => g.name === group.name);
                         const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
         
-                        // Pre skupinu použijeme transferFromBasicGroup LEN ak je to nadstavbová skupina
-                        const shouldTransferFromBasicGroup = isAdvancedGroup && (transferFromBasicGroup || false);
+                        // PRE NADSTAVBOVÚ SKUPINU NAČÍTAME HODNOTU carryOverPoints PRIAMO Z KATEGÓRIE
+                        let shouldTransferFromBasicGroup = false;
+                        
+                        if (isAdvancedGroup) {
+                            // Načítame carryOverPoints z nastavení kategórie
+                            const categoryFromSettings = categories.find(c => c.id === category.id);
+                            if (categoryFromSettings) {
+                                shouldTransferFromBasicGroup = categoryFromSettings.carryOverPoints ?? false;
+                                console.log(`Skupina ${group.name} (nadstavbová) - carryOverPoints: ${shouldTransferFromBasicGroup}`);
+                            }
+                        }
                         
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
                         
