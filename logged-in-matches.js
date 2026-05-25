@@ -3632,6 +3632,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     
     // Nový stav pre carryOverPoints z nastavení kategórie
     const [carryOverPoints, setCarryOverPoints] = useState(false);
+    // Nový stav pre informáciu, či existuje nadstavbová skupina s carryOverPoints
+    const [hasAdvancedGroupWithCarryOver, setHasAdvancedGroupWithCarryOver] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
@@ -3641,6 +3643,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setAvailableGroups([]);
             setSelectedGroupType('');
             setCarryOverPoints(false);
+            setHasAdvancedGroupWithCarryOver(false);
         }
     }, [isOpen]);
 
@@ -3658,12 +3661,24 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setAvailableGroups(sortedGroups);
             setSelectedGroup('');
             setSelectedGroupType('');
+            
+            // Skontrolujeme, či existuje aspoň jedna nadstavbová skupina s carryOverPoints
+            const category = categories.find(c => c.id === selectedCategory);
+            const hasAdvanced = sortedGroups.some(group => group.type === 'nadstavbová skupina');
+            const carryOver = category?.carryOverPoints ?? false;
+            
+            setHasAdvancedGroupWithCarryOver(hasAdvanced && carryOver);
+            setCarryOverPoints(carryOver);
+            
+            console.log(`Kategória ${category?.name} - nadstavbová skupina existuje: ${hasAdvanced}, carryOverPoints: ${carryOver}`);
         } else {
             setAvailableGroups([]);
             setSelectedGroup('');
             setSelectedGroupType('');
+            setHasAdvancedGroupWithCarryOver(false);
+            setCarryOverPoints(false);
         }
-    }, [selectedCategory, groupsByCategory]);
+    }, [selectedCategory, groupsByCategory, categories]);
 
     // Zistenie typu vybranej skupiny a načítanie carryOverPoints z kategórie
     useEffect(() => {
@@ -3679,7 +3694,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     // Načítame carryOverPoints z nastavení kategórie
                     const category = categories.find(c => c.id === selectedCategory);
                     if (category) {
-                        // carryOverPoints je vlastnosť kategórie z CategorySettings
                         const carryOver = category.carryOverPoints ?? false;
                         setCarryOverPoints(carryOver);
                         console.log(`Nadstavbová skupina - carryOverPoints: ${carryOver}`);
@@ -3696,11 +3710,16 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             }
         } else {
             setSelectedGroupType('');
-            setCarryOverPoints(false);
+            // Ak nie je vybraná žiadna skupina, ale je vybraná kategória,
+            // zachováme hodnotu hasAdvancedGroupWithCarryOver (nastavenú v prvom useEffect)
         }
     }, [selectedGroup, availableGroups, selectedCategory, categories]);
 
     if (!isOpen) return null;
+
+    // Zistíme, či máme zobraziť info box (pre nadstavbovú skupinu alebo pre celú kategóriu s nadstavbovou skupinou)
+    const showCarryOverInfo = (selectedGroup && selectedGroupType === 'Nadstavbová skupina') || 
+                              (!selectedGroup && hasAdvancedGroupWithCarryOver);
 
     return React.createElement(
         'div',
@@ -3770,7 +3789,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     )
                 ),
                 
-                // Zobrazenie typu skupiny
+                // Zobrazenie typu skupiny (len ak je vybraná konkrétna skupina)
                 selectedGroup && selectedGroupType && React.createElement(
                     'div',
                     { className: 'mt-2 text-sm' },
@@ -3795,9 +3814,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // ZMENENÉ: Namiesto checkboxu zobrazujeme INFO o stave prenosu zápasov (len pre nadstavbové skupiny)
-            selectedGroup && selectedGroupType === 'Nadstavbová skupina' && React.createElement(
-                'div',
+            // ZMENENÉ: Zobrazujeme INFO o stave prenosu zápasov pre:
+            // 1. Vybranú nadstavbovú skupinu
+            // 2. Celú kategóriu (žiadna skupina), ak existuje nadstavbová skupina a je zapnuté carryOverPoints
+            showCarryOverInfo && React.createElement(
+                'div', 
                 { 
                     className: `mb-6 p-3 rounded-lg border ${
                         carryOverPoints 
@@ -3845,6 +3866,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
+            // Informácia o jedinečných dvojiciach (len ak nie je zaškrtnuté "s opakovaním")
             !withRepetitions && React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mt-1 ml-6' },
