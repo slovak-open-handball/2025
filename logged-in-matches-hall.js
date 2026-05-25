@@ -226,43 +226,161 @@ const getCategoryNameById = (categoryId) => {
     return null;
 };
 
-// Nový kód (používa Worker API)
-const loadTeamMembersViaWorker = async (teamName, categoryName, onUpdate, onMappedName) => {
-    if (!teamName || !categoryName) {
+// Funkcia na načítanie členov tímu z databázy (s real-time aktualizáciou)
+const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) => {
+    if (!window.db || !teamName || !categoryName) {
+        console.log("Chýba db, teamName alebo categoryName");
         if (onUpdate) onUpdate([]);
-        return;
+        if (onMappedName) onMappedName(teamName);
+        return () => {};
     }
     
-    try {
-        // Získame mapovaný názov tímu (ak je to identifikátor)
-        let actualTeamName = teamName;
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            try {
-                const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
-                if (convertedName && convertedName !== teamName) {
-                    actualTeamName = convertedName;
-                    console.log(`🔄 Mapovaný názov: "${teamName}" → "${actualTeamName}"`);
-                    if (onMappedName) onMappedName(actualTeamName);
-                } else if (onMappedName) {
+    // 🔥 PRVÝ KROK: Prevedieme teamName cez matchTracker na správny názov
+    let actualTeamName = teamName;
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        try {
+            console.log(`🔄 Prevod názvu tímu: "${teamName}" → cez matchTracker`);
+            const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
+            if (convertedName && convertedName !== teamName) {
+                actualTeamName = convertedName;
+                console.log(`✅ Prevedený názov: "${teamName}" → "${actualTeamName}"`);
+                if (onMappedName) {
+                    onMappedName(actualTeamName);
+                }
+            } else {
+                console.log(`ℹ️ Názov tímu sa nezmenil: "${teamName}"`);
+                if (onMappedName) {
                     onMappedName(teamName);
                 }
-            } catch (err) {
-                console.error(`Chyba pri mapovaní názvu:`, err);
-                if (onMappedName) onMappedName(teamName);
             }
-        } else if (onMappedName) {
+        } catch (err) {
+            console.error(`Chyba pri prevode názvu tímu "${teamName}":`, err);
+            if (onMappedName) {
+                onMappedName(teamName);
+            }
+        }
+    } else {
+        console.log(`⚠️ window.matchTracker.getTeamNameByDisplayId nie je dostupný, používam pôvodný názov: "${teamName}"`);
+        if (onMappedName) {
             onMappedName(teamName);
         }
-        
-        // Načítame členov tímu z Worker
-        const members = await loadTeamMembersFromWorker(actualTeamName, categoryName);
-        
-        if (onUpdate) onUpdate(members);
-        
-    } catch (err) {
-        console.error('Chyba pri načítaní členov tímu:', err);
-        if (onUpdate) onUpdate([]);
     }
+    
+    console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU (real-time) ===`);
+    console.log(`Pôvodný názov: "${teamName}"`);
+    console.log(`Skutočný názov na vyhľadávanie: "${actualTeamName}"`);
+    console.log(`Kategória: "${categoryName}"`);
+    
+    const usersRef = collection(window.db, 'users');
+    
+    const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
+        console.log(`Real-time aktualizácia: Načítavam členov pre tím ${actualTeamName}`);
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                if (categoryKey !== categoryName) continue;
+                
+                const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName);
+                
+                if (foundTeam) {
+                    console.log(`✅ Našiel som tím: "${actualTeamName}" v kategórii ${categoryKey} (real-time)`);
+                    
+                    const members = [];
+                    
+                    // Hráči - 🔥 PRIDANÉ userId a originalIndex
+                    if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
+                        foundTeam.playerDetails.forEach((player, idx) => {
+                            members.push({
+                                type: 'Hráč',
+                                firstName: player.firstName || '',
+                                lastName: player.lastName || '',
+                                jerseyNumber: player.jerseyNumber || '',
+                                registrationNumber: player.registrationNumber || '',
+                                userId: userId,        // 🔥 PRIDANÉ
+                                originalIndex: idx    // 🔥 PRIDANÉ
+                            });
+                        });
+                    }
+                    
+                    // Členovia realizačného tímu (muži) - 🔥 PRIDANÉ userId a originalIndex
+                    if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
+                        foundTeam.menTeamMemberDetails.forEach((member, idx) => {
+                            members.push({
+                                type: 'Člen RT (muž)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,        // 🔥 PRIDANÉ
+                                originalIndex: idx    // 🔥 PRIDANÉ
+                            });
+                        });
+                    }
+                    
+                    // Členovia realizačného tímu (ženy) - 🔥 PRIDANÉ userId a originalIndex
+                    if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
+                        foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
+                            members.push({
+                                type: 'Člen RT (žena)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,        // 🔥 PRIDANÉ
+                                originalIndex: idx    // 🔥 PRIDANÉ
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (muži) - 🔥 PRIDANÉ userId a originalIndex
+                    if (foundTeam.driverDetailsMale && Array.isArray(foundTeam.driverDetailsMale)) {
+                        foundTeam.driverDetailsMale.forEach((driver, idx) => {
+                            members.push({
+                                type: 'Šofér (muž)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (ženy) - 🔥 PRIDANÉ userId a originalIndex
+                    if (foundTeam.driverDetailsFemale && Array.isArray(foundTeam.driverDetailsFemale)) {
+                        foundTeam.driverDetailsFemale.forEach((driver, idx) => {
+                            members.push({
+                                type: 'Šofér (žena)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx
+                            });
+                        });
+                    }
+                    
+                    console.log(`Celkový počet členov tímu (real-time): ${members.length}`);
+                    if (onUpdate) onUpdate(members);
+                    return;
+                }
+            }
+        }
+        
+        console.log(`❌ Nenašiel som tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
+        if (onUpdate) onUpdate([]);
+    }, (error) => {
+        console.error('Chyba pri real-time načítaní členov tímu:', error);
+        if (onUpdate) onUpdate([]);
+    });
+    
+    return unsubscribe;
 };
 
 // OPRAVENÝ Komponent pre odpočet času vylúčenia - NEMÁ ŽIADNU DATABÁZOVÚ INTERAKCIU
@@ -438,101 +556,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-
-
-
-
-// WORKER API PRE NAČÍTANIE ČLENOV TÍMU
-const WORKER_URL = 'https://soh-2025.turnaj-slovak-open-handball.workers.dev/';
-
-// Cache pre údaje členov tímov
-let teamMembersCache = new Map();
-
-async function loadTeamMembersFromWorker(teamName, categoryName) {
-    const cacheKey = `${teamName}|${categoryName}`;
-    
-    // Kontrola cache
-    if (teamMembersCache.has(cacheKey)) {
-        console.log(`💿 Načítaní členovia z cache pre ${teamName}`);
-        return teamMembersCache.get(cacheKey);
-    }
-    
-    try {
-        console.log(`🔄 Načítavam členov tímu cez Worker: ${teamName} (${categoryName})`);
-        
-        // Paralelné načítanie všetkých troch typov členov
-        const [players, menRt, womenRt] = await Promise.all([
-            fetchTeamMembers(teamName, categoryName, 'playerDetails'),
-            fetchTeamMembers(teamName, categoryName, 'menTeamMemberDetails'),
-            fetchTeamMembers(teamName, categoryName, 'womenTeamMemberDetails')
-        ]);
-        
-        // Spojenie všetkých členov (najprv RT, potom hráči)
-        const allMembers = [...menRt, ...womenRt, ...players];
-        
-        // Pridanie potrebných polí
-        const membersWithDisplay = allMembers.map(member => ({
-            ...member,
-            originalIndex: member.sourceIdx,
-            dbArrayName: member.sourceType,
-            type: getMemberTypeDisplayName(member.memberType || member.sourceType)
-        }));
-        
-        console.log(`✅ Načítaných celkom ${membersWithDisplay.length} členov pre ${teamName}`);
-        
-        // Uloženie do cache
-        teamMembersCache.set(cacheKey, membersWithDisplay);
-        
-        return membersWithDisplay;
-    } catch (err) {
-        console.error(`Chyba pri načítaní členov pre ${teamName}:`, err);
-        return [];
-    }
-}
-
-async function fetchTeamMembers(teamName, categoryName, memberType) {
-    try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                teamName: teamName,
-                categoryName: categoryName,
-                playerType: memberType,
-                loadAll: true
-            })
-        });
-        
-        if (!response.ok) return [];
-        
-        const result = await response.json();
-        if (result.success && result.data) {
-            return Array.isArray(result.data) ? result.data : [];
-        }
-        return [];
-    } catch (err) {
-        console.error(`Chyba pri načítaní ${memberType}:`, err);
-        return [];
-    }
-}
-
-function getMemberTypeDisplayName(type) {
-    if (type === 'playerDetails' || type === 'Hráč') return 'Hráč';
-    if (type === 'menTeamMemberDetails') return 'Člen RT (muž)';
-    if (type === 'womenTeamMemberDetails') return 'Člen RT (žena)';
-    return type;
-}
-
-// Funkcia na vymazanie cache
-function clearTeamMembersCache() {
-    teamMembersCache.clear();
-    console.log('🗑️ Cache členov tímov vymazaná');
-}
-
-
-
-
-// OPRAVENÝ TeamMembersList KOMPONENT - POUŽÍVA WORKER API NAMIESTO PRIAMYCH READ Z FIRESTORE
+// OPRAVENÝ TeamMembersList KOMPONENT - SPRÁVNE NAČÍTA DĹŽKU PERIÓDY
 const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -543,7 +567,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [matchData, setMatchData] = useState(null);
     const [excludedMembers, setExcludedMembers] = useState({});
     
-    // STATE PRE AKTUÁLNY ČAS
+    // STATE PRE AKTUÁLNY ČAS (celkový čas zápasu v sekundách)
     const [currentTotalTime, setCurrentTotalTime] = useState(0);
     const [periodLengthSeconds, setPeriodLengthSeconds] = useState(0); 
     const matchDataRef = useRef(matchData);
@@ -555,7 +579,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         }
     }, [propBlueCardSuspensions]);
     
-    // Načítanie match data z Firebase (to je povolené - canRead())
+    // Načítanie match data z Firebase
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -565,15 +589,23 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 const data = docSnap.data();
                 setMatchData(data);
                 
+                // 🔥 NAJPRV POUŽIJEME HODNOTU Z PROPS (z nastavení kategórie)
                 if (propPeriodDuration) {
                     setPeriodLengthSeconds(propPeriodDuration * 60);
-                } else if (data.periodDuration) {
+                    console.log(`[TeamMembersList] Nastavená dĺžka periódy z props: ${propPeriodDuration} minút (${propPeriodDuration * 60} sekúnd)`);
+                }
+                // Ak nemáme z props, skúsime z databázy
+                else if (data.periodDuration) {
                     setPeriodLengthSeconds(data.periodDuration * 60);
-                } else {
+                    console.log(`[TeamMembersList] Nastavená dĺžka periódy z databázy: ${data.periodDuration} minút (${data.periodDuration * 60} sekúnd)`);
+                } 
+                // Inak z kategórie
+                else {
                     const categoryId = data.categoryId;
                     if (categoryId && window.categorySettings && window.categorySettings[categoryId]) {
                         const periodDuration = window.categorySettings[categoryId].periodDuration || 20;
                         setPeriodLengthSeconds(periodDuration * 60);
+                        console.log(`[TeamMembersList] Nastavená dĺžka periódy z kategórie: ${periodDuration} minút`);
                     }
                 }
             }
@@ -582,22 +614,34 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId, propPeriodDuration]);
     
+    // Aktualizácia referencie na matchData
     useEffect(() => {
         matchDataRef.current = matchData;
     }, [matchData]);
     
-    // Aktualizácia času
+    // 🔥 OPRAVENÝ useEffect pre aktuálny čas
     useEffect(() => {
         const updateGameTime = () => {
             const currentMatchData = matchDataRef.current;
-            if (!currentMatchData) return;
+            if (!currentMatchData) {
+                return;
+            }
             
+            // 🔥 POUŽIJEME AKTUÁLNU HODNOTU periodLengthSeconds
             const periodLength = periodLengthSeconds;
-            if (periodLength === 0) return;
+            
+            // 🔥 DÔLEŽITÉ: Ak je periodLength stále 0, nemôžeme správne vypočítať čas
+            if (periodLength === 0) {
+                console.warn(`[TeamMembersList] periodLengthSeconds je 0, čakám na nastavenie...`);
+                return;
+            }
             
             const currentPeriod = currentMatchData.currentPeriod || 1;
+            
+            // Čas v aktuálnej perióde (v sekundách)
             let currentPeriodTime = currentMatchData.manualTimeOffset || 0;
             
+            // Ak zápas beží, pripočítame uplynutý čas
             if (currentMatchData.status === 'in-progress' && currentMatchData.startedAt) {
                 const elapsed = Math.floor((Date.now() - currentMatchData.startedAt.toDate().getTime()) / 1000);
                 currentPeriodTime = (currentMatchData.manualTimeOffset || 0) + elapsed;
@@ -606,32 +650,44 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
+            // 🔥 CELKOVÝ ČAS = (aktuálna perióda - 1) * dĺžka periódy + čas v aktuálnej perióde
             const totalGameTime = ((currentPeriod - 1) * periodLength) + currentPeriodTime;
+            
             setCurrentTotalTime(prev => {
-                if (Math.abs(prev - totalGameTime) >= 0.5) return totalGameTime;
+                if (Math.abs(prev - totalGameTime) >= 0.5) {
+                    return totalGameTime;
+                }
                 return prev;
             });
         };
         
+        // Okamžité spustenie
         updateGameTime();
+        
+        // Pravidelná aktualizácia
         const interval = setInterval(updateGameTime, 200);
         timerIntervalRef.current = interval;
         
         return () => {
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
         };
-    }, [matchId, periodLengthSeconds]);
+    }, [matchId, periodLengthSeconds]); // 🔥 ZÁVISLOSŤ NA periodLengthSeconds
     
-    // Načítanie nastavení vylúčenia
+    // Načítanie nastavení vylúčenia z databázy
     useEffect(() => {
         const loadExclusionSettings = async () => {
             if (!window.db || !matchId) return;
+            
             try {
                 const matchRef = doc(window.db, 'matches', matchId);
                 const matchSnap = await getDoc(matchRef);
                 if (matchSnap.exists()) {
                     const matchData = matchSnap.data();
                     const categoryId = matchData.categoryId;
+                    
                     if (categoryId) {
                         const settingsRef = doc(window.db, 'settings', 'categories');
                         const settingsSnap = await getDoc(settingsRef);
@@ -639,6 +695,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             const categoryData = settingsSnap.data()[categoryId];
                             if (categoryData && categoryData.exclusionTime) {
                                 setExclusionDuration(categoryData.exclusionTime);
+                                console.log(`[TeamMembersList] Nastavená dĺžka vylúčenia: ${categoryData.exclusionTime} minút`);
                             }
                         }
                     }
@@ -647,86 +704,186 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 console.error('Chyba pri načítaní nastavení vylúčenia:', err);
             }
         };
+        
         loadExclusionSettings();
     }, [matchId]);
     
-    // SPRÁVNY KÓD - používa funkcie definované v tomto súbore
-    const loadTeamMembersViaWorker = async () => {
-        setLoading(true);
-        try {
-            // Získame mapovaný názov tímu
-            let actualTeamName = teamName;
-            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
-                if (convertedName && convertedName !== teamName) {
-                    actualTeamName = convertedName;
-                    if (onMappedNameUpdate) onMappedNameUpdate(actualTeamName);
-                }
-            }
-            
-            // 🔥 POUŽIJEME FUNKCIE DEFINOVANÉ V TOMTO SÚBORE (nie z window.teamNameReplacer)
-            const members = await loadTeamMembersFromWorker(actualTeamName, categoryName);
-            setMembers(members);
-            console.log(`✅ Načítaných ${members.length} členov tímu`);
-        } catch (err) {
-            console.error('Chyba pri načítaní členov:', err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
+    // 🔥 OPRAVENÝ VÝPOČET VYLÚČENÝCH ČLENOV - BERIE DO ÚVAHY PERIÓDY
+    useEffect(() => {
+        if (!window.db || !matchId || members.length === 0) {
+            return;
         }
-    };
-    
-    // Pomocná funkcia na načítanie členov podľa typu
-    const loadTeamMembersByType = async (teamName, categoryName, memberType) => {
-        try {
-            // Najprv skúsime načítať všetkých členov naraz (ak Worker podporuje)
-            const response = await fetch('https://soh-2025.turnaj-slovak-open-handball.workers.dev/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    teamName: teamName,
-                    categoryName: categoryName,
-                    memberType: memberType,
-                    loadAll: true  // Indikujeme, že chceme všetkých členov daného typu
-                })
+        
+        const eventsRef = collection(window.db, 'matchEvents');
+        const q = query(eventsRef, where('matchId', '==', matchId));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const excluded = {};
+            const currentMatchData = matchDataRef.current;
+            const periodLength = periodLengthSeconds || (currentMatchData?.periodDuration * 60) || 1200;
+            
+            // 🔥 ZÍSKAME AKTUÁLNU PERIÓDU
+            const currentPeriod = currentMatchData?.currentPeriod || 1;
+            
+            members.forEach((member) => {
+                // Vytvoríme unikátny kľúč pre každého člena (typ + pôvodný index)
+                const uniqueKey = `${member.type}_${member.originalIndex}`;
+                
+                // Získanie správneho typu pre vyhľadávanie v databáze
+                let targetTypeKey = member.dbArrayName;
+                let targetIndex = member.originalIndex;
+                
+                if (!targetTypeKey) {
+                    if (member.type === 'Hráč') targetTypeKey = 'playerDetails';
+                    else if (member.type === 'Člen RT (muž)') targetTypeKey = 'menTeamMemberDetails';
+                    else if (member.type === 'Člen RT (žena)') targetTypeKey = 'womenTeamMemberDetails';
+                    targetIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
+                }
+                
+                // Zozbierame všetky vylúčenia pre tohto člena
+                const exclusions = [];
+                
+                snapshot.forEach((doc) => {
+                    const event = doc.data();
+                    
+                    if (event.team === teamType && 
+                        event.memberTypeKey === targetTypeKey && 
+                        event.memberIndex === targetIndex &&
+                        event.eventType === 'exclusion') {
+                        
+                        // 🔥 DÔLEŽITÉ: Udalosti majú totalTime v SEKUNDÁCH (celkový čas zápasu)
+                        // Musíme zistiť, v ktorej perióde k vylúčeniu došlo
+                        const exclusionTotalTime = event.totalTime || 0;
+                        
+                        // 🔥 ZISTÍME PERIÓDU VYLÚČENIA
+                        let exclusionPeriod = event.period || 1;
+                        // Ak nemáme period v evente, odvodíme ho z totalTime
+                        if (!event.period && periodLength > 0) {
+                            exclusionPeriod = Math.floor(exclusionTotalTime / periodLength) + 1;
+                        }
+                        
+                        exclusions.push({
+                            totalTime: exclusionTotalTime,
+                            period: exclusionPeriod,
+                            docId: doc.id
+                        });
+                    }
+                });
+                
+                // Zoradíme vylúčenia podľa času
+                exclusions.sort((a, b) => a.totalTime - b.totalTime);
+                
+                if (exclusions.length === 0) {
+                    excluded[uniqueKey] = { isExcluded: false, remainingSeconds: 0, endTotalTime: 0 };
+                    return;
+                }
+                
+                let totalPenaltyEndTotalTime = 0;
+                const penaltyDurationSec = exclusionDuration * 60;
+                
+                for (let i = 0; i < exclusions.length; i++) {
+                    const exclusion = exclusions[i];
+                    const exclusionStartTotalTime = exclusion.totalTime;
+                    
+                    if (exclusionStartTotalTime >= totalPenaltyEndTotalTime) {
+                        totalPenaltyEndTotalTime = exclusionStartTotalTime + penaltyDurationSec;
+                    } else {
+                        totalPenaltyEndTotalTime = totalPenaltyEndTotalTime + penaltyDurationSec;
+                    }
+                }
+                
+                const isCurrentlyExcluded = currentTotalTime < totalPenaltyEndTotalTime;
+                
+                if (isCurrentlyExcluded) {
+                    const remainingTotalSeconds = Math.max(0, Math.ceil(totalPenaltyEndTotalTime - currentTotalTime));
+                    
+                    const currentPeriodNum = currentPeriod;
+                    const timeInCurrentPeriod = currentTotalTime - ((currentPeriodNum - 1) * periodLength);
+                    
+                    const endPeriod = Math.floor(totalPenaltyEndTotalTime / periodLength);
+                    const timeInEndPeriod = totalPenaltyEndTotalTime - (endPeriod * periodLength);
+                    
+                    let displayRemainingSeconds = remainingTotalSeconds;
+                    
+                    if (endPeriod > currentPeriodNum - 1) {
+                        displayRemainingSeconds = remainingTotalSeconds;
+                    } else if (endPeriod === currentPeriodNum - 1) {
+                        displayRemainingSeconds = remainingTotalSeconds;
+                    } else {
+                        displayRemainingSeconds = remainingTotalSeconds;
+                    }
+                    
+                    excluded[uniqueKey] = {
+                        isExcluded: true,
+                        remainingSeconds: displayRemainingSeconds,
+                        endTotalTime: totalPenaltyEndTotalTime,
+                        exclusionCount: exclusions.length
+                    };                    
+                } else {
+                    excluded[uniqueKey] = { 
+                        isExcluded: false, 
+                        remainingSeconds: 0, 
+                        endTotalTime: 0 
+                    };
+                }
             });
             
-            if (!response.ok) {
-                console.warn(`Worker pre ${memberType} vrátil chybu: ${response.status}`);
-                return [];
-            }
-            
-            const result = await response.json();
-            
-            if (result.success && result.data) {
-                // Ak Worker vrátil pole členov
-                if (Array.isArray(result.data)) {
-                    return result.data;
-                }
-                // Ak vrátil jedného člena
-                if (result.data.sourceIdx !== undefined) {
-                    return [result.data];
-                }
-            }
-            
-            return [];
-        } catch (err) {
-            console.error(`Chyba pri načítaní ${memberType}:`, err);
-            return [];
-        }
-    };
+            setExcludedMembers(excluded);
+        });
+        
+        return () => unsubscribe();
+    }, [matchId, teamType, members, exclusionDuration, currentTotalTime, periodLengthSeconds, matchDataRef.current?.currentPeriod]);
     
-    // Pomocná funkcia pre zobrazenie typu člena
-    const getMemberTypeDisplay = (type) => {
-        if (type === 'playerDetails' || type === 'Hráč') return 'Hráč';
-        if (type === 'menTeamMemberDetails') return 'Člen RT (muž)';
-        if (type === 'womenTeamMemberDetails') return 'Člen RT (žena)';
-        return type;
-    };
-    
-    // Spustenie načítania pri zmene teamName alebo categoryName
+    // Načítanie členov tímu
     useEffect(() => {
-        loadTeamMembersViaWorker();
+        setLoading(true);
+        setError(null);
+        
+        if (!teamName || !categoryName) {
+            setLoading(false);
+            return;
+        }
+        
+        const handleMembersUpdate = (updatedMembers) => {
+            const filteredMembers = updatedMembers.filter(m => m.type === 'Hráč' || m.type === 'Člen RT (muž)' || m.type === 'Člen RT (žena)');
+            const rtMembers = filteredMembers.filter(m => m.type !== 'Hráč');
+            const players = filteredMembers.filter(m => m.type === 'Hráč');
+            const sortedMembers = [...rtMembers, ...players];
+    
+            const membersWithOriginalIndex = sortedMembers.map((member, displayIdx) => {
+                // 🔥 POUŽIJEME originalIndex, KTORÝ UŽ MÁME Z loadTeamMembers
+                // Ak nie je, použijeme displayIdx
+                let originalIndex = member.originalIndex !== undefined ? member.originalIndex : displayIdx;
+                
+                return {
+                    ...member,
+                    originalIndex: originalIndex,
+                    dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
+                                (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
+                    userId: member.userId || null  // 🔥 ZACHOVÁME userId Z loadTeamMembers
+                };
+            });
+            
+            setMembers(membersWithOriginalIndex);
+            setLoading(false);
+        };
+        
+        const handleMappedName = (newMappedName) => {
+            if (newMappedName !== mappedName) {
+                setMappedName(newMappedName);
+                if (onMappedNameUpdate && typeof onMappedNameUpdate === 'function') {
+                    onMappedNameUpdate(newMappedName);
+                }
+            }
+        };
+        
+        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
+        const timeoutId = setTimeout(() => setLoading(false), 5000);
+        
+        return () => {
+            clearTimeout(timeoutId);
+            if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
+        };
     }, [teamName, categoryName]);
     
     // Načítanie štatistík z udalostí
