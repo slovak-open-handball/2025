@@ -1074,15 +1074,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 KONTROLA: Ak je zápas v stave 'in-progress' alebo 'completed', nevykonávame odstraňovanie
-        if (matchStatus === 'in-progress' || matchStatus === 'completed') {
-            console.log(`ℹ️ Zápas je v stave ${matchStatus}, odstraňovanie zo súpisky nie je povolené`);
-            return;
-        }
-        
         // 🔥 KONTROLA: Či je hráč vylúčený za modrú kartu
         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
         if (isSuspendedByBlue) {
+            console.log(`ℹ️ Hráč ${member.firstName} ${member.lastName} je vylúčený za modrú kartu`);
             return;
         }
         
@@ -1129,14 +1124,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             } else {
                 // PRIDÁME ODSTRÁNENIE - uložíme udalosť
-                const memberForSave = {
-                    type: member.type,
-                    name: `${member.firstName} ${member.lastName}`.trim(),
-                    index: member.originalIndex,
-                    typeKey: member.dbArrayName,
-                    userId: member.userId
-                };
-                
                 // Uložíme udalosť typu 'roster_removal'
                 if (window.db && matchId) {
                     try {
@@ -1168,27 +1155,36 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 PÔVODNÁ LOGIKA PRE UDALOSTI (góly, karty, atď.)
+        // 🔥 PÔVODNÁ LOGIKA PRE UDALOSTI (góly, karty, atď.) - pre VŠETKY stavy okrem 'completed'
+        // Táto časť sa vykoná pre 'scheduled' (s vybranou akciou), 'in-progress' aj 'paused'
+        
+        // Kontrola: Gól môže dať len hráč, nie člen RT
         if (selectedActionsSet.has('goal') && member.type !== 'Hráč') {
+            console.log(`ℹ️ Len hráč môže dať gól, ${member.type} nie je hráč`);
             return;
         }
         
+        // Kontrola: 7m môže kopať len hráč, nie člen RT
         if (selectedActionsSet.has('7m') && member.type !== 'Hráč') {
+            console.log(`ℹ️ Len hráč môže kopať 7m, ${member.type} nie je hráč`);
             return;
         }
         
-        // Kontrola normálneho vylúčenia (2 minúty)
+        // Kontrola normálneho vylúčenia (2 minúty) - ak je hráč vylúčený, nemôže dať gól ani 7m
         const uniqueKey = `${member.type}_${member.originalIndex}`;
         const exclusionInfo = excludedMembers[uniqueKey];
         if (exclusionInfo && exclusionInfo.isExcluded) {
             if (selectedActionsSet.has('goal')) {
+                console.log(`ℹ️ Hráč ${member.firstName} ${member.lastName} je vylúčený, nemôže dať gól`);
                 return;
             }
             if (selectedActionsSet.has('7m')) {
+                console.log(`ℹ️ Hráč ${member.firstName} ${member.lastName} je vylúčený, nemôže kopať 7m`);
                 return;
             }
         }
         
+        // Ak nie je vybratá žiadna akcia, nič neukladáme
         if (selectedActionsSet.size === 0) {
             return;
         }
@@ -1209,7 +1205,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         }
         
         if (success) {
-            console.log(`✅ Udalosť úspešne uložená`);
+            console.log(`✅ Udalosť úspešne uložená pre ${member.firstName} ${member.lastName}`);
+        } else {
+            console.log(`❌ Nepodarilo sa uložiť udalosť pre ${member.firstName} ${member.lastName}`);
         }
     };
     
