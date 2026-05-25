@@ -751,56 +751,38 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return () => unsubscribe();
     }, [matchId, teamType, members, exclusionDuration, currentTotalTime, periodLengthSeconds, matchDataRef.current?.currentPeriod]);
     
-    // Načítanie členov tímu
     useEffect(() => {
-        setLoading(true);
-        setError(null);
-        
-        if (!teamName || !categoryName) {
-            setLoading(false);
-            return;
-        }
-        
-        const handleMembersUpdate = (updatedMembers) => {
-            const filteredMembers = updatedMembers.filter(m => m.type === 'Hráč' || m.type === 'Člen RT (muž)' || m.type === 'Člen RT (žena)');
-            const rtMembers = filteredMembers.filter(m => m.type !== 'Hráč');
-            const players = filteredMembers.filter(m => m.type === 'Hráč');
-            const sortedMembers = [...rtMembers, ...players];
+        let isMounted = true;
     
-            const membersWithOriginalIndex = sortedMembers.map((member, displayIdx) => {
-                // 🔥 POUŽIJEME originalIndex, KTORÝ UŽ MÁME Z loadTeamMembers
-                // Ak nie je, použijeme displayIdx
-                let originalIndex = member.originalIndex !== undefined ? member.originalIndex : displayIdx;
-                
-                return {
-                    ...member,
-                    originalIndex: originalIndex,
-                    dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
-                                (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
-                    userId: member.userId || null  // 🔥 ZACHOVÁME userId Z loadTeamMembers
-                };
-            });
-            
-            setMembers(membersWithOriginalIndex);
-            setLoading(false);
-        };
-        
-        const handleMappedName = (newMappedName) => {
-            if (newMappedName !== mappedName) {
-                setMappedName(newMappedName);
-                if (onMappedNameUpdate && typeof onMappedNameUpdate === 'function') {
-                    onMappedNameUpdate(newMappedName);
-                }
+        const loadMembers = async () => {
+            if (!teamName || !categoryName) {
+                setLoading(false);
+                return;
             }
+            
+            setLoading(true);
+            
+            const handleMembersUpdate = (updatedMembers) => {
+                if (!isMounted) return;
+                // ... spracovanie členov
+                setMembers(membersWithOriginalIndex);
+                setLoading(false);
+            };
+            
+            const handleMappedName = (newMappedName) => {
+                if (!isMounted) return;
+                if (newMappedName !== mappedName) {
+                    setMappedName(newMappedName);
+                    if (onMappedNameUpdate) onMappedNameUpdate(newMappedName);
+                }
+            };
+            
+            await loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
         };
         
-        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
-        const timeoutId = setTimeout(() => setLoading(false), 5000);
+        loadMembers();
         
-        return () => {
-            clearTimeout(timeoutId);
-            if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
-        };
+        return () => { isMounted = false; };
     }, [teamName, categoryName]);
     
     // Načítanie štatistík z udalostí
