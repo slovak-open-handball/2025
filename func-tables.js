@@ -3176,6 +3176,203 @@ function findTeamInUsersByGroupAndOrder(category, groupLetter, order) {
     return null;
 }
 
+const WORKER_URL = 'https://soh-2025.turnaj-slovak-open-handball.workers.dev/';
+
+// Cache pre údaje členov tímov
+let teamMembersCache = new Map();
+let teamMembersCacheTimestamp = new Map();
+const TEAM_MEMBERS_CACHE_TTL = 5 * 60 * 1000; // 5 minút
+
+/**
+ * Načítanie všetkých členov tímu daného typu cez Worker API
+ * @param {string} teamName - Názov tímu
+ * @param {string} categoryName - Názov kategórie
+ * @param {string} memberType - Typ člena ('playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails')
+ * @returns {Promise<Array>} - Pole členov tímu
+ */
+async function loadTeamMembersViaWorker(teamName, categoryName, memberType) {
+    const cacheKey = `${teamName}|${categoryName}|${memberType}`;
+    
+    // Kontrola cache
+    if (teamMembersCache.has(cacheKey) && teamMembersCacheTimestamp.has(cacheKey)) {
+        const timestamp = teamMembersCacheTimestamp.get(cacheKey);
+        if (Date.now() - timestamp < TEAM_MEMBERS_CACHE_TTL) {
+            log(`💿 Načítaní členovia z cache pre ${teamName} (${memberType}): ${teamMembersCache.get(cacheKey).length} členov`);
+            return teamMembersCache.get(cacheKey);
+        } else {
+            teamMembersCache.delete(cacheKey);
+            teamMembersCacheTimestamp.delete(cacheKey);
+        }
+    }
+    
+    try {
+        log(`🔄 Načítavam členov tímu cez Worker: ${teamName} (${categoryName}) - typ: ${memberType}`);
+        
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                teamName: teamName,
+                categoryName: categoryName,
+                playerType: memberType,
+                loadAll: true
+            })
+        });
+        
+        if (!response.ok) {
+            console.error(`Worker pre ${memberType} vrátil chybu: ${response.status}`);
+            return [];
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const members = Array.isArray(result.data) ? result.data : [];
+            log(`✅ Načítaných ${members.length} členov pre ${teamName} (${memberType})`);
+            
+            teamMembersCache.set(cacheKey, members);
+            teamMembersCacheTimestamp.set(cacheKey, Date.now());
+            
+            return members;
+        }
+        
+        return [];
+    } catch (err) {
+        console.error(`Chyba pri načítaní ${memberType} pre ${teamName}:`, err);
+        return [];
+    }
+}
+
+/**
+ * Načítanie všetkých členov tímu (hráči + RT muži + RT ženy) cez Worker API
+ * @param {string} teamName - Názov tímu
+ * @param {string} categoryName - Názov kategórie
+ * @returns {Promise<Array>} - Pole všetkých členov tímu
+ */
+async function loadAllTeamMembersViaWorker(teamName, categoryName) {
+    try {
+        log(`🔄 Načítavam všetkých členov tímu cez Worker: ${teamName} (${categoryName})`);
+        
+        const [players, menRtMembers, womenRtMembers] = await Promise.all([
+            loadTeamMembersViaWorker(teamName, categoryName, 'playerDetails'),
+            loadTeamMembersViaWorker(teamName, categoryName, 'menTeamMemberDetails'),
+            loadTeamMembersViaWorker(teamName, categoryName, 'womenTeamMemberDetails')
+        ]);
+        
+        const allMembers = [...menRtMembers, ...womenRtMembers, ...players];
+        
+        const membersWithDisplay = allMembers.map(member => ({
+            ...member,
+            originalIndex: member.sourceIdx,
+            dbArrayName: member.sourceType,
+            type: getMemberTypeDisplayWorker(member.memberType || member.sourceType)
+        }));
+        
+        log(`✅ Načítaných celkom ${membersWithDisplay.length} členov pre ${teamName}`);
+        return membersWithDisplay;
+    } catch (err) {
+        console.error(`Chyba pri načítaní všetkých členov pre ${teamName}:`, err);
+        return [];
+    }
+}
+
+/**
+ * Získanie zobrazeného názvu typu člena
+ */
+function getMemberTypeDisplayWorker(type) {
+    if (type === 'playerDetails' || type === 'Hráč') return 'Hráč';
+    if (type === 'menTeamMemberDetails') return 'Člen RT (muž)';
+    if (type === 'womenTeamMemberDetails') return 'Člen RT (žena)';
+    return type;
+}
+
+/**
+ * Vymazanie cache členov tímov
+ */
+function clearTeamMembersCacheWorker() {
+    teamMembersCache.clear();
+    teamMembersCacheTimestamp.clear();
+    log('🗑️ Cache členov tímov bola vymazaná');
+}
+
+/**
+ * Získanie informácií o tíme (počty členov) cez Worker API
+ */
+async function getTeamInfoViaWorker(teamName, categoryName) {
+    try {
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                teamName: teamName,
+                categoryName: categoryName
+            })
+        });
+        
+        if (!response.ok) return null;
+        
+        const result = await response.json();
+        if (result.success && result.data) {
+            return result.data;
+        }
+        return null;
+    } catch (err) {
+        console.error(`Chyba pri získavaní info o tíme ${teamName}:`, err);
+        return null;
+    }
+}
+
+// Export nových funkcií do window.teamNameReplacer
+if (window.teamNameReplacer) {
+    window.teamNameReplacer.loadTeamMembersViaWorker = loadTeamMembersViaWorker;
+    window.teamNameReplacer.loadAllTeamMembersViaWorker = loadAllTeamMembersViaWorker;
+    window.teamNameReplacer.clearTeamMembersCache = clearTeamMembersCacheWorker;
+    window.teamNameReplacer.getTeamInfoViaWorker = getTeamInfoViaWorker;
+    window.teamNameReplacer.getMemberTypeDisplay = getMemberTypeDisplayWorker;
+}
+
+log('📋 Pridané funkcie pre prácu s Worker API:');
+log('   • window.teamNameReplacer.loadTeamMembersViaWorker(teamName, categoryName, memberType)');
+log('   • window.teamNameReplacer.loadAllTeamMembersViaWorker(teamName, categoryName)');
+log('   • window.teamNameReplacer.clearTeamMembersCache()');
+log('   • window.teamNameReplacer.getTeamInfoViaWorker(teamName, categoryName)');
+
+// ============================================================
+// PÔVODNÁ FUNKCIA findTeamInUsersByGroupAndOrder - ZACHOVANÁ PRE KOMPATIBILITU
+// ============================================================
+
+function findTeamInUsersByGroupAndOrder(category, groupLetter, order) {
+    // Táto funkcia zostáva nezmenená, ale už sa nepoužíva primárne
+    if (!window.db) return null;
+    
+    const users = window.__reactUsersState || [];
+    
+    for (const user of users) {
+        if (!user.teams) continue;
+        
+        const userTeams = user.teams[category];
+        if (!userTeams || !Array.isArray(userTeams)) continue;
+        
+        const fullGroupName = `skupina ${groupLetter}`;
+        
+        const team = userTeams.find(t => 
+            t.groupName === fullGroupName && 
+            t.order === order
+        );
+        
+        if (team && team.teamName) {
+            return {
+                teamName: team.teamName,
+                userId: user.id,
+                userEmail: user.email,
+                teamData: team
+            };
+        }
+    }
+    
+    return null;
+}
+
 // Funkcia na vymazanie cache (napr. pri aktualizácii dát)
 function clearReplacementCache() {
     replacementCache.clear();
