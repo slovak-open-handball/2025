@@ -2113,16 +2113,21 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 
     if (!isOpen) return null;
 
-    // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca vo formáte "tým1 * tým2"
+    // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
+    // Podporuje formáty: "tým1 * tým2", "tým1*tým2", "tým1* tým2", "tým1 *tým2"
     const extractTeamsFromSearch = (search) => {
-        // Hľadáme hviezdičku s medzerami: " * "
-        const starWithSpacesIndex = search.indexOf(' * ');
-        if (starWithSpacesIndex === -1) {
+        // Odstránime nadbytočné medzery na začiatku a konci
+        const trimmedSearch = search.trim();
+        
+        // Hľadáme hviezdičku - môže ale nemusí mať medzery okolo seba
+        const starIndex = trimmedSearch.indexOf('*');
+        if (starIndex === -1) {
             return { team1: null, team2: null };
         }
         
-        const team1Raw = search.substring(0, starWithSpacesIndex).trim();
-        const team2Raw = search.substring(starWithSpacesIndex + 3).trim();
+        // Rozdelíme reťazec podľa hviezdičky
+        const team1Raw = trimmedSearch.substring(0, starIndex).trim();
+        const team2Raw = trimmedSearch.substring(starIndex + 1).trim();
         
         // Ak je niektorá časť prázdna, vrátime null
         if (!team1Raw || !team2Raw) {
@@ -2190,7 +2195,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 * tým2")
+    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 * tým2" v rôznych variantoch)
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase();
         const team2Lower = team2.toLowerCase();
@@ -2199,25 +2204,25 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         let foundTeam2 = false;
         
         // Kontrola v názvoch
-        if (matchStrings.homeName.includes(team1Lower) || matchStrings.awayName.includes(team1Lower)) foundTeam1 = true;
-        if (matchStrings.homeName.includes(team2Lower) || matchStrings.awayName.includes(team2Lower)) foundTeam2 = true;
+        if (stringContainsTeam(matchStrings.homeName, team1Lower) || stringContainsTeam(matchStrings.awayName, team1Lower)) foundTeam1 = true;
+        if (stringContainsTeam(matchStrings.homeName, team2Lower) || stringContainsTeam(matchStrings.awayName, team2Lower)) foundTeam2 = true;
         
         // Ak ešte nenašiel team1, skúsime v celých identifikátoroch
-        if (!foundTeam1 && (matchStrings.homeId.includes(team1Lower) || matchStrings.awayId.includes(team1Lower))) foundTeam1 = true;
+        if (!foundTeam1 && (stringContainsTeam(matchStrings.homeId, team1Lower) || stringContainsTeam(matchStrings.awayId, team1Lower))) foundTeam1 = true;
         
         // Ak ešte nenašiel team2, skúsime v celých identifikátoroch
-        if (!foundTeam2 && (matchStrings.homeId.includes(team2Lower) || matchStrings.awayId.includes(team2Lower))) foundTeam2 = true;
+        if (!foundTeam2 && (stringContainsTeam(matchStrings.homeId, team2Lower) || stringContainsTeam(matchStrings.awayId, team2Lower))) foundTeam2 = true;
         
         // Ak ešte nenašiel team1, skúsime v čistých ID
-        if (!foundTeam1 && (matchStrings.homePureId.includes(team1Lower) || matchStrings.awayPureId.includes(team1Lower))) foundTeam1 = true;
+        if (!foundTeam1 && (stringContainsTeam(matchStrings.homePureId, team1Lower) || stringContainsTeam(matchStrings.awayPureId, team1Lower))) foundTeam1 = true;
         
         // Ak ešte nenašiel team2, skúsime v čistých ID
-        if (!foundTeam2 && (matchStrings.homePureId.includes(team2Lower) || matchStrings.awayPureId.includes(team2Lower))) foundTeam2 = true;
+        if (!foundTeam2 && (stringContainsTeam(matchStrings.homePureId, team2Lower) || stringContainsTeam(matchStrings.awayPureId, team2Lower))) foundTeam2 = true;
         
         return foundTeam1 && foundTeam2;
     };
 
-    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1 * tým2")
+    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1*tým2" s ľubovoľným počtom medzier)
     const matchSearch = (match, searchLower, matchStrings) => {
         // Skúsime extrahovať dva tímy z vyhľadávania
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
@@ -2229,21 +2234,21 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         
         // Pôvodné vyhľadávanie (jeden tím alebo časť textu)
         // Kontrola v názvoch
-        if (matchStrings.homeName.includes(searchLower) || matchStrings.awayName.includes(searchLower)) return true;
+        if (stringContainsTeam(matchStrings.homeName, searchLower) || stringContainsTeam(matchStrings.awayName, searchLower)) return true;
         
         // Kontrola v celých identifikátoroch
-        if (matchStrings.homeId.includes(searchLower) || matchStrings.awayId.includes(searchLower)) return true;
+        if (stringContainsTeam(matchStrings.homeId, searchLower) || stringContainsTeam(matchStrings.awayId, searchLower)) return true;
         
         // Kontrola v čistých ID (bez kategórie)
-        if (matchStrings.homePureId.includes(searchLower) || matchStrings.awayPureId.includes(searchLower)) return true;
+        if (stringContainsTeam(matchStrings.homePureId, searchLower) || stringContainsTeam(matchStrings.awayPureId, searchLower)) return true;
         
         // Kontrola v názve kategórie
-        if (match.categoryName && match.categoryName.toLowerCase().includes(searchLower)) return true;
+        if (match.categoryName && stringContainsTeam(match.categoryName.toLowerCase(), searchLower)) return true;
         
         return false;
     };
 
-    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1 * tým2")
+    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1*tým2")
     const filteredMatches = availableMatches.filter(match => {
         const searchLower = searchTerm.toLowerCase();
         
@@ -2385,7 +2390,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Vyhľadávanie - s placeholderom pre formát "tým1 * tým2"
+            // Vyhľadávanie - s placeholderom pre všetky formáty
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -2395,7 +2400,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     React.createElement('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm' }),
                     React.createElement('input', {
                         type: 'text',
-                        placeholder: 'Vyhľadať zápas... (napr. "A1 * A2" alebo "A2")',
+                        placeholder: 'Vyhľadať zápas... (napr. "A1 * A2", "A1*A2" alebo "A1")',
                         value: searchTerm,
                         onChange: (e) => setSearchTerm(e.target.value),
                         className: 'w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
@@ -2406,7 +2411,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1 * A2"'
+                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1*A2" (hviezdičkou oddeľte tímy)'
                 )
             ),
 
