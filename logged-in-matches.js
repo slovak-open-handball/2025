@@ -2114,20 +2114,20 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     if (!isOpen) return null;
 
     // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
-    // Podporuje formáty: "tým1 * tým2", "tým1*tým2", "tým1* tým2", "tým1 *tým2"
+    // Podporuje formáty: "tým1 = tým2", "tým1=tým2", "tým1= tým2", "tým1 =tým2"
     const extractTeamsFromSearch = (search) => {
         // Odstránime nadbytočné medzery na začiatku a konci
         const trimmedSearch = search.trim();
         
-        // Hľadáme hviezdičku - môže ale nemusí mať medzery okolo seba
-        const starIndex = trimmedSearch.indexOf('*');
-        if (starIndex === -1) {
+        // Hľadáme znak rovná sa - môže ale nemusí mať medzery okolo seba
+        const equalIndex = trimmedSearch.indexOf('=');
+        if (equalIndex === -1) {
             return { team1: null, team2: null };
         }
         
-        // Rozdelíme reťazec podľa hviezdičky
-        const team1Raw = trimmedSearch.substring(0, starIndex).trim();
-        const team2Raw = trimmedSearch.substring(starIndex + 1).trim();
+        // Rozdelíme reťazec podľa znaku rovná sa
+        const team1Raw = trimmedSearch.substring(0, equalIndex).trim();
+        const team2Raw = trimmedSearch.substring(equalIndex + 1).trim();
         
         // Ak je niektorá časť prázdna, vrátime null
         if (!team1Raw || !team2Raw) {
@@ -2195,7 +2195,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 * tým2" v rôznych variantoch)
+    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 = tým2" v rôznych variantoch)
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase();
         const team2Lower = team2.toLowerCase();
@@ -2222,7 +2222,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return foundTeam1 && foundTeam2;
     };
 
-    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1*tým2" s ľubovoľným počtom medzier)
+    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1=tým2" s ľubovoľným počtom medzier)
     const matchSearch = (match, searchLower, matchStrings) => {
         // Skúsime extrahovať dva tímy z vyhľadávania
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
@@ -2248,7 +2248,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1*tým2")
+    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1=tým2")
     const filteredMatches = availableMatches.filter(match => {
         const searchLower = searchTerm.toLowerCase();
         
@@ -2400,7 +2400,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     React.createElement('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm' }),
                     React.createElement('input', {
                         type: 'text',
-                        placeholder: 'Vyhľadať zápas... (napr. "A1 * A2", "A1*A2" alebo "A1")',
+                        placeholder: 'Vyhľadať zápas... (napr. "A1 = A2", "A1=A2" alebo "A1")',
                         value: searchTerm,
                         onChange: (e) => setSearchTerm(e.target.value),
                         className: 'w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
@@ -2411,7 +2411,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1 * A2" (hviezdičkou oddeľte tímy)'
+                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1=A2" (rovná sa oddeľte tímy)'
                 )
             ),
 
