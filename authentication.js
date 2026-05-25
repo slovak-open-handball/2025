@@ -118,85 +118,30 @@ const roleAccess = {
     ]
 };
 
-// 🆕 Pomocná funkcia na kontrolu, či je App Check podporovaný v prehliadači
-const isAppCheckSupported = () => {
-    try {
-        // Kontrola, či je dostupný window a localStorage (pre debug token)
-        return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-    } catch (e) {
-        console.warn("AuthManager: App Check nie je podporovaný v tomto prostredí:", e);
-        return false;
-    }
+// 🆕 Pomocná funkcia na kontrolu, či je stránka HTML stránka (obsahuje .html)
+const isHtmlPage = () => {
+    const currentPath = window.location.pathname;
+    return currentPath.includes('.html');
 };
 
-// 🆕 Funkcia na nastavenie debug tokenu pre lokálny vývoj
-const setupAppCheckDebug = () => {
-    // Debug token sa nastavuje len pre lokálny vývoj (localhost)
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' ||
-                        window.location.hostname === '';
-    
-    if (isLocalhost) {
-        // Povolenie debug tokenu pre lokálny vývoj
-        // Po prvom načítaní sa v konzole zobrazí debug token, ktorý treba zaregistrovať vo Firebase Console
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-        console.log("AuthManager: 🔧 App Check debug mód aktivovaný pre localhost. Skontroluj konzolu pre debug token.");
-        
-        // Upozornenie pre vývojára
-        console.log("%c⚠️ App Check Debug Mód aktívny! Nezabudni zaregistrovať debug token vo Firebase Console → App Check → Debug tokens", "color: orange; font-size: 14px;");
-    }
-};
-
-// Inicializácia Firebase aplikácie s App Check
-let app;
-let db;
-let auth;
-let appCheck;
-
-const setupFirebase = () => {
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        
-        // 🆕 Dočasne vypnutý App Check - aktivuj neskôr
-        // if (isAppCheckSupported()) {
-        //     setupAppCheckDebug();
-        //     
-        //     appCheck = initializeAppCheck(app, {
-        //         provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
-        //         isTokenAutoRefreshEnabled: true
-        //     });
-        //     console.log("AuthManager: ✅ Firebase App Check inicializovaný s reCAPTCHA Enterprise.");
-        // } else {
-        //     console.warn("AuthManager: ⚠️ App Check nie je podporovaný, pokračujem bez neho.");
-        // }
-        
-        console.log("AuthManager: Firebase inicializovaný.");
-
-        // Pridáme globálne sprístupnené funkcie
-        window.auth = auth;
-        window.db = db;
-        window.firebaseConfig = firebaseConfig;
-        window.reauthenticateWithCredential = reauthenticateWithCredential;
-        window.updateEmail = updateEmail;
-        window.EmailAuthProvider = EmailAuthProvider;
-        window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
-        window.appCheck = appCheck;
-        
-    } catch (e) {
-        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
-    }
-};
-
-// Pomocná funkcia na získanie názvu súboru z cesty
+// 🆕 Pomocná funkcia na získanie názvu súboru z cesty (len ak obsahuje .html)
 const getFileNameFromPath = (path) => {
+    // Ak cesta neobsahuje .html, vrátime prázdny reťazec
+    if (!path.includes('.html')) {
+        return '';
+    }
     const parts = path.split('/');
     return parts[parts.length - 1];
 };
 
 // Pomocná funkcia na kontrolu, či je stránka verejná (prístupná pre neprihlásených)
 const isPublicPage = () => {
+    // Ak to nie je HTML stránka, považujeme ju za verejnú (napr. root cesta)
+    if (!isHtmlPage()) {
+        console.log(`AuthManager: isPublicPage() - aktuálna cesta "${window.location.pathname}" nie je HTML stránka, považujem za verejnú.`);
+        return true;
+    }
+    
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     const result = publicPages.includes(fileName);
@@ -206,6 +151,11 @@ const isPublicPage = () => {
 
 // Pomocná funkcia na kontrolu, či je stránka dostupná LEN pre neprihlásených používateľov
 const isGuestOnlyPage = () => {
+    // Ak to nie je HTML stránka, nie je to guest-only stránka
+    if (!isHtmlPage()) {
+        return false;
+    }
+    
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     const result = guestOnlyPages.includes(fileName);
@@ -215,6 +165,11 @@ const isGuestOnlyPage = () => {
 
 // Pomocná funkcia na kontrolu, či sme na login stránke
 const isOnLoginPage = () => {
+    // Ak to nie je HTML stránka, nie je to login stránka
+    if (!isHtmlPage()) {
+        return false;
+    }
+    
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     const result = fileName === 'login.html';
@@ -224,6 +179,11 @@ const isOnLoginPage = () => {
 
 // Pomocná funkcia na kontrolu, či sme na jednej z registračných stránok
 const isOnRegistrationPage = () => {
+    // Ak to nie je HTML stránka, nie je to registračná stránka
+    if (!isHtmlPage()) {
+        return false;
+    }
+    
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     const registrationPages = ['register.html', 'admin-register.html', 'volunteer-register.html'];
@@ -421,8 +381,8 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
-                                // Pre neverejné stránky kontrolujeme prístup podľa roly
-                                if (!isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
+                                // Pre neverejné stránky kontrolujeme prístup podľa roly (len ak ide o HTML stránku)
+                                if (isHtmlPage() && !isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
                                     console.log(`AuthManager: Používateľ s rolou "${userRole}" nemá prístup na stránku "${currentPage}". Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                     return;
@@ -466,6 +426,12 @@ const handleAuthState = async () => {
             }
             
             // NEPRIHLÁSENÝ POUŽÍVATEĽ - má prístup LEN k verejným stránkam
+            // Ak aktuálna cesta nie je HTML stránka (napr. root), necháme ho tam
+            if (!isHtmlPage()) {
+                console.log(`AuthManager: Neprihlásený používateľ na ne-HTML stránke "${window.location.pathname}". Žiadne presmerovanie.`);
+                return;
+            }
+            
             const isCurrentPagePublic = isPublicPage();
             const currentFileName = getFileNameFromPath(window.location.pathname);
             
