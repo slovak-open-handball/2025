@@ -2132,39 +2132,115 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return { team1: team1Raw, team2: team2Raw };
     };
 
-    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1 - tým2")
-    const matchSearch = (match, searchLower) => {
-        // Získame zobrazovaný text pre domáci a hosťovský tím
+    // Funkcia na získanie textu pre porovnanie (pre názov aj ID)
+    const getComparableStrings = (match) => {
         const homeDisplay = getTeamDisplayText ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier;
         const awayDisplay = getTeamDisplayText ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier;
         
-        const homeText = typeof homeDisplay === 'object' ? homeDisplay.name : homeDisplay;
-        const awayText = typeof awayDisplay === 'object' ? awayDisplay.name : awayDisplay;
+        // Názvy tímov (bez kategórie)
+        const homeName = typeof homeDisplay === 'object' ? homeDisplay.name : homeDisplay;
+        const awayName = typeof awayDisplay === 'object' ? awayDisplay.name : awayDisplay;
         
+        // Celé identifikátory (napr. "U10 B6")
+        const homeId = match.homeTeamIdentifier;
+        const awayId = match.awayTeamIdentifier;
+        
+        // Čisté ID bez kategórie (napr. "B6")
+        const extractPureId = (identifier) => {
+            if (!identifier) return '';
+            const parts = identifier.split(' ');
+            return parts.length >= 2 ? parts[parts.length - 1] : identifier;
+        };
+        
+        const homePureId = extractPureId(homeId);
+        const awayPureId = extractPureId(awayId);
+        
+        return {
+            homeName: homeName.toLowerCase(),
+            awayName: awayName.toLowerCase(),
+            homeId: homeId.toLowerCase(),
+            awayId: awayId.toLowerCase(),
+            homePureId: homePureId.toLowerCase(),
+            awayPureId: awayPureId.toLowerCase()
+        };
+    };
+
+    // Funkcia na kontrolu, či reťazec obsahuje tím (porovnáva všetky formy)
+    const stringContainsTeam = (str, teamQuery) => {
+        if (!str || !teamQuery) return false;
+        return str.includes(teamQuery);
+    };
+
+    // Funkcia na kontrolu, či zápas obsahuje daný tím (v ľubovoľnej forme)
+    const matchContainsTeam = (matchStrings, teamQuery) => {
+        const teamLower = teamQuery.toLowerCase();
+        
+        // Kontrola v názvoch
+        if (stringContainsTeam(matchStrings.homeName, teamLower)) return true;
+        if (stringContainsTeam(matchStrings.awayName, teamLower)) return true;
+        
+        // Kontrola v celých identifikátoroch
+        if (stringContainsTeam(matchStrings.homeId, teamLower)) return true;
+        if (stringContainsTeam(matchStrings.awayId, teamLower)) return true;
+        
+        // Kontrola v čistých ID (bez kategórie)
+        if (stringContainsTeam(matchStrings.homePureId, teamLower)) return true;
+        if (stringContainsTeam(matchStrings.awayPureId, teamLower)) return true;
+        
+        return false;
+    };
+
+    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 - tým2")
+    const matchContainsBothTeams = (matchStrings, team1, team2) => {
+        const team1Lower = team1.toLowerCase();
+        const team2Lower = team2.toLowerCase();
+        
+        let foundTeam1 = false;
+        let foundTeam2 = false;
+        
+        // Kontrola v názvoch
+        if (matchStrings.homeName.includes(team1Lower) || matchStrings.awayName.includes(team1Lower)) foundTeam1 = true;
+        if (matchStrings.homeName.includes(team2Lower) || matchStrings.awayName.includes(team2Lower)) foundTeam2 = true;
+        
+        // Ak ešte nenašiel team1, skúsime v celých identifikátoroch
+        if (!foundTeam1 && (matchStrings.homeId.includes(team1Lower) || matchStrings.awayId.includes(team1Lower))) foundTeam1 = true;
+        
+        // Ak ešte nenašiel team2, skúsime v celých identifikátoroch
+        if (!foundTeam2 && (matchStrings.homeId.includes(team2Lower) || matchStrings.awayId.includes(team2Lower))) foundTeam2 = true;
+        
+        // Ak ešte nenašiel team1, skúsime v čistých ID
+        if (!foundTeam1 && (matchStrings.homePureId.includes(team1Lower) || matchStrings.awayPureId.includes(team1Lower))) foundTeam1 = true;
+        
+        // Ak ešte nenašiel team2, skúsime v čistých ID
+        if (!foundTeam2 && (matchStrings.homePureId.includes(team2Lower) || matchStrings.awayPureId.includes(team2Lower))) foundTeam2 = true;
+        
+        return foundTeam1 && foundTeam2;
+    };
+
+    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1 - tým2")
+    const matchSearch = (match, searchLower, matchStrings) => {
         // Skúsime extrahovať dva tímy z vyhľadávania
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
         
         if (team1 && team2) {
-            // Ak máme dva tímy, kontrolujeme, či zápas obsahuje tieto dva tímy (v ľubovoľnom poradí)
-            const homeLower = homeText.toLowerCase();
-            const awayLower = awayText.toLowerCase();
-            
-            // Kontrola, či oba tímy sú v zápase (jeden ako domáci, druhý ako hosť)
-            const containsTeam1 = homeLower.includes(team1) || awayLower.includes(team1);
-            const containsTeam2 = homeLower.includes(team2) || awayLower.includes(team2);
-            
-            // Ak oba tímy nájdeme v zápase (každý aspoň raz), zápas zodpovedá
-            if (containsTeam1 && containsTeam2) {
-                return true;
-            }
+            // Ak máme dva tímy, kontrolujeme, či zápas obsahuje oba tímy
+            return matchContainsBothTeams(matchStrings, team1, team2);
         }
         
-        // Pôvodné vyhľadávanie (či už jeden tím, alebo časť názvu)
-        return homeText.toLowerCase().includes(searchLower) ||
-               awayText.toLowerCase().includes(searchLower) ||
-               match.homeTeamIdentifier.toLowerCase().includes(searchLower) ||
-               match.awayTeamIdentifier.toLowerCase().includes(searchLower) ||
-               (match.categoryName && match.categoryName.toLowerCase().includes(searchLower));
+        // Pôvodné vyhľadávanie (jeden tím alebo časť textu)
+        // Kontrola v názvoch
+        if (matchStrings.homeName.includes(searchLower) || matchStrings.awayName.includes(searchLower)) return true;
+        
+        // Kontrola v celých identifikátoroch
+        if (matchStrings.homeId.includes(searchLower) || matchStrings.awayId.includes(searchLower)) return true;
+        
+        // Kontrola v čistých ID (bez kategórie)
+        if (matchStrings.homePureId.includes(searchLower) || matchStrings.awayPureId.includes(searchLower)) return true;
+        
+        // Kontrola v názve kategórie
+        if (match.categoryName && match.categoryName.toLowerCase().includes(searchLower)) return true;
+        
+        return false;
     };
 
     // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1 - tým2")
@@ -2174,7 +2250,10 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         // Ak je vyhľadávací reťazec prázdny, vrátime všetky zápasy
         if (!searchLower) return true;
         
-        return matchSearch(match, searchLower);
+        // Získame porovnateľné reťazce pre tento zápas
+        const matchStrings = getComparableStrings(match);
+        
+        return matchSearch(match, searchLower, matchStrings);
     });
 
     // Funkcia na získanie správneho tvaru slova "zápas" podľa počtu
@@ -2316,7 +2395,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     React.createElement('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm' }),
                     React.createElement('input', {
                         type: 'text',
-                        placeholder: 'Vyhľadať zápas... (napr. "tím1 - tím2")',
+                        placeholder: 'Vyhľadať zápas... (napr. "B6 - B1" alebo "U10 B6")',
                         value: searchTerm,
                         onChange: (e) => setSearchTerm(e.target.value),
                         className: 'w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
@@ -2327,7 +2406,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Môžete vyhľadávať podľa názvu tímu, ID tímu alebo pomocou formátu "tím1 - tím2"'
+                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (napr. "U10 B6") alebo pomocou formátu "B6 - B1"'
                 )
             ),
 
