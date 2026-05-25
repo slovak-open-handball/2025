@@ -2411,7 +2411,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1=A2" (rovná sa oddeľte tímy)'
+                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (A1) alebo pomocou formátu "A1=A2" (znakom = oddeľte tímy)'
                 )
             ),
 
