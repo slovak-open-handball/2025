@@ -25,10 +25,14 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
-// Konštanty pre fialové farby (jednotné pre všetky play-off a placement zápasy)
 const ELIMINATION_COLORS = {
     backgroundColor: '#F3E8FF',
     textColor: '#6B21A5'
+};
+
+const REMOVAL_COLORS = {
+    backgroundColor: '#FFEDD5',
+    textColor: '#EA580C'
 };
 
 // Funkcia na získanie farby kategórie z databázy
@@ -573,6 +577,38 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const matchDataRef = useRef(matchData);
     const timerIntervalRef = useRef(null);
 
+    const [rosterRemovals, setRosterRemovals] = useState({});
+    const [matchStatus, setMatchStatusLocal] = useState(null);
+
+    // Načítanie odstránení zo súpisky pre tento zápas
+    useEffect(() => {
+        if (!window.db || !matchId) return;
+        
+        const removalsRef = collection(window.db, 'matchEvents');
+        const q = query(removalsRef, where('matchId', '==', matchId), where('eventType', '==', 'roster_removal'));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const removals = {};
+            
+            snapshot.forEach((doc) => {
+                const event = doc.data();
+                if (event.userId && event.memberTypeKey && event.memberIndex !== undefined) {
+                    const key = `${event.userId}_${event.memberTypeKey}_${event.memberIndex}`;
+                    removals[key] = {
+                        isRemoved: true,
+                        eventId: doc.id,
+                        removedAt: event.totalTime || 0
+                    };
+                }
+            });
+            
+            setRosterRemovals(removals);
+            console.log(`[RosterRemovals] Načítaných ${Object.keys(removals).length} odstránení zo súpisky`);
+        });
+        
+        return () => unsubscribe();
+    }, [matchId]);
+
     useEffect(() => {
         if (propBlueCardSuspensions && Object.keys(propBlueCardSuspensions).length > 0) {
             console.log(`[TeamMembersList] Prijaté vylúčenia pre ${teamName}:`, propBlueCardSuspensions);
@@ -588,6 +624,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setMatchData(data);
+                
+                // 🔥 NASTAVENIE STATUSU ZÁPASU PRE KONTROLU ODSTRAŇOVANIA ZO SÚPISKY
+                if (data.status) {
+                    setMatchStatusLocal(data.status);
+                }
                 
                 // 🔥 NAJPRV POUŽIJEME HODNOTU Z PROPS (z nastavení kategórie)
                 if (propPeriodDuration) {
@@ -979,6 +1020,25 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         }
         return false;
     };
+
+    const isPlayerRemovedFromRoster = (member, matchId, removals) => {
+        if (!removals || !matchId) return false;
+    
+        const userId = member.userId;
+        const dbArrayName = member.dbArrayName || (member.type === 'Hráč' ? 'playerDetails' : 
+                              (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'));
+        const originalIndex = member.originalIndex !== undefined ? member.originalIndex : 0;
+    
+        if (!userId) return false;
+        
+        const memberKey = `${userId}_${dbArrayName}_${originalIndex}`;
+        const removal = removals[memberKey];
+        
+        if (removal && removal.isRemoved) {
+            return true;
+        }
+        return false;
+    };
     
     const getMemberIcon = (memberType) => {
         if (memberType === 'Hráč') {
@@ -1014,10 +1074,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             return;
         }
         
-        // 🔥 PRVÁ KONTROLA: Ak je hráč vylúčený za modrú kartu, NEDOVOLÍME ŽIADNU AKCIU
+        // 🔥 KONTROLA: Ak je zápas v stave 'in-progress' alebo 'completed', nevykonávame odstraňovanie
+        if (matchStatus === 'in-progress' || matchStatus === 'completed') {
+            console.log(`ℹ️ Zápas je v stave ${matchStatus}, odstraňovanie zo súpisky nie je povolené`);
+            return;
+        }
+        
+        // 🔥 KONTROLA: Či je hráč vylúčený za modrú kartu
         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
         if (isSuspendedByBlue) {
-            // Zobrazíme alert alebo notifikáciu
             return;
         }
         
@@ -1042,6 +1107,68 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             }
         }
         
+        // 🔥 ŠPECIÁLNA LOGIKA PRE OSTRÁNENIE ZO SÚPISKY
+        // Ak nie je vybratá žiadna akcia a zápas je v stave 'scheduled', ide o odstránenie/obnovenie zo súpisky
+        if (selectedActionsSet.size === 0 && matchStatus === 'scheduled') {
+            // Kontrola, či je už odstránený
+            const isRemoved = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
+            
+            if (isRemoved) {
+                // ODSTRÁNENIE ZRUŠÍME - vymažeme udalosť
+                const memberKey = `${member.userId}_${member.dbArrayName}_${member.originalIndex}`;
+                const removalEvent = rosterRemovals[memberKey];
+                
+                if (removalEvent && removalEvent.eventId && window.db) {
+                    try {
+                        const eventRef = doc(window.db, 'matchEvents', removalEvent.eventId);
+                        await deleteDoc(eventRef);
+                        console.log(`✅ Odstránenie člena ${member.firstName} ${member.lastName} bolo zrušené`);
+                    } catch (err) {
+                        console.error('Chyba pri rušení odstránenia:', err);
+                    }
+                }
+            } else {
+                // PRIDÁME ODSTRÁNENIE - uložíme udalosť
+                const memberForSave = {
+                    type: member.type,
+                    name: `${member.firstName} ${member.lastName}`.trim(),
+                    index: member.originalIndex,
+                    typeKey: member.dbArrayName,
+                    userId: member.userId
+                };
+                
+                // Uložíme udalosť typu 'roster_removal'
+                if (window.db && matchId) {
+                    try {
+                        const eventData = {
+                            matchId: matchId,
+                            totalTime: 0,
+                            periodTime: 0,
+                            period: 1,
+                            eventType: 'roster_removal',
+                            eventSubtype: null,
+                            team: teamType,
+                            memberType: member.type,
+                            memberTypeKey: member.dbArrayName,
+                            memberIndex: member.originalIndex,
+                            userId: member.userId,
+                            categoryName: categoryName,
+                            createdAt: Timestamp.now(),
+                            timestamp: Timestamp.now()
+                        };
+                        
+                        const eventsRef = collection(window.db, 'matchEvents');
+                        await addDoc(eventsRef, eventData);
+                        console.log(`✅ Člen ${member.firstName} ${member.lastName} bol odstránený zo súpisky pre tento zápas`);
+                    } catch (err) {
+                        console.error('Chyba pri ukladaní odstránenia člena:', err);
+                    }
+                }
+            }
+            return;
+        }
+        
+        // 🔥 PÔVODNÁ LOGIKA PRE UDALOSTI (góly, karty, atď.)
         if (selectedActionsSet.has('goal') && member.type !== 'Hráč') {
             return;
         }
@@ -1204,19 +1331,38 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const uniqueKey = `${member.type}_${member.originalIndex}`;
                         const exclusionInfo = excludedMembers[uniqueKey];
 
+                        const isRemovedFromRoster = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
                         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
                         const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
-                        const isExcluded = isExcludedNormally || isSuspendedByBlue;
+                        const isExcluded = isRemovedFromRoster || isExcludedNormally || isSuspendedByBlue;
                         
                         let exclusionDisplayRow = null;
 
-                        const isClickable = !isSuspendedByBlue; 
+                        const isClickable = (matchStatus === 'scheduled') || (!isRemovedFromRoster && !isSuspendedByBlue); 
                         const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
-                        const rowClassName = isExcluded 
-                            ? `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`
-                            : `hover:bg-gray-50 transition-colors ${cursorClass}`;
+                        let rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
+                        if (isExcluded) {
+                            if (isRemovedFromRoster) {
+                                rowClassName = `hover:bg-orange-50 transition-colors ${cursorClass} opacity-80 bg-orange-100`;
+                            } else {
+                                rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`;
+                            }
+                        }
                         
-                        if (isExcludedNormally) {
+                        if (isRemovedFromRoster) {
+                            exclusionDisplayRow = React.createElement(
+                                'tr',
+                                { key: `removal-${idx}`, className: 'bg-orange-100' },
+                                React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'text-xs text-orange-700 font-medium flex items-center justify-center gap-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-user-slash' }),
+                                        React.createElement('span', {}, 'Pre tento zápas odstránený zo súpisky')
+                                    )
+                                )
+                            );
+                        } else if (isExcludedNormally) {
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
@@ -1260,7 +1406,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                 key: `member-${idx}`,
                                 className: rowClassName,
                                 onClick: () => {
-                                    if (isClickable) {
+                                    // 🔥 AK JE ČLEN ODSTRÁNENÝ ZO SÚPISKY, KLIKNUTIE HO OBNOVÍ (len v stave scheduled)
+                                    if (isRemovedFromRoster && matchStatus === 'scheduled') {
+                                        handleMemberClick(member);
+                                    } else if (isClickable) {
                                         handleMemberClick(member);
                                     }
                                 }
@@ -3838,6 +3987,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     return React.createElement('i', { className: 'fa-solid fa-id-card', style: { fontSize: '18px' } });
                 case 'exclusion':
                     return React.createElement('i', { className: 'fa-solid fa-clock text-orange-600', style: { fontSize: '18px' } });
+                case 'roster_removal':
+                    return React.createElement('i', { className: 'fa-solid fa-user-slash text-orange-600', style: { fontSize: '18px' } });
                 default:
                     return React.createElement('i', { className: 'fa-solid fa-circle-info', style: { fontSize: '18px' } });
             }
@@ -4020,6 +4171,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                                 return 'Karta';
                                             case 'exclusion': 
                                                 return 'Vylúčenie';
+                                            case 'roster_removal':
+                                                return 'Odstránený zo súpisky';
                                             default: 
                                                 return 'Udalosť';
                                         }
