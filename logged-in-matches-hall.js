@@ -1409,7 +1409,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                     // 🔥 AK JE ČLEN ODSTRÁNENÝ ZO SÚPISKY, KLIKNUTIE HO OBNOVÍ (len v stave scheduled)
                                     if (isRemovedFromRoster && matchStatus === 'scheduled') {
                                         handleMemberClick(member);
-                                    } else if (isClickable) {
+                                    } else if (isClickable && !isRemovedFromRoster) {
                                         handleMemberClick(member);
                                     }
                                 }
