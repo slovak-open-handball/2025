@@ -653,61 +653,31 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     // 🔥 HLAVNÁ ZMENA: Načítanie členov tímu cez WORKER API
     const loadTeamMembersViaWorker = async () => {
         setLoading(true);
-        setError(null);
-        
-        if (!teamName || !categoryName) {
-            setLoading(false);
-            return;
-        }
-        
         try {
-            console.log(`[TeamMembersList] Načítavam členov tímu cez Worker: ${teamName} (${categoryName})`);
-            
-            // 1. Najprv získame mapovaný názov tímu (ak je to identifikátor)
+            // Získame mapovaný názov tímu
             let actualTeamName = teamName;
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                try {
-                    const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
-                    if (convertedName && convertedName !== teamName) {
-                        actualTeamName = convertedName;
-                        console.log(`[TeamMembersList] Prevedený názov: "${teamName}" → "${actualTeamName}"`);
-                        if (onMappedNameUpdate) onMappedNameUpdate(actualTeamName);
-                    }
-                } catch (err) {
-                    console.error(`Chyba pri prevode názvu tímu:`, err);
+                const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                if (convertedName && convertedName !== teamName) {
+                    actualTeamName = convertedName;
+                    if (onMappedNameUpdate) onMappedNameUpdate(actualTeamName);
                 }
             }
             
-            // 2. Načítame hráčov (playerDetails) cez Worker
-            const players = await loadTeamMembersByType(actualTeamName, categoryName, 'playerDetails');
-            
-            // 3. Načítame členov RT mužov
-            const menRtMembers = await loadTeamMembersByType(actualTeamName, categoryName, 'menTeamMemberDetails');
-            
-            // 4. Načítame členov RT žien
-            const womenRtMembers = await loadTeamMembersByType(actualTeamName, categoryName, 'womenTeamMemberDetails');
-            
-            // 5. Spojíme všetkých členov (najprv RT, potom hráči)
-            const allMembers = [...menRtMembers, ...womenRtMembers, ...players];
-            
-            // Pridáme originalIndex a dbArrayName
-            const membersWithIndex = allMembers.map((member, idx) => ({
-                ...member,
-                originalIndex: member.sourceIdx !== undefined ? member.sourceIdx : idx,
-                dbArrayName: member.sourceType,
-                type: getMemberTypeDisplay(member.memberType || member.sourceType)
-            }));
-            
-            setMembers(membersWithIndex);
-            console.log(`[TeamMembersList] Načítaných ${membersWithIndex.length} členov tímu cez Worker`);
-            
+            // Načítame členov cez Worker
+            const members = await window.teamNameReplacer.loadAllTeamMembersViaWorker(actualTeamName, categoryName);
+            setMembers(members);
         } catch (err) {
-            console.error('[TeamMembersList] Chyba pri načítaní cez Worker:', err);
-            setError(err.message);
+            console.error('Chyba pri načítaní členov:', err);
         } finally {
             setLoading(false);
         }
     };
+    
+    // Zavolaj to v useEffect
+    useEffect(() => {
+        loadTeamMembersViaWorker();
+    }, [teamName, categoryName]);
     
     // Pomocná funkcia na načítanie členov podľa typu
     const loadTeamMembersByType = async (teamName, categoryName, memberType) => {
