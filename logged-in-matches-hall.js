@@ -1338,7 +1338,13 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         let exclusionDisplayRow = null;
 
-                        const isClickable = matchStatus !== 'completed' && !isSuspendedByBlue && !(isRemovedFromRoster && matchStatus !== 'scheduled');
+                        let isClickable = !isSuspendedByBlue;
+                        if (isRemovedFromRoster) {
+                            isClickable = matchStatus === 'scheduled';
+                        } else {
+                            isClickable = matchStatus !== 'completed';
+                        }
+                        
                         const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
                         let rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
                         if (isExcluded) {
