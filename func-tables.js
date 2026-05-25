@@ -3140,41 +3140,6 @@ function clearCheckedGroupsCache() {
     log('🗑️ Cache kontrolovaných skupín bola vymazaná');
 }
 
-// ============================================================
-// POMOCNÁ FUNKCIA: Vyhľadanie tímu v používateľských dátach
-// ============================================================
-
-function findTeamInUsersByGroupAndOrder(category, groupLetter, order) {
-    if (!window.db) return null;
-    
-    // Získame všetkých používateľov z globálneho stavu
-    const users = window.__reactUsersState || [];
-    
-    for (const user of users) {
-        if (!user.teams) continue;
-        
-        const userTeams = user.teams[category];
-        if (!userTeams || !Array.isArray(userTeams)) continue;
-        
-        const fullGroupName = `skupina ${groupLetter}`;
-        
-        const team = userTeams.find(t => 
-            t.groupName === fullGroupName && 
-            t.order === order
-        );
-        
-        if (team && team.teamName) {
-            return {
-                teamName: team.teamName,
-                userId: user.id,
-                userEmail: user.email,
-                teamData: team
-            };
-        }
-    }
-    
-    return null;
-}
 
 const WORKER_URL = 'https://soh-2025.turnaj-slovak-open-handball.workers.dev/';
 
