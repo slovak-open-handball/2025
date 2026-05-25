@@ -2113,16 +2113,16 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 
     if (!isOpen) return null;
 
-    // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca vo formáte "tým1 - tým2"
+    // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca vo formáte "tým1 * tým2"
     const extractTeamsFromSearch = (search) => {
-        // Hľadáme pomlčku s medzerami: " - "
-        const dashWithSpacesIndex = search.indexOf(' - ');
-        if (dashWithSpacesIndex === -1) {
+        // Hľadáme hviezdičku s medzerami: " * "
+        const starWithSpacesIndex = search.indexOf(' * ');
+        if (starWithSpacesIndex === -1) {
             return { team1: null, team2: null };
         }
         
-        const team1Raw = search.substring(0, dashWithSpacesIndex).trim();
-        const team2Raw = search.substring(dashWithSpacesIndex + 3).trim();
+        const team1Raw = search.substring(0, starWithSpacesIndex).trim();
+        const team2Raw = search.substring(starWithSpacesIndex + 3).trim();
         
         // Ak je niektorá časť prázdna, vrátime null
         if (!team1Raw || !team2Raw) {
@@ -2190,7 +2190,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 - tým2")
+    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 * tým2")
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase();
         const team2Lower = team2.toLowerCase();
@@ -2217,7 +2217,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return foundTeam1 && foundTeam2;
     };
 
-    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1 - tým2")
+    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1 * tým2")
     const matchSearch = (match, searchLower, matchStrings) => {
         // Skúsime extrahovať dva tímy z vyhľadávania
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
@@ -2243,7 +2243,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1 - tým2")
+    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1 * tým2")
     const filteredMatches = availableMatches.filter(match => {
         const searchLower = searchTerm.toLowerCase();
         
@@ -2385,7 +2385,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Vyhľadávanie - s placeholderom pre formát "tým1 - tým2"
+            // Vyhľadávanie - s placeholderom pre formát "tým1 * tým2"
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -2395,7 +2395,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     React.createElement('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm' }),
                     React.createElement('input', {
                         type: 'text',
-                        placeholder: 'Vyhľadať zápas... (napr. "B6 - B1" alebo "U10 B6")',
+                        placeholder: 'Vyhľadať zápas... (napr. "B6 * B1" alebo "U10 B6")',
                         value: searchTerm,
                         onChange: (e) => setSearchTerm(e.target.value),
                         className: 'w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
@@ -2406,7 +2406,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (napr. "U10 B6") alebo pomocou formátu "B6 - B1"'
+                    'Môžete vyhľadávať podľa názvu tímu, ID tímu (napr. "U10 B6") alebo pomocou formátu "B6 * B1"'
                 )
             ),
 
