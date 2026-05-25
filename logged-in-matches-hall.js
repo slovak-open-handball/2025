@@ -2394,16 +2394,19 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const periodLength = periodDuration * 60;
         if (newSeconds < 0) newSeconds = 0;
         if (newSeconds > periodLength) newSeconds = periodLength;
+        
         setDisplaySeconds(newSeconds);
+        displaySecondsRef.current = newSeconds;
         
         if (newSeconds >= periodLength && isRunningRef.current) {
             stopTimerAndSave(true);
         }
-        
+    
         if (isRunningRef.current) {
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
         }
+        
         if (window.db && matchId) {
             lastServerUpdateRef.current = Date.now();
             const status = isRunningRef.current ? 'in-progress' : 'paused';
@@ -2416,7 +2419,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             if (!isRunningRef.current) updateData.pausedAt = Timestamp.now();
             if (isRunningRef.current) updateData.startedAt = Timestamp.now();
             updateDoc(doc(window.db, 'matches', matchId), updateData)
-                .then(() => setTimeout(() => { lastServerUpdateRef.current = 0; }, 300))
                 .catch(console.error);
         }
     };
@@ -2427,7 +2429,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (!docSnap.exists()) return;
             const now = Date.now();
-            if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 300) return;
             const data = docSnap.data();
             const serverStatus = data.status;
             let serverSeconds = data.manualTimeOffset || 0;
