@@ -650,7 +650,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         loadExclusionSettings();
     }, [matchId]);
     
-    // 🔥 HLAVNÁ ZMENA: Načítanie členov tímu cez WORKER API
+    // SPRÁVNY KÓD - používa funkcie definované v tomto súbore
     const loadTeamMembersViaWorker = async () => {
         setLoading(true);
         try {
@@ -664,20 +664,17 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 }
             }
             
-            // Načítame členov cez Worker
-            const members = await window.teamNameReplacer.loadAllTeamMembersViaWorker(actualTeamName, categoryName);
+            // 🔥 POUŽIJEME FUNKCIE DEFINOVANÉ V TOMTO SÚBORE (nie z window.teamNameReplacer)
+            const members = await loadTeamMembersFromWorker(actualTeamName, categoryName);
             setMembers(members);
+            console.log(`✅ Načítaných ${members.length} členov tímu`);
         } catch (err) {
             console.error('Chyba pri načítaní členov:', err);
+            setError(err.message);
         } finally {
             setLoading(false);
         }
     };
-    
-    // Zavolaj to v useEffect
-    useEffect(() => {
-        loadTeamMembersViaWorker();
-    }, [teamName, categoryName]);
     
     // Pomocná funkcia na načítanie členov podľa typu
     const loadTeamMembersByType = async (teamName, categoryName, memberType) => {
