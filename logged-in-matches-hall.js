@@ -2444,6 +2444,11 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 const periodLength = periodDuration * 60;
                 serverSeconds = Math.min(serverSeconds + elapsed, periodLength);
             }
+
+            if (Math.abs(serverSeconds - displaySecondsRef.current) > 0.1) {
+                setDisplaySeconds(serverSeconds);
+                displaySecondsRef.current = serverSeconds;
+            }
             
             setDisplaySeconds(serverSeconds);
             displaySecondsRef.current = serverSeconds;
