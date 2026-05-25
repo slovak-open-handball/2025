@@ -1,4 +1,3 @@
-// func-tables.js
 // ========== LOKÁLNY PREPÍNAČ PRE LOGOVANIE LEN PRE TENTO SÚBOR ==========
 const DEBUG_MODE = false;  // false = nevypisuje sa, true = vypisuje sa
 
