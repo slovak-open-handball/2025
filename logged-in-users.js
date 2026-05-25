@@ -1206,7 +1206,7 @@ function UsersManagementApp() {
                   colSpan: "2",
                   className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium'
                 },
-                user.hallId ? (hallNames[user.hallId] || 'Načítavam...') : 'Žiadna priradená hala'
+                user.hallId ? (hallNames[user.hallId] || '') : 'Žiadna priradená hala'
               ),
               
               // PRE OSTATNÉ ROLY: Štandardné zobrazenie dátumov
