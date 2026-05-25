@@ -4129,9 +4129,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             timeoutDuration: categoryData.timeoutDuration ?? 1,
                             exclusionTime: categoryData.exclusionTime ?? 2
                         });
-                            periods: categoryData.periods ?? 2,
-                            periodDuration: categoryData.periodDuration ?? 20
-                        });
                     } else {
                         setCategorySettings({
                             periods: 2,
@@ -4155,6 +4152,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     });
                 }
             } catch (err) {
+                console.error('Chyba pri načítaní nastavení kategórie:', err);
                 setCategorySettings({
                     periods: 2,
                     periodDuration: 20,
