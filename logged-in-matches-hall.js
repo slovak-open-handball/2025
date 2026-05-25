@@ -2390,6 +2390,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     const addTime = (deltaSeconds) => {
         if (match?.status === 'completed') return;
+        
         let newSeconds = displaySeconds + deltaSeconds;
         const periodLength = periodDuration * 60;
         if (newSeconds < 0) newSeconds = 0;
@@ -2400,15 +2401,15 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         
         if (newSeconds >= periodLength && isRunningRef.current) {
             stopTimerAndSave(true);
+            return;
         }
-    
+        
         if (isRunningRef.current) {
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
         }
         
         if (window.db && matchId) {
-            lastServerUpdateRef.current = Date.now();
             const status = isRunningRef.current ? 'in-progress' : 'paused';
             const updateData = {
                 manualTimeOffset: newSeconds,
@@ -2418,6 +2419,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             };
             if (!isRunningRef.current) updateData.pausedAt = Timestamp.now();
             if (isRunningRef.current) updateData.startedAt = Timestamp.now();
+            
             updateDoc(doc(window.db, 'matches', matchId), updateData)
                 .catch(console.error);
         }
@@ -2425,33 +2427,50 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     useEffect(() => {
         if (!window.db || !matchId) return;
+        
         const matchRef = doc(window.db, 'matches', matchId);
+        let isLocalUpdate = false;
+        
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (!docSnap.exists()) return;
-            const now = Date.now();
+            
             const data = docSnap.data();
             const serverStatus = data.status;
             let serverSeconds = data.manualTimeOffset || 0;
             let serverPeriod = data.currentPeriod || 1;
             
-            if (serverPeriod !== period) {
+            if (serverPeriod !== periodRef.current) {
                 setPeriod(serverPeriod);
                 periodRef.current = serverPeriod;
             }
             
             if (serverStatus === 'in-progress' && data.startedAt) {
+                const now = Date.now();
                 const elapsed = Math.floor((now - data.startedAt.toDate().getTime()) / 1000);
-                const periodLength = periodDuration * 60;
+                const periodLength = periodDurationRef.current * 60;
                 serverSeconds = Math.min(serverSeconds + elapsed, periodLength);
             }
-
-            if (Math.abs(serverSeconds - displaySecondsRef.current) > 0.1) {
+            
+            const currentDisplayValue = displaySecondsRef.current;
+            const difference = Math.abs(serverSeconds - currentDisplayValue);
+            
+            if (difference > 0.5) {
                 setDisplaySeconds(serverSeconds);
                 displaySecondsRef.current = serverSeconds;
+                
+                if (isRunningRef.current && serverStatus === 'in-progress') {
+                    stopLocalInterval();
+                    startLocalInterval(serverSeconds);
+                }
+                
+                if (onTimeUpdate) {
+                    onTimeUpdate({ 
+                        totalSeconds: serverSeconds, 
+                        period: serverPeriod, 
+                        isRunning: isRunningRef.current 
+                    });
+                }
             }
-            
-            setDisplaySeconds(serverSeconds);
-            displaySecondsRef.current = serverSeconds;
             
             if (serverStatus === 'in-progress') {
                 if (!isRunningRef.current) {
@@ -2459,22 +2478,27 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     setIsRunning(true);
                     isRunningRef.current = true;
                     if (onTimeUpdate) onTimeUpdate({ totalSeconds: serverSeconds, period: serverPeriod, isRunning: true });
-                } else {
-                    const diff = Math.abs(serverSeconds - displaySecondsRef.current);
-                    if (diff > 0.5) {
-                        startLocalInterval(serverSeconds);
-                        if (onTimeUpdate) onTimeUpdate({ totalSeconds: serverSeconds, period: serverPeriod, isRunning: true });
-                    }
                 }
-            } else if (serverStatus === 'paused' && isRunningRef.current) {
-                stopLocalInterval();
-                setIsRunning(false);
-                isRunningRef.current = false;
-                if (onTimeUpdate) onTimeUpdate({ totalSeconds: serverSeconds, period: serverPeriod, isRunning: false });
+            } else if (serverStatus === 'paused') {
+                if (isRunningRef.current) {
+                    stopLocalInterval();
+                    setIsRunning(false);
+                    isRunningRef.current = false;
+                    if (onTimeUpdate) onTimeUpdate({ totalSeconds: serverSeconds, period: serverPeriod, isRunning: false });
+                }
+            } else if (serverStatus === 'completed') {
+                if (isRunningRef.current) {
+                    stopLocalInterval();
+                    setIsRunning(false);
+                    isRunningRef.current = false;
+                }
             }
+        }, (error) => {
+            console.error('Chyba pri počúvaní zápasu:', error);
         });
+        
         return () => unsubscribe();
-    }, [matchId, periodDuration]);
+    }, [matchId]);
 
     useEffect(() => {
         if (!match) return;
