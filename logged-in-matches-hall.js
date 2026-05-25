@@ -1338,7 +1338,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         let exclusionDisplayRow = null;
 
-                        const isClickable = (matchStatus === 'scheduled') || (!isRemovedFromRoster && !isSuspendedByBlue); 
+                        const isClickable = matchStatus !== 'completed' && !isSuspendedByBlue && !(isRemovedFromRoster && matchStatus !== 'scheduled');
                         const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
                         let rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
                         if (isExcluded) {
@@ -4095,18 +4095,20 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         };
         
         // 🔥 VYTVORÍME ZORADENÝ ZOZNAM UDALOSTÍ OD NAJNOVŠEJ PO NAJSTARŠIU (descending)
-        const eventsSortedDesc = [...matchEvents].sort((a, b) => {
-            const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
-            const timeB = b.totalTime !== undefined ? b.totalTime : (b.matchTime || 0);
-            
-            // 🔥 ZORADENIE OD NAJVÄČŠIEHO ČASU PO NAJMENŠÍ (od najnovšej po najstaršiu)
-            if (timeA !== timeB) return timeB - timeA;
-            
-            // Ak je čas rovnaký, použijeme timestamp (novšie najprv)
-            const timestampA = a.timestamp?.toDate?.()?.getTime() || a.createdAt?.toDate?.()?.getTime() || 0;
-            const timestampB = b.timestamp?.toDate?.()?.getTime() || b.createdAt?.toDate?.()?.getTime() || 0;
-            return timestampB - timestampA;
-        });
+        const eventsSortedDesc = [...matchEvents]
+            .filter(event => event.eventType !== 'roster_removal')  // 🔥 PRIDANÉ: odfiltruje odstránenia zo súpisky
+            .sort((a, b) => {
+                const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
+                const timeB = b.totalTime !== undefined ? b.totalTime : (b.matchTime || 0);
+                
+                // 🔥 ZORADENIE OD NAJVÄČŠIEHO ČASU PO NAJMENŠÍ (od najnovšej po najstaršiu)
+                if (timeA !== timeB) return timeB - timeA;
+                
+                // Ak je čas rovnaký, použijeme timestamp (novšie najprv)
+                const timestampA = a.timestamp?.toDate?.()?.getTime() || a.createdAt?.toDate?.()?.getTime() || 0;
+                const timestampB = b.timestamp?.toDate?.()?.getTime() || b.createdAt?.toDate?.()?.getTime() || 0;
+                return timestampB - timestampA;
+            });
         
         return React.createElement(
             'div',
