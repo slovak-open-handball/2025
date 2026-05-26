@@ -2113,6 +2113,46 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 
     if (!isOpen) return null;
 
+    const getTeamNameByIdentifierLocal = (identifier) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
+        const parts = identifier.split(' ');
+        
+        if (parts.length < 2) {
+            return identifier;
+        }
+        
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupName = '';
+        let order = '';
+        
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupName = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) {
+            order = '?';
+            groupName = groupAndOrder;
+        }
+        
+        // Hľadáme v availableMatches pre získanie kategórie (nemôžeme použiť teamData)
+        // Pre farbu ubytovne potrebujeme len názov tímu, ktorý získame z getTeamDisplayText
+        
+        const display = getTeamDisplayText ? getTeamDisplayText(identifier) : identifier;
+        if (typeof display === 'object') {
+            return display.name;
+        }
+        return display;
+    };
+
     // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
     // Podporuje formáty: "tým1 = tým2", "tým1=tým2", "tým1= tým2", "tým1 =tým2"
     const extractTeamsFromSearch = (search) => {
