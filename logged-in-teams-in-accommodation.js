@@ -1364,7 +1364,19 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 if (window.categorySettingsData[category.name].drawColor) {
                                     categoryColor = window.categorySettingsData[category.name].drawColor;
                                 }
-                            }                            
+                            }
+                            
+                            // Funkcia na výpočet kontrastnej farby textu (rovnaká ako v zobrazení podľa ubytovní)
+                            const getContrastColor = (hexColor) => {
+                                const r = parseInt(hexColor.slice(1,3), 16);
+                                const g = parseInt(hexColor.slice(3,5), 16);
+                                const b = parseInt(hexColor.slice(5,7), 16);
+                                const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+                                return luminance > 128 ? '#000000' : '#ffffff';
+                            };
+                            
+                            const categoryTextColorContrast = getContrastColor(categoryColor);
+                            
                             return React.createElement(
                                 'div',
                                 { 
@@ -1377,7 +1389,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                         className: 'px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0',
                                         style: { 
                                             backgroundColor: categoryColor,
-                                            color: categoryTextColor
+                                            color: categoryTextColorContrast
                                         }
                                     },
                                     React.createElement(
@@ -1433,22 +1445,37 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                 .filter(team => 
                                                     !selectedTeamNameFilter || teamMatchesFilter(team, selectedTeamNameFilter)
                                                 )
-                                                .map((team, index) =>
-                                                    React.createElement(
+                                                .map((team, index) => {
+                                                    // Získanie farby pre kategóriu tímu (rovnaká ako v zobrazení podľa ubytovní)
+                                                    let teamCategoryColor = '#6b7280';
+                                                    if (window.categorySettingsData && window.categorySettingsData[team.category]) {
+                                                        if (window.categorySettingsData[team.category].drawColor) {
+                                                            teamCategoryColor = window.categorySettingsData[team.category].drawColor;
+                                                        }
+                                                    }
+                                                    
+                                                    const teamTextColor = getContrastColor(teamCategoryColor);
+                                                    
+                                                    return React.createElement(
                                                         'li',
                                                         {
                                                             key: `${team.teamId}-${index}`,
-                                                            className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
+                                                            className: 'py-1.5 px-2.5 rounded border border-gray-200 flex justify-between items-center hover:opacity-90 group min-w-0',
+                                                            style: { 
+                                                                backgroundColor: teamCategoryColor,
+                                                                color: teamTextColor
+                                                            }
                                                         },
                                                         React.createElement(
                                                             'div',
                                                             { className: 'min-w-0 flex-grow flex items-center overflow-hidden' },
                                                             React.createElement('span', { 
                                                                 className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
-                                                                style: { textOverflow: 'clip' },
+                                                                style: { color: teamTextColor },
                                                             }, `${team.category}: ${team.teamName}`),
                                                             React.createElement('span', { 
-                                                                className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
+                                                                className: 'text-xs ml-1.5 whitespace-nowrap flex-shrink-0',
+                                                                style: { color: teamTextColor, opacity: 0.8 }
                                                             }, `(${team.peopleWithAccommodation} z ${team.totalPeople})`
                                                             )
                                                         ),
@@ -1459,13 +1486,33 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                                 'button',
                                                                 {
                                                                     onClick: () => openAssignModal(team),
-                                                                    className: 'px-2 py-0.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors whitespace-nowrap'
+                                                                    className: 'p-0.5 rounded transition-colors',
+                                                                    style: { 
+                                                                        color: teamTextColor,
+                                                                        backgroundColor: 'rgba(255,255,255,0.2)'
+                                                                    },
+                                                                    onMouseEnter: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)',
+                                                                    onMouseLeave: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'
                                                                 },
-                                                                'Priradiť'
+                                                                React.createElement(
+                                                                    'svg',
+                                                                    { 
+                                                                        className: 'w-3 h-3', 
+                                                                        fill: 'none', 
+                                                                        stroke: 'currentColor', 
+                                                                        viewBox: '0 0 24 24',
+                                                                        strokeWidth: '2'
+                                                                    },
+                                                                    React.createElement('path', {
+                                                                        strokeLinecap: 'round',
+                                                                        strokeLinejoin: 'round',
+                                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                                    })
+                                                                )
                                                             )
                                                         )
-                                                    )
-                                                )
+                                                    );
+                                                })
                                         )
                                     ),                                    
                                     category.assignedTeams.length > 0 && 
@@ -1516,32 +1563,40 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
                                                 })
                                                 .map((team, index) => {
-                                                    const teamColor = getTeamAccommodationColor(team);                                                    
+                                                    // Získanie farby pre kategóriu tímu (rovnaká ako v zobrazení podľa ubytovní)
+                                                    let teamCategoryColor = '#6b7280';
+                                                    if (window.categorySettingsData && window.categorySettingsData[team.category]) {
+                                                        if (window.categorySettingsData[team.category].drawColor) {
+                                                            teamCategoryColor = window.categorySettingsData[team.category].drawColor;
+                                                        }
+                                                    }
+                                                    
+                                                    const teamTextColor = getContrastColor(teamCategoryColor);
+                                                    const teamColor = getTeamAccommodationColor(team);
+                                                    
                                                     return React.createElement(
                                                         'li',
                                                         {
                                                             key: `${team.teamId}-${index}`,
-                                                            className: 'py-1.5 px-0 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
+                                                            className: 'py-1.5 rounded border border-gray-200 flex justify-between items-center hover:opacity-90 group min-w-0',
+                                                            style: { 
+                                                                backgroundColor: teamCategoryColor,
+                                                                color: teamTextColor
+                                                            }
                                                         },
                                                         React.createElement(
                                                             'div',
                                                             { 
-                                                                className: 'min-w-0 flex-grow flex items-center overflow-hidden'
+                                                                className: 'min-w-0 flex-grow flex items-center overflow-hidden pl-2.5 pr-1 py-1.5'
                                                             },
+                                                            React.createElement('span', { 
+                                                                className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                style: { color: teamTextColor },
+                                                            }, `${team.category}: ${team.teamName}`),
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'flex-grow min-w-0 pl-2.5 pr-1 py-1.5'
-                                                                },
-                                                                React.createElement('span', { 
-                                                                    className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0 text-gray-800',
-                                                                    style: { textOverflow: 'clip' },
-                                                                }, `${team.category}: ${team.teamName}`)
-                                                            ),
-                                                            React.createElement(
-                                                                'div',
-                                                                { 
-                                                                    className: 'w-8 flex-shrink-0 flex items-center justify-center text-xs font-bold',
+                                                                    className: 'ml-2 w-7 flex-shrink-0 flex items-center justify-center text-xs font-bold rounded',
                                                                     style: { 
                                                                         backgroundColor: teamColor || '#6b7280',
                                                                         color: getTeamAccommodationTextColor(team) || '#000000'
@@ -1552,12 +1607,18 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                         ),
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5' },
+                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5 pr-1' },
                                                             React.createElement(
                                                                 'button',
                                                                 {
                                                                     onClick: () => openAssignModal(team),
-                                                                    className: 'p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                    className: 'p-0.5 rounded transition-colors',
+                                                                    style: { 
+                                                                        color: teamTextColor,
+                                                                        backgroundColor: 'rgba(255,255,255,0.2)'
+                                                                    },
+                                                                    onMouseEnter: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)',
+                                                                    onMouseLeave: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'
                                                                 },
                                                                 React.createElement(
                                                                     'svg',
@@ -1579,7 +1640,13 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                                 'button',
                                                                 {
                                                                     onClick: () => openRemoveConfirmation(team),
-                                                                    className: 'p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                    className: 'p-0.5 rounded transition-colors',
+                                                                    style: { 
+                                                                        color: teamTextColor,
+                                                                        backgroundColor: 'rgba(255,255,255,0.2)'
+                                                                    },
+                                                                    onMouseEnter: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)',
+                                                                    onMouseLeave: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'
                                                                 },
                                                                 React.createElement(
                                                                     'svg',
