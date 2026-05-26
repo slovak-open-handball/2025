@@ -2320,8 +2320,25 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     };
 
     // Funkcia na získanie farby ubytovne pre tím
-    const getTeamAccommodationColor = (teamIdentifier) => {
+    const getTeamAccommodationColor = (teamIdentifier, categoryName, teamName) => {
         if (!teamAccommodations) return '#ffff00';
+        
+        // Získame názov tímu, ak nebol poskytnutý
+        let finalTeamName = teamName;
+        if (!finalTeamName) {
+            const teamDisplay = getTeamDisplayText ? getTeamDisplayText(teamIdentifier) : teamIdentifier;
+            finalTeamName = typeof teamDisplay === 'object' ? teamDisplay.name : teamDisplay;
+        }
+        
+        // Zistíme, či názov tímu obsahuje názov kategórie
+        const teamContainsCategory = categoryName && finalTeamName && 
+            finalTeamName.toLowerCase().includes(categoryName.toLowerCase());
+        
+        // Ak názov tímu obsahuje názov kategórie, vrátime bielu farbu
+        if (teamContainsCategory) {
+            return '#ffff00';
+        }
+        
         const accommodationName = teamAccommodations.get(teamIdentifier);
         if (accommodationName && accommodations) {
             const accommodation = accommodations.find(a => a.name === accommodationName);
@@ -2444,8 +2461,16 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const categoryColor = getCategoryColor(match.categoryName);
                     
                     // Farby ubytovní pre tímy
-                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier);
-                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier);
+                    const homeTeamColor = getTeamAccommodationColor(
+                        match.homeTeamIdentifier, 
+                        match.categoryName,
+                        homeName
+                    );
+                    const awayTeamColor = getTeamAccommodationColor(
+                        match.awayTeamIdentifier, 
+                        match.categoryName,
+                        awayName
+                    );
                     
                     // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
@@ -7954,20 +7979,34 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                     let homeTeamColor = '#ffff00';
                                     let awayTeamColor = '#ffff00';
+
+                                    // Získame názvy tímov
+                                    const homeTeamNameOnly = removeCategoryFromName(homeName, match.categoryName);
+                                    const awayTeamNameOnly = removeCategoryFromName(awayName, match.categoryName);
+
+                                    // Zistíme, či názov tímu obsahuje názov kategórie
+                                    const homeTeamContainsCategory = match.categoryName && homeTeamNameOnly && 
+                                        homeTeamNameOnly.toLowerCase().includes(match.categoryName.toLowerCase());
+                                    const awayTeamContainsCategory = match.categoryName && awayTeamNameOnly && 
+                                        awayTeamNameOnly.toLowerCase().includes(match.categoryName.toLowerCase());
                                     
-                                    const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
-                                    const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
-                                    
-                                    if (homeAccommodationName) {
-                                        const accommodation = accommodations.find(a => a.name === homeAccommodationName);
-                                        if (accommodation) {
-                                            homeTeamColor = accommodation.headerColor;
+                                    if (!homeTeamContainsCategory) {
+                                        const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+                                        if (homeAccommodationName) {
+                                            const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                                            if (accommodation) {
+                                                homeTeamColor = accommodation.headerColor;
+                                            }
                                         }
                                     }
-                                    if (awayAccommodationName) {
-                                        const accommodation = accommodations.find(a => a.name === awayAccommodationName);
-                                        if (accommodation) {
-                                            awayTeamColor = accommodation.headerColor;
+                                    
+                                    if (!awayTeamContainsCategory) {
+                                        const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+                                        if (awayAccommodationName) {
+                                            const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                                            if (accommodation) {
+                                                awayTeamColor = accommodation.headerColor;
+                                            }
                                         }
                                     }
                                     
@@ -8383,23 +8422,38 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    
                                                    // Vytvorenie matchesWithColors
                                                    const matchesWithColors = hallMatchesForDay.map(match => {
+                                                       // Získame názov tímu pre domáceho a hosťovského
+                                                       const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                                                       const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                                                       
+                                                       // Zistíme, či názov tímu obsahuje názov kategórie
+                                                       const homeTeamContainsCategory = match.categoryName && homeTeamName && 
+                                                           homeTeamName.toLowerCase().includes(match.categoryName.toLowerCase());
+                                                       const awayTeamContainsCategory = match.categoryName && awayTeamName && 
+                                                           awayTeamName.toLowerCase().includes(match.categoryName.toLowerCase());
+                                                       
                                                        const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                                        let homeTeamColor = '#ffff00';
                                                        let awayTeamColor = '#ffff00';
                                                        
-                                                       const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
-                                                       const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
-                                                       
-                                                       if (homeAccommodationName) {
-                                                           const accommodation = accommodations.find(a => a.name === homeAccommodationName);
-                                                           if (accommodation) {
-                                                               homeTeamColor = accommodation.headerColor;
+                                                       // Ak názov tímu NEOBSAHUJE názov kategórie, použijeme farbu ubytovne
+                                                       if (!homeTeamContainsCategory) {
+                                                           const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+                                                           if (homeAccommodationName) {
+                                                               const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                                                               if (accommodation) {
+                                                                   homeTeamColor = accommodation.headerColor;
+                                                               }
                                                            }
                                                        }
-                                                       if (awayAccommodationName) {
-                                                           const accommodation = accommodations.find(a => a.name === awayAccommodationName);
-                                                           if (accommodation) {
-                                                               awayTeamColor = accommodation.headerColor;
+                                                       
+                                                       if (!awayTeamContainsCategory) {
+                                                           const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+                                                           if (awayAccommodationName) {
+                                                               const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                                                               if (accommodation) {
+                                                                   awayTeamColor = accommodation.headerColor;
+                                                               }
                                                            }
                                                        }
                                                        
