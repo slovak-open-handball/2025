@@ -2490,8 +2490,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const categoryColor = getCategoryColor(match.categoryName);
                     
                     // Farby ubytovní pre tímy
-                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier);
-                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier);
+                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
+                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
                     
                     // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
