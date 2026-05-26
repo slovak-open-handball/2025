@@ -2320,14 +2320,26 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     };
 
     // Funkcia na získanie farby ubytovne pre tím
+    // Funkcia na získanie farby ubytovne pre tím
     const getTeamAccommodationColor = (teamIdentifier) => {
         if (!teamAccommodations) return '#f3f4f6';
         const accommodationName = teamAccommodations.get(teamIdentifier);
-        if (accommodationName && accommodations) {
+        
+        // Získanie názvu tímu pre kontrolu obsahu kategórie
+        const teamName = getTeamNameByIdentifier(teamIdentifier);
+        
+        // Nájdenie kategórie tohto tímu (musíme získať z match)
+        // Keďže v tomto modálnom okne nemáme priamy prístup ku kategórii,
+        // použijeme match.categoryName z aktuálneho match
+        const matchCategoryName = match?.categoryName || '';
+        
+        if (accommodationName && !teamName.includes(matchCategoryName)) {
             const accommodation = accommodations.find(a => a.name === accommodationName);
             if (accommodation && accommodation.headerColor) {
                 return accommodation.headerColor;
             }
+        } else if (!accommodationName && !teamName.includes(matchCategoryName)) {
+            return '#ffff00';
         }
         return '#f3f4f6';
     };
@@ -6051,15 +6063,51 @@ const AddMatchesApp = ({ userProfileData }) => {
             return true;
         });
         
-        // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte
+        // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte a nastavíme farby ubytovní
         return filteredMatches.map(match => {
             const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
             const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
             
+            // Získanie farieb ubytovní pre tímy
+            const accommodationsMap = window.__teamAccommodationsMap || new Map();
+            let homeTeamColor = '#f3f4f6';
+            let awayTeamColor = '#f3f4f6';
+            
+            const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+            const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+            
+            // Kontrola, či názov tímu obsahuje názov kategórie
+            const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            
+            // Ak názov tímu obsahuje názov kategórie, farba ostáva biela (pôvodná #f3f4f6)
+            if (homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
+                const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                if (accommodation) {
+                    homeTeamColor = accommodation.headerColor;
+                }
+            } else if (!homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
+                // Ak tím nemá ubytovňu a názov neobsahuje názov kategórie, farba je žltá
+                homeTeamColor = '#ffff00';
+            }
+            
+            if (awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
+                const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                if (accommodation) {
+                    awayTeamColor = accommodation.headerColor;
+                }
+            } else if (!awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
+                awayTeamColor = '#ffff00';
+            }
+            
             return {
                 ...match,
                 homeTeamInConflict: homeInConflict,
-                awayTeamInConflict: awayInConflict
+                awayTeamInConflict: awayInConflict,
+                homeTeamColor: homeTeamColor,
+                awayTeamColor: awayTeamColor,
+                homeTextColor: '#000000', // Text zostáva čierny
+                awayTextColor: '#000000'  // Text zostáva čierny
             };
         });
     };
@@ -7954,21 +8002,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                     let homeTeamColor = '#f3f4f6';
                                     let awayTeamColor = '#f3f4f6';
-                                    
+
                                     const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                     const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                     
-                                    if (homeAccommodationName) {
+                                    // Kontrola, či názov tímu obsahuje názov kategórie
+                                    const homeTeamNameForColor = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                                    const awayTeamNameForColor = getTeamNameByIdentifier(match.awayTeamIdentifier);
+
+                                    if (homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
                                         const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                                         if (accommodation) {
                                             homeTeamColor = accommodation.headerColor;
                                         }
+                                    } else if (!homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
+                                        homeTeamColor = '#ffff00';
                                     }
-                                    if (awayAccommodationName) {
+
+                                    if (awayAccommodationName && !awayTeamNameForColor.includes(match.categoryName)) {
                                         const accommodation = accommodations.find(a => a.name === awayAccommodationName);
                                         if (accommodation) {
                                             awayTeamColor = accommodation.headerColor;
                                         }
+                                    } else if (!awayAccommodationName && !awayTeamNameForColor.includes(match.categoryName)) {
+                                        awayTeamColor = '#ffff00';
                                     }
                                     
                                     // Kategória farba pre písmeno
@@ -8381,7 +8438,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                                    const matchesCount = hallMatchesForDay.length;
                                                    
-                                                   // Vytvorenie matchesWithColors
+                                                   // Vytvorenie matchesWithColors - nájdite túto časť v kóde (približne okolo riadku 4300-4400)
                                                    const matchesWithColors = hallMatchesForDay.map(match => {
                                                        const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                                        let homeTeamColor = '#f3f4f6';
@@ -8390,28 +8447,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                                        const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                                        
-                                                       if (homeAccommodationName) {
+                                                       // Kontrola, či názov tímu obsahuje názov kategórie
+                                                       const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                                                       const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                                                       
+                                                       // Ak názov tímu obsahuje názov kategórie, farba ostáva biela (pôvodná #f3f4f6)
+                                                       if (homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
                                                            const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                                                            if (accommodation) {
                                                                homeTeamColor = accommodation.headerColor;
                                                            }
+                                                       } else if (!homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
+                                                           homeTeamColor = '#ffff00';
                                                        }
-                                                       if (awayAccommodationName) {
+                                                       
+                                                       if (awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
                                                            const accommodation = accommodations.find(a => a.name === awayAccommodationName);
                                                            if (accommodation) {
                                                                awayTeamColor = accommodation.headerColor;
                                                            }
+                                                       } else if (!awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
+                                                           awayTeamColor = '#ffff00';
                                                        }
-                                                       
-                                                       const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                                       const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
                                                        
                                                        return {
                                                            ...match,
                                                            homeTeamColor,
                                                            awayTeamColor,
-                                                           homeTextColor,
-                                                           awayTextColor
+                                                           homeTextColor: '#000000',
+                                                           awayTextColor: '#000000'
                                                        };
                                                    });
                                                    
