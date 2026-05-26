@@ -5936,6 +5936,65 @@ const AddMatchesApp = ({ userProfileData }) => {
         console.warn(`Nenašiel sa tím s kategóriou "${categoryName}" a názvom "${extractedName}"`);
         return extractedName;
     };
+
+    // Funkcia na získanie farby ubytovne pre tím
+    const getTeamAccommodationColor = (teamIdentifier, categoryName) => {
+        // 1. Najprv skontrolujeme, či názov tímu obsahuje názov kategórie
+        let teamName = '';
+        
+        // Pokus získať názov tímu z identifikátora
+        if (teamIdentifier) {
+            // Rozdelíme identifikátor (napr. "U10 A1" -> ["U10", "A1"])
+            const parts = teamIdentifier.split(' ');
+            if (parts.length >= 2) {
+                const categoryFromId = parts.slice(0, -1).join(' ');
+                const groupAndOrder = parts[parts.length - 1];
+                
+                // Extrahujeme groupName a order z "A1"
+                let groupName = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupName = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                // Hľadáme tím v teamData
+                if (teamData.allTeams && teamData.allTeams.length > 0) {
+                    const foundTeam = teamData.allTeams.find(t => 
+                        t.category === categoryFromId && 
+                        (t.groupName === `skupina ${groupName}` || t.groupName === groupName) &&
+                        t.order?.toString() === order
+                    );
+                    if (foundTeam && foundTeam.teamName) {
+                        teamName = foundTeam.teamName;
+                    }
+                }
+            }
+        }
+        
+        // Ak názov tímu obsahuje názov kategórie, vrátime bielu farbu (žiadne zvýraznenie)
+        if (categoryName && teamName && teamName.includes(categoryName)) {
+            return '#ffffff';
+        }
+        
+        // 2. Inak skontrolujeme, či má tím pridelenú ubytovňu
+        if (!teamAccommodations) return '#ffff00';
+        
+        const accommodationName = teamAccommodations.get(teamIdentifier);
+        if (accommodationName && accommodations) {
+            const accommodation = accommodations.find(a => a.name === accommodationName);
+            if (accommodation && accommodation.headerColor) {
+                return accommodation.headerColor;
+            }
+        }
+        
+        // 3. Ak nemá ubytovňu, farba je žltá
+        return '#ffff00';
+    };
     
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (identifier) => {
@@ -7997,8 +8056,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     
                                     // Získanie farieb ubytovní pre tímy (rovnako ako v spriradených zápasoch)
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
-                                    let homeTeamColor = '#f3f4f6';
-                                    let awayTeamColor = '#f3f4f6';
+                                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
+                                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
                                     
                                     const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                     const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
@@ -8428,28 +8487,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    
                                                    // Vytvorenie matchesWithColors
                                                    const matchesWithColors = hallMatchesForDay.map(match => {
-                                                       const accommodationsMap = window.__teamAccommodationsMap || new Map();
-                                                       let homeTeamColor = '#f3f4f6';
-                                                       let awayTeamColor = '#f3f4f6';
-                                                       
-                                                       const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
-                                                       const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
-                                                       
-                                                       if (homeAccommodationName) {
-                                                           const accommodation = accommodations.find(a => a.name === homeAccommodationName);
-                                                           if (accommodation) {
-                                                               homeTeamColor = accommodation.headerColor;
-                                                           }
-                                                       }
-                                                       if (awayAccommodationName) {
-                                                           const accommodation = accommodations.find(a => a.name === awayAccommodationName);
-                                                           if (accommodation) {
-                                                               awayTeamColor = accommodation.headerColor;
-                                                           }
-                                                       }
-                                                       
-                                                       const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                                       const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                       const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
+                                                       const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
+    
+                                                       const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#ffffff' && homeTeamColor !== '#ffff00') ? '#ffffff' : '#000000';
+                                                       const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#ffffff' && awayTeamColor !== '#ffff00') ? '#ffffff' : '#000000';
                                                        
                                                        return {
                                                            ...match,
@@ -9007,11 +9049,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                                                        var letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                                                        
-                                                                       const homeTeamColor = match.homeTeamColor || '#f3f4f6';
-                                                                       const homeTextColor = match.homeTextColor || '#000000';
-                                                                       const awayTeamColor = match.awayTeamColor || '#f3f4f6';
-                                                                       const awayTextColor = match.awayTextColor || '#000000';
-                                                                       
+                                                                       const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
+                                                                       const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#ffffff' && homeTeamColor !== '#ffff00') ? '#ffffff' : '#000000';
+                                                                       const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
+                                                                       const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#ffffff' && awayTeamColor !== '#ffff00') ? '#ffffff' : '#000000';
+                                                                                                                                              
                                                                        allElements.push(
                                                                            React.createElement(
                                                                                'div',
