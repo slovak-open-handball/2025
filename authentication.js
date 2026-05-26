@@ -96,6 +96,7 @@ const roleAccess = {
         'logged-in-all-registrations.html',
         'logged-in-map.html',
         'logged-in-matches.html',
+        'logged-in-catering.html',
         'logged-in-my-data.html',
         'logged-in-notifications.html',
         'logged-in-rosters.html',
