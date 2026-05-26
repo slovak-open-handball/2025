@@ -103,7 +103,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) { // NOVÉ: catering
+                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) { 
                     link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
                     link.classList.add('hover:text-white', 'hover:dark:text-white');
                 }
@@ -147,7 +147,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) { // NOVÉ: catering
+                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
                     link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
                     link.classList.add('hover:text-white', 'hover:dark:text-white');
                     
@@ -247,7 +247,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsAccommodationLink?.classList.remove('hidden');
             matchesLink.classList.remove('hidden');
             matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.remove('hidden'); // NOVÉ: zobrazenie cateringu pre admina
+            if (cateringLink) cateringLink.classList.remove('hidden');
     
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
@@ -280,7 +280,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsAccommodationLink?.classList.add('hidden');
             matchesLink.classList.add('hidden');
             matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden'); // NOVÉ: skrytie cateringu pre club
+            if (cateringLink) cateringLink.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -290,7 +290,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             }
         } else if (userProfileData.role === 'hall') {
             matchesHallLink.classList.remove('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden'); // NOVÉ: skrytie cateringu pre hall
+            if (cateringLink) cateringLink.classList.add('hidden');
         } else {
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
@@ -304,7 +304,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsAccommodationLink?.classList.add('hidden');
             matchesLink.classList.add('hidden');
             matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden'); // NOVÉ: skrytie cateringu pre ostatné roly
+            if (cateringLink) cateringLink.classList.add('hidden'); 
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
