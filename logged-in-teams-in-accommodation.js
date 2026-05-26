@@ -1563,7 +1563,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
                                                 })
                                                 .map((team, index) => {
-                                                    // Získanie farby pre kategóriu tímu (rovnaká ako v zobrazení podľa ubytovní)
+                                                    // Získanie farby pre kategóriu tímu
                                                     let teamCategoryColor = '#6b7280';
                                                     if (window.categorySettingsData && window.categorySettingsData[team.category]) {
                                                         if (window.categorySettingsData[team.category].drawColor) {
@@ -1592,22 +1592,22 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                             React.createElement('span', { 
                                                                 className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                 style: { color: teamTextColor },
-                                                            }, `${team.category}: ${team.teamName}`),
+                                                            }, `${team.category}: ${team.teamName}`)
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-1 flex-shrink-0 ml-1.5 pr-1' },
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'ml-2 w-7 flex-shrink-0 flex items-center justify-center text-xs font-bold rounded',
+                                                                    className: 'w-7 flex-shrink-0 flex items-center justify-center text-xs font-bold rounded',
                                                                     style: { 
                                                                         backgroundColor: teamColor || '#6b7280',
                                                                         color: getTeamAccommodationTextColor(team) || '#000000'
                                                                     }
                                                                 },
                                                                 team.peopleWithAccommodation
-                                                            )
-                                                        ),
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5 pr-1' },
+                                                            ),
                                                             React.createElement(
                                                                 'button',
                                                                 {
