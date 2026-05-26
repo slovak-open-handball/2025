@@ -2320,31 +2320,16 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     };
 
     // Funkcia na získanie farby ubytovne pre tím
-    const getTeamAccommodationColor = (teamIdentifier, categoryName) => {
+    const getTeamAccommodationColor = (teamIdentifier) => {
         if (!teamAccommodations) return '#f3f4f6';
         const accommodationName = teamAccommodations.get(teamIdentifier);
-        
-        // Kontrola, či názov tímu obsahuje názov kategórie
-        let containsCategoryName = false;
-        if (categoryName && teamIdentifier) {
-            const teamNamePart = teamIdentifier.split(' ').pop();
-            if (teamNamePart && categoryName) {
-                containsCategoryName = teamNamePart.toLowerCase().includes(categoryName.toLowerCase());
-            }
-        }
-    
-        if (containsCategoryName) {
-            return '#ffffff';
-        }
-    
         if (accommodationName && accommodations) {
             const accommodation = accommodations.find(a => a.name === accommodationName);
             if (accommodation && accommodation.headerColor) {
                 return accommodation.headerColor;
             }
         }
-        
-        return '#ffff00';
+        return '#f3f4f6';
     };
 
     // Výpočet dĺžky zápasu pre kategóriu
@@ -2459,8 +2444,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const categoryColor = getCategoryColor(match.categoryName);
                     
                     // Farby ubytovní pre tímy
-                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
-                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
+                    const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier);
+                    const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier);
                     
                     // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
@@ -8405,34 +8390,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                                        const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                                        
-                                                       // Kontrola, či názov tímu obsahuje názov kategórie
-                                                       const containsCategoryInHome = match.homeTeamIdentifier.split(' ').pop()?.toLowerCase().includes(match.categoryName?.toLowerCase()) || false;
-                                                       const containsCategoryInAway = match.awayTeamIdentifier.split(' ').pop()?.toLowerCase().includes(match.categoryName?.toLowerCase()) || false;
-                                                       
-                                                       if (containsCategoryInHome) {
-                                                           homeTeamColor = '#ffffff';
-                                                       } else if (homeAccommodationName) {
+                                                       if (homeAccommodationName) {
                                                            const accommodation = accommodations.find(a => a.name === homeAccommodationName);
-                                                           if (accommodation && accommodation.headerColor) {
+                                                           if (accommodation) {
                                                                homeTeamColor = accommodation.headerColor;
-                                                           } else {
-                                                               homeTeamColor = '#ffff00'; // Žltá pre tímy bez ubytovne
                                                            }
-                                                       } else {
-                                                           homeTeamColor = '#ffff00'; // Žltá pre tímy bez ubytovne
                                                        }
-                                                       
-                                                       if (containsCategoryInAway) {
-                                                           awayTeamColor = '#ffffff';
-                                                       } else if (awayAccommodationName) {
+                                                       if (awayAccommodationName) {
                                                            const accommodation = accommodations.find(a => a.name === awayAccommodationName);
-                                                           if (accommodation && accommodation.headerColor) {
+                                                           if (accommodation) {
                                                                awayTeamColor = accommodation.headerColor;
-                                                           } else {
-                                                               awayTeamColor = '#ffff00'; // Žltá pre tímy bez ubytovne
                                                            }
-                                                       } else {
-                                                           awayTeamColor = '#ffff00'; // Žltá pre tímy bez ubytovne
                                                        }
                                                        
                                                        const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
