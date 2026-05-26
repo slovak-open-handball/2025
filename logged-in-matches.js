@@ -2360,18 +2360,12 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     };
 
     // Funkcia na získanie farby ubytovne pre tím
-    // Funkcia na získanie farby ubytovne pre tím
-    const getTeamAccommodationColor = (teamIdentifier) => {
+    const getTeamAccommodationColor = (teamIdentifier, matchCategoryName) => {
         if (!teamAccommodations) return '#f3f4f6';
         const accommodationName = teamAccommodations.get(teamIdentifier);
         
-        // Získanie názvu tímu pre kontrolu obsahu kategórie
-        const teamName = getTeamNameByIdentifier(teamIdentifier);
-        
-        // Nájdenie kategórie tohto tímu (musíme získať z match)
-        // Keďže v tomto modálnom okne nemáme priamy prístup ku kategórii,
-        // použijeme match.categoryName z aktuálneho match
-        const matchCategoryName = match?.categoryName || '';
+        // Použijeme lokálnu funkciu
+        const teamName = getTeamNameByIdentifierLocal(teamIdentifier);
         
         if (accommodationName && !teamName.includes(matchCategoryName)) {
             const accommodation = accommodations.find(a => a.name === accommodationName);
