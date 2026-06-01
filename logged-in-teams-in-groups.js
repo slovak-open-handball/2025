@@ -1347,17 +1347,29 @@ const AddTeamsGroupApp = (props) => {
                             'Zrušiť'
                         ),
                         React.createElement(
-                            'button',
-                            {
-                                onClick: handleSwap,
-                                disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
-                                className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
-                                    (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700'
-                                }`
-                            },
-                            isSwapping ? 'Spracúvam...' : 'Vymeniť tímy'
+                            'div',
+                            { className: 'flex justify-end space-x-4 mt-6' },
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: onClose,
+                                    className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+                                },
+                                'Zrušiť'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: handleSwap,
+                                    disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
+                                    className: `px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 border-2 ${
+                                        (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
+                                            ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
+                                            : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border-transparent'
+                                    }`
+                                },
+                                isSwapping ? 'Spracúvam...' : 'Vymeniť tímy'
+                            )
                         )
                     )
                 )
