@@ -6273,9 +6273,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor: awayTeamColor,
                 homeTextColor: '#000000',
                 awayTextColor: '#000000',
-                // NOVÉ POLE: celkový počet členov pre domáci tím
                 homeTotalMembersCount: getTotalMembersCount(match.homeTeamIdentifier),
-                // NOVÉ POLE: celkový počet členov pre hosťovský tím
                 awayTotalMembersCount: getTotalMembersCount(match.awayTeamIdentifier)
             };
         });
