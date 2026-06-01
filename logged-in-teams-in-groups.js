@@ -1285,9 +1285,6 @@ const AddTeamsGroupApp = (props) => {
                     React.createElement(
                         'div',
                         null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            swapWithinSameGroup ? 'Vyberte cieľový tím v rovnakej skupine:' : 'Vyberte cieľovú skupinu:'
-                        ),
                         !swapWithinSameGroup && React.createElement(
                             'select',
                             {
