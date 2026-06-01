@@ -8440,7 +8440,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             isSpecialMatch && React.createElement(
                                                 'div', 
                                                 { 
-                                                    className: 'px-3 py-1 flex items-center justify-center',
+                                                    className: 'px-1 py-1 flex items-center justify-center',
                                                     style: { 
                                                         textAlign: 'center',
                                                         backgroundColor: categoryColor,
@@ -8454,7 +8454,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'span',
                                                     { 
-                                                        className: 'text-black font-bold text-[10px] block w-full',
+                                                        className: 'text-black font-bold text-[9px] block w-full',
                                                         style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
                                                     },
                                                     specialMatchText
@@ -9427,7 +9427,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    isSpecialMatch && React.createElement(
                                                                                        'div', 
                                                                                        { 
-                                                                                           className: 'px-3 py-0 flex items-center justify-center',
+                                                                                           className: 'px-1 py-0 flex items-center justify-center',
                                                                                            colSpan: 2,
                                                                                            style: { 
                                                                                                textAlign: 'center',
