@@ -2576,9 +2576,18 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 'div', 
                                 { 
                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                    style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
+                                    style: { 
+                                        textAlign: 'center', 
+                                        backgroundColor: homeTeamColor, 
+                                        width: '10px', 
+                                        height: '100%',
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        color: '#000000'
+                                    },
+                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
                                 },
-                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                React.createElement('span', null, match.homeTotalMembersCount || 0)
                             ),
                             // Hosťovský tím
                             React.createElement(
@@ -2602,9 +2611,18 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 'div', 
                                 { 
                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                    style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
+                                    style: { 
+                                        textAlign: 'center', 
+                                        backgroundColor: awayTeamColor, 
+                                        width: '10px', 
+                                        height: '100%',
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        color: '#000000'
+                                    },
+                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
                                 },
-                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                React.createElement('span', null, match.awayTotalMembersCount || 0)
                             ),
                             // Kombinované čísla alebo špeciálny text
                             !isSpecialMatch ? React.createElement(
@@ -8221,9 +8239,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 'div', 
                                                 { 
                                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%' }
+                                                    style: { 
+                                                        textAlign: 'center', 
+                                                        backgroundColor: homeTeamColor, 
+                                                        width: '10px', 
+                                                        height: '100%',
+                                                        fontSize: '9px',
+                                                        fontWeight: 'bold',
+                                                        color: '#000000'
+                                                    },
+                                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
                                                 },
-                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                                React.createElement('span', null, match.homeTotalMembersCount || 0)
                                             ),
                                             // Hosťovský tím
                                             React.createElement(
@@ -8247,9 +8274,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 'div', 
                                                 { 
                                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
-                                                    style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%' }
+                                                    style: { 
+                                                        textAlign: 'center', 
+                                                        backgroundColor: awayTeamColor, 
+                                                        width: '10px', 
+                                                        height: '100%',
+                                                        fontSize: '9px',
+                                                        fontWeight: 'bold',
+                                                        color: '#000000'
+                                                    },
+                                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
                                                 },
-                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
+                                                React.createElement('span', null, match.awayTotalMembersCount || 0)
                                             ),
                                             // Kombinované čísla (homeNumber-awayNumber)
                                             !isSpecialMatch && React.createElement(
