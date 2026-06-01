@@ -2635,9 +2635,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
-                                    title: `Počet členov tímu: ${homeMemberCount || 0}`
+                                    title: `Počet členov tímu: ${homeTeamMemberCount || 0}`
                                 },
-                                React.createElement('span', null, homeMemberCount || 0)
+                                React.createElement('span', null, homeTeamMemberCount || 0)
                             ),
                             // Hosťovský tím
                             React.createElement(
@@ -2670,9 +2670,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
-                                    title: `Počet členov tímu: ${awayMemberCount || 0}`
+                                    title: `Počet členov tímu: ${awayTeamMemberCount || 0}`
                                 },
-                                React.createElement('span', null, awayMemberCount || 0)
+                                React.createElement('span', null, awayTeamMemberCount || 0)
                             ),
                             // Kombinované čísla alebo špeciálny text
                             !isSpecialMatch ? React.createElement(
