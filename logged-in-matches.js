@@ -6206,27 +6206,27 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU
+            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - SPRÁVNY SÚČET 5 POLÍ
             const getTotalMembersCount = (teamIdentifier) => {
                 if (!teamIdentifier) return 0;
     
                 // Nájdenie tímu v teamData podľa identifikátora
                 const allTeams = teamData.allTeams || window.__teamManagerData?.allTeams || [];
-                
+        
                 // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
                 const parts = teamIdentifier.split(' ');
                 if (parts.length < 2) return 0;
-                
+        
                 const groupAndOrder = parts.pop();
                 const categoryName = parts.join(' ');
-                
+        
                 // Rozdelenie groupAndOrder na groupName a order
                 let groupName = '';
                 let order = '';
-                
+                    
                 for (let i = 0; i < groupAndOrder.length; i++) {
                     const char = groupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
+                        if (char >= '0' && char <= '9') {
                         order = groupAndOrder.substring(i);
                         groupName = groupAndOrder.substring(0, i);
                         break;
@@ -6246,19 +6246,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                     (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
                     t.order?.toString() === order
                 );
-                
+    
                 if (!foundTeam) return 0;
                 
-                // SÚČET: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount
+                // SPRÁVNY SÚČET: 
+                // 1. Hráči (playersCount)
+                // 2. Členovia realizačného tímu - ženy (womenTeamMembersCount)
+                // 3. Členovia realizačného tímu - muži (menTeamMembersCount)
+                // 4. Šoféri - ženy (womenDriversCount)
+                // 5. Šoféri - muži (menDriversCount)
                 const playersCount = foundTeam._players !== undefined ? foundTeam._players : (foundTeam.playerDetails?.length || 0);
                 const womenTeamMembersCount = foundTeam._womenTeamMembersCount !== undefined ? foundTeam._womenTeamMembersCount : (foundTeam.womenTeamMemberDetails?.length || 0);
                 const menTeamMembersCount = foundTeam._menTeamMembersCount !== undefined ? foundTeam._menTeamMembersCount : (foundTeam.menTeamMemberDetails?.length || 0);
                 const womenDriversCount = foundTeam._womenDriversCount !== undefined ? foundTeam._womenDriversCount : (foundTeam.driverDetailsFemale?.length || 0);
                 const menDriversCount = foundTeam._menDriversCount !== undefined ? foundTeam._menDriversCount : (foundTeam.driverDetailsMale?.length || 0);
-                
+    
+                // Vrátime SÚČET všetkých piatich hodnôt
                 return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
             };
-    
+            
             return {
                 ...match,
                 homeTeamInConflict: homeInConflict,
@@ -6274,7 +6280,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             };
         });
     };
-
+    
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
     const hasExistingMatches = (categoryId, groupName) => {
         return matches.some(match => 
