@@ -1159,6 +1159,140 @@ const AddTeamsGroupApp = (props) => {
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
         }
     };
+
+    // Komponent pre modálne okno výmeny tímov
+    const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId }) => {
+        const [selectedGroup, setSelectedGroup] = useState('');
+        const [selectedTeam, setSelectedTeam] = useState('');
+        
+        if (!isOpen || !team) return null;
+        
+        const categoryName = team.category;
+        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
+        const groups = allGroupsByCategoryId[categoryId] || [];
+        
+        // Získame typ skupiny pôvodného tímu
+        const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
+        
+        // Filtrujeme skupiny: rovnaká kategória, rovnaký typ, ale nie pôvodná skupina
+        const availableGroups = groups.filter(g => 
+            g.type === originalGroupType && 
+            g.name !== team.groupName
+        );
+        
+        // Získame tímy vo vybranej skupine (okrem pôvodného tímu)
+        const teamsInSelectedGroup = allTeams.filter(t => 
+            t.category === categoryName && 
+            t.groupName === selectedGroup &&
+            t.id !== team.id
+        ).sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        const handleSwap = () => {
+            if (selectedTeam) {
+                onSwap(team, selectedGroup, selectedTeam);
+            }
+        };
+        
+        return React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
+                onClick: onClose
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+                    onClick: e => e.stopPropagation()
+                },
+                React.createElement(
+                    'h2',
+                    { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+                    'Vymeniť tím'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'space-y-4' },
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            `Pôvodný tím: ${team.teamName} (${team.groupName}, por. ${team.order})`
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            'Vyberte cieľovú skupinu:'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                                value: selectedGroup,
+                                onChange: (e) => {
+                                    setSelectedGroup(e.target.value);
+                                    setSelectedTeam('');
+                                }
+                            },
+                            React.createElement('option', { value: '' }, '--- Vyberte skupinu ---'),
+                            availableGroups.map(group => 
+                                React.createElement('option', { key: group.name, value: group.name }, group.name)
+                            )
+                        )
+                    ),
+                    selectedGroup && React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            'Vyberte cieľový tím na výmenu:'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                                value: selectedTeam,
+                                onChange: (e) => setSelectedTeam(e.target.value)
+                            },
+                            React.createElement('option', { value: '' }, '--- Vyberte tím ---'),
+                            teamsInSelectedGroup.map(t => 
+                                React.createElement('option', { key: t.id, value: t.teamName },
+                                    `${t.teamName} (por. ${t.order})`
+                                )
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end space-x-4 mt-6' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: onClose,
+                                className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+                            },
+                            'Zrušiť'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: handleSwap,
+                                disabled: !selectedGroup || !selectedTeam || isSwapping,
+                                className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
+                                    !selectedGroup || !selectedTeam || isSwapping
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                }`
+                            },
+                            isSwapping ? 'Spracúvam...' : 'Vymeniť tímy'
+                        )
+                    )
+                )
+            )
+        );
+    };
+  
     // ===================================================================
     // MODÁLNE OKNO (ako vnútorný komponent)
     // ===================================================================
@@ -2531,48 +2665,60 @@ const AddTeamsGroupApp = (props) => {
                                 `${pos}. ${mappedDisplayName}${hasDuplicate ? '' : ''}`
                             ),
                             React.createElement(
-                                'div',
-                                { className: 'flex items-center space-x-1' },
-                                // UPRAVENÉ: Ceruzka - zakázaná ak už existujú zápasy v skupine
-                                React.createElement(
-                                    'button',
-                                    {
-                                        onClick: groupHasMatches ? undefined : () => {
-                                            setTeamToEdit(team);
-                                            setIsModalOpen(true);
-                                        },
-                                        className: `p-1.5 rounded-full transition-colors ${
-                                            groupHasMatches 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
-                                        }`,
-                                        title: groupHasMatches 
-                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
-                                            : 'Upraviť tím',
-                                        disabled: groupHasMatches
+                                'button',
+                                {
+                                    onClick: groupHasMatches ? undefined : () => {
+                                        setTeamToEdit(team);
+                                        setIsModalOpen(true);
                                     },
-                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                                    )
-                                ),
-                                // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
-                                React.createElement(
-                                    'button',
-                                    {
-                                        onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
-                                        className: `p-1.5 rounded-full transition-colors ${
-                                            groupHasMatches 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
-                                        }`,
-                                        title: groupHasMatches 
-                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
-                                            : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
-                                        disabled: groupHasMatches
+                                    className: `p-1.5 rounded-full transition-colors ${
+                                        groupHasMatches 
+                                            ? 'text-gray-300 cursor-not-allowed' 
+                                            : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
+                                    }`,
+                                    title: groupHasMatches 
+                                        ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
+                                        : 'Upraviť tím',
+                                    disabled: groupHasMatches
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                )
+                            ),
+                            // NOVÉ TLAČIDLO PRE VÝMENU TÍMOV (zobrazené len ak existujú zápasy)
+                            groupHasMatches && React.createElement(
+                                'button',
+                                {
+                                    onClick: () => {
+                                        setSwapModal({
+                                            team: team,
+                                            open: true
+                                        });
                                     },
-                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
-                                    )
+                                    className: 'p-1.5 rounded-full transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50',
+                                    title: 'Vymeniť tím s iným tímom v rovnakej kategórii a type skupiny'
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' })
+                                )
+                            ),
+                            // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
+                                    className: `p-1.5 rounded-full transition-colors ${
+                                        groupHasMatches 
+                                            ? 'text-gray-300 cursor-not-allowed' 
+                                            : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                                    }`,
+                                    title: groupHasMatches 
+                                        ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
+                                        : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
+                                    disabled: groupHasMatches
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
                                 )
                             )
                         )
@@ -3340,6 +3486,15 @@ return React.createElement(
         groupName: deleteGapModal?.groupName,
         categoryName: deleteGapModal?.categoryName,
         isConfirming: false
+    }),
+    React.createElement(SwapTeamsModal, {
+        isOpen: !!swapModal?.open,
+        onClose: () => setSwapModal(null),
+        onSwap: (team, targetGroup, targetTeam) => handleSwapTeams(team, targetGroup, targetTeam),
+        team: swapModal?.team,
+        allTeams: allTeams,
+        categoryIdToNameMap: categoryIdToNameMap,
+        allGroupsByCategoryId: allGroupsByCategoryId
     }),
     React.createElement(
         'div',
