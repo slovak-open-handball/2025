@@ -2156,53 +2156,48 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
         if (!teamIdentifier) return 0;
     
-        // Nájdenie tímu v teamData podľa identifikátora
-        const allTeams = window.__teamManagerData?.allTeams || [];
-        
-        // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
-        const parts = teamIdentifier.split(' ');
-        if (parts.length < 2) return 0;
-        
-        const groupAndOrder = parts.pop();
-        const categoryName = parts.join(' ');
-        
-        // Rozdelenie groupAndOrder na groupName a order
-        let groupName = '';
-        let order = '';
-        
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupName = groupAndOrder.substring(0, i);
-                break;
+        // KROK 1: Získame názov tímu
+        let teamDisplayName = null;
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                teamDisplayName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+            } catch (e) {
+                console.error(`getTotalMembersCountSync: Chyba pre "${teamIdentifier}":`, e);
+            }
+        }
+    
+        const actualTeamName = teamDisplayName || teamIdentifier;
+    
+        // KROK 2: Vyhľadáme v cache
+        if (!window.__allUsersCache) {
+            console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
+            return 0;
+        }
+    
+        for (const user of window.__allUsersCache) {
+            if (!user.teams) continue;
+            
+            for (const [category, teamsArray] of Object.entries(user.teams)) {
+                if (!Array.isArray(teamsArray)) continue;
+                
+                const team = teamsArray.find(t => 
+                    t.teamName === actualTeamName && 
+                    (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
+                );
+                
+                if (team) {
+                    const playersCount = team.playerDetails?.length || 0;
+                    const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                    const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                    const womenDriversCount = team.driverDetailsFemale?.length || 0;
+                    const menDriversCount = team.driverDetailsMale?.length || 0;
+                    
+                    return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+                }
             }
         }
         
-        if (!order) {
-            order = '?';
-            groupName = groupAndOrder;
-        }
-        
-        const groupNameWithPrefix = `skupina ${groupName}`;
-        
-        // Hľadanie tímu v teamData
-        const foundTeam = allTeams.find(t =>
-            t.category === categoryName &&
-            (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
-            t.order?.toString() === order
-        );
-        
-        if (!foundTeam) return 0;
-        
-        // SÚČET: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount
-        const playersCount = foundTeam._players !== undefined ? foundTeam._players : (foundTeam.playerDetails?.length || 0);
-        const womenTeamMembersCount = foundTeam._womenTeamMembersCount !== undefined ? foundTeam._womenTeamMembersCount : (foundTeam.womenTeamMemberDetails?.length || 0);
-        const menTeamMembersCount = foundTeam._menTeamMembersCount !== undefined ? foundTeam._menTeamMembersCount : (foundTeam.menTeamMemberDetails?.length || 0);
-        const womenDriversCount = foundTeam._womenDriversCount !== undefined ? foundTeam._womenDriversCount : (foundTeam.driverDetailsFemale?.length || 0);
-        const menDriversCount = foundTeam._menDriversCount !== undefined ? foundTeam._menDriversCount : (foundTeam.driverDetailsMale?.length || 0);
-        
-        return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+        return 0;
     };
 
     // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
@@ -6207,87 +6202,53 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
     
             // Funkcia na získanie celkového počtu členov tímu - OPRAVENÁ VERZIA (používa priamy prístup k users kolekcii)
-            const getTotalMembersCount = async (teamIdentifier, matchCategoryName) => {
+            const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
                 if (!teamIdentifier) return 0;
             
-                // KROK 1: Získame názov tímu pomocou teamManager.getTeamNameByDisplayIdSync
+                // KROK 1: Získame názov tímu
                 let teamDisplayName = null;
                 if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                     try {
                         teamDisplayName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
-                        console.log(`getTotalMembersCount: getTeamNameByDisplayIdSync("${teamIdentifier}") -> "${teamDisplayName}"`);
                     } catch (e) {
-                        console.error(`getTotalMembersCount: Chyba pri volaní getTeamNameByDisplayIdSync pre "${teamIdentifier}":`, e);
+                        console.error(`getTotalMembersCountSync: Chyba pre "${teamIdentifier}":`, e);
                     }
-                } else {
-                    console.warn('getTotalMembersCount: teamManager.getTeamNameByDisplayIdSync nie je k dispozícii');
                 }
             
-                // Ak sa nepodarilo získať názov, použijeme pôvodný identifikátor ako fallback
                 const actualTeamName = teamDisplayName || teamIdentifier;
             
-                // KROK 2: Vyhľadáme používateľa, ktorý vlastní tento tím
-                // Prejdeme všetkých používateľov v pamäti (ak sú k dispozícii)
+                // KROK 2: Vyhľadáme v cache
                 if (!window.__allUsersCache) {
-                    console.warn('getTotalMembersCount: window.__allUsersCache nie je k dispozícii');
+                    console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
                     return 0;
                 }
             
-                let foundTeam = null;
-                let foundUser = null;
-            
-                // Prehľadáme všetkých používateľov
                 for (const user of window.__allUsersCache) {
                     if (!user.teams) continue;
                     
-                    // Prehľadáme všetky kategórie v teams objekte
                     for (const [category, teamsArray] of Object.entries(user.teams)) {
                         if (!Array.isArray(teamsArray)) continue;
                         
-                        // Hľadáme tím podľa kategórie a názvu tímu
                         const team = teamsArray.find(t => 
                             t.teamName === actualTeamName && 
                             (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
                         );
                         
                         if (team) {
-                            foundTeam = team;
-                            foundUser = user;
-                            console.log(`getTotalMembersCount: Našiel som tím v users kolekcii - používateľ: ${foundUser.email}, kategória: ${category}, názov: ${actualTeamName}`);
-                            break;
+                            const playersCount = team.playerDetails?.length || 0;
+                            const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                            const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                            const womenDriversCount = team.driverDetailsFemale?.length || 0;
+                            const menDriversCount = team.driverDetailsMale?.length || 0;
+                            
+                            return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
                         }
                     }
-                    if (foundTeam) break;
                 }
-            
-                if (!foundTeam) {
-                    console.warn(`getTotalMembersCount: Nenašiel som tím s názvom "${actualTeamName}" a kategóriou "${matchCategoryName}" (pôvodný identifikátor: ${teamIdentifier})`);
-                    return 0;
-                }
-            
-                // KROK 3: SÚČET všetkých členov tímu priamo z foundTeam (ktorý je z users kolekcie)
-                const playersCount = foundTeam.playerDetails?.length || 0;
-                const womenTeamMembersCount = foundTeam.womenTeamMemberDetails?.length || 0;
-                const menTeamMembersCount = foundTeam.menTeamMemberDetails?.length || 0;
-                const womenDriversCount = foundTeam.driverDetailsFemale?.length || 0;
-                const menDriversCount = foundTeam.driverDetailsMale?.length || 0;
                 
-                const total = playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
-                
-                console.log(`getTotalMembersCount pre ${teamIdentifier} (názov: ${actualTeamName}, kategória: ${matchCategoryName}):`, {
-                    playersCount,
-                    womenTeamMembersCount,
-                    menTeamMembersCount,
-                    womenDriversCount,
-                    menDriversCount,
-                    total,
-                    foundTeamExists: !!foundTeam,
-                    userId: foundUser?.id
-                });
-                
-                return total;
+                return 0;
             };
-        
+                    
             return {
                 ...match,
                 homeTeamInConflict: homeInConflict,
