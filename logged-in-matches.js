@@ -8361,9 +8361,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${homeMemberCount || 0}`
+                                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
                                                 },
-                                                React.createElement('span', null, homeMemberCount || 0)
+                                                React.createElement('span', null, match.homeTotalMembersCount || 0)
                                             ),
                                             // Hosťovský tím
                                             React.createElement(
@@ -8396,9 +8396,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${awayMemberCount || 0}`
+                                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
                                                 },
-                                                React.createElement('span', null, awayMemberCount || 0)
+                                                React.createElement('span', null, match.awayTotalMembersCount || 0)
                                             ),
                                             // Kombinované čísla (homeNumber-awayNumber)
                                             !isSpecialMatch && React.createElement(
