@@ -1326,7 +1326,7 @@ const AddTeamsGroupApp = (props) => {
                                 : teamsInSelectedGroup
                             ).map(t => 
                                 React.createElement('option', { key: t.id, value: t.teamName },
-                                    `${t.teamName} (por. ${t.order})`
+                                    `${t.order}. ${t.teamName}`
                                 )
                             )
                         )
