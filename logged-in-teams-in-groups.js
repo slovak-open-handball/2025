@@ -625,9 +625,6 @@ const AddTeamsGroupApp = (props) => {
       
     const createTeamAssignmentNotification = async (action, team) => {
         if (!window.db) return;
-        if (!currentUserEmail) {
-            console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
-        }
     
         let message = '';
         let category = team.category || '?';
@@ -2548,7 +2545,6 @@ const AddTeamsGroupApp = (props) => {
                         return currentName;
                     }
                 } catch (e) {
-                    console.warn('[Mapovanie] Chyba pri získavaní mapovaného názvu:', e);
                 }
             }
         
