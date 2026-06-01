@@ -1257,7 +1257,7 @@ const AddTeamsGroupApp = (props) => {
                         'div',
                         null,
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            `Pôvodný tím: ${team.teamName} (${team.groupName}, por. ${team.order})`
+                            `Pôvodný tím: ${team.groupName} ${team.order}. ${team.teamName})`
                         )
                     ),
                     
