@@ -8449,7 +8449,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         gridColumn: 'span 2',
                                                         whiteSpace: 'nowrap',
                                                         wordBreak: 'keep-all',
-                                                        width: '95%'
+                                                        width: '90%'
                                                     }
                                                 },
                                                 React.createElement(
@@ -9438,7 +9438,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                gridColumn: 'span 2',
                                                                                                whiteSpace: 'nowrap',
                                                                                                wordBreak: 'keep-all',
-                                                                                               width: '95%'
+                                                                                               width: '90%'
                                                                                            }
                                                                                        },
                                                                                        React.createElement(
