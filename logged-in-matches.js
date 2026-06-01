@@ -6207,19 +6207,19 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
     
             // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - SPRÁVNY SÚČET 5 POLÍ
-            const getTotalMembersCount = (teamIdentifier) => {
+                const getTotalMembersCount = (teamIdentifier) => {
                 if (!teamIdentifier) return 0;
-    
-                // Nájdenie tímu v teamData podľa identifikátora
-                const allTeams = teamData.allTeams || window.__teamManagerData?.allTeams || [];
-        
+            
+                // Použijeme window.__teamManagerData priamo (je to globálna premenná)
+                const allTeams = window.__teamManagerData?.allTeams || [];
+                
                 // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
                 const parts = teamIdentifier.split(' ');
                 if (parts.length < 2) return 0;
-        
+                
                 const groupAndOrder = parts.pop();
                 const categoryName = parts.join(' ');
-                
+    
                 // Rozdelenie groupAndOrder na groupName a order
                 let groupName = '';
                 let order = '';
@@ -6237,7 +6237,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     order = '?';
                     groupName = groupAndOrder;
                 }
-        
+                
                 const groupNameWithPrefix = `skupina ${groupName}`;
                 
                 // Hľadanie tímu v teamData
@@ -6246,7 +6246,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
                     t.order?.toString() === order
                 );
-        
+                
                 if (!foundTeam) return 0;
                 
                 // KĽÚČOVÉ: POČÍTAME PRIAMO DĹŽKY POLÍ, NEPOUŽÍVAME PREDPOČÍTANÉ HODNOTY
@@ -6256,10 +6256,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const womenDriversCount = foundTeam.driverDetailsFemale?.length || 0;
                 const menDriversCount = foundTeam.driverDetailsMale?.length || 0;
                 
+                // DEBUG výpis (odstráňte po otestovaní)
+                console.log(`getTotalMembersCount pre ${teamIdentifier}:`, {
+                    playersCount,
+                    womenTeamMembersCount,
+                    menTeamMembersCount,
+                    womenDriversCount,
+                    menDriversCount,
+                    total: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount,
+                    foundTeamExists: !!foundTeam,
+                    foundTeamKeys: foundTeam ? Object.keys(foundTeam) : []
+                });
+    
                 // Vrátime SÚČET všetkých piatich hodnôt
                 return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
             };
-            
+        
             return {
                 ...match,
                 homeTeamInConflict: homeInConflict,
