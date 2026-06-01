@@ -9438,7 +9438,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                whiteSpace: 'nowrap',
                                                                                                wordBreak: 'keep-all',
                                                                                                minWidth: '50px',
-                                                                                               maxWidth: 'none'
+                                                                                               maxWidth: 'none',
                                                                                            }
                                                                                        },
                                                                                        React.createElement(
