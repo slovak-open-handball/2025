@@ -5454,6 +5454,26 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [filtersInitialized, setFiltersInitialized] = useState(false);
 
     useEffect(() => {
+        if (!window.db) return;        
+        
+        const usersRef = collection(window.db, 'users');
+        const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+            const usersData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            // 🔑 ULOŽENIE DO CACHE - toto je kľúčové!
+            window.__allUsersCache = usersData;            
+            
+        }, (error) => {
+            console.error("Chyba pri načítaní používateľov do cache:", error);
+        });
+        
+        return () => unsubscribe();
+    }, [window.db]);
+
+    useEffect(() => {
         const completedExists = matches.some(match => match.status === 'completed');
         setHasCompletedMatch(completedExists);
     }, [matches]);
