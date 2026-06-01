@@ -3697,3 +3697,300 @@ if (window.globalUserProfileData) {
         ));
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// Funkcia pre konzolu - presun tímu do inej skupiny (aj pri existujúcich zápasoch)
+window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, targetOrder) => {
+    if (!window.db) {
+        console.error("❌ Firebase nie je inicializovaný!");
+        return;
+    }
+    
+    console.log(`🔍 Hľadám tím: "${teamName}"`);
+    
+    // 1. Nájdeme tím vo všetkých tímoch
+    const allTeams = window.__allTeams || [];
+    const teamToMove = allTeams.find(t => t.teamName === teamName);
+    
+    if (!teamToMove) {
+        console.error(`❌ Tím "${teamName}" sa nenašiel!`);
+        console.log("📋 Dostupné tímy:", allTeams.map(t => t.teamName));
+        return;
+    }
+    
+    console.log(`✅ Nájdený tím: ${teamToMove.teamName}`);
+    console.log(`   Kategória: ${teamToMove.category}`);
+    console.log(`   Skupina: ${teamToMove.groupName || 'bez skupiny'}`);
+    console.log(`   Poradie: ${teamToMove.order || 'žiadne'}`);
+    console.log(`   Typ: ${teamToMove.isSuperstructureTeam ? 'Superstructure' : 'Používateľský'}`);
+    
+    // 2. Nájdeme ID cieľovej kategórie
+    const categoryIdToNameMap = window.__categoryIdToNameMap || {};
+    const targetCategoryId = Object.keys(categoryIdToNameMap).find(
+        id => categoryIdToNameMap[id] === targetCategoryName
+    );
+    
+    if (!targetCategoryId) {
+        console.error(`❌ Kategória "${targetCategoryName}" sa nenašla!`);
+        console.log("📋 Dostupné kategórie:", Object.values(categoryIdToNameMap));
+        return;
+    }
+    
+    console.log(`✅ Cieľová kategória: ${targetCategoryName} (ID: ${targetCategoryId})`);
+    
+    // 3. Overíme, či cieľová skupina existuje
+    const allGroupsByCategoryId = window.__allGroupsByCategoryId || {};
+    const groupsInCategory = allGroupsByCategoryId[targetCategoryId] || [];
+    const targetGroup = groupsInCategory.find(g => g.name === targetGroupName);
+    
+    if (!targetGroup) {
+        console.error(`❌ Skupina "${targetGroupName}" v kategórii "${targetCategoryName}" sa nenašla!`);
+        console.log("📋 Dostupné skupiny:", groupsInCategory.map(g => `${g.name} (${g.type})`));
+        return;
+    }
+    
+    console.log(`✅ Cieľová skupina: ${targetGroupName} (typ: ${targetGroup.type})`);
+    
+    // 4. Kontrola, či je poradie platné
+    if (targetOrder && (isNaN(targetOrder) || targetOrder < 1)) {
+        console.error(`❌ Poradie musí byť kladné číslo!`);
+        return;
+    }
+    
+    // 5. Presun podľa typu tímu
+    if (teamToMove.isSuperstructureTeam) {
+        await moveSuperstructureTeam(teamToMove, targetCategoryName, targetGroupName, targetOrder);
+    } else {
+        await moveUserTeam(teamToMove, targetCategoryName, targetGroupName, targetOrder);
+    }
+};
+
+// Pomocná funkcia pre superstructure tímy
+async function moveSuperstructureTeam(team, targetCategoryName, targetGroupName, targetOrder) {
+    const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
+    const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+    
+    try {
+        const docSnap = await getDoc(superstructureDocRef);
+        if (!docSnap.exists()) {
+            console.error("❌ Dokument superstructureGroups neexistuje!");
+            return;
+        }
+        
+        const data = docSnap.data() || {};
+        const sourceCategory = team.category;
+        
+        // Získame tímy v zdrojovej kategórii
+        let sourceTeams = [...(data[sourceCategory] || [])];
+        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
+        
+        if (teamIndex === -1) {
+            console.error("❌ Tím sa nenašiel v zdrojovej kategórii!");
+            return;
+        }
+        
+        // Odstránime tím zo zdrojovej kategórie
+        const movedTeam = { ...sourceTeams[teamIndex] };
+        sourceTeams.splice(teamIndex, 1);
+        
+        // Získame tímy v cieľovej kategórii
+        let targetTeams = [...(data[targetCategoryName] || [])];
+        
+        // Ak je cieľová skupina rovnaká ako zdrojová, použijeme upravené pole
+        if (sourceCategory === targetCategoryName) {
+            targetTeams = sourceTeams;
+        }
+        
+        // Zoradíme tímy v cieľovej skupine podľa poradia
+        const teamsInTargetGroup = targetTeams.filter(t => t.groupName === targetGroupName);
+        const otherTeams = targetTeams.filter(t => t.groupName !== targetGroupName);
+        
+        // Aktualizujeme poradie tímu
+        movedTeam.groupName = targetGroupName;
+        
+        // Určíme nové poradie
+        let newOrder = targetOrder;
+        if (!newOrder) {
+            const maxOrder = Math.max(...teamsInTargetGroup.map(t => t.order || 0), 0);
+            newOrder = maxOrder + 1;
+        } else {
+            // Posunieme tímy s poradím >= newOrder
+            const teamsToShift = teamsInTargetGroup.filter(t => t.order >= newOrder);
+            for (const t of teamsToShift) {
+                const idx = targetTeams.findIndex(tt => tt.id === t.id);
+                if (idx !== -1) {
+                    targetTeams[idx] = { ...t, order: t.order + 1 };
+                }
+            }
+        }
+        
+        movedTeam.order = newOrder;
+        
+        // Pridáme tím do cieľovej skupiny
+        const updatedTargetTeams = [...otherTeams, movedTeam];
+        
+        // Uložíme zmeny
+        const updatePayload = {};
+        if (sourceCategory === targetCategoryName) {
+            updatePayload[sourceCategory] = updatedTargetTeams;
+        } else {
+            updatePayload[sourceCategory] = sourceTeams;
+            updatePayload[targetCategoryName] = updatedTargetTeams;
+        }
+        
+        await updateDoc(superstructureDocRef, updatePayload);
+        
+        console.log(`✅ Tím "${team.teamName}" bol úspešne presunutý do skupiny "${targetGroupName}" na pozíciu ${newOrder}!`);
+        
+        // Aktualizácia lokálneho stavu
+        if (window.__refreshTeams) window.__refreshTeams();
+        
+    } catch (err) {
+        console.error("❌ Chyba pri presune superstructure tímu:", err);
+    }
+}
+
+// Pomocná funkcia pre používateľské tímy
+async function moveUserTeam(team, targetCategoryName, targetGroupName, targetOrder) {
+    try {
+        const userRef = doc(window.db, 'users', team.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            console.error("❌ Používateľ neexistuje!");
+            return;
+        }
+        
+        const userData = userSnap.data();
+        const sourceCategory = team.category;
+        
+        // Získame tímy v zdrojovej kategórii
+        let sourceTeams = [...(userData.teams?.[sourceCategory] || [])];
+        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
+        
+        if (teamIndex === -1) {
+            console.error("❌ Tím sa nenašiel v profile používateľa!");
+            return;
+        }
+        
+        // Odstránime tím zo zdrojovej kategórie
+        const movedTeam = { ...sourceTeams[teamIndex] };
+        sourceTeams.splice(teamIndex, 1);
+        
+        // Získame tímy v cieľovej kategórii (ak je rovnaká, použijeme sourceTeams)
+        let targetTeams;
+        if (sourceCategory === targetCategoryName) {
+            targetTeams = sourceTeams;
+        } else {
+            targetTeams = [...(userData.teams?.[targetCategoryName] || [])];
+        }
+        
+        // Zoradíme tímy v cieľovej skupine
+        const teamsInTargetGroup = targetTeams.filter(t => t.groupName === targetGroupName);
+        const otherTeams = targetTeams.filter(t => t.groupName !== targetGroupName);
+        
+        // Aktualizujeme tím
+        movedTeam.groupName = targetGroupName;
+        
+        // Určíme nové poradie
+        let newOrder = targetOrder;
+        if (!newOrder) {
+            const maxOrder = Math.max(...teamsInTargetGroup.map(t => t.order || 0), 0);
+            newOrder = maxOrder + 1;
+        } else {
+            // Posunieme tímy s poradím >= newOrder
+            const teamsToShift = teamsInTargetGroup.filter(t => t.order >= newOrder);
+            for (const t of teamsToShift) {
+                const idx = targetTeams.findIndex(tt => tt.id === t.id);
+                if (idx !== -1) {
+                    targetTeams[idx] = { ...t, order: t.order + 1 };
+                }
+            }
+        }
+        
+        movedTeam.order = newOrder;
+        
+        // Pridáme tím do cieľovej skupiny
+        const updatedTargetTeams = [...otherTeams, movedTeam];
+        
+        // Uložíme zmeny
+        if (sourceCategory === targetCategoryName) {
+            await updateDoc(userRef, { [`teams.${sourceCategory}`]: updatedTargetTeams });
+        } else {
+            await updateDoc(userRef, { 
+                [`teams.${sourceCategory}`]: sourceTeams,
+                [`teams.${targetCategoryName}`]: updatedTargetTeams
+            });
+        }
+        
+        console.log(`✅ Tím "${team.teamName}" bol úspešne presunutý do skupiny "${targetGroupName}" na pozíciu ${newOrder}!`);
+        
+        // Aktualizácia lokálneho stavu
+        if (window.__refreshTeams) window.__refreshTeams();
+        
+    } catch (err) {
+        console.error("❌ Chyba pri presune používateľského tímu:", err);
+    }
+}
+
+// Funkcia na aktualizáciu lokálnych dát
+window.__refreshTeams = () => {
+    // Vyvoláme udalosť pre aktualizáciu
+    if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('teamsUpdated'));
+    }
+    console.log("🔄 Požiadavka na aktualizáciu zoznamu tímov odoslaná.");
+};
+
+// Pomocná funkcia na zobrazenie všetkých tímov
+window.listAllTeams = () => {
+    const allTeams = window.__allTeams || [];
+    console.log("📋 Zoznam všetkých tímov:");
+    console.table(allTeams.map(t => ({
+        Názov: t.teamName,
+        Kategória: t.category,
+        Skupina: t.groupName || 'bez skupiny',
+        Poradie: t.order || '-',
+        Typ: t.isSuperstructureTeam ? 'Superstructure' : 'User'
+    })));
+    return allTeams;
+};
+
+// Pomocná funkcia na zobrazenie všetkých skupín
+window.listAllGroups = () => {
+    const allGroupsByCategoryId = window.__allGroupsByCategoryId || {};
+    const categoryIdToNameMap = window.__categoryIdToNameMap || {};
+    
+    console.log("📋 Zoznam všetkých skupín:");
+    for (const [categoryId, groups] of Object.entries(allGroupsByCategoryId)) {
+        const categoryName = categoryIdToNameMap[categoryId] || categoryId;
+        console.log(`\n📁 Kategória: ${categoryName}`);
+        groups.forEach(g => console.log(`   - ${g.name} (${g.type})`));
+    }
+};
+
+// Inicializácia globálnych premenných pre funkciu
+setTimeout(() => {
+    // Pokus o získanie aktuálnych dát z komponentu
+    if (window.AddTeamsGroupApp && window.AddTeamsGroupApp.__getCurrentState) {
+        const state = window.AddTeamsGroupApp.__getCurrentState();
+        window.__allTeams = state.allTeams;
+        window.__allGroupsByCategoryId = state.allGroupsByCategoryId;
+        window.__categoryIdToNameMap = state.categoryIdToNameMap;
+    }
+    console.log("🎯 Funkcia moveTeamToGroup je pripravená!");
+    console.log("📖 Príklad použitia: moveTeamToGroup('U12 CH 3E', 'U12 CH', 'Skupina A', 2)");
+    console.log("📖 Alebo bez uvedenia poradia: moveTeamToGroup('U12 CH 3E', 'U12 CH', 'Skupina A')");
+    console.log("📖 Zoznam všetkých tímov: listAllTeams()");
+    console.log("📖 Zoznam všetkých skupín: listAllGroups()");
+}, 1000);
