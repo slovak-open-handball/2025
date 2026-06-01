@@ -4510,6 +4510,68 @@ const AddMatchesApp = ({ userProfileData }) => {
         return saved === 'true';
     });
 
+    const getEnrichedUnassignedMatches = () => {
+        const unassignedMatches = matches.filter(m => !m.hallId);
+        
+        // Aplikujeme filtre
+        const filteredMatches = getFilteredMatches(unassignedMatches, true, true);
+        
+        // Obohatíme o počty členov
+        return filteredMatches.map(match => {
+            // Funkcia na získanie počtu členov (rovnaká ako v getMatchesForHallAndDay)
+            const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
+                if (!teamIdentifier) return 0;
+            
+                let teamDisplayName = null;
+                if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                    try {
+                        teamDisplayName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+                    } catch (e) {
+                        console.error(`getTotalMembersCountSync: Chyba pre "${teamIdentifier}":`, e);
+                    }
+                }
+            
+                const actualTeamName = teamDisplayName || teamIdentifier;
+            
+                if (!window.__allUsersCache) {
+                    console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
+                    return 0;
+                }
+            
+                for (const user of window.__allUsersCache) {
+                    if (!user.teams) continue;
+                    
+                    for (const [category, teamsArray] of Object.entries(user.teams)) {
+                        if (!Array.isArray(teamsArray)) continue;
+                        
+                        const team = teamsArray.find(t => 
+                            t.teamName === actualTeamName && 
+                            (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
+                        );
+                        
+                        if (team) {
+                            const playersCount = team.playerDetails?.length || 0;
+                            const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                            const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                            const womenDriversCount = team.driverDetailsFemale?.length || 0;
+                            const menDriversCount = team.driverDetailsMale?.length || 0;
+                            
+                            return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+                        }
+                    }
+                }
+                
+                return 0;
+            };
+            
+            return {
+                ...match,
+                homeTotalMembersCount: getTotalMembersCount(match.homeTeamIdentifier, match.categoryName),
+                awayTotalMembersCount: getTotalMembersCount(match.awayTeamIdentifier, match.categoryName)
+            };
+        });
+    };
+
     const measureDayCardsHeights = () => {
         setTimeout(() => {
             const dayCards = document.querySelectorAll('.day-card-measure');
@@ -7328,6 +7390,8 @@ const AddMatchesApp = ({ userProfileData }) => {
         right: { textAlign: 'right' }
     };
 
+    const enrichedUnassignedMatchesData = getEnrichedUnassignedMatches();
+
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         React.Fragment,
@@ -7818,68 +7882,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             },
                             'Pavúk'
                         ),
-        
-//                        React.createElement(
-//                            'div',
-//                            { className: 'flex items-center gap-1 ml-2' },
-//                            React.createElement('input', {
-//                                type: 'checkbox',
-//                                id: 'color-highlight',
-//                                checked: colorHighlight,
-//                                onChange: (e) => setColorHighlight(e.target.checked),
-//                                className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
-//                            }),
-//                            React.createElement('label', { 
-//                                htmlFor: 'color-highlight',
-//                                className: 'text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer' 
-//                            }, 'Podfarbenie')
-//                        ),
-                        
-                        // Oddeľovač
-//                        React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
-//                        
-//                        // Prepínač zobrazenia
-//                        React.createElement(
-//                            'div',
-//                            { className: 'flex items-center gap-1 bg-white/95 p-1 rounded-lg border border-gray-200' },
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'name' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('name')
-//                                },
-//                                'Názvy'
-//                            ),
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'id' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('id')
-//                                },
-//                                'ID'
-//                            ),
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'both' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('both')
-//                                },
-//                                'Oboje'
-//                            )
-//                        )
-                    ),
                     
                     generationInProgress && React.createElement(
                         'div',
@@ -8047,16 +8049,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
         React.createElement(
             'div',
-// { className: 'flex-grow flex justify-center items-start w-full' },
             { className: 'flex-grow flex justify-center items-start w-full' },
             React.createElement(
                 'div',
-// { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 { className: 'bg-white p-8', 
                     style: { 
-                        width: '100%',        // Zmeniť z fit-content na 100%
-                        maxWidth: '100%'       // Ponechať
-                        // margin: '0 auto'    // Odstrániť
+                        width: '100%',
+                        maxWidth: '100%'
                     }
                 },
                 
@@ -8105,7 +8104,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
-                                filteredUnassignedMatches.map(match => {
+                                enrichedUnassignedMatches.map(match => {
                                     // Získame zobrazenie pre tímy podľa prepínača
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
