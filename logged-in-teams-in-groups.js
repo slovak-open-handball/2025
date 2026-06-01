@@ -390,7 +390,7 @@ const AddTeamsGroupApp = (props) => {
                     
                     await updateDoc(superstructureDocRef, { [categoryName]: newTeams });
                     
-                    const swapMessage = `Výmena tímov: '${sourceGroup} (por. ${sourceOrder}) - ${teamToSwap.teamName}' ↔ '${targetGroup} (por. ${targetOrder}) - ${targetTeam.teamName}'`;
+                    const swapMessage = `Výmena tímov: '${sourceGroup} ${sourceOrder}. - ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. - ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
@@ -445,7 +445,7 @@ const AddTeamsGroupApp = (props) => {
                     
                     await updateDoc(userRef, { [`teams.${categoryName}`]: newTeams });
                     
-                    const swapMessage = `Výmena tímov: '${sourceGroup} (por. ${sourceOrder}) - ${teamToSwap.teamName}' ↔ '${targetGroup} (por. ${targetOrder}) - ${targetTeam.teamName}'`;
+                    const swapMessage = `Výmena tímov: '${sourceGroup} ${sourceOrder}. - ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. - ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
@@ -516,7 +516,7 @@ const AddTeamsGroupApp = (props) => {
                         updateDoc(targetUserRef, { [`teams.${categoryName}`]: newTargetTeams })
                     ]);
                     
-                    const swapMessage = `Výmena tímov: '${sourceGroup} (por. ${sourceOrder}) - ${teamToSwap.teamName}' ↔ '${targetGroup} (por. ${targetOrder}) - ${targetTeam.teamName}'`;
+                    const swapMessage = `Výmena tímov: '${sourceGroup} ${sourceOrder}. - ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. - ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
