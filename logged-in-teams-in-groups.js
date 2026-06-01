@@ -270,7 +270,7 @@ const AddTeamsGroupApp = (props) => {
                     notify(`Poradia tímov boli úspešne vymenené v skupine ${sourceGroupName}.`, "success");
                 }
             } 
-            // Výmena medzi RÔZNYMI skupinami - vymeníme skupiny AJ poradové čísla
+            // Výmena medzi RÔZNYMI skupinami - OPRAVENÁ VERZIA
             else {
                 // AKTUALIZÁCIA PRE SUPERSTRUCTURE TÍMY
                 if (teamToSwap.isSuperstructureTeam && targetTeam.isSuperstructureTeam) {
@@ -278,6 +278,7 @@ const AddTeamsGroupApp = (props) => {
                     const docSnap = await getDoc(superstructureDocRef);
                     const data = docSnap.exists() ? docSnap.data() : {};
                     
+                    // Vytvoríme KOPIU celého poľa tímov
                     let teams = [...(data[categoryName] || [])];
                     
                     const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
@@ -288,41 +289,48 @@ const AddTeamsGroupApp = (props) => {
                         return;
                     }
                     
-                    // VYMENÍME SKUPINY AJ PORADOVÉ ČÍSLA
+                    // ZAPAMATAME SI PÔVODNÉ HODNOTY
                     const sourceOriginalOrder = teams[sourceIndex].order;
                     const targetOriginalOrder = teams[targetIndex].order;
+                    const sourceOriginalGroup = teams[sourceIndex].groupName;
+                    const targetOriginalGroup = teams[targetIndex].groupName;
                     
-                    // Tím A dostane skupinu B a poradie B
-                    teams[sourceIndex] = {
+                    // VYTVORÍME NOVÉ OBJEKTY TÍMOV (nie len referencie)
+                    const newSourceTeam = {
                         ...teams[sourceIndex],
-                        groupName: targetGroupName,
+                        groupName: targetOriginalGroup,
                         order: targetOriginalOrder
                     };
                     
-                    // Tím B dostane skupinu A a poradie A
-                    teams[targetIndex] = {
+                    const newTargetTeam = {
                         ...teams[targetIndex],
-                        groupName: sourceGroupName,
+                        groupName: sourceOriginalGroup,
                         order: sourceOriginalOrder
                     };
                     
-                    await updateDoc(superstructureDocRef, { [categoryName]: teams });
+                    // Vytvoríme NOVÉ pole s vymenenými tímami
+                    const newTeams = [...teams];
+                    newTeams[sourceIndex] = newSourceTeam;
+                    newTeams[targetIndex] = newTargetTeam;
                     
-                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceGroupName}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetGroupName}, por. ${targetOriginalOrder})`;
+                    // Uložíme celé nové pole
+                    await updateDoc(superstructureDocRef, { [categoryName]: newTeams });
+                    
+                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceOriginalGroup}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetOriginalGroup}, por. ${targetOriginalOrder})`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
                         category: categoryName,
-                        groupName: targetGroupName,
+                        groupName: targetOriginalGroup,
                         order: targetOriginalOrder,
-                        oldGroup: sourceGroupName,
+                        oldGroup: sourceOriginalGroup,
                         oldOrder: sourceOriginalOrder,
                         message: swapMessage
                     });
                     
-                    notify(`Tímy boli úspešne vymenené: "${teamToSwap.teamName}" → ${targetGroupName} (por. ${targetOriginalOrder}), "${targetTeam.teamName}" → ${sourceGroupName} (por. ${sourceOriginalOrder})`, "success");
+                    notify(`Tímy boli úspešne vymenené: "${teamToSwap.teamName}" → ${targetOriginalGroup} (por. ${targetOriginalOrder}), "${targetTeam.teamName}" → ${sourceOriginalGroup} (por. ${sourceOriginalOrder})`, "success");
                 } 
-                // AKTUALIZÁCIA PRE POUŽÍVATEĽSKÉ TÍMY
+                // AKTUALIZÁCIA PRE POUŽÍVATEĽSKÉ TÍMY (rôzni používatelia ALEBO rovnaký používateľ)
                 else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam) {
                     const sourceUserRef = doc(window.db, 'users', teamToSwap.uid);
                     const targetUserRef = doc(window.db, 'users', targetTeam.uid);
@@ -351,42 +359,50 @@ const AddTeamsGroupApp = (props) => {
                         return;
                     }
                     
-                    // ZAPAMATAME SI POVODNE HODNOTY
+                    // ZAPAMATAME SI PÔVODNÉ HODNOTY
                     const sourceOriginalOrder = sourceTeams[sourceIndex].order;
                     const targetOriginalOrder = targetTeams[targetIndex].order;
+                    const sourceOriginalGroup = sourceTeams[sourceIndex].groupName;
+                    const targetOriginalGroup = targetTeams[targetIndex].groupName;
                     
-                    // VYMENÍME SKUPINY AJ PORADOVÉ ČÍSLA
-                    sourceTeams[sourceIndex] = {
+                    // VYTVORÍME NOVÉ OBJEKTY TÍMOV
+                    const newSourceTeam = {
                         ...sourceTeams[sourceIndex],
-                        groupName: targetGroupName,
+                        groupName: targetOriginalGroup,
                         order: targetOriginalOrder
                     };
                     
-                    targetTeams[targetIndex] = {
+                    const newTargetTeam = {
                         ...targetTeams[targetIndex],
-                        groupName: sourceGroupName,
+                        groupName: sourceOriginalGroup,
                         order: sourceOriginalOrder
                     };
                     
+                    // Vytvoríme NOVÉ polia
+                    const newSourceTeams = [...sourceTeams];
+                    const newTargetTeams = [...targetTeams];
+                    newSourceTeams[sourceIndex] = newSourceTeam;
+                    newTargetTeams[targetIndex] = newTargetTeam;
+                    
                     // Uložíme zmeny pre oboch používateľov
                     await Promise.all([
-                        updateDoc(sourceUserRef, { [`teams.${categoryName}`]: sourceTeams }),
-                        updateDoc(targetUserRef, { [`teams.${categoryName}`]: targetTeams })
+                        updateDoc(sourceUserRef, { [`teams.${categoryName}`]: newSourceTeams }),
+                        updateDoc(targetUserRef, { [`teams.${categoryName}`]: newTargetTeams })
                     ]);
                     
-                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceGroupName}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetGroupName}, por. ${targetOriginalOrder})`;
+                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceOriginalGroup}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetOriginalGroup}, por. ${targetOriginalOrder})`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
                         category: categoryName,
-                        groupName: targetGroupName,
+                        groupName: targetOriginalGroup,
                         order: targetOriginalOrder,
-                        oldGroup: sourceGroupName,
+                        oldGroup: sourceOriginalGroup,
                         oldOrder: sourceOriginalOrder,
                         message: swapMessage
                     });
                     
-                    notify(`Tímy boli úspešne vymenené: "${teamToSwap.teamName}" → ${targetGroupName} (por. ${targetOriginalOrder}), "${targetTeam.teamName}" → ${sourceGroupName} (por. ${sourceOriginalOrder})`, "success");
+                    notify(`Tímy boli úspešne vymenené: "${teamToSwap.teamName}" → ${targetOriginalGroup} (por. ${targetOriginalOrder}), "${targetTeam.teamName}" → ${sourceOriginalGroup} (por. ${sourceOriginalOrder})`, "success");
                 } else {
                     notify("Nie je možné vymeniť tím medzi superstructure a používateľským tímom.", "error");
                     return;
