@@ -202,7 +202,7 @@ const AddTeamsGroupApp = (props) => {
             const categoryName = teamToSwap.category;
             const sourceGroupName = teamToSwap.groupName;
             
-            // Nájdeme cieľový tím (môže byť v rovnakej alebo inej skupine)
+            // Nájdeme cieľový tím
             const targetTeam = allTeams.find(t => 
                 t.category === categoryName && 
                 t.groupName === targetGroupName && 
@@ -245,18 +245,6 @@ const AddTeamsGroupApp = (props) => {
                     
                     await updateDoc(superstructureDocRef, { [categoryName]: teams });
                     
-                    const swapMessage = `Výmena poradí v skupine ${sourceGroupName}: "${teamToSwap.teamName}" (por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (por. ${targetOrder})`;
-                    await createTeamAssignmentNotification('swap_teams', {
-                        id: teamToSwap.id,
-                        teamName: teamToSwap.teamName,
-                        category: categoryName,
-                        groupName: targetGroupName,
-                        order: targetOrder,
-                        oldGroup: sourceGroupName,
-                        oldOrder: sourceOrder,
-                        message: swapMessage
-                    });
-                    
                     notify(`Poradia tímov boli úspešne vymenené v skupine ${sourceGroupName}.`, "success");
                 } 
                 else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam && teamToSwap.uid === targetTeam.uid) {
@@ -279,18 +267,6 @@ const AddTeamsGroupApp = (props) => {
                     
                     await updateDoc(userRef, { [`teams.${categoryName}`]: teams });
                     
-                    const swapMessage = `Výmena poradí v skupine ${sourceGroupName}: "${teamToSwap.teamName}" (por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (por. ${targetOrder})`;
-                    await createTeamAssignmentNotification('swap_teams', {
-                        id: teamToSwap.id,
-                        teamName: teamToSwap.teamName,
-                        category: categoryName,
-                        groupName: targetGroupName,
-                        order: targetOrder,
-                        oldGroup: sourceGroupName,
-                        oldOrder: sourceOrder,
-                        message: swapMessage
-                    });
-                    
                     notify(`Poradia tímov boli úspešne vymenené v skupine ${sourceGroupName}.`, "success");
                 }
             } 
@@ -304,33 +280,58 @@ const AddTeamsGroupApp = (props) => {
                     
                     let teams = [...(data[categoryName] || [])];
                     
-                    // Nájdeme indexy oboch tímov
-                    const sourceIndex = teams.findIndex(t => t.id === teamToSwap.id);
-                    const targetIndex = teams.findIndex(t => t.id === targetTeam.id);
+                    // 1. Najprv ODSTRÁNIME oba tímy z polí (aby sme mohli správne prečíslovať)
+                    const teamsWithoutSource = teams.filter(t => t.id !== teamToSwap.id);
+                    const teamsWithoutBoth = teamsWithoutSource.filter(t => t.id !== targetTeam.id);
                     
-                    if (sourceIndex === -1 || targetIndex === -1) {
-                        notify("Jeden z tímov sa nenašiel.", "error");
-                        return;
-                    }
+                    // 2. Získame tímy v zdrojovej skupine (bez pôvodného tímu)
+                    const sourceGroupTeams = teamsWithoutBoth.filter(t => t.groupName === sourceGroupName);
+                    const otherTeams = teamsWithoutBoth.filter(t => t.groupName !== sourceGroupName && t.groupName !== targetGroupName);
                     
-                    // Zapamätáme si pôvodné hodnoty
-                    const sourceTeamOriginal = { ...teams[sourceIndex] };
-                    const targetTeamOriginal = { ...teams[targetIndex] };
+                    // 3. Získame tímy v cieľovej skupine (bez pôvodného tímu)
+                    const targetGroupTeams = teamsWithoutBoth.filter(t => t.groupName === targetGroupName);
                     
-                    // KOMPLETNÁ VÝMENA - skupina aj poradie
-                    teams[sourceIndex] = {
-                        ...teams[sourceIndex],
-                        groupName: targetTeamOriginal.groupName,
-                        order: targetTeamOriginal.order
+                    // 4. PRERADÍME poradia v zdrojovej skupine (posunieme všetky tímy s order > sourceOrder o -1)
+                    const updatedSourceGroupTeams = sourceGroupTeams.map(t => {
+                        if (t.order > sourceOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
+                    
+                    // 5. PRERADÍME poradia v cieľovej skupine (posunieme všetky tímy s order >= targetOrder o +1)
+                    //    Pozor: ak targetOrder je menšie ako sourceOrder, posúvame inak
+                    let updatedTargetGroupTeams = targetGroupTeams.map(t => {
+                        if (t.order >= targetOrder) {
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                    
+                    // 6. Vytvoríme NOVÉ tímy s novými skupinami a poradiami
+                    const newSourceTeam = {
+                        ...teamToSwap,
+                        groupName: targetGroupName,
+                        order: targetOrder
                     };
                     
-                    teams[targetIndex] = {
-                        ...teams[targetIndex],
-                        groupName: sourceTeamOriginal.groupName,
-                        order: sourceTeamOriginal.order
+                    const newTargetTeam = {
+                        ...targetTeam,
+                        groupName: sourceGroupName,
+                        order: sourceOrder
                     };
                     
-                    await updateDoc(superstructureDocRef, { [categoryName]: teams });
+                    // 7. Zložíme všetky tímy dohromady
+                    const finalTeams = [
+                        ...otherTeams,
+                        ...updatedSourceGroupTeams,
+                        ...updatedTargetGroupTeams,
+                        newSourceTeam,
+                        newTargetTeam
+                    ];
+                    
+                    // 8. Uložíme do Firestore
+                    await updateDoc(superstructureDocRef, { [categoryName]: finalTeams });
                     
                     const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceGroupName}, por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (${targetGroupName}, por. ${targetOrder})`;
                     await createTeamAssignmentNotification('swap_teams', {
@@ -361,40 +362,68 @@ const AddTeamsGroupApp = (props) => {
                         return;
                     }
                     
-                    const sourceUserData = sourceUserSnap.data();
-                    const targetUserData = targetUserSnap.data();
+                    let sourceUserData = sourceUserSnap.data();
+                    let targetUserData = targetUserSnap.data();
                     
                     let sourceTeams = [...(sourceUserData.teams?.[categoryName] || [])];
                     let targetTeams = [...(targetUserData.teams?.[categoryName] || [])];
                     
-                    const sourceIndex = sourceTeams.findIndex(t => t.id === teamToSwap.id);
-                    const targetIndex = targetTeams.findIndex(t => t.id === targetTeam.id);
+                    // 1. Odstránime oba tímy
+                    const sourceTeamsWithoutSource = sourceTeams.filter(t => t.id !== teamToSwap.id);
+                    const targetTeamsWithoutTarget = targetTeams.filter(t => t.id !== targetTeam.id);
                     
-                    if (sourceIndex === -1 || targetIndex === -1) {
-                        notify("Jeden z tímov sa nenašiel.", "error");
-                        return;
-                    }
+                    // 2. Spracujeme zdrojovú skupinu (posunieme tímy s order > sourceOrder o -1)
+                    const sourceGroupTeams = sourceTeamsWithoutSource.filter(t => t.groupName === sourceGroupName);
+                    const otherSourceTeams = sourceTeamsWithoutSource.filter(t => t.groupName !== sourceGroupName);
                     
-                    // Zapamätáme si pôvodné hodnoty
-                    const sourceTeamOriginal = { ...sourceTeams[sourceIndex] };
-                    const targetTeamOriginal = { ...targetTeams[targetIndex] };
+                    const updatedSourceGroupTeams = sourceGroupTeams.map(t => {
+                        if (t.order > sourceOrder) {
+                            return { ...t, order: t.order - 1 };
+                        }
+                        return t;
+                    });
                     
-                    // KOMPLETNÁ VÝMENA - skupina aj poradie
-                    sourceTeams[sourceIndex] = {
-                        ...sourceTeams[sourceIndex],
-                        groupName: targetTeamOriginal.groupName,
-                        order: targetTeamOriginal.order
+                    // 3. Spracujeme cieľovú skupinu (posunieme tímy s order >= targetOrder o +1)
+                    const targetGroupTeams = targetTeamsWithoutTarget.filter(t => t.groupName === targetGroupName);
+                    const otherTargetTeams = targetTeamsWithoutTarget.filter(t => t.groupName !== targetGroupName);
+                    
+                    const updatedTargetGroupTeams = targetGroupTeams.map(t => {
+                        if (t.order >= targetOrder) {
+                            return { ...t, order: t.order + 1 };
+                        }
+                        return t;
+                    });
+                    
+                    // 4. Vytvoríme nové tímy
+                    const newSourceTeam = {
+                        ...teamToSwap,
+                        groupName: targetGroupName,
+                        order: targetOrder
                     };
                     
-                    targetTeams[targetIndex] = {
-                        ...targetTeams[targetIndex],
-                        groupName: sourceTeamOriginal.groupName,
-                        order: sourceTeamOriginal.order
+                    const newTargetTeam = {
+                        ...targetTeam,
+                        groupName: sourceGroupName,
+                        order: sourceOrder
                     };
                     
+                    // 5. Zložíme finálne polia
+                    const finalSourceTeams = [
+                        ...otherSourceTeams,
+                        ...updatedSourceGroupTeams,
+                        newSourceTeam
+                    ];
+                    
+                    const finalTargetTeams = [
+                        ...otherTargetTeams,
+                        ...updatedTargetGroupTeams,
+                        newTargetTeam
+                    ];
+                    
+                    // 6. Uložíme
                     await Promise.all([
-                        updateDoc(sourceUserRef, { [`teams.${categoryName}`]: sourceTeams }),
-                        updateDoc(targetUserRef, { [`teams.${categoryName}`]: targetTeams })
+                        updateDoc(sourceUserRef, { [`teams.${categoryName}`]: finalSourceTeams }),
+                        updateDoc(targetUserRef, { [`teams.${categoryName}`]: finalTargetTeams })
                     ]);
                     
                     const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceGroupName}, por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (${targetGroupName}, por. ${targetOrder})`;
@@ -418,11 +447,9 @@ const AddTeamsGroupApp = (props) => {
             
             setSwapModal(null);
             
-            // Manuálna aktualizácia zoznamu tímov
+            // Obnovenie zobrazenia
             setTimeout(() => {
-                // Znovu načítame dáta
                 if (window.location && window.location.reload) {
-                    // Jemné obnovenie - necháme používateľa vedieť
                     notify("Zoznam tímov bol aktualizovaný.", "info");
                 }
             }, 500);
