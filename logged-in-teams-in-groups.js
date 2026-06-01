@@ -316,7 +316,7 @@ const AddTeamsGroupApp = (props) => {
                     // Uložíme celé nové pole
                     await updateDoc(superstructureDocRef, { [categoryName]: newTeams });
                     
-                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceOriginalGroup}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetOriginalGroup}, por. ${targetOriginalOrder})`;
+                    const swapMessage = `Výmena tímov: '${sourceOriginalGroup} ${sourceOriginalOrder}. - ${teamToSwap.teamName}' ↔ '${targetOriginalGroup} ${targetOriginalOrder}. - ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
@@ -390,7 +390,7 @@ const AddTeamsGroupApp = (props) => {
                         updateDoc(targetUserRef, { [`teams.${categoryName}`]: newTargetTeams })
                     ]);
                     
-                    const swapMessage = `Výmena tímov: "${teamToSwap.teamName}" (${sourceOriginalGroup}, por. ${sourceOriginalOrder}) ↔ "${targetTeam.teamName}" (${targetOriginalGroup}, por. ${targetOriginalOrder})`;
+                    const swapMessage = `Výmena tímov: '${sourceOriginalGroup} ${sourceOriginalOrder}. - ${teamToSwap.teamName}' ↔ '${targetOriginalGroup} ${targetOriginalOrder}. - ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
