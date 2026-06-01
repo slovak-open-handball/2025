@@ -6206,8 +6206,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // Funkcia na získanie celkového počtu členov tímu - OPRAVENÁ VERZIA
-            const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
+            // Funkcia na získanie celkového počtu členov tímu - OPRAVENÁ VERZIA (používa priamy prístup k users kolekcii)
+            const getTotalMembersCount = async (teamIdentifier, matchCategoryName) => {
                 if (!teamIdentifier) return 0;
             
                 // KROK 1: Získame názov tímu pomocou teamManager.getTeamNameByDisplayIdSync
@@ -6226,31 +6226,38 @@ const AddMatchesApp = ({ userProfileData }) => {
                 // Ak sa nepodarilo získať názov, použijeme pôvodný identifikátor ako fallback
                 const actualTeamName = teamDisplayName || teamIdentifier;
             
-                // KROK 2: Vyhľadáme tím v používateľských dokumentoch podľa názvu tímu a kategórie
-                // Najprv skúsime v teamData.allTeams
-                let foundTeam = null;
-                
-                if (teamData.allTeams && teamData.allTeams.length > 0) {
-                    foundTeam = teamData.allTeams.find(t => 
-                        t.category === matchCategoryName && 
-                        t.teamName === actualTeamName
-                    );
-                    if (foundTeam) {
-                        console.log(`getTotalMembersCount: Našiel som tím v teamData.allTeams podľa názvu "${actualTeamName}" a kategórie "${matchCategoryName}"`);
-                    }
+                // KROK 2: Vyhľadáme používateľa, ktorý vlastní tento tím
+                // Prejdeme všetkých používateľov v pamäti (ak sú k dispozícii)
+                if (!window.__allUsersCache) {
+                    console.warn('getTotalMembersCount: window.__allUsersCache nie je k dispozícii');
+                    return 0;
                 }
-                
-                // Ak nenašiel, skúsime v window.__teamManagerData?.allTeams
-                if (!foundTeam && window.__teamManagerData?.allTeams) {
-                    foundTeam = window.__teamManagerData.allTeams.find(t => 
-                        t.category === matchCategoryName && 
-                        t.teamName === actualTeamName
-                    );
-                    if (foundTeam) {
-                        console.log(`getTotalMembersCount: Našiel som tím v window.__teamManagerData.allTeams podľa názvu "${actualTeamName}" a kategórie "${matchCategoryName}"`);
-                        // Aktualizujeme teamData
-                        setTeamData(window.__teamManagerData);
+            
+                let foundTeam = null;
+                let foundUser = null;
+            
+                // Prehľadáme všetkých používateľov
+                for (const user of window.__allUsersCache) {
+                    if (!user.teams) continue;
+                    
+                    // Prehľadáme všetky kategórie v teams objekte
+                    for (const [category, teamsArray] of Object.entries(user.teams)) {
+                        if (!Array.isArray(teamsArray)) continue;
+                        
+                        // Hľadáme tím podľa kategórie a názvu tímu
+                        const team = teamsArray.find(t => 
+                            t.teamName === actualTeamName && 
+                            (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
+                        );
+                        
+                        if (team) {
+                            foundTeam = team;
+                            foundUser = user;
+                            console.log(`getTotalMembersCount: Našiel som tím v users kolekcii - používateľ: ${foundUser.email}, kategória: ${category}, názov: ${actualTeamName}`);
+                            break;
+                        }
                     }
+                    if (foundTeam) break;
                 }
             
                 if (!foundTeam) {
@@ -6258,7 +6265,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return 0;
                 }
             
-                // KROK 3: SÚČET všetkých členov tímu
+                // KROK 3: SÚČET všetkých členov tímu priamo z foundTeam (ktorý je z users kolekcie)
                 const playersCount = foundTeam.playerDetails?.length || 0;
                 const womenTeamMembersCount = foundTeam.womenTeamMemberDetails?.length || 0;
                 const menTeamMembersCount = foundTeam.menTeamMemberDetails?.length || 0;
@@ -6274,7 +6281,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     womenDriversCount,
                     menDriversCount,
                     total,
-                    foundTeamExists: !!foundTeam
+                    foundTeamExists: !!foundTeam,
+                    userId: foundUser?.id
                 });
                 
                 return total;
