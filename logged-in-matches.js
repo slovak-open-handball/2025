@@ -2631,7 +2631,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         backgroundColor: homeTeamColor, 
                                         width: '10px', 
                                         height: '100%',
-                                        fontSize: '9px',
+                                        fontSize: '11px',
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
@@ -2666,7 +2666,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         backgroundColor: awayTeamColor, 
                                         width: '10px', 
                                         height: '100%',
-                                        fontSize: '9px',
+                                        fontSize: '11px',
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
@@ -8357,7 +8357,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         backgroundColor: homeTeamColor, 
                                                         width: '10px', 
                                                         height: '100%',
-                                                        fontSize: '9px',
+                                                        fontSize: '11px',
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
@@ -8392,7 +8392,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         backgroundColor: awayTeamColor, 
                                                         width: '10px', 
                                                         height: '100%',
-                                                        fontSize: '9px',
+                                                        fontSize: '11px',
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
@@ -9343,7 +9343,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                backgroundColor: homeTeamColor, 
                                                                                                width: '20px', 
                                                                                                height: '100%',
-                                                                                               fontSize: '9px',
+                                                                                               fontSize: '11px',
                                                                                                fontWeight: 'bold',
                                                                                                color: '#000000'
                                                                                            },
@@ -9382,7 +9382,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                backgroundColor: awayTeamColor, 
                                                                                                width: '20px', 
                                                                                                height: '100%',
-                                                                                               fontSize: '9px',
+                                                                                               fontSize: '11px',
                                                                                                fontWeight: 'bold',
                                                                                                color: '#000000'
                                                                                            },
