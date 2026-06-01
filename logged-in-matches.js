@@ -8139,7 +8139,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     let awayName = '';
                                     let homeId = '';
                                     let awayId = '';
-                        
+                                
                                     // Spracujeme podľa režimu zobrazenia
                                     if (displayMode === 'both' && typeof homeTeamDisplay === 'object') {
                                         // Režim "Oboje" - máme objekt s name a id
@@ -8156,13 +8156,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         homeId = match.homeTeamIdentifier;
                                         awayId = match.awayTeamIdentifier;
                                     }
-                        
+                                
                                     // Funkcia na odstránenie názvu kategórie z názvu tímu
                                     const removeCategoryFromName = (teamName, categoryName) => {
                                         if (!teamName || !categoryName) return teamName;
                                         return teamName.replace(categoryName, '').replace(/^skupina\s+/i, '').trim();
                                     };
-                        
+                                
                                     const homeNameWithoutCategory = removeCategoryFromName(homeName, match.categoryName);
                                     const awayNameWithoutCategory = removeCategoryFromName(awayName, match.categoryName);
                                     
@@ -8173,14 +8173,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                     let homeTeamColor = '#f3f4f6';
                                     let awayTeamColor = '#f3f4f6';
-
+                                
                                     const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                     const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                     
                                     // Kontrola, či názov tímu obsahuje názov kategórie
                                     const homeTeamNameForColor = getTeamNameByIdentifier(match.homeTeamIdentifier);
                                     const awayTeamNameForColor = getTeamNameByIdentifier(match.awayTeamIdentifier);
-
+                                
                                     if (homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
                                         const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                                         if (accommodation) {
@@ -8189,7 +8189,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     } else if (!homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
                                         homeTeamColor = '#ffff00';
                                     }
-
+                                
                                     if (awayAccommodationName && !awayTeamNameForColor.includes(match.categoryName)) {
                                         const accommodation = accommodations.find(a => a.name === awayAccommodationName);
                                         if (accommodation) {
@@ -8259,9 +8259,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                     const letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                     
+                                    // *** HLAVNÁ ZMENA: Používame správne premenné pre počet členov ***
                                     const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
                                         if (!teamIdentifier) return 0;
-    
+                                
                                         // KROK 1: Získame názov tímu
                                         let teamDisplayName = null;
                                         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
@@ -8273,13 +8274,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         }
                                     
                                         const actualTeamName = teamDisplayName || teamIdentifier;
-    
+                                
                                         // KROK 2: Vyhľadáme v cache
                                         if (!window.__allUsersCache) {
                                             console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
                                             return 0;
                                         }
-    
+                                
                                         for (const user of window.__allUsersCache) {
                                             if (!user.teams) continue;
                                             
@@ -8290,7 +8291,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     t.teamName === actualTeamName && 
                                                     (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
                                                 );
-                
+                                
                                                 if (team) {
                                                     const playersCount = team.playerDetails?.length || 0;
                                                     const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
@@ -8302,10 +8303,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         }
-        
+                                
                                         return 0;
                                     };
-    
+                                
                                     const homeMemberCount = getTotalMembersCountForMatch(match.homeTeamIdentifier, match.categoryName);
                                     const awayMemberCount = getTotalMembersCountForMatch(match.awayTeamIdentifier, match.categoryName);
                                     
@@ -8341,13 +8342,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'span',
                                                     { 
                                                         className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        style: { color: '#000000' }, // FARBA: VŽDY ČIERNA
+                                                        style: { color: '#000000' },
                                                         title: homeName 
                                                     },
                                                     homeName
                                                 )
                                             ),
-                                            // Stĺpec pre farbu domáceho tímu
+                                            // Stĺpec pre farbu domáceho tímu - **POUŽÍVA homeMemberCount**
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -8361,9 +8362,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
+                                                    title: `Počet členov tímu: ${homeMemberCount || 0}`
                                                 },
-                                                React.createElement('span', null, match.homeTotalMembersCount || 0)
+                                                React.createElement('span', null, homeMemberCount || 0)
                                             ),
                                             // Hosťovský tím
                                             React.createElement(
@@ -8376,13 +8377,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'span',
                                                     { 
                                                         className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                        style: { color: '#000000' }, // FARBA: VŽDY ČIERNA
+                                                        style: { color: '#000000' },
                                                         title: awayName 
                                                     },
                                                     awayName
                                                 )
                                             ),
-                                            // Stĺpec pre farbu hosťovského tímu
+                                            // Stĺpec pre farbu hosťovského tímu - **POUŽÍVA awayMemberCount**
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -8396,9 +8397,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
+                                                    title: `Počet členov tímu: ${awayMemberCount || 0}`
                                                 },
-                                                React.createElement('span', null, match.awayTotalMembersCount || 0)
+                                                React.createElement('span', null, awayMemberCount || 0)
                                             ),
                                             // Kombinované čísla (homeNumber-awayNumber)
                                             !isSpecialMatch && React.createElement(
