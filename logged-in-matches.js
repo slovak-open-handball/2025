@@ -6206,50 +6206,62 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - SPRÁVNY SÚČET 5 POLÍ
-                const getTotalMembersCount = (teamIdentifier) => {
+            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - POUŽÍVA teamManager.getTeamByDisplayIdSync()
+            const getTotalMembersCount = (teamIdentifier) => {
                 if (!teamIdentifier) return 0;
-            
-                // Použijeme window.__teamManagerData priamo (je to globálna premenná)
-                const allTeams = window.__teamManagerData?.allTeams || [];
-                
-                // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
-                const parts = teamIdentifier.split(' ');
-                if (parts.length < 2) return 0;
-                
-                const groupAndOrder = parts.pop();
-                const categoryName = parts.join(' ');
     
-                // Rozdelenie groupAndOrder na groupName a order
-                let groupName = '';
-                let order = '';
+                // KĽÚČOVÉ: Použijeme window.teamManager.getTeamByDisplayIdSync() na získanie kompletných údajov tímu
+                // Táto funkcia vráti tím so všetkými poľami (playerDetails, womenTeamMemberDetails, atď.)
+                let foundTeam = null;
                 
-                for (let i = 0; i < groupAndOrder.length; i++) {
-                    const char = groupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
-                        order = groupAndOrder.substring(i);
-                        groupName = groupAndOrder.substring(0, i);
-                        break;
+                // Skúsime najprv sync verziu (ak existuje)
+                if (window.teamManager && typeof window.teamManager.getTeamByDisplayIdSync === 'function') {
+                    foundTeam = window.teamManager.getTeamByDisplayIdSync(teamIdentifier);
+                }
+                
+                // Ak sync verzia neexistuje alebo nevrátila výsledok, skúsime async (ale to je komplikované)
+                // Pre jednoduchosť použijeme window.__teamManagerDataRaw ak existuje
+                if (!foundTeam && window.__teamManagerDataRaw) {
+                    // window.__teamManagerDataRaw by mal obsahovať kompletných tímov
+                    const allTeams = window.__teamManagerDataRaw.allTeams || [];
+                    
+                    // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
+                    const parts = teamIdentifier.split(' ');
+                    if (parts.length < 2) return 0;
+                    
+                    const groupAndOrder = parts.pop();
+                    const categoryName = parts.join(' ');
+                    
+                    // Rozdelenie groupAndOrder na groupName a order
+                    let groupName = '';
+                    let order = '';
+                    
+                    for (let i = 0; i < groupAndOrder.length; i++) {
+                        const char = groupAndOrder[i];
+                        if (char >= '0' && char <= '9') {
+                            order = groupAndOrder.substring(i);
+                            groupName = groupAndOrder.substring(0, i);
+                            break;
+                        }
                     }
+                    
+                    if (!order) {
+                        order = '?';
+                        groupName = groupAndOrder;
+                    }
+                    
+                    const groupNameWithPrefix = `skupina ${groupName}`;
+                    
+                    foundTeam = allTeams.find(t =>
+                        t.category === categoryName &&
+                        (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                        t.order?.toString() === order
+                    );
                 }
-                
-                if (!order) {
-                    order = '?';
-                    groupName = groupAndOrder;
-                }
-                
-                const groupNameWithPrefix = `skupina ${groupName}`;
-                
-                // Hľadanie tímu v teamData
-                const foundTeam = allTeams.find(t =>
-                    t.category === categoryName &&
-                    (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
-                    t.order?.toString() === order
-                );
                 
                 if (!foundTeam) return 0;
                 
-                // KĽÚČOVÉ: POČÍTAME PRIAMO DĹŽKY POLÍ, NEPOUŽÍVAME PREDPOČÍTANÉ HODNOTY
+                // TERAZ POČÍTAME PRIAMO DĹŽKY POLÍ z foundTeam (ktorý má všetky detaily)
                 const playersCount = foundTeam.playerDetails?.length || 0;
                 const womenTeamMembersCount = foundTeam.womenTeamMemberDetails?.length || 0;
                 const menTeamMembersCount = foundTeam.menTeamMemberDetails?.length || 0;
@@ -6265,9 +6277,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                     menDriversCount,
                     total: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount,
                     foundTeamExists: !!foundTeam,
-                    foundTeamKeys: foundTeam ? Object.keys(foundTeam) : []
+                    hasPlayerDetails: !!foundTeam.playerDetails,
+                    playerDetailsLength: foundTeam.playerDetails?.length || 0,
+                    hasWomenTeamMemberDetails: !!foundTeam.womenTeamMemberDetails,
+                    hasMenTeamMemberDetails: !!foundTeam.menTeamMemberDetails,
+                    hasDriverDetailsFemale: !!foundTeam.driverDetailsFemale,
+                    hasDriverDetailsMale: !!foundTeam.driverDetailsMale
                 });
-    
+                
                 // Vrátime SÚČET všetkých piatich hodnôt
                 return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
             };
