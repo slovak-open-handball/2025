@@ -2153,6 +2153,58 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return display;
     };
 
+    const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
+        if (!teamIdentifier) return 0;
+    
+        // Nájdenie tímu v teamData podľa identifikátora
+        const allTeams = window.__teamManagerData?.allTeams || [];
+        
+        // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
+        const parts = teamIdentifier.split(' ');
+        if (parts.length < 2) return 0;
+        
+        const groupAndOrder = parts.pop();
+        const categoryName = parts.join(' ');
+        
+        // Rozdelenie groupAndOrder na groupName a order
+        let groupName = '';
+        let order = '';
+        
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupName = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) {
+            order = '?';
+            groupName = groupAndOrder;
+        }
+        
+        const groupNameWithPrefix = `skupina ${groupName}`;
+        
+        // Hľadanie tímu v teamData
+        const foundTeam = allTeams.find(t =>
+            t.category === categoryName &&
+            (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+            t.order?.toString() === order
+        );
+        
+        if (!foundTeam) return 0;
+        
+        // SÚČET: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount
+        const playersCount = foundTeam._players !== undefined ? foundTeam._players : (foundTeam.playerDetails?.length || 0);
+        const womenTeamMembersCount = foundTeam._womenTeamMembersCount !== undefined ? foundTeam._womenTeamMembersCount : (foundTeam.womenTeamMemberDetails?.length || 0);
+        const menTeamMembersCount = foundTeam._menTeamMembersCount !== undefined ? foundTeam._menTeamMembersCount : (foundTeam.menTeamMemberDetails?.length || 0);
+        const womenDriversCount = foundTeam._womenDriversCount !== undefined ? foundTeam._womenDriversCount : (foundTeam.driverDetailsFemale?.length || 0);
+        const menDriversCount = foundTeam._menDriversCount !== undefined ? foundTeam._menDriversCount : (foundTeam.driverDetailsMale?.length || 0);
+        
+        return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+    };
+
     // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
     // Podporuje formáty: "tým1 = tým2", "tým1=tým2", "tým1= tým2", "tým1 =tým2"
     const extractTeamsFromSearch = (search) => {
@@ -2492,6 +2544,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     // Farby ubytovní pre tímy
                     const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
                     const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
+
+                    const homeTeamMemberCount = getTotalMembersCountForMatch(match.homeTeamIdentifier, match.categoryName);
+                    const awayTeamMemberCount = getTotalMembersCountForMatch(match.awayTeamIdentifier, match.categoryName);
                     
                     // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
@@ -2585,9 +2640,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
-                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
+                                    title: `Počet členov tímu: ${homeTeamMemberCount || 0}`
                                 },
-                                React.createElement('span', null, match.homeTotalMembersCount || 0)
+                                React.createElement('span', null, homeTeamMemberCount || 0)
                             ),
                             // Hosťovský tím
                             React.createElement(
@@ -2620,9 +2675,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         fontWeight: 'bold',
                                         color: '#000000'
                                     },
-                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
+                                    title: `Počet členov tímu: ${awayTeamMemberCount || 0}`
                                 },
-                                React.createElement('span', null, match.awayTotalMembersCount || 0)
+                                React.createElement('span', null, awayTeamMemberCount || 0)
                             ),
                             // Kombinované čísla alebo špeciálny text
                             !isSpecialMatch ? React.createElement(
