@@ -6206,25 +6206,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - POUŽÍVA teamManager.getTeamByDisplayIdSync()
+            // FUNKCIA NA ZÍSKANIE CELKOVÉHO POČTU ČLENOV TÍMU - POUŽÍVA ROVNAKÚ LOGIKU AKO getTeamNameByIdentifier
             const getTotalMembersCount = (teamIdentifier) => {
                 if (!teamIdentifier) return 0;
     
-                // KĽÚČOVÉ: Použijeme window.teamManager.getTeamByDisplayIdSync() na získanie kompletných údajov tímu
-                // Táto funkcia vráti tím so všetkými poľami (playerDetails, womenTeamMemberDetails, atď.)
+                // KĽÚČOVÉ: Použijeme ROVNAKÚ logiku ako getTeamNameByIdentifier na nájdenie tímu
+                // Najprv nájdeme tím pomocou rovnakej logiky
                 let foundTeam = null;
                 
-                // Skúsime najprv sync verziu (ak existuje)
-                if (window.teamManager && typeof window.teamManager.getTeamByDisplayIdSync === 'function') {
-                    foundTeam = window.teamManager.getTeamByDisplayIdSync(teamIdentifier);
-                }
-                
-                // Ak sync verzia neexistuje alebo nevrátila výsledok, skúsime async (ale to je komplikované)
-                // Pre jednoduchosť použijeme window.__teamManagerDataRaw ak existuje
-                if (!foundTeam && window.__teamManagerDataRaw) {
-                    // window.__teamManagerDataRaw by mal obsahovať kompletných tímov
-                    const allTeams = window.__teamManagerDataRaw.allTeams || [];
-                    
+                // 1. Skúsime nájsť v teamData.allTeams (rovnaké ako getTeamNameByIdentifier)
+                if (teamData.allTeams && teamData.allTeams.length > 0) {
                     // Parsovanie identifikátora: "Kategória SkupinaOrder" (napr. "U10 A1")
                     const parts = teamIdentifier.split(' ');
                     if (parts.length < 2) return 0;
@@ -6232,7 +6223,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const groupAndOrder = parts.pop();
                     const categoryName = parts.join(' ');
                     
-                    // Rozdelenie groupAndOrder na groupName a order
                     let groupName = '';
                     let order = '';
                     
@@ -6252,23 +6242,57 @@ const AddMatchesApp = ({ userProfileData }) => {
                     
                     const groupNameWithPrefix = `skupina ${groupName}`;
                     
-                    foundTeam = allTeams.find(t =>
+                    foundTeam = teamData.allTeams.find(t =>
                         t.category === categoryName &&
                         (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
                         t.order?.toString() === order
                     );
                 }
                 
+                // 2. Ak nenašiel, skúsime v window.__teamManagerData?.allTeams
+                if (!foundTeam && window.__teamManagerData?.allTeams) {
+                    const parts = teamIdentifier.split(' ');
+                    if (parts.length >= 2) {
+                        const groupAndOrder = parts.pop();
+                        const categoryName = parts.join(' ');
+                        
+                        let groupName = '';
+                        let order = '';
+                        
+                        for (let i = 0; i < groupAndOrder.length; i++) {
+                            const char = groupAndOrder[i];
+                            if (char >= '0' && char <= '9') {
+                                order = groupAndOrder.substring(i);
+                                groupName = groupAndOrder.substring(0, i);
+                                break;
+                            }
+                        }
+                        
+                        if (!order) {
+                            order = '?';
+                            groupName = groupAndOrder;
+                        }
+                        
+                        const groupNameWithPrefix = `skupina ${groupName}`;
+                        
+                        foundTeam = window.__teamManagerData.allTeams.find(t =>
+                            t.category === categoryName &&
+                            (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                            t.order?.toString() === order
+                        );
+                    }
+                }
+                
                 if (!foundTeam) return 0;
                 
-                // TERAZ POČÍTAME PRIAMO DĹŽKY POLÍ z foundTeam (ktorý má všetky detaily)
+                // TERAZ POČÍTAME DĹŽKY POLÍ PRIAMO Z foundTeam
+                // foundTeam by mal obsahovať všetky polia (playerDetails, womenTeamMemberDetails, atď.)
                 const playersCount = foundTeam.playerDetails?.length || 0;
                 const womenTeamMembersCount = foundTeam.womenTeamMemberDetails?.length || 0;
                 const menTeamMembersCount = foundTeam.menTeamMemberDetails?.length || 0;
                 const womenDriversCount = foundTeam.driverDetailsFemale?.length || 0;
                 const menDriversCount = foundTeam.driverDetailsMale?.length || 0;
                 
-                // DEBUG výpis (odstráňte po otestovaní)
                 console.log(`getTotalMembersCount pre ${teamIdentifier}:`, {
                     playersCount,
                     womenTeamMembersCount,
@@ -6277,15 +6301,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                     menDriversCount,
                     total: playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount,
                     foundTeamExists: !!foundTeam,
-                    hasPlayerDetails: !!foundTeam.playerDetails,
-                    playerDetailsLength: foundTeam.playerDetails?.length || 0,
-                    hasWomenTeamMemberDetails: !!foundTeam.womenTeamMemberDetails,
-                    hasMenTeamMemberDetails: !!foundTeam.menTeamMemberDetails,
-                    hasDriverDetailsFemale: !!foundTeam.driverDetailsFemale,
-                    hasDriverDetailsMale: !!foundTeam.driverDetailsMale
+                    foundTeamKeys: foundTeam ? Object.keys(foundTeam).slice(0, 10) : []
                 });
                 
-                // Vrátime SÚČET všetkých piatich hodnôt
                 return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
             };
         
