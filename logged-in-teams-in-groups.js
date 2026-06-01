@@ -1229,7 +1229,8 @@ const AddTeamsGroupApp = (props) => {
         
         const handleSwap = () => {
             if (selectedTeam) {
-                onSwap(team, selectedGroup, selectedTeam);
+                const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
+                onSwap(team, targetGroup, selectedTeam);
             }
         };
         
@@ -1345,7 +1346,10 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement(
                             'button',
                             {
-                                onClick: handleSwap,
+                                onClick: () => {
+                                    const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
+                                    onSwap(team, targetGroup, selectedTeam);
+                                },
                                 disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
                                 className: `px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 border-2 ${
                                     (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
