@@ -8259,6 +8259,56 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                     const letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                     
+                                    const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
+                                        if (!teamIdentifier) return 0;
+    
+                                        // KROK 1: Získame názov tímu
+                                        let teamDisplayName = null;
+                                        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                                            try {
+                                                teamDisplayName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+                                            } catch (e) {
+                                                console.error(`getTotalMembersCountSync: Chyba pre "${teamIdentifier}":`, e);
+                                            }
+                                        }
+                                    
+                                        const actualTeamName = teamDisplayName || teamIdentifier;
+    
+                                        // KROK 2: Vyhľadáme v cache
+                                        if (!window.__allUsersCache) {
+                                            console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
+                                            return 0;
+                                        }
+    
+                                        for (const user of window.__allUsersCache) {
+                                            if (!user.teams) continue;
+                                            
+                                            for (const [category, teamsArray] of Object.entries(user.teams)) {
+                                                if (!Array.isArray(teamsArray)) continue;
+                                                
+                                                const team = teamsArray.find(t => 
+                                                    t.teamName === actualTeamName && 
+                                                    (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
+                                                );
+                
+                                                if (team) {
+                                                    const playersCount = team.playerDetails?.length || 0;
+                                                    const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                                                    const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                                                    const womenDriversCount = team.driverDetailsFemale?.length || 0;
+                                                    const menDriversCount = team.driverDetailsMale?.length || 0;
+                                                    
+                                                    return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+                                                }
+                                            }
+                                        }
+        
+                                        return 0;
+                                    };
+    
+                                    const homeMemberCount = getTotalMembersCountForMatch(match.homeTeamIdentifier, match.categoryName);
+                                    const awayMemberCount = getTotalMembersCountForMatch(match.awayTeamIdentifier, match.categoryName);
+                                    
                                     return React.createElement(
                                         'div',
                                         { 
@@ -8311,9 +8361,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
+                                                    title: `Počet členov tímu: ${homeMemberCount || 0}`
                                                 },
-                                                React.createElement('span', null, match.homeTotalMembersCount || 0)
+                                                React.createElement('span', null, homeMemberCount || 0)
                                             ),
                                             // Hosťovský tím
                                             React.createElement(
@@ -8346,9 +8396,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         fontWeight: 'bold',
                                                         color: '#000000'
                                                     },
-                                                    title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
+                                                    title: `Počet členov tímu: ${awayMemberCount || 0}`
                                                 },
-                                                React.createElement('span', null, match.awayTotalMembersCount || 0)
+                                                React.createElement('span', null, awayMemberCount || 0)
                                             ),
                                             // Kombinované čísla (homeNumber-awayNumber)
                                             !isSpecialMatch && React.createElement(
@@ -9297,9 +9347,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                fontWeight: 'bold',
                                                                                                color: '#000000'
                                                                                            },
-                                                                                           title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}`
+                                                                                           title: `Počet členov tímu: ${homeMemberCount || 0}`
                                                                                        },
-                                                                                       React.createElement('span', null, match.homeTotalMembersCount || 0)
+                                                                                       React.createElement('span', null, homeMemberCount || 0)
                                                                                    ),
                                                                                    React.createElement(
                                                                                        'div', 
@@ -9336,9 +9386,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                fontWeight: 'bold',
                                                                                                color: '#000000'
                                                                                            },
-                                                                                           title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}`
+                                                                                           title: `Počet členov tímu: ${awayMemberCount || 0}`
                                                                                        },
-                                                                                       React.createElement('span', null, match.awayTotalMembersCount || 0)
+                                                                                       React.createElement('span', null, awayMemberCount || 0)
                                                                                    ),
                                                                                    !isSpecialMatch && React.createElement(
                                                                                        React.Fragment,
