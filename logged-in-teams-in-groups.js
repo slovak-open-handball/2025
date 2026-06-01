@@ -256,7 +256,7 @@ const AddTeamsGroupApp = (props) => {
                     await updateDoc(superstructureDocRef, { [categoryName]: newTeams });
                     
                     // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY
-                    const swapMessage = `Výmena poradí v rámci skupiny '${sourceGroupName}': '${teamToSwap.teamName}' (por. ${sourceOrder} ↔ '${targetTeam.teamName}' (por. ${targetOrder})`;
+                    const swapMessage = `Výmena poradia tímov v rámci skupiny '${sourceGroupName}: ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams_same_group', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
@@ -270,7 +270,7 @@ const AddTeamsGroupApp = (props) => {
                         message: swapMessage
                     });
                     
-                    notify(`Poradia boli vymenené v skupine ${sourceGroupName}: ${teamToSwap.teamName} (${sourceOrder} → ${targetOrder}), ${targetTeam.teamName} (${targetOrder} → ${sourceOrder})`, "success");
+                    notify(`Výmena poradia tímov v rámci skupiny '${sourceGroupName}: ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}', "success");
                 }
                 // POUŽÍVATEĽSKÉ TÍMY - môžu byť od ROVNAKÉHO alebo RÔZNYCH používateľov
                 else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam) {
@@ -311,7 +311,7 @@ const AddTeamsGroupApp = (props) => {
                         await updateDoc(userRef, { [`teams.${categoryName}`]: newTeams });
                         
                         // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY (rovnaký používateľ)
-                        const swapMessage = `Výmena poradí v rámci skupiny '${sourceGroupName}': '${teamToSwap.teamName}' (por. ${sourceOrder} ↔ '${targetTeam.teamName}' (por. ${targetOrder})`;
+                        const swapMessage = `Výmena poradia tímov v rámci skupiny '${sourceGroupName}: ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}';
                         await createTeamAssignmentNotification('swap_teams_same_group_user', {
                             id: teamToSwap.id,
                             teamName: teamToSwap.teamName,
@@ -383,7 +383,7 @@ const AddTeamsGroupApp = (props) => {
                         ]);
                         
                         // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY (rôzni používatelia)
-                        const swapMessage = `Výmena poradí v rámci skupiny '${sourceGroupName}': '${teamToSwap.teamName}' (por. ${sourceOrder} ↔ '${targetTeam.teamName}' (por. ${targetOrder}) medzi rôznymi používateľmi`;
+                        const swapMessage = `Výmena poradia tímov v rámci skupiny '${sourceGroupName}: ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}';
                         await createTeamAssignmentNotification('swap_teams_same_group_cross_user', {
                             id: teamToSwap.id,
                             teamName: teamToSwap.teamName,
