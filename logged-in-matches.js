@@ -2727,7 +2727,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     React.createElement(
                                         'span',
                                         { 
-                                            className: 'text-black font-bold text-[10px] block w-full',
+                                            className: 'text-black font-bold text-[8px] block w-full',
                                             style: { color: '#000', textShadow: 'none', whiteSpace: 'nowrap', wordBreak: 'keep-all' }
                                         },
                                         specialMatchText
