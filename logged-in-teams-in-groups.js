@@ -421,66 +421,46 @@ const AddTeamsGroupApp = (props) => {
             teamNameWithoutCategory = teamName;
         }
     
-        console.log(`Kontrolujem tím: ${teamName}`);
-        console.log(`Kategória: ${categoryName}`);
-        console.log(`Názov bez kategórie: ${teamNameWithoutCategory}`);
-        console.log(`Aktuálna skupina tímu: ${currentGroupName}`);
-    
         // Extrahujeme číselnú časť a písmeno z názvu tímu
         // Hľadáme vzor: číslo + písmeno na KONCI reťazca (napr. "3E" v "U12 CH 3E")
         const match = teamNameWithoutCategory.match(/(\d+)([A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ])$/);
         
         if (!match) {
-            console.log(`Nenašiel sa vzor číslo+písmeno na konci názvu: ${teamNameWithoutCategory}`);
             return false;
         }
     
-        const teamNumber = match[1]; // Napr. "3"
-        const teamLetter = match[2]; // Napr. "E"
-    
-        console.log(`Extrahované číslo: ${teamNumber}, písmeno: ${teamLetter}`);
+        const teamNumber = match[1];
+        const teamLetter = match[2];
     
         // Nájdeme ID kategórie podľa názvu
         const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
         
         if (!categoryId) {
-            console.log(`Nenašlo sa ID pre kategóriu ${categoryName}`);
             return false;
         }
     
         // Získame všetky skupiny v tejto kategórii
         const groupsInCategory = allGroupsByCategoryId[categoryId] || [];
-        console.log(`Skupiny v kategórii ${categoryName}:`, groupsInCategory.map(g => g.name));
     
         // Nájdeme skupinu, ktorá končí na teamLetter (napr. "Skupina E")
         const targetGroup = groupsInCategory.find(g => g.name.slice(-1) === teamLetter);
         
         if (!targetGroup) {
-            console.log(`Nenašla sa skupina končiaca na ${teamLetter} v kategórii ${categoryName}`);
             return false;
-        }
-    
-        console.log(`Cieľová skupina: ${targetGroup.name}`);
+        }    
     
         // Nájdeme všetky tímy v cieľovej skupine
         const teamsInTargetGroup = allTeams.filter(t => 
             t.category === categoryName && 
             t.groupName === targetGroup.name
         );
-    
-        console.log(`Tímy v skupine ${targetGroup.name}:`, teamsInTargetGroup.map(t => ({
-            name: t.teamName,
-            order: t.order
-        })));
-    
+      
         // Skontrolujeme, či existuje tím s order = teamNumber
         const teamExists = teamsInTargetGroup.some(t => t.order === parseInt(teamNumber, 10));
     
         if (teamExists) {
-            console.log(`✓ Tím ${teamName} má zástupcu v skupine ${targetGroup.name} na pozícii ${teamNumber}`);
             return true;
         } else {
-            console.log(`✗ Tím ${teamName} NEMÁ zástupcu v skupine ${targetGroup.name} na pozícii ${teamNumber}`);
             return false;
         }
     };
@@ -546,7 +526,6 @@ const AddTeamsGroupApp = (props) => {
                 }
                 try {
                     await updateDoc(docRef, { [categoryName]: teams });
-                    console.log("[SUCCESS] Nadstavbová skupina aktualizovaná – posunuté tímy");
                 } catch (err) {
                     console.error("[CHYBA superstructure update]:", err);
                 }
@@ -597,7 +576,6 @@ const AddTeamsGroupApp = (props) => {
                         await updateDoc(userRef, {
                             [`teams.${categoryName}`]: teamsInCategory
                         });
-                        console.log(`[SUCCESS] Používateľ ${userDoc.id} – posunuté tímy`);
                     } catch (err) {
                         console.error(`[CHYBA] Používateľ ${userDoc.id}:`, err);
                     }
@@ -685,13 +663,11 @@ const AddTeamsGroupApp = (props) => {
                 relatedCategory: category,
                 relatedGroup: group || null,
                 actionType: action,
-                // Pridáme dodatočné informácie pre lepšie sledovanie zmien
                 oldGroup: team.oldGroup || null,
                 newGroup: team.groupName || null,
                 oldOrder: team.oldOrder || null,
                 newOrder: team.newOrder || team.order || null
             });
-            console.log("[NOTIFIKÁCIA] Uložená:", message);
         } catch (err) {
             console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
         }
@@ -704,8 +680,6 @@ const AddTeamsGroupApp = (props) => {
               
               if (window.matchTracker && typeof window.matchTracker.refreshTeamNameMappings === 'function') {
                   window.matchTracker.refreshTeamNameMappings();
-              } else if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                  console.log('🔄 [Mapovanie] Prekreslenie po zmene výberu');
               }
           }, 50);
       }
@@ -729,23 +703,19 @@ const AddTeamsGroupApp = (props) => {
         };
       }, []);
 
-    // ============================================================
-    // 🔥 AUTOMATICKÉ MAPOVANIE TÍMOV PRE NADSTAVBOVÉ SKUPINY
-    // ============================================================
     useEffect(() => {
         let isMounted = true;
-        let hasApplied = false; // 🔥 PRIDAJTE FLAG
+        let hasApplied = false;
     
         const forceRerender = () => {
             if (isMounted && !hasApplied) {
                 setAllTeams(prevTeams => [...prevTeams]);
-                hasApplied = true; // 🔥 NASTAVÍME, ŽE SME UŽ APLIKOVALI
+                hasApplied = true; 
             }
         };
     
         const checkAndApplyMapping = () => {
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                console.log('✅ [Mapovanie] window.matchTracker je dostupný, aplikujem mapovanie...');
                 forceRerender();
                 return true;
             }
@@ -2535,25 +2505,19 @@ const AddTeamsGroupApp = (props) => {
         
             if (!isInSuperstructureGroup) return displayName;
             
-            // Kontrola, či je matchTracker dostupný
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 try {
                     let currentName = team.teamName;
                     let mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
                     
-                    // Iba PRVÉ mapovanie - ak sa líši, použijeme ho
                     if (mappedName && mappedName !== currentName) {
-                        console.log(`🔄 [Mapovanie] 1. iterácia: "${currentName}" → "${mappedName}"`);
                         currentName = mappedName;
                         
-                        // DRUHÉ mapovanie - maximálne dvakrát
                         const secondMappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
                         if (secondMappedName && secondMappedName !== currentName) {
-                            console.log(`🔄 [Mapovanie] 2. iterácia: "${currentName}" → "${secondMappedName}"`);
                             currentName = secondMappedName;
                         }
                         
-                        console.log(`✅ [Mapovanie] Konečný výsledok (max 2 iterácie): "${team.teamName}" → "${currentName}"`);
                         return currentName;
                     }
                 } catch (e) {
@@ -3525,10 +3489,7 @@ const renderSingleCategoryView = () => {
             setHasNotifiedMapping(true);
             
             const currentMappings = window.__teamNameMapping || {};
-            const mappingsCount = Object.keys(currentMappings).length;
-            
-            console.log('%c🎉 MAPOVANIE TÍMOV BOLO AKTUALIZOVANÉ! 🎉', 'color: #00ff00; font-size: 14px; font-weight: bold; background: #1a1a1a; padding: 4px 12px; border-radius: 8px;');
-            console.log(`📊 Počet mapovaní: ${mappingsCount}`);
+            const mappingsCount = Object.keys(currentMappings).length;            
             
             const event = new CustomEvent('superstructureTeamsMappingReady', {
                 detail: {
@@ -3734,15 +3695,12 @@ if (window.globalUserProfileData) {
 
 
 // Funkcia pre konzolu - presun tímu do inej skupiny (aj pri existujúcich zápasoch)
-// Funkcia pre konzolu - presun tímu do inej skupiny (priamo z Firestore)
 window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, targetOrder) => {
     if (!window.db) {
         console.error("❌ Firebase nie je inicializovaný!");
         return;
     }
-    
-    console.log(`🔍 Hľadám tím: "${teamName}"`);
-    
+        
     // 1. Najprv načítame všetky tímy z Firestore
     const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
     const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
@@ -3804,15 +3762,8 @@ window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, t
         
         if (!foundTeam) {
             console.error(`❌ Tím "${teamName}" sa nenašiel!`);
-            console.log("📋 Dostupné tímy:", allTeams.map(t => t.teamName));
             return;
         }
-        
-        console.log(`✅ Nájdený tím: ${foundTeam.teamName}`);
-        console.log(`   Kategória: ${foundTeam.category}`);
-        console.log(`   Skupina: ${foundTeam.groupName || 'bez skupiny'}`);
-        console.log(`   Poradie: ${foundTeam.order || 'žiadne'}`);
-        console.log(`   Typ: ${foundTeam.isSuperstructureTeam ? 'Superstructure' : 'Používateľský'}`);
         
         // 2. Načítame kategórie a skupiny
         const categoriesRef = doc(window.db, 'settings', 'categories');
@@ -3852,28 +3803,19 @@ window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, t
         );
         
         if (!targetCategoryId) {
-            console.error(`❌ Kategória "${targetCategoryName}" sa nenašla!`);
-            console.log("📋 Dostupné kategórie:", Object.values(categoryIdToNameMap));
             return;
-        }
-        
-        console.log(`✅ Cieľová kategória: ${targetCategoryName}`);
+        }        
         
         // 4. Overíme, či cieľová skupina existuje
         const groupsInCategory = allGroupsByCategoryId[targetCategoryId] || [];
         const targetGroup = groupsInCategory.find(g => g.name === targetGroupName);
         
         if (!targetGroup) {
-            console.error(`❌ Skupina "${targetGroupName}" v kategórii "${targetCategoryName}" sa nenašla!`);
-            console.log("📋 Dostupné skupiny:", groupsInCategory.map(g => `${g.name} (${g.type})`));
             return;
-        }
-        
-        console.log(`✅ Cieľová skupina: ${targetGroupName} (typ: ${targetGroup.type})`);
+        }        
         
         // 5. Kontrola poradia
         if (targetOrder && (isNaN(targetOrder) || targetOrder < 1)) {
-            console.error(`❌ Poradie musí byť kladné číslo!`);
             return;
         }
         
@@ -3959,13 +3901,9 @@ async function moveSuperstructureTeamDirect(team, targetCategoryName, targetGrou
             updatePayload[targetCategoryName] = updatedTargetTeams;
         }
         
-        await updateDoc(superstructureDocRef, updatePayload);
-        
-        console.log(`✅ Tím "${team.teamName}" bol úspešne presunutý do skupiny "${targetGroupName}" na pozíciu ${newOrder}!`);
-        console.log(`   (Presun vykonaný aj napriek existujúcim zápasom)`);
+        await updateDoc(superstructureDocRef, updatePayload);        
         
         // Obnovíme stránku pre zobrazenie zmien
-        console.log("🔄 Obnovujem stránku pre zobrazenie zmien...");
         setTimeout(() => location.reload(), 1500);
         
     } catch (err) {
@@ -3980,7 +3918,6 @@ async function moveUserTeamDirect(team, targetCategoryName, targetGroupName, tar
         const userSnap = await getDoc(userRef);
         
         if (!userSnap.exists()) {
-            console.error("❌ Používateľ neexistuje!");
             return;
         }
         
@@ -4044,19 +3981,12 @@ async function moveUserTeamDirect(team, targetCategoryName, targetGroupName, tar
                 [`teams.${sourceCategory}`]: sourceTeams,
                 [`teams.${targetCategoryName}`]: updatedTargetTeams
             });
-        }
-        
-        console.log(`✅ Tím "${team.teamName}" bol úspešne presunutý do skupiny "${targetGroupName}" na pozíciu ${newOrder}!`);
-        console.log(`   (Presun vykonaný aj napriek existujúcim zápasom)`);
+        }        
         
         // Obnovíme stránku pre zobrazenie zmien
-        console.log("🔄 Obnovujem stránku pre zobrazenie zmien...");
         setTimeout(() => location.reload(), 1500);
         
     } catch (err) {
         console.error("❌ Chyba pri presune používateľského tímu:", err);
     }
 }
-
-console.log("🎯 Funkcia moveTeamToGroup je pripravená!");
-console.log("📖 Príklad použitia: moveTeamToGroup('HK Slovan Duslo Šaľa A', 'U12 D', 'Skupina B', 1)");
