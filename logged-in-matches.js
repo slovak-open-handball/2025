@@ -7390,8 +7390,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         right: { textAlign: 'right' }
     };
 
-    const enrichedUnassignedMatchesData = getEnrichedUnassignedMatches();
-
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         React.Fragment,
