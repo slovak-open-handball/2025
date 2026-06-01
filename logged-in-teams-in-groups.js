@@ -319,6 +319,7 @@ const AddTeamsGroupApp = (props) => {
                     const sourceOriginalGroup = teams[sourceIndex].groupName;
                     const targetOriginalGroup = teams[targetIndex].groupName;
                     
+                    // VYTVORÍME NOVÉ OBJEKTY TÍMOV S VYMENENÝMI HODNOTAMI
                     const newSourceTeam = {
                         ...teams[sourceIndex],
                         groupName: targetOriginalGroup,
@@ -385,6 +386,7 @@ const AddTeamsGroupApp = (props) => {
                     const sourceOriginalGroup = sourceTeams[sourceIndex].groupName;
                     const targetOriginalGroup = targetTeams[targetIndex].groupName;
                     
+                    // VYTVORÍME NOVÉ OBJEKTY TÍMOV S VYMENENÝMI HODNOTAMI
                     const newSourceTeam = {
                         ...sourceTeams[sourceIndex],
                         groupName: targetOriginalGroup,
@@ -397,6 +399,7 @@ const AddTeamsGroupApp = (props) => {
                         order: sourceOriginalOrder
                     };
                     
+                    // VYTVORÍME NOVÉ POLIA S VYMENENÝMI TÍMMI
                     const newSourceTeams = [...sourceTeams];
                     const newTargetTeams = [...targetTeams];
                     newSourceTeams[sourceIndex] = newSourceTeam;
