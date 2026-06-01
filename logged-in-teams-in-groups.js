@@ -271,8 +271,8 @@ const AddTeamsGroupApp = (props) => {
                 
                 // Notifikácia o výmene
                 const swapMessage = isSameGroup
-                    ? `Výmena poradí v skupine ${sourceGroupName}: "${teamToSwap.teamName}" (por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (por. ${targetOrder})`
-                    : `Výmena tímov: "${teamToSwap.teamName}" (${sourceGroupName}, por. ${sourceOrder}) ↔ "${targetTeam.teamName}" (${targetGroupName}, por. ${targetOrder})`;
+                    ? `Výmena poradí v skupine ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`
+                    : `Výmena tímov: '${sourceGroupName} ${sourceOrder}. - ${teamToSwap.teamName}' ↔ '${targetGroupName} ${targetOrder}. - ${targetTeam.teamName}'`;
                 
                 await createTeamAssignmentNotification('swap_teams', {
                     id: teamToSwap.id,
