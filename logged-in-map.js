@@ -2431,17 +2431,14 @@ const MapApp = ({ userProfileData }) => {
 
                     // Farby pre ubytovanie
                     selectedPlace.type === 'ubytovanie' && (
-                      React.createElement('div', { className: 'mb-3' },
-                        React.createElement('strong', { className: 'block text-gray-700 mb-2' }, 'Farba:'),
-                        React.createElement('div', { className: 'flex items-center gap-3' },
-                          React.createElement('div', { 
-                            className: 'px-3 py-1.5 rounded-lg text-sm font-medium',
-                            style: { 
-                              backgroundColor: selectedPlace.headerColor || '#1e40af',
-                              color: selectedPlace.headerTextColor || '#000000'
-                            }
-                          }, selectedPlace.name || '(bez názvu)')
-                        )
+                      React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
+                        React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
+                        React.createElement('div', { 
+                          className: 'w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm',
+                          style: { 
+                            backgroundColor: selectedPlace.headerColor || '#1e40af',
+                          }
+                        })
                       )
                     ),
                   
