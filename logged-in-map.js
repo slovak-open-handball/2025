@@ -3227,6 +3227,49 @@ const MapApp = ({ userProfileData }) => {
                 React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
               )
             ),
+
+            // FARBY PRE UBYTOVANIE (PRIDAJ TOTO)
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: newHeaderColor,
+                  onChange: e => setNewHeaderColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: newHeaderColor,
+                  onChange: e => setNewHeaderColor(e.target.value),
+                  placeholder: '#1e40af',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              )
+            ),
+
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: newHeaderTextColor,
+                  onChange: e => setNewHeaderTextColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: newHeaderTextColor,
+                  onChange: e => setNewHeaderTextColor(e.target.value),
+                  placeholder: '#000000',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              ),
+              React.createElement('div', { className: 'mt-3 p-3 rounded-lg', style: { backgroundColor: newHeaderColor, color: newHeaderTextColor } },
+                React.createElement('span', { className: 'text-sm font-medium' }, 'Ukážka: ', newPlaceName || '(názov miesta)')
+              )
+            ),
+            
             // NOVÉ: Ceny stravovania
             newPlaceType === 'stravovanie' && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
