@@ -2560,7 +2560,7 @@ const MapApp = ({ userProfileData }) => {
                       (() => {
                           if (selectedPlace?.type === 'ubytovanie') {
                               return isPlaceAssigned 
-                                  ? 'Upraviť názov/kapacitu/cenu/poznámku'
+                                  ? 'Upraviť názov/kapacitu/cenu/farbu/poznámku'
                                   : 'Upraviť názov/typ/kapacitu/cenu/poznámku';
                           } else if (selectedPlace?.type === 'stravovanie') {
                               return 'Upraviť názov/typ/kapacitu/cenu/poznámku';
