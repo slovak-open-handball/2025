@@ -458,7 +458,7 @@ const AddTeamsGroupApp = (props) => {
                         message: swapMessage
                     });
                     
-                    notify(`Tímy boli vymenené: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
+                    notify(`Tímy boli vymenené v kategórii ${categoryName}: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
                 } 
                 // POUŽÍVATEĽSKÉ TÍMY
                 else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam && teamToSwap.uid === targetTeam.uid) {
@@ -513,7 +513,7 @@ const AddTeamsGroupApp = (props) => {
                         message: swapMessage
                     });
                     
-                    notify(`Tímy boli vymenené: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
+                    notify(`Tímy boli vymenené v kategórii ${categoryName}: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
                 } else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam && teamToSwap.uid !== targetTeam.uid) {
                     // Tímy od RÔZNYCH používateľov
                     const sourceUserRef = doc(window.db, 'users', teamToSwap.uid);
@@ -584,7 +584,7 @@ const AddTeamsGroupApp = (props) => {
                         message: swapMessage
                     });
                     
-                    notify(`Tímy boli vymenené: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
+                    notify(`Tímy boli vymenené v kategórii ${categoryName}: ${sourceGroup} ${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetGroup} ${targetOrder}. ${targetTeam.teamName}`, "success");
                 } else {
                     notify("Nie je možné vymeniť tím medzi superstructure a používateľským tímom.", "error");
                     return;
