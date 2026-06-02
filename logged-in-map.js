@@ -110,7 +110,7 @@ const MapApp = ({ userProfileData }) => {
     const [editDinnerPrice, setEditDinnerPrice] = useState('');
     const [mealPriceError, setMealPriceError] = useState(null);
 
-    const [hallRentalPrices, setHallRentalPrices] = useState({}); // { "2024-01-01": 50, "2024-01-02": 50 }
+    const [hallRentalPrices, setHallRentalPrices] = useState({});
     const [editHallRentalPrices, setEditHallRentalPrices] = useState({});
     const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
@@ -120,6 +120,11 @@ const MapApp = ({ userProfileData }) => {
 
     const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
     const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
+
+    const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
+    const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
+    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
+    const [editHeaderTextColor, setEditHeaderTextColor] = useState('#000000');
 
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr) return '';
@@ -674,6 +679,9 @@ const MapApp = ({ userProfileData }) => {
                     return;
                 }
                 placeData.costPerNight = cost;
+
+                placeData.headerColor = newHeaderColor || '#1e40af';
+                placeData.headerTextColor = newHeaderTextColor || '#000000';
             }
 
             if (newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0) {
@@ -1175,17 +1183,26 @@ const MapApp = ({ userProfileData }) => {
         
         // Validácia ceny pre ubytovanie
         if (editType === 'ubytovanie') {
+            updates.accommodationType = editAccommodationType || null;
             const price = parseFloat(editPricePerNight);
             const cost = parseFloat(editCostPerNight);
-    
-            if (isNaN(price) || price <= 0) {
-                setPriceError('Cena pre kluby musí byť kladné číslo');
-                return;
+            if (!isNaN(price) && price > 0) {
+                updates.pricePerNight = price;
             }
-            if (isNaN(cost) || cost <= 0) {
-                setPriceError('Náklady musia byť kladné číslo');
-                return;
+            if (!isNaN(cost) && cost > 0) {
+                updates.costPerNight = cost;
             }
+            // Pridanie farieb
+            if (editHeaderColor) {
+                updates.headerColor = editHeaderColor;
+            }
+            if (editHeaderTextColor) {
+                updates.headerTextColor = editHeaderTextColor;
+            }
+        } else {
+            updates.accommodationType = null;
+            updates.pricePerNight = null;
+            updates.costPerNight = null;
         }
     
         if (editType === 'sportova_hala' && tournamentDates.days.length > 0) {
@@ -1977,6 +1994,8 @@ const MapApp = ({ userProfileData }) => {
               dinnerPrice: data.dinnerPrice || null,
               note: data.note || null,
               hallRentalPrices: data.hallRentalPrices || null,
+              headerColor: data.headerColor || '#1e40af',
+              headerTextColor: data.headerTextColor || '#000000' 
             });
           });
           
@@ -2489,6 +2508,8 @@ const MapApp = ({ userProfileData }) => {
                           setEditLunchPrice(selectedPlace.lunchPrice != null ? String(selectedPlace.lunchPrice) : '');
                           setEditDinnerPrice(selectedPlace.dinnerPrice != null ? String(selectedPlace.dinnerPrice) : '');
                           setEditNote(selectedPlace.note || '');
+                          setEditHeaderColor(selectedPlace.headerColor || '#1e40af');
+                          setEditHeaderTextColor(selectedPlace.headerTextColor || '#000000');
         
                           // Naplnenie cien prenájmu haly pre editáciu
                           if (selectedPlace.type === 'sportova_hala') {
