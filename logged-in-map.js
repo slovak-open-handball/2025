@@ -2432,7 +2432,7 @@ const MapApp = ({ userProfileData }) => {
                     // Farby pre ubytovanie
                     selectedPlace.type === 'ubytovanie' && (
                       React.createElement('div', { className: 'mb-3' },
-                        React.createElement('strong', { className: 'block text-gray-700 mb-2' }, 'Farebný štítok:'),
+                        React.createElement('strong', { className: 'block text-gray-700 mb-2' }, 'Farba:'),
                         React.createElement('div', { className: 'flex items-center gap-3' },
                           React.createElement('div', { 
                             className: 'px-3 py-1.5 rounded-lg text-sm font-medium',
@@ -2440,10 +2440,7 @@ const MapApp = ({ userProfileData }) => {
                               backgroundColor: selectedPlace.headerColor || '#1e40af',
                               color: selectedPlace.headerTextColor || '#000000'
                             }
-                          }, selectedPlace.name || '(bez názvu)'),
-                          React.createElement('span', { className: 'text-xs text-gray-500' }, 
-                            `(bunka: ${(selectedPlace.headerColor || '#1e40af').toUpperCase()}, text: ${(selectedPlace.headerTextColor || '#000000').toUpperCase()})`
-                          )
+                          }, selectedPlace.name || '(bez názvu)')
                         )
                       )
                     ),
