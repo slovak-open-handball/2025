@@ -1674,108 +1674,108 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         })
                 )
         ),    
-        isColorModalOpen &&
-        React.createElement(
-            'div',
-            {
-                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
-                onClick: (e) => { if (e.target === e.currentTarget) setIsColorModalOpen(false); }
-            },
-            React.createElement(
-                'div',
-                { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
-                
-                React.createElement(
-                    'div',
-                    { className: 'mb-6' },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-xl font-bold text-gray-900 inline' },
-                        'Upraviť farby'
-                    ),
-                    React.createElement(
-                        'span',
-                        { className: 'text-lg font-medium text-gray-600 ml-2' },
-                        '– ' + (selectedPlaceForEdit?.name || 'Ubytovacie miesto')
-                    )
-                ),        
-                React.createElement('div', { className: 'mb-10' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba pozadia hlavičky'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-col items-center gap-4' },
-                        React.createElement('input', {
-                            type: 'color',
-                            value: newHeaderColor,
-                            onChange: (e) => setNewHeaderColor(e.target.value),
-                            className: 'w-32 h-32 rounded-lg cursor-pointer border-2 border-gray-300 shadow-md'
-                        }),
-                        React.createElement(
-                            'div',
-                            { className: 'w-full text-center text-sm text-gray-600 space-y-1 font-mono' },
-                            React.createElement('div', null, `HEX: ${newHeaderColor}`),
-                            React.createElement('div', null, `RGB: ${hexToRgb(newHeaderColor)}`),
-                            React.createElement('div', null, `HSL: ${hexToHsl(newHeaderColor)}`)
-                        )
-                    )
-                ),        
-                React.createElement('div', { className: 'mb-10' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba textu názvu'),
-                    React.createElement(
-                        'div',
-                        { className: 'flex gap-4' },
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setNewHeaderTextColor('#ffffff'),
-                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#ffffff'
-                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                                        : 'border-gray-300 hover:bg-gray-50'
-                                }`,
-                                style: { backgroundColor: '#ffffff', color: '#000000' }
-                            },
-                            'Biela'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => setNewHeaderTextColor('#000000'),
-                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#000000'
-                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                                        : 'border-gray-300 hover:bg-gray-50'
-                                }`,
-                                style: { backgroundColor: '#000000', color: '#ffffff' }
-                            },
-                            'Čierna'
-                        )
-                    )
-                ),        
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-end gap-4 mt-8' },
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setIsColorModalOpen(false),
-                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: saveHeaderColor,
-                            className: 'px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
-                        },
-                        'Uložiť'
-                    )
-                )
-            )
-        ),
+//        isColorModalOpen &&
+//        React.createElement(
+//            'div',
+//            {
+//                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]',
+//                onClick: (e) => { if (e.target === e.currentTarget) setIsColorModalOpen(false); }
+//            },
+//            React.createElement(
+//                'div',
+//                { className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4' },
+//                
+//                React.createElement(
+//                    'div',
+//                    { className: 'mb-6' },
+//                    React.createElement(
+//                        'h3',
+//                        { className: 'text-xl font-bold text-gray-900 inline' },
+//                        'Upraviť farby'
+//                    ),
+//                    React.createElement(
+//                        'span',
+//                        { className: 'text-lg font-medium text-gray-600 ml-2' },
+//                        '– ' + (selectedPlaceForEdit?.name || 'Ubytovacie miesto')
+//                    )
+//                ),        
+//                React.createElement('div', { className: 'mb-10' },
+//                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba pozadia hlavičky'),
+//                    React.createElement(
+//                        'div',
+//                        { className: 'flex flex-col items-center gap-4' },
+//                        React.createElement('input', {
+//                            type: 'color',
+//                            value: newHeaderColor,
+//                            onChange: (e) => setNewHeaderColor(e.target.value),
+//                            className: 'w-32 h-32 rounded-lg cursor-pointer border-2 border-gray-300 shadow-md'
+//                        }),
+//                        React.createElement(
+//                            'div',
+//                            { className: 'w-full text-center text-sm text-gray-600 space-y-1 font-mono' },
+//                            React.createElement('div', null, `HEX: ${newHeaderColor}`),
+//                            React.createElement('div', null, `RGB: ${hexToRgb(newHeaderColor)}`),
+//                            React.createElement('div', null, `HSL: ${hexToHsl(newHeaderColor)}`)
+//                        )
+//                    )
+//                ),        
+//                React.createElement('div', { className: 'mb-10' },
+//                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba textu názvu'),
+//                    React.createElement(
+//                        'div',
+//                        { className: 'flex gap-4' },
+//                        React.createElement(
+//                            'button',
+//                            {
+//                                type: 'button',
+//                                onClick: () => setNewHeaderTextColor('#ffffff'),
+//                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
+//                                    newHeaderTextColor === '#ffffff'
+//                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+//                                        : 'border-gray-300 hover:bg-gray-50'
+//                                }`,
+//                                style: { backgroundColor: '#ffffff', color: '#000000' }
+//                            },
+//                            'Biela'
+//                        ),
+//                        React.createElement(
+//                            'button',
+//                            {
+//                                type: 'button',
+//                                onClick: () => setNewHeaderTextColor('#000000'),
+//                                className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
+//                                    newHeaderTextColor === '#000000'
+//                                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+//                                        : 'border-gray-300 hover:bg-gray-50'
+//                                }`,
+//                                style: { backgroundColor: '#000000', color: '#ffffff' }
+//                            },
+//                            'Čierna'
+//                        )
+//                    )
+//                ),        
+//                React.createElement(
+//                    'div',
+//                    { className: 'flex justify-end gap-4 mt-8' },
+//                    React.createElement(
+//                        'button',
+//                        {
+//                            onClick: () => setIsColorModalOpen(false),
+//                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition'
+//                        },
+//                        'Zrušiť'
+//                    ),
+//                    React.createElement(
+//                        'button',
+//                        {
+//                            onClick: saveHeaderColor,
+//                            className: 'px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition'
+//                        },
+//                        'Uložiť'
+//                    )
+//                )
+//            )
+//        ),
         isRemoveModalOpen &&
         React.createElement(
             'div',
