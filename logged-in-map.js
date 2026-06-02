@@ -1484,6 +1484,23 @@ const MapApp = ({ userProfileData }) => {
                     `Zmena poznámky z '${oldNote}' na '${newNote}'`
                 );
             }
+
+            if (original.headerColor !== updates.headerColor) {
+                const oldColor = original.headerColor || '#1e40af';
+                const newColor = updates.headerColor || '#1e40af';
+                changesList.push(
+                    `Zmena farby pozadia z '${oldColor}' na '${newColor}'`
+                );
+            }
+            
+            // Zmena farby textu
+            if (original.headerTextColor !== updates.headerTextColor) {
+                const oldColor = original.headerTextColor || '#000000';
+                const newColor = updates.headerTextColor || '#000000';
+                changesList.push(
+                    `Zmena farby textu z '${oldColor}' na '${newColor}'`
+                );
+            }
     
             // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
             if (changesList.length > 1) {
