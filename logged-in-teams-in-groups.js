@@ -214,10 +214,10 @@ const AddTeamsGroupApp = (props) => {
                 return;
             }
             
-            // Zistíme, či ide o výmenu v rámci rovnakej skupiny
+            // Zistíme, či ide o výmenu v rovnakej skupine
             const isSameGroup = sourceGroupName === targetGroupName;
             
-            // Výmena v rámci ROVNAKEJ skupiny - tímy môžu byť od rôznych používateľov
+            // Výmena v ROVNAKEJ skupine - tímy môžu byť od rôznych používateľov
             if (isSameGroup) {
                 // SUPERSTRUCTURE TÍMY (globálne)
                 if (teamToSwap.isSuperstructureTeam && targetTeam.isSuperstructureTeam) {
@@ -255,8 +255,8 @@ const AddTeamsGroupApp = (props) => {
                     
                     await updateDoc(superstructureDocRef, { [categoryName]: newTeams });
                     
-                    // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY
-                    const swapMessage = `Výmena poradia tímov v rámci skupiny ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
+                    // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V ROVNAKEJ SKUPINE
+                    const swapMessage = `Výmena poradia tímov v kategórii ${categoryName} v skupine ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
                     await createTeamAssignmentNotification('swap_teams_same_group', {
                         id: teamToSwap.id,
                         teamName: teamToSwap.teamName,
@@ -270,7 +270,7 @@ const AddTeamsGroupApp = (props) => {
                         message: swapMessage
                     });
                     
-                    notify(`Výmena poradia tímov v rámci skupiny ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`, "success");
+                    notify(`Výmena poradia tímov v kategórii ${categoryName} v rovnakej skupine ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`, "success");
                 }
                 // POUŽÍVATEĽSKÉ TÍMY - môžu byť od ROVNAKÉHO alebo RÔZNYCH používateľov
                 else if (!teamToSwap.isSuperstructureTeam && !targetTeam.isSuperstructureTeam) {
@@ -310,8 +310,8 @@ const AddTeamsGroupApp = (props) => {
                         
                         await updateDoc(userRef, { [`teams.${categoryName}`]: newTeams });
                         
-                        // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY (rovnaký používateľ)
-                        const swapMessage = `Výmena poradia tímov v rámci skupiny ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
+                        // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V ROVNAKEJ SKUPINE (rovnaký používateľ)
+                        const swapMessage = `Výmena poradia tímov v kategórii ${categoryName} v skupine ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
                         await createTeamAssignmentNotification('swap_teams_same_group_user', {
                             id: teamToSwap.id,
                             teamName: teamToSwap.teamName,
@@ -382,8 +382,8 @@ const AddTeamsGroupApp = (props) => {
                             updateDoc(targetUserRef, { [`teams.${categoryName}`]: newTargetTeams })
                         ]);
                         
-                        // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY (rôzni používatelia)
-                        const swapMessage = `Výmena poradia tímov v rámci skupiny ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
+                        // PRIDANÁ NOTIFIKÁCIA PRE VÝMENU V ROVNAKEJ SKUPINE (rôzni používatelia)
+                        const swapMessage = `Výmena poradia tímov v kategórii ${categoryName} v skupine ${sourceGroupName}: '${sourceOrder}. ${teamToSwap.teamName}' ↔ '${targetOrder}. ${targetTeam.teamName}'`;
                         await createTeamAssignmentNotification('swap_teams_same_group_cross_user', {
                             id: teamToSwap.id,
                             teamName: teamToSwap.teamName,
@@ -1390,7 +1390,7 @@ const AddTeamsGroupApp = (props) => {
         }
     };
 
-    // Komponent pre modálne okno výmeny tímov - UPRAVENÝ pre výmenu v rámci rovnakej skupiny
+    // Komponent pre modálne okno výmeny tímov - UPRAVENÝ pre výmenu v rovnakej skupine
     const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId }) => {
         const [selectedGroup, setSelectedGroup] = useState('');
         const [selectedTeam, setSelectedTeam] = useState('');
@@ -1406,7 +1406,7 @@ const AddTeamsGroupApp = (props) => {
         const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
         
         // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
-        // Ak je zaškrtnuté "v rámci rovnakej skupiny", zahrnieme aj pôvodnú skupinu
+        // Ak je zaškrtnuté "v rovnakej skupine", zahrnieme aj pôvodnú skupinu
         const availableGroups = groups.filter(g => 
             g.type === originalGroupType && 
             (swapWithinSameGroup || g.name !== team.groupName)
@@ -1454,7 +1454,7 @@ const AddTeamsGroupApp = (props) => {
                         )
                     ),
                     
-                    // NOVÉ CHECKBOX PRE VÝMENU V RÁMCI ROVNAKEJ SKUPINY
+                    // NOVÉ CHECKBOX PRE VÝMENU V ROVNAKEJ SKUPINE
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-2 mb-2' },
@@ -1472,7 +1472,7 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement('label', {
                             htmlFor: 'swapWithinSameGroup',
                             className: 'text-sm font-medium text-gray-700 cursor-pointer'
-                        }, 'Vymeniť tímy v rámci rovnakej skupiny')
+                        }, 'Vymeniť tímy v rovnakej skupine')
                     ),
                     
                     React.createElement(
@@ -1495,7 +1495,7 @@ const AddTeamsGroupApp = (props) => {
                         )
                     ),
                     
-                    // Ak je zaškrtnuté "v rámci rovnakej skupiny", zobrazíme tímy z pôvodnej skupiny
+                    // Ak je zaškrtnuté "v rovnakej skupine", zobrazíme tímy z pôvodnej skupiny
                     (swapWithinSameGroup || selectedGroup) && React.createElement(
                         'div',
                         null,
