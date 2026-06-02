@@ -2680,43 +2680,7 @@ const MapApp = ({ userProfileData }) => {
                             }`,
                             onClick: () => handlePlaceClick(place)
                           },
-                            // Hlavička s farbami pre ubytovanie
-                            (place.type === 'ubytovanie' && place.headerColor) ? 
-                              React.createElement('div', { 
-                                className: 'px-4 py-2',
-                                style: { 
-                                  backgroundColor: place.headerColor || '#1e40af',
-                                  color: place.headerTextColor || '#000000'
-                                }
-                              },
-                                React.createElement('div', { className: 'flex justify-between items-start' },
-                                  React.createElement('div', null,
-                                    React.createElement('h4', { className: 'font-bold text-lg' }, place.name),
-                                    React.createElement('span', { 
-                                      className: 'text-xs px-2 py-0.5 rounded-full mt-1 inline-block',
-                                      style: { 
-                                        backgroundColor: place.headerTextColor + '20',
-                                        color: place.headerTextColor
-                                      }
-                                    },
-                                      place.type === 'ubytovanie' && place.accommodationType 
-                                        ? `${typeLabels[place.type]} (${place.accommodationType})` 
-                                        : typeLabels[place.type] || place.type
-                                    )
-                                  ),
-                                  React.createElement('div', { 
-                                    className: 'w-8 h-8 rounded-full flex items-center justify-center',
-                                    style: { 
-                                      backgroundColor: 'rgba(255,255,255,0.2)',
-                                      color: place.headerTextColor
-                                    }
-                                  },
-                                    React.createElement('i', { className: `fa-solid ${typeIcons[place.type]?.icon || 'fa-map-pin'}` })
-                                  )
-                                )
-                              )
-                            :
-                            // Štandardná hlavička pre ostatné typy
+                            // JEDNOTNÁ HLAVIČKA PRE VŠETKY TYPY MIEST (vrátane ubytovania)
                             React.createElement('div', { className: 'p-4' },
                               React.createElement('div', { className: 'flex justify-between items-start' },
                                 React.createElement('div', null,
