@@ -1144,29 +1144,29 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                         style: { textOverflow: 'clip' }
                                                     }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity} osôb`)
                                                 ),
-                                                React.createElement(
-                                                    'button',
-                                                    {
-                                                        onClick: () => openEditModal(place),
-                                                        className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap',
-                                                    },
-                                                    React.createElement(
-                                                        'svg',
-                                                        { 
-                                                            className: 'w-3 h-3', 
-                                                            fill: 'none', 
-                                                            stroke: 'currentColor', 
-                                                            viewBox: '0 0 24 24',
-                                                            strokeWidth: '2'
-                                                        },
-                                                        React.createElement('path', {
-                                                            strokeLinecap: 'round',
-                                                            strokeLinejoin: 'round',
-                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                                                        })
-                                                    ),
-                                                    React.createElement('span', null, 'Upraviť')
-                                                )
+//                                                React.createElement(
+//                                                    'button',
+//                                                    {
+//                                                        onClick: () => openEditModal(place),
+//                                                        className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap',
+//                                                    },
+//                                                    React.createElement(
+//                                                        'svg',
+//                                                        { 
+//                                                            className: 'w-3 h-3', 
+//                                                            fill: 'none', 
+//                                                            stroke: 'currentColor', 
+//                                                            viewBox: '0 0 24 24',
+//                                                            strokeWidth: '2'
+//                                                        },
+//                                                        React.createElement('path', {
+//                                                            strokeLinecap: 'round',
+//                                                            strokeLinejoin: 'round',
+//                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+//                                                        })
+//                                                    ),
+//                                                    React.createElement('span', null, 'Upraviť')
+//                                                )
                                             ),
                                             React.createElement(
                                                 'div',
