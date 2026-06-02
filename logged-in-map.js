@@ -1391,6 +1391,8 @@ const MapApp = ({ userProfileData }) => {
                 lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
                 dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
                 note: selectedPlace.note || null,
+                headerColor: selectedPlace.headerColor || '#1e40af',
+                headerTextColor: selectedPlace.headerTextColor || '#000000',
             };
     
             await updateDoc(placeRef, updates);
