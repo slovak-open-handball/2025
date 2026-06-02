@@ -2430,7 +2430,7 @@ const MapApp = ({ userProfileData }) => {
                     ),
 
                     // Farby pre ubytovanie
-                    sselectedPlace.type === 'ubytovanie' && (
+                    selectedPlace.type === 'ubytovanie' && (
                       React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
                         React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
                         React.createElement('div', { 
