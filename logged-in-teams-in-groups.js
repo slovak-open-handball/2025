@@ -193,6 +193,9 @@ const AddTeamsGroupApp = (props) => {
     // NOVÝ STAV: Sledovanie zápasov
     const [matchesData, setMatchesData] = useState([]);
 
+    const [accommodations, setAccommodations] = useState([]);
+    const [teamAccommodations, setTeamAccommodations] = useState(new Map());
+
     const handleSwapTeams = async (teamToSwap, targetGroupName, targetTeamName) => {
         if (!window.db || !teamToSwap || !targetTeamName) return;
         
@@ -2577,6 +2580,52 @@ const AddTeamsGroupApp = (props) => {
         }, (error) => {
             console.error('Chyba pri načítaní zápasov:', error);
         });
+
+        const unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
+            const loadedAccommodations = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.type === "ubytovanie") {
+                    loadedAccommodations.push({
+                        id: docSnap.id,
+                        name: data.name,
+                        headerColor: data.headerColor || '#1e40af',
+                        headerTextColor: data.headerTextColor || '#000000'
+                    });
+                }
+            });
+            setAccommodations(loadedAccommodations);
+        });
+        
+        const unsubscribeUsersForAcc = onSnapshot(collection(window.db, 'users'), (snapshot) => {
+            const teamAccommodationMap = new Map();
+            
+            snapshot.forEach((userDoc) => {
+                const userData = userDoc.data() || {};
+                const userTeams = userData.teams;
+                
+                if (userTeams && typeof userTeams === 'object') {
+                    Object.entries(userTeams).forEach(([category, teamArray]) => {
+                        if (!Array.isArray(teamArray)) return;
+                        
+                        teamArray.forEach((team) => {
+                            if (!team?.teamName) return;
+                            
+                            const accommodationName = team.accommodation?.name;
+                            if (accommodationName) {
+                                if (team.id) {
+                                    teamAccommodationMap.set(team.id, accommodationName);
+                                } else {
+                                    teamAccommodationMap.set(team.teamName, accommodationName);
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+            
+            setTeamAccommodations(teamAccommodationMap);
+        });
         
         return () => {
             unsubscribeUsers();
@@ -2584,8 +2633,11 @@ const AddTeamsGroupApp = (props) => {
             unsubscribeCategories();
             unsubscribeGroups();
             unsubscribeMatches();
+            unsubscribePlaces();
+            unsubscribeUsersForAcc();
         };
-    }, []);
+    }, []);    
+  
     useEffect(() => {
         const globalTeamsList = Object.entries(superstructureTeams).flatMap(([categoryName, teamArray]) =>
             (teamArray || []).map(team => ({
@@ -2665,6 +2717,43 @@ const AddTeamsGroupApp = (props) => {
             match.categoryName === categoryName && 
             match.groupName === groupName
         );
+    };
+
+    // Pomocná funkcia na extrahovanie čistého názvu tímu (bez kategórie)
+    const getCleanTeamName = (team, categoryName) => {
+        if (!team.teamName) return '';
+        if (categoryName && team.teamName.startsWith(categoryName + ' ')) {
+            return team.teamName.substring(categoryName.length + 1).trim();
+        }
+        return team.teamName;
+    };
+    
+    // Pomocná funkcia na získanie farby ubytovne pre tím
+    const getTeamAccommodationColor = (team, categoryName) => {
+        if (!team) return '#f3f4f6';
+        
+        const teamName = team.teamName;
+        const cleanTeamName = getCleanTeamName(team, categoryName);
+        
+        // Získame názov ubytovne z mapovania
+        const accommodationName = teamAccommodations?.get(team.id) || 
+                                  teamAccommodations?.get(teamName) || 
+                                  teamAccommodations?.get(cleanTeamName);
+        
+        // Ak názov tímu obsahuje názov kategórie, vrátime sivú farbu
+        if (teamName.includes(categoryName)) {
+            return '#f3f4f6';
+        }
+        
+        if (accommodationName) {
+            const accommodation = accommodations?.find(a => a.name === accommodationName);
+            if (accommodation && accommodation.headerColor) {
+                return accommodation.headerColor;
+            }
+            return '#ffff00'; // Žltá pre tímy bez ubytovne
+        }
+        
+        return '#f3f4f6';
     };
     
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
