@@ -2847,6 +2847,8 @@ const AddTeamsGroupApp = (props) => {
                 }
     
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
+
+                const teamColor = getTeamAccommodationColor(team, categoryIdToNameMap[targetCategoryId]);
     
                 return React.createElement(
                     'li',
@@ -2855,10 +2857,24 @@ const AddTeamsGroupApp = (props) => {
                         className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
                     },
                     React.createElement('span', { className: 'flex-grow text-gray-800' }, display),
-    
+                
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-1' },
+                        // FAREBNÝ KRUH
+                        React.createElement('div', {
+                            className: 'w-3 h-3 rounded-full flex-shrink-0',
+                            style: { 
+                                backgroundColor: getTeamAccommodationColor(team, categoryIdToNameMap[selectedCategoryId]), 
+                                boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                            },
+                            title: (() => {
+                                const color = getTeamAccommodationColor(team, categoryIdToNameMap[selectedCategoryId]);
+                                if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
+                                if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                return 'Tím má priradenú ubytovňu';
+                            })()
+                        }),
                         React.createElement(
                             'button',
                             {
