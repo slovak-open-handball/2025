@@ -2941,7 +2941,7 @@ const AddTeamsGroupApp = (props) => {
         // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
         const categoryName = categoryIdToNameMap[targetCategoryId];
         const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
-    
+
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
             const ob = typeof b.order === 'number' ? b.order : Infinity;
@@ -3059,6 +3059,19 @@ const AddTeamsGroupApp = (props) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
+                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ ZA NÁZVOM TÍMU (pred ikonami)
+                                React.createElement('div', {
+                                    className: 'w-3 h-3 rounded-full flex-shrink-0',
+                                    style: { 
+                                        backgroundColor: getTeamAccommodationColor(team, categoryName), 
+                                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                                    },
+                                    title: (() => {
+                                        const color = getTeamAccommodationColor(team, categoryName);
+                                        if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
+                                        return 'Tím má priradenú ubytovňu';
+                                    })()
+                                }),
                                 // EDIT: Tlačidlo pre úpravu tímu
                                 React.createElement(
                                     'button',
@@ -3116,20 +3129,7 @@ const AddTeamsGroupApp = (props) => {
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
                                     )
-                                ),
-                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ NA KONCI (vedľa koša/ceruzky)
-                                React.createElement('div', {
-                                    className: 'w-3 h-3 rounded-full flex-shrink-0',
-                                    style: { 
-                                        backgroundColor: getTeamAccommodationColor(team, categoryName), 
-                                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
-                                    },
-                                    title: (() => {
-                                        const color = getTeamAccommodationColor(team, categoryName);
-                                        if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                        return 'Tím má priradenú ubytovňu';
-                                    })()
-                                })
+                                )
                             )
                         )
                     );
@@ -3190,6 +3190,19 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement(
                             'div',
                             { className: 'flex items-center space-x-1' },
+                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ ZA NÁZVOM
+                            React.createElement('div', {
+                                className: 'w-3 h-3 rounded-full flex-shrink-0',
+                                style: { 
+                                    backgroundColor: getTeamAccommodationColor(team, categoryName), 
+                                    boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                                },
+                                title: (() => {
+                                    const color = getTeamAccommodationColor(team, categoryName);
+                                    if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
+                                    return 'Tím má priradenú ubytovňu';
+                                })()
+                            }),
                             // EDIT: Tlačidlo pre úpravu tímu
                             React.createElement(
                                 'button',
@@ -3227,20 +3240,7 @@ const AddTeamsGroupApp = (props) => {
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
                                 )
-                            ),
-                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ NA KONCI
-                            React.createElement('div', {
-                                className: 'w-3 h-3 rounded-full flex-shrink-0',
-                                style: { 
-                                    backgroundColor: getTeamAccommodationColor(team, categoryName), 
-                                    boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
-                                },
-                                title: (() => {
-                                    const color = getTeamAccommodationColor(team, categoryName);
-                                    if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                    return 'Tím má priradenú ubytovňu';
-                                })()
-                            })
+                            )
                         )
                     )
                 );
