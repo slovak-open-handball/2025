@@ -3076,29 +3076,8 @@ const AddTeamsGroupApp = (props) => {
                                         return 'Tím má priradenú ubytovňu';
                                     })()
                                 }),
-                                // EDIT: Tlačidlo pre úpravu tímu
-                                React.createElement(
-                                    'button',
-                                    {
-                                        onClick: groupHasMatches ? undefined : () => {
-                                            setTeamToEdit(team);
-                                            setIsModalOpen(true);
-                                        },
-                                        className: `p-1.5 rounded-full transition-colors ${
-                                            groupHasMatches 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
-                                        }`,
-                                        title: groupHasMatches 
-                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
-                                            : 'Upraviť tím',
-                                        disabled: groupHasMatches
-                                    },
-                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                                    )
-                                ),
-                                // NOVÉ TLAČIDLO PRE VÝMENU TÍMOV (zobrazené len ak existujú zápasy)
+                                
+                                // 🔥 TLAČIDLO PRE VÝMENU TÍMOV (zobrazené len ak existujú zápasy)
                                 groupHasMatches && React.createElement(
                                     'button',
                                     {
@@ -3115,20 +3094,30 @@ const AddTeamsGroupApp = (props) => {
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' })
                                     )
                                 ),
-                                // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
-                                React.createElement(
+                                
+                                // 🔥 EDIT TLAČIDLO - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
+                                !groupHasMatches && React.createElement(
                                     'button',
                                     {
-                                        onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
-                                        className: `p-1.5 rounded-full transition-colors ${
-                                            groupHasMatches 
-                                                ? 'text-gray-300 cursor-not-allowed' 
-                                                : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
-                                        }`,
-                                        title: groupHasMatches 
-                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
-                                            : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
-                                        disabled: groupHasMatches
+                                        onClick: () => {
+                                            setTeamToEdit(team);
+                                            setIsModalOpen(true);
+                                        },
+                                        className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-indigo-600 hover:bg-indigo-50',
+                                        title: 'Upraviť tím'
+                                    },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                                    )
+                                ),
+                                
+                                // 🔥 KÔŠ TLAČIDLO - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
+                                !groupHasMatches && React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => handleRemoveOrDeleteTeam(team),
+                                        className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-red-600 hover:bg-red-50',
+                                        title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
@@ -3210,39 +3199,27 @@ const AddTeamsGroupApp = (props) => {
                                     return 'Tím má priradenú ubytovňu';
                                 })()
                             }),
-                            // EDIT: Tlačidlo pre úpravu tímu
-                            React.createElement(
+                            
+                            // 🔥 EDIT TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
+                            !groupHasMatches && React.createElement(
                                 'button',
                                 {
-                                    onClick: groupHasMatches ? undefined : () => { setTeamToEdit(team); setIsModalOpen(true); },
-                                    className: `p-1.5 rounded-full transition-colors ${
-                                        groupHasMatches 
-                                            ? 'text-gray-300 cursor-not-allowed' 
-                                            : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
-                                    }`,
-                                    title: groupHasMatches 
-                                        ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
-                                        : 'Upraviť tím',
-                                    disabled: groupHasMatches
+                                    onClick: () => { setTeamToEdit(team); setIsModalOpen(true); },
+                                    className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-indigo-600 hover:bg-indigo-50',
+                                    title: 'Upraviť tím'
                                 },
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                                 )
                             ),
-                            // Kôš
-                            React.createElement(
+                            
+                            // 🔥 KÔŠ TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
+                            !groupHasMatches && React.createElement(
                                 'button',
                                 {
-                                    onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
-                                    className: `p-1.5 rounded-full transition-colors ${
-                                        groupHasMatches 
-                                            ? 'text-gray-300 cursor-not-allowed' 
-                                            : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
-                                    }`,
-                                    title: groupHasMatches 
-                                        ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
-                                        : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
-                                    disabled: groupHasMatches
+                                    onClick: () => handleRemoveOrDeleteTeam(team),
+                                    className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-red-600 hover:bg-red-50',
+                                    title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
                                 },
                                 React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
