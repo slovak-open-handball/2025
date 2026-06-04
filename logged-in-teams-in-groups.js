@@ -2808,7 +2808,7 @@ const AddTeamsGroupApp = (props) => {
                 } catch (e) {
                 }
             }
-        
+    
             // Fallback na globálne mapovanie (tiež max 2 iterácie)
             if (window.__teamNameMapping) {
                 let currentName = team.teamName;
@@ -2833,6 +2833,34 @@ const AddTeamsGroupApp = (props) => {
             return displayName;
         };
     
+        // Pomocná funkcia na získanie farby ubytovne pre tím (PRESUNUTÁ SEM, ABY BOLA DOSTUPNÁ)
+        const getTeamAccommodationColor = (team, categoryName) => {
+            if (!team) return '#f3f4f6';
+            
+            const teamName = team.teamName;
+            const cleanTeamName = getCleanDisplayName(team);
+            
+            // Získame názov ubytovne z mapovania
+            const accommodationName = teamAccommodations?.get(team.id) || 
+                                      teamAccommodations?.get(teamName) || 
+                                      teamAccommodations?.get(cleanTeamName);
+            
+            // Ak názov tímu obsahuje názov kategórie, vrátime sivú farbu
+            if (teamName.includes(categoryName)) {
+                return '#f3f4f6';
+            }
+            
+            if (accommodationName) {
+                const accommodation = accommodations?.find(a => a.name === accommodationName);
+                if (accommodation && accommodation.headerColor) {
+                    return accommodation.headerColor;
+                }
+                return '#ffff00'; // Žltá pre tímy bez ubytovne
+            }
+            
+            return '#f3f4f6';
+        };
+    
         if (isWithoutGroup) {
             // Tímy bez skupiny → triedime len podľa názvu, bez čísel a placeholderov
             const sortedTeams = [...teamsToRender].sort((a, b) =>
@@ -2847,8 +2875,7 @@ const AddTeamsGroupApp = (props) => {
                 }
     
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
-
-                const teamColor = getTeamAccommodationColor(team, categoryIdToNameMap[targetCategoryId]);
+                const categoryName = categoryIdToNameMap[targetCategoryId] || team.category || '';
     
                 return React.createElement(
                     'li',
@@ -2861,15 +2888,15 @@ const AddTeamsGroupApp = (props) => {
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-1' },
-                        // FAREBNÝ KRUH
+                        // FAREBNÝ KRUH (už existuje)
                         React.createElement('div', {
                             className: 'w-3 h-3 rounded-full flex-shrink-0',
                             style: { 
-                                backgroundColor: getTeamAccommodationColor(team, categoryIdToNameMap[selectedCategoryId]), 
+                                backgroundColor: getTeamAccommodationColor(team, categoryName), 
                                 boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
                             },
                             title: (() => {
-                                const color = getTeamAccommodationColor(team, categoryIdToNameMap[selectedCategoryId]);
+                                const color = getTeamAccommodationColor(team, categoryName);
                                 if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
                                 if (color === '#f3f4f6') return 'Tím je v základnej skupine';
                                 return 'Tím má priradenú ubytovňu';
@@ -3019,12 +3046,30 @@ const AddTeamsGroupApp = (props) => {
                                 } ${hasDuplicate ? 'border-red-300' : ''}`
                             },
                             React.createElement(
-                                'span', 
-                                { 
-                                    className: `flex-grow ${textColor} ${additionalClasses}`,
-                                    title: title
-                                },
-                                `${pos}. ${mappedDisplayName}${hasDuplicate ? '' : ''}`
+                                'div',
+                                { className: 'flex items-center space-x-3 flex-grow' },
+                                // 🔥 PRIDANÝ FAREBNÝ KRUH PRE TÍMY V SKUPINE
+                                React.createElement('div', {
+                                    className: 'w-3 h-3 rounded-full flex-shrink-0',
+                                    style: { 
+                                        backgroundColor: getTeamAccommodationColor(team, categoryName), 
+                                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                                    },
+                                    title: (() => {
+                                        const color = getTeamAccommodationColor(team, categoryName);
+                                        if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
+                                        if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                        return 'Tím má priradenú ubytovňu';
+                                    })()
+                                }),
+                                React.createElement(
+                                    'span', 
+                                    { 
+                                        className: `flex-grow ${textColor} ${additionalClasses}`,
+                                        title: title
+                                    },
+                                    `${pos}. ${mappedDisplayName}${hasDuplicate ? '' : ''}`
+                                )
                             ),
                             React.createElement(
                                 'button',
@@ -3128,12 +3173,30 @@ const AddTeamsGroupApp = (props) => {
                             }`
                         },
                         React.createElement(
-                            'span',
-                            { 
-                                className: `flex-grow text-orange-800 ${additionalClasses}`,
-                                title: title
-                            },
-                            `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
+                            'div',
+                            { className: 'flex items-center space-x-3 flex-grow' },
+                            // 🔥 PRIDANÝ FAREBNÝ KRUH PRE EXTRA TÍMY V SKUPINE
+                            React.createElement('div', {
+                                className: 'w-3 h-3 rounded-full flex-shrink-0',
+                                style: { 
+                                    backgroundColor: getTeamAccommodationColor(team, categoryName), 
+                                    boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                                },
+                                title: (() => {
+                                    const color = getTeamAccommodationColor(team, categoryName);
+                                    if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
+                                    if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                    return 'Tím má priradenú ubytovňu';
+                                })()
+                            }),
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: `flex-grow text-orange-800 ${additionalClasses}`,
+                                    title: title
+                                },
+                                `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
+                            )
                         ),
                         React.createElement(
                             'div',
