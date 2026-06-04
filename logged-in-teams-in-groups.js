@@ -2941,7 +2941,7 @@ const AddTeamsGroupApp = (props) => {
         // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
         const categoryName = categoryIdToNameMap[targetCategoryId];
         const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
-
+    
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
             const ob = typeof b.order === 'number' ? b.order : Infinity;
@@ -3033,6 +3033,10 @@ const AddTeamsGroupApp = (props) => {
                         }
                     }
                     
+                    // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu
+                    // Ak je tím v nadstavbovej skupine a názov tímu obsahuje názov kategórie, kruh sa nezobrazí
+                    const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
+                    
                     items.push(
                         React.createElement(
                             'li',
@@ -3059,8 +3063,8 @@ const AddTeamsGroupApp = (props) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
-                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ ZA NÁZVOM TÍMU (pred ikonami)
-                                React.createElement('div', {
+                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
+                                showAccommodationCircle && React.createElement('div', {
                                     className: 'w-3 h-3 rounded-full flex-shrink-0',
                                     style: { 
                                         backgroundColor: getTeamAccommodationColor(team, categoryName), 
@@ -3164,6 +3168,9 @@ const AddTeamsGroupApp = (props) => {
                     }
                 }
                 
+                // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu (pre extra tímy)
+                const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
+                
                 items.push(
                     React.createElement(
                         'li',
@@ -3190,8 +3197,8 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement(
                             'div',
                             { className: 'flex items-center space-x-1' },
-                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - TERAZ ZA NÁZVOM
-                            React.createElement('div', {
+                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
+                            showAccommodationCircle && React.createElement('div', {
                                 className: 'w-3 h-3 rounded-full flex-shrink-0',
                                 style: { 
                                     backgroundColor: getTeamAccommodationColor(team, categoryName), 
