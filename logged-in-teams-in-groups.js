@@ -2730,7 +2730,7 @@ const AddTeamsGroupApp = (props) => {
     
     // Pomocná funkcia na získanie farby ubytovne pre tím
     const getTeamAccommodationColor = (team, categoryName) => {
-        if (!team) return '#f3f4f6';
+        if (!team) return '#ffff00';
         
         const teamName = team.teamName;
         const cleanTeamName = getCleanTeamName(team, categoryName);
@@ -2742,7 +2742,7 @@ const AddTeamsGroupApp = (props) => {
         
         // Ak názov tímu obsahuje názov kategórie, vrátime sivú farbu
         if (teamName.includes(categoryName)) {
-            return '#f3f4f6';
+            return '#ffff00';
         }
         
         if (accommodationName) {
@@ -2753,7 +2753,7 @@ const AddTeamsGroupApp = (props) => {
             return '#ffff00'; // Žltá pre tímy bez ubytovne
         }
         
-        return '#f3f4f6';
+        return '#ffff00';
     };
     
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
@@ -2835,7 +2835,7 @@ const AddTeamsGroupApp = (props) => {
     
         // Pomocná funkcia na získanie farby ubytovne pre tím (PRESUNUTÁ SEM, ABY BOLA DOSTUPNÁ)
         const getTeamAccommodationColor = (team, categoryName) => {
-            if (!team) return '#f3f4f6';
+            if (!team) return '#ffff00';
             
             const teamName = team.teamName;
             const cleanTeamName = getCleanDisplayName(team);
@@ -2847,7 +2847,7 @@ const AddTeamsGroupApp = (props) => {
             
             // Ak názov tímu obsahuje názov kategórie, vrátime sivú farbu
             if (teamName.includes(categoryName)) {
-                return '#f3f4f6';
+                return '#ffff00';
             }
             
             if (accommodationName) {
@@ -2858,7 +2858,7 @@ const AddTeamsGroupApp = (props) => {
                 return '#ffff00'; // Žltá pre tímy bez ubytovne
             }
             
-            return '#f3f4f6';
+            return '#ffff00';
         };
     
         if (isWithoutGroup) {
@@ -2898,7 +2898,7 @@ const AddTeamsGroupApp = (props) => {
                             title: (() => {
                                 const color = getTeamAccommodationColor(team, categoryName);
                                 if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                if (color === '#ffff00') return 'Tím je v základnej skupine';
                                 return 'Tím má priradenú ubytovňu';
                             })()
                         }),
@@ -3058,7 +3058,7 @@ const AddTeamsGroupApp = (props) => {
                                     title: (() => {
                                         const color = getTeamAccommodationColor(team, categoryName);
                                         if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                        if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                        if (color === '#ffff00') return 'Tím je v základnej skupine';
                                         return 'Tím má priradenú ubytovňu';
                                     })()
                                 }),
@@ -3185,7 +3185,7 @@ const AddTeamsGroupApp = (props) => {
                                 title: (() => {
                                     const color = getTeamAccommodationColor(team, categoryName);
                                     if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                    if (color === '#f3f4f6') return 'Tím je v základnej skupine';
+                                    if (color === '#ffff00') return 'Tím je v základnej skupine';
                                     return 'Tím má priradenú ubytovňu';
                                 })()
                             }),
