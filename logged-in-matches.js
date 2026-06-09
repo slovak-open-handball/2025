@@ -9134,9 +9134,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            }
                                                                            
                                                                            blockIndex++;
-                                                                       }
-                                                                       
-                                                                       console.log(`splitGapIntoBlocks: gapMinutes=${gapMinutes}, totalBlocksDuration=${totalBlocksDuration}, matchBreak=${matchBreak}, blocksCount=${blocks.length}`);
+                                                                       }                                                                       
                                                                        
                                                                        return blocks;
                                                                    };
