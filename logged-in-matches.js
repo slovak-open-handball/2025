@@ -9042,17 +9042,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            if (match.scheduledTime) {
                                                                                const category = categories.find(c => c.name === match.categoryName);
                                                                                let matchDuration = 0;
-                                                                               let matchBreak = 5;
                                                                                if (category) {
                                                                                    const periods = category.periods || 2;
                                                                                    const periodDuration = category.periodDuration || 20;
                                                                                    const breakDuration = category.breakDuration || 2;
                                                                                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                                   matchBreak = category.matchBreak || 5;
                                                                                }
-                                                                               const totalWithBreak = matchDuration + matchBreak;
-                                                                               if (totalWithBreak > maxDuration) {
-                                                                                   maxDuration = totalWithBreak;
+                                                                               if (matchDuration > maxDuration) {
+                                                                                   maxDuration = matchDuration;
                                                                                }
                                                                            }
                                                                        }
