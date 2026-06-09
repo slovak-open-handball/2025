@@ -9058,12 +9058,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
-
-                                                                   const formatTimeFromMinutes = (minutes) => {
-                                                                       const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                                                                       const mins = (minutes % 60).toString().padStart(2, '0');
-                                                                       return `${hours}:${mins}`;
-                                                                   };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
                                                                    const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
