@@ -9107,12 +9107,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return blocks;
                                                                    };
 
-                                                                   const formatTimeFromMinutes = (minutes) => {
-                                                                       const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                                                                       const mins = (minutes % 60).toString().padStart(2, '0');
-                                                                       return `${hours}:${mins}`;
-                                                                   };
-
                                                                    // Funkcia na získanie maximálneho trvania zápasu v tomto dni (vrátane prestávky)
                                                                    const getMaxMatchDurationInDay = (matchesList) => {
                                                                        let maxDuration = 0;
