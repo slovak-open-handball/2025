@@ -9057,7 +9057,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (pridáva prestávku medzi blokmi)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9106,11 +9106,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
-                                                                           // ALE DÔLEŽITÉ: PRESTÁVKA SA NEPRIPOČÍTA K remainingMinutes, LEN POSÚVA ČAS
+                                                                           // MEDZI BLOKMI PRIDÁME ZOBRAZENIE PRESTÁVKY
+                                                                           // Ak ešte zostávajú nejaké bloky na vykreslenie, vytvoríme medzi nimi MEDZERU (prestávku)
                                                                            if (remainingMinutes > 0) {
-                                                                               currentStartMinutes += matchBreak;  // PRESTÁVKA MEDZI ZÁPASMI
-                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času, ktorý môže byť vyplnený zápasom
+                                                                               // Vytvoríme novú premennú pre čas začiatku prestávky
+                                                                               const breakStartMinutes = currentStartMinutes;
+                                                                               // Prestávka trvá matchBreak minút (predvolene 5)
+                                                                               const matchBreak = 5;
+                                                                               const breakStartTimeFormatted = formatTimeFromMinutes(breakStartMinutes);
+                                                                               const breakEndTimeFormatted = formatTimeFromMinutes(breakStartMinutes + matchBreak);
+                                                                               
+                                                                               // Pridáme vizuálny prvok pre prestávku medzi blokmi
+                                                                               blocks.push({
+                                                                                   id: `break-between-${blockIndex}`,
+                                                                                   startTime: breakStartTimeFormatted,
+                                                                                   endTime: breakEndTimeFormatted,
+                                                                                   duration: matchBreak,
+                                                                                   isBreak: true,  // Označíme, že ide o prestávku
+                                                                                   isFirst: false,
+                                                                                   isLast: false,
+                                                                                   isBlocked: false
+                                                                               });
+                                                                               
+                                                                               // Posunieme čas o dĺžku prestávky (ale neodpočítavame z remainingMinutes)
+                                                                               currentStartMinutes += matchBreak;
                                                                            }
                                                                            
                                                                            blockIndex++;
