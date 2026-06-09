@@ -9160,13 +9160,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    // KONIEC VOĽNÉHO ČASU = začiatok prvého zápasu - prestávka pred prvým zápasom
                                                                                    const freeTimeEndMinutes = firstMatchStartMinutes - firstMatchBreak;
                                                                                    
-                                                                                   // DĹŽKA VOĽNÉHO ČASU
+                                                                                   // DĹŽKA VOĽNÉHO ČASU (tu už NIE je potrebné odpočítavať prestávky)
                                                                                    let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                    
-                                                                                   // ** DEFINUJEME PREMENNÚ TU, KDE SA POUŽÍVA **
                                                                                    const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                    
-                                                                                   // Ak je medzera menšia ako 0, nezobrazujeme nič
                                                                                    if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                        const gapStartTime = hallStartTimeStr;
                                                                                        const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
