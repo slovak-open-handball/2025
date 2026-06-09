@@ -9099,37 +9099,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                isFirst: blockIndex === 0,
                                                                                isLast: (blockDuration === remainingMinutes),
                                                                                isBlocked: isThisBlockBlocked,
-                                                                               uniqueKey: uniqueBreakKey
+                                                                               uniqueKey: uniqueBreakKey,
+                                                                               isBreak: false  // Toto je blok VOĽNÉHO ČASU (zápas)
                                                                            });
                                                                            
                                                                            // Posunieme sa o dĺžku bloku
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // MEDZI BLOKMI PRIDÁME ZOBRAZENIE PRESTÁVKY
-                                                                           // Ak ešte zostávajú nejaké bloky na vykreslenie, vytvoríme medzi nimi MEDZERU (prestávku)
+                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
                                                                            if (remainingMinutes > 0) {
-                                                                               // Vytvoríme novú premennú pre čas začiatku prestávky
-                                                                               const breakStartMinutes = currentStartMinutes;
-                                                                               // Prestávka trvá matchBreak minút (predvolene 5)
+                                                                               // Prestávka trvá 5 minút (matchBreak)
                                                                                const matchBreak = 5;
-                                                                               const breakStartTimeFormatted = formatTimeFromMinutes(breakStartMinutes);
-                                                                               const breakEndTimeFormatted = formatTimeFromMinutes(breakStartMinutes + matchBreak);
+                                                                               const breakStartMinutes = currentStartMinutes;
+                                                                               const breakEndMinutes = currentStartMinutes + matchBreak;
                                                                                
-                                                                               // Pridáme vizuálny prvok pre prestávku medzi blokmi
                                                                                blocks.push({
-                                                                                   id: `break-between-${blockIndex}`,
-                                                                                   startTime: breakStartTimeFormatted,
-                                                                                   endTime: breakEndTimeFormatted,
+                                                                                   id: `break-${blockIndex}`,
+                                                                                   startTime: formatTimeFromMinutes(breakStartMinutes),
+                                                                                   endTime: formatTimeFromMinutes(breakEndMinutes),
                                                                                    duration: matchBreak,
-                                                                                   isBreak: true,  // Označíme, že ide o prestávku
+                                                                                   isBreak: true,  // Toto je PRESTÁVKA (NIE je to voľný čas na zápas)
                                                                                    isFirst: false,
                                                                                    isLast: false,
                                                                                    isBlocked: false
                                                                                });
                                                                                
-                                                                               // Posunieme čas o dĺžku prestávky (ale neodpočítavame z remainingMinutes)
+                                                                               // Posunieme čas o dĺžku prestávky
                                                                                currentStartMinutes += matchBreak;
+                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
                                                                            }
                                                                            
                                                                            blockIndex++;
