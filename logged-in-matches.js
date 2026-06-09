@@ -9076,7 +9076,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (odpočítava matchBreak z remainingMinutes)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9084,12 +9084,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return hours * 60 + minutes;
                                                                        })() : 0;
                                                                        
+                                                                       // Pomocná funkcia na formátovanie času z minút
                                                                        const formatTimeFromMinutes = (minutes) => {
                                                                            const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
                                                                            const mins = (minutes % 60).toString().padStart(2, '0');
                                                                            return `${hours}:${mins}`;
                                                                        };
                                                                        
+                                                                       // Minimálna dĺžka bloku, ktorý sa má zobraziť
                                                                        const MIN_BLOCK_DURATION = 5;
                                                                        
                                                                        if (gapMinutes <= 0) return [];
@@ -9132,7 +9134,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            }
                                                                            
                                                                            blockIndex++;
-                                                                       }                                                                      
+                                                                       }
+                                                                       
+                                                                       console.log(`splitGapIntoBlocks: gapMinutes=${gapMinutes}, totalBlocksDuration=${totalBlocksDuration}, matchBreak=${matchBreak}, blocksCount=${blocks.length}`);
                                                                        
                                                                        return blocks;
                                                                    };
@@ -9688,7 +9692,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                    // Použijeme funkciu splitGapIntoBlocks - tá už NEODPOČÍTAVA prestávky, len ich používa na posun času medzi blokmi
                                                                                    const blocks = splitGapIntoBlocks(
-                                                                                       displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
+                                                                                       displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
@@ -9765,7 +9769,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
                                                                                                            onClick: (e) => {
                                                                                                                e.stopPropagation();
-                                                                                                               toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                               toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
                                                                                                            },
                                                                                                            title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                        },
