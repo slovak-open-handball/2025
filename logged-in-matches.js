@@ -9076,7 +9076,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (odpočítava matchBreak z remainingMinutes)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5, blockedBreaksParam = {}) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
