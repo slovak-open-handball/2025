@@ -4927,11 +4927,20 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match || !match.scheduledTime) return;
     
+            // Získame dĺžku prestávky pre prvý zápas
+            let firstMatchBreak = 5;
+            const firstMatchCategory = categories.find(c => c.name === match.categoryName);
+            if (firstMatchCategory) {
+                firstMatchBreak = firstMatchCategory.matchBreak || 5;
+            }
+    
+            // Celkový posun = dĺžka voľného času + prestávka pred prvým zápasom
+            const totalShift = breakDuration + firstMatchBreak;
+    
             // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = match.scheduledTime.toDate();
             const dateStr = getLocalDateStr(matchDate);
             
-            // Získame všetky zápasy v tej istej hale a deň, zoradené podľa času
             const hallDayMatches = matches
                 .filter(m => 
                     m.hallId === match.hallId && 
@@ -4954,11 +4963,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return;
             }
     
-            // Posunieme VŠETKY zápasy v tento deň o breakDuration SKÔR (odpočítame minúty)
+            // Posunieme VŠETKY zápasy v tento deň o totalShift SKÔR
             for (const m of hallDayMatches) {
                 const mRef = doc(window.db, 'matches', m.id);
                 const mDateTime = new Date(m.scheduledTimeObj);
-                mDateTime.setMinutes(mDateTime.getMinutes() - breakDuration);  // ZMENA: mínus namiesto plus
+                mDateTime.setMinutes(mDateTime.getMinutes() - totalShift);
                 
                 await updateDoc(mRef, {
                     scheduledTime: Timestamp.fromDate(mDateTime)
@@ -4967,7 +4976,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
     
             window.showGlobalNotification(
-                `Medzera ${breakDuration} minút bola odstránená. Všetky zápasy boli posunuté o ${breakDuration} minút SKÔR.`,
+                `Medzera ${breakDuration} minút bola odstránená. Všetky zápasy boli posunuté o ${totalShift} minút SKÔR (vrátane prestávky).`,
                 'success'
             );
     
@@ -4994,6 +5003,16 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             if (!currentMatch || !nextMatch || !currentMatch.scheduledTime || !nextMatch.scheduledTime) return;
     
+            // Získame dĺžku prestávky pre aktuálny zápas
+            let currentMatchBreak = 5;
+            const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
+            if (currentMatchCategory) {
+                currentMatchBreak = currentMatchCategory.matchBreak || 5;
+            }
+    
+            // Celkový posun = dĺžka voľného času + prestávka medzi zápasmi
+            const totalShift = breakDuration + currentMatchBreak;
+    
             // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = currentMatch.scheduledTime.toDate();
             const dateStr = getLocalDateStr(matchDate);
@@ -5019,11 +5038,11 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Všetky zápasy PO aktuálnom (vrátane nasledujúceho)
             const afterMatches = hallDayMatches.slice(currentIndex + 1);
     
-            // Posunieme všetky nasledujúce zápasy o breakDuration skôr
+            // Posunieme všetky nasledujúce zápasy o totalShift skôr
             for (const m of afterMatches) {
                 const mRef = doc(window.db, 'matches', m.id);
                 const mDateTime = new Date(m.scheduledTimeObj);
-                mDateTime.setMinutes(mDateTime.getMinutes() - breakDuration);
+                mDateTime.setMinutes(mDateTime.getMinutes() - totalShift);
                 
                 await updateDoc(mRef, {
                     scheduledTime: Timestamp.fromDate(mDateTime)
@@ -5031,7 +5050,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
     
             window.showGlobalNotification(
-                `Medzera ${breakDuration} minút bola odstránená. Nasledujúce zápasy boli posunuté skôr.`,
+                `Medzera ${breakDuration} minút bola odstránená. Nasledujúce zápasy boli posunuté o ${totalShift} minút skôr (vrátane prestávky).`,
                 'success'
             );
     
