@@ -9060,7 +9060,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9105,16 +9105,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                uniqueKey: uniqueBreakKey
                                                                            });
                                                                            
-                                                                           // Posunieme sa o dĺžku bloku
+                                                                           // Posunieme sa o dĺžku bloku (BEZ PRIDÁVANIA PRESTÁVKY)
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
-                                                                           
-                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
-                                                                           // ALE DÔLEŽITÉ: PRESTÁVKA SA NEPRIPOČÍTA K remainingMinutes, LEN POSÚVA ČAS
-                                                                           if (remainingMinutes > 0) {
-                                                                               currentStartMinutes += matchBreak;
-                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
-                                                                           }
                                                                            
                                                                            blockIndex++;
                                                                        }
@@ -9172,7 +9165,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore,
-                                                                                           null, firstMatchBreak  // PRIDANÝ parameter matchBreak
+                                                                                           null,
                                                                                        );
                                                                                        
                                                                                        blocks.forEach(block => {
@@ -9678,7 +9671,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
                                                                                        setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak,
-                                                                                       null, currentMatchBreak  // matchBreak pre medzery medzi blokmi
+                                                                                       null,
                                                                                    );
                                                                                    
                                                                                    blocks.forEach(block => {
