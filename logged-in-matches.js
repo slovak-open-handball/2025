@@ -9107,7 +9107,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
-                                                                           const isThisBlockBlocked = blockedBreaksParam ? !!blockedBreaksParam[uniqueBreakKey] : false;
+                                                                           const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
                                                                    
                                                                            if (isBlockLongEnough) {
                                                                                blocks.push({
