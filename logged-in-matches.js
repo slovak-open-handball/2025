@@ -9610,16 +9610,38 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const dateStr = getLocalDateStr(currentMatchDate);
                                                                                const hallId = currentMatch.hallId;
                                                                                const gapStartTime = formatTimeFromMinutes(currentEndMinutes);
-                                                                               const gapEndTime = formatTimeFromMinutes(nextStartMinutes);
+                                                                               
+                                                                               // ZÍSKAME DĹŽKU PRESTÁVKY PRE NASLEDUJÚCI ZÁPAS
+                                                                               let nextMatchBreak = 5;
+                                                                               const nextMatchCategory = categories.find(c => c.name === nextMatch.categoryName);
+                                                                               if (nextMatchCategory) {
+                                                                                   nextMatchBreak = nextMatchCategory.matchBreak || 5;
+                                                                               }
+                                                                               
+                                                                               // VYPOČÍTAME UPRAVENÝ KONEC PRE ZOBRAZENIE (znížený o prestávku)
+                                                                               let displayGapMinutes = gapMinutes;
+                                                                               let effectiveEndMinutes = nextStartMinutes - nextMatchBreak;
+                                                                               
+                                                                               if (gapMinutes > 0) {
+                                                                                   if (gapMinutes >= nextMatchBreak) {
+                                                                                       displayGapMinutes = gapMinutes - nextMatchBreak;
+                                                                                       effectiveEndMinutes = nextStartMinutes - nextMatchBreak;
+                                                                                   } else {
+                                                                                       displayGapMinutes = 0;
+                                                                                       effectiveEndMinutes = currentEndMinutes;
+                                                                                   }
+                                                                               }
+                                                                               
+                                                                               const gapEndTime = formatTimeFromMinutes(effectiveEndMinutes);
                                                                                
                                                                                const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hallId}_${dateStr}_${gapStartTime}`] : false;
                                                                                const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
                                                                                if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
-                                                                                   if (gapMinutes >= 0) {
+                                                                                   if (displayGapMinutes >= 0) {
                                                                                        const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                        const blocks = splitGapIntoBlocks(
-                                                                                           gapMinutes, maxBlockDuration, hallId, dateStr, 
+                                                                                           displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                            gapStartTime, gapEndTime, isGapBlocked,
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
