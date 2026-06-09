@@ -9074,7 +9074,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const mins = (minutes % 60).toString().padStart(2, '0');
                                                                            return `${hours}:${mins}`;
                                                                        };
-    
+                                                                       
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
                                                                        
@@ -9093,7 +9093,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            
                                                                            // Skontrolujeme, či je tento konkrétny blok zablokovaný
                                                                            const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
-        
+                                                                   
                                                                            blocks.push({
                                                                                id: `block-${blockIndex}`,
                                                                                startTime: blockStartTime,
@@ -9109,10 +9109,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // Ak ešte zostávajú nejaké minúty, PRIDÁME PRESTÁVKU MEDZI BLOKMI
+                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
+                                                                           // ALE DÔLEŽITÉ: PRESTÁVKA SA NEPRIPOČÍTA K remainingMinutes, LEN POSÚVA ČAS
                                                                            if (remainingMinutes > 0) {
-                                                                               currentStartMinutes += matchBreak;  // PRESTÁVKA MEDZI ZÁPASMI
-                                                                               // Neodpočítavame z remainingMinutes, lebo prestávka nie je súčasťou voľného času
+                                                                               currentStartMinutes += matchBreak;
+                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
                                                                            }
                                                                            
                                                                            blockIndex++;
@@ -9657,27 +9658,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                // DĹŽKA VOĽNÉHO ČASU (len priestor, kde môže byť zápas)
                                                                                let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                
-                                                                               const dateStr = getLocalDateStr(currentMatchDate);
-                                                                               const hallId = currentMatch.hallId;
+                                                                               // ... zvyšok kódu ...
                                                                                
-                                                                               // Začiatok zobrazovanej medzery = koniec zápasu + prestávka
-                                                                               const gapStartTime = formatTimeFromMinutes(freeTimeStartMinutes);
-                                                                               // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
-                                                                               const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
-                                                                               
-                                                                               const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                                                               
-                                                                               // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                   // Použijeme upravenú funkciu splitGapIntoBlocks s parametrom matchBreak
                                                                                    const blocks = splitGapIntoBlocks(
                                                                                        displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
                                                                                        setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak,
-                                                                                       null, currentMatchBreak  // PRIDANÝ parameter matchBreak
+                                                                                       null, currentMatchBreak  // matchBreak pre medzery medzi blokmi
                                                                                    );
                                                                                    
                                                                                    blocks.forEach(block => {
