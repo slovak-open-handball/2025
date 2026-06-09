@@ -9121,11 +9121,33 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
                                                                                    const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                    
+                                                                                   // ZÍSKAME DĹŽKU PRESTÁVKY MEDZI ZÁPASMI PRE PRVÝ ZÁPAS
+                                                                                   let matchBreakDuration = 5; // predvolená hodnota
+                                                                                   const firstMatchCategory = categories.find(c => c.name === firstMatch.categoryName);
+                                                                                   if (firstMatchCategory) {
+                                                                                       matchBreakDuration = firstMatchCategory.matchBreak || 5;
+                                                                                   }
+                                                                                   
+                                                                                   // ZNÍŽIME MEDZERU O DĹŽKU PRESTÁVKY (ak je medzera dostatočne veľká)
+                                                                                   let displayGapMinutes = gapBeforeFirstMatch;
+                                                                                   let effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
+                                                                                   
+                                                                                   if (gapBeforeFirstMatch > 0) {
+                                                                                       // Pre zobrazenie používame čas konca znížený o prestávku
+                                                                                       if (gapBeforeFirstMatch >= matchBreakDuration) {
+                                                                                           displayGapMinutes = gapBeforeFirstMatch - matchBreakDuration;
+                                                                                           effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
+                                                                                       } else {
+                                                                                           displayGapMinutes = 0;
+                                                                                           effectiveEndMinutes = hallStartMinutesTotal;
+                                                                                       }
+                                                                                   }
+                                                                                   
                                                                                    if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
                                                                                        const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                        const blocks = splitGapIntoBlocks(
-                                                                                           gapBeforeFirstMatch, maxBlockDuration, hall.id, dateStr, 
-                                                                                           hallStartTimeStr, formatTimeFromMinutes(firstMatchStartMinutes), false,
+                                                                                           displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
+                                                                                           hallStartTimeStr, formatTimeFromMinutes(effectiveEndMinutes), false,
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore
