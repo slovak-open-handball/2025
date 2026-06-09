@@ -9107,7 +9107,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
-                                                                           const isThisBlockBlocked = window.blockedBreaks ? !!window.blockedBreaks[uniqueBreakKey] : false;
+                                                                           const isThisBlockBlocked = blockedBreaksParam ? !!blockedBreaksParam[uniqueBreakKey] : false;
                                                                    
                                                                            if (isBlockLongEnough) {
                                                                                blocks.push({
@@ -9189,7 +9189,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore,
-                                                                                           null, firstMatchBreak
+                                                                                           null, firstMatchBreak, blockedBreaks
                                                                                        );
                                                                                        
                                                                                        // Pre každý blok vytvoríme samostatný riadok s vlastným tlačidlom koša
@@ -9697,7 +9697,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
                                                                                        setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak,
-                                                                                       null, currentMatchBreak 
+                                                                                       null, currentMatchBreak, blockedBreaks
                                                                                    );
                                                                                    
                                                                                    blocks.forEach(block => {
