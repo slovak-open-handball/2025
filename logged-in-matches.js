@@ -9060,7 +9060,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak) => {
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9074,18 +9074,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return `${hours}:${mins}`;
                                                                        };
                                                                        
+                                                                       // Ak je gapMinutes 0, nič nezobrazujeme
+                                                                       if (gapMinutes <= 0) return [];
+                                                                       
                                                                        let blockIndex = 0;
                                                                        // Rozdeľujeme, kým neostane žiadny čas - BEZ OBMEDZENIA NA POČET BLOKOV
                                                                        while (remainingMinutes > 0) {
                                                                            // Každý blok má dĺžku maxBlockDuration, posledný blok má zvyšok
                                                                            const blockDuration = Math.min(maxBlockDuration, remainingMinutes);
                                                                            const blockStartTime = formatTimeFromMinutesLocal(currentStartMinutes);
+                                                                           
+                                                                           // DÔLEŽITÉ: Koncový čas bloku je aktuálny start + dĺžka bloku
+                                                                           // (žiadne odpočítavanie prestávky - prestávka sa odpočítava už pri výpočte gapMinutes)
                                                                            const blockEndTime = formatTimeFromMinutesLocal(currentStartMinutes + blockDuration);
                                                                            
                                                                            // Vytvoríme UNIKÁTNY identifikátor pre každý blok
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
                                                                            
-                                                                           // Skontrolujeme, či je tento konkrétny blok zablokovaný (nie celý pôvodný interval)
+                                                                           // Skontrolujeme, či je tento konkrétny blok zablokovaný
                                                                            const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
                                                                            
                                                                            blocks.push({
@@ -9106,6 +9112,36 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        
                                                                        return blocks;
                                                                    };
+
+                                                                   const formatTimeFromMinutes = (minutes) => {
+                                                                       const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                       const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                       return `${hours}:${mins}`;
+                                                                   };
+
+                                                                   // Funkcia na získanie maximálneho trvania zápasu v tomto dni (vrátane prestávky)
+                                                                   const getMaxMatchDurationInDay = (matchesList) => {
+                                                                       let maxDuration = 0;
+                                                                       for (const match of matchesList) {
+                                                                            if (match.scheduledTime) {
+                                                                                const category = categories.find(c => c.name === match.categoryName);
+                                                                                let matchDuration = 0;
+                                                                                let matchBreak = 5;
+                                                                                if (category) {
+                                                                                    const periods = category.periods || 2;
+                                                                                    const periodDuration = category.periodDuration || 20;
+                                                                                    const breakDuration = category.breakDuration || 2;
+                                                                                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                    matchBreak = category.matchBreak || 5;
+                                                                                }
+                                                                                const totalWithBreak = matchDuration + matchBreak;
+                                                                                if (totalWithBreak > maxDuration) {
+                                                                                    maxDuration = totalWithBreak;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        return maxDuration > 0 ? maxDuration : 45;
+                                                                    };
                                                                    
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
@@ -9126,154 +9162,153 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    const [hallStartHours, hallStartMinutes] = hallStartTimeStr.split(':').map(Number);
                                                                                    const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
                                                                                    
-                                                                                   let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
-                                                                                   const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                                                                   
-                                                                                   // ZÍSKAME DĹŽKU PRESTÁVKY MEDZI ZÁPASMI PRE PRVÝ ZÁPAS
-                                                                                   let matchBreakDuration = 5; // predvolená hodnota
+                                                                                   // ZÍSKAME DĹŽKU PRESTÁVKY PRE PRVÝ ZÁPAS
+                                                                                   let firstMatchBreak = 5;
                                                                                    const firstMatchCategory = categories.find(c => c.name === firstMatch.categoryName);
                                                                                    if (firstMatchCategory) {
-                                                                                       matchBreakDuration = firstMatchCategory.matchBreak || 5;
+                                                                                       firstMatchBreak = firstMatchCategory.matchBreak || 5;
                                                                                    }
                                                                                    
-                                                                                   // ZNÍŽIME MEDZERU O DĹŽKU PRESTÁVKY (ak je medzera dostatočne veľká)
-                                                                                   let displayGapMinutes = gapBeforeFirstMatch;
-                                                                                   let effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
+                                                                                   // Celková medzera pred prvým zápasom (od začiatku haly po začiatok zápasu)
+                                                                                   const totalGapBeforeFirst = firstMatchStartMinutes - hallStartMinutesTotal;
                                                                                    
-                                                                                   if (gapBeforeFirstMatch > 0) {
-                                                                                       if (gapBeforeFirstMatch >= matchBreakDuration) {
-                                                                                           displayGapMinutes = gapBeforeFirstMatch - matchBreakDuration;
-                                                                                           effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
-                                                                                       } else {
-                                                                                           displayGapMinutes = 0;
-                                                                                           effectiveEndMinutes = hallStartMinutesTotal;
-                                                                                       }
-                                                                                   }
+                                                                                   // ZOBRAZOVACIA MEDZERA = celková medzera - prestávka pred prvým zápasom
+                                                                                   let displayGapMinutes = totalGapBeforeFirst - firstMatchBreak;
                                                                                    
-                                                                                   if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
-                                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                       const blocks = splitGapIntoBlocks(
-                                                                                           displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
-                                                                                           hallStartTimeStr, formatTimeFromMinutes(effectiveEndMinutes), false,
-                                                                                           toggleBlockBreak, null, null, hasCompletedMatch, 
-                                                                                           userProfileData?.role, filteredUnassignedMatches,
-                                                                                           setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore
-                                                                                       );
-                                                                                   
-                                                                                       blocks.forEach(block => {
-                                                                                           allElements.push(
-                                                                                               React.createElement(
-                                                                                                   'div',
-                                                                                                   {
-                                                                                                       key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
-                                                                                                       className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                                                                           hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                                                                       } transition-all relative group/gap`,
-                                                                                                       style: { 
-                                                                                                           width: '100%',
-                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
-                                                                                                       }
-                                                                                                   },
+                                                                                   // Ak je medzera menšia ako 0, nezobrazujeme nič
+                                                                                   if (displayGapMinutes > 0) {
+                                                                                       const gapStartTime = hallStartTimeStr;
+                                                                                       // Koncový čas zobrazovanej medzery = začiatok prvého zápasu - prestávka
+                                                                                       const effectiveEndMinutes = firstMatchStartMinutes - firstMatchBreak;
+                                                                                       const gapEndTime = formatTimeFromMinutes(effectiveEndMinutes);
+                                                                                       
+                                                                                       const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                                       
+                                                                                       if (!isFilterActiveForGaps) {
+                                                                                           const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
+                                                                                           const blocks = splitGapIntoBlocks(
+                                                                                               displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
+                                                                                               gapStartTime, gapEndTime, false,
+                                                                                               toggleBlockBreak, null, null, hasCompletedMatch, 
+                                                                                               userProfileData?.role, filteredUnassignedMatches,
+                                                                                               setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore
+                                                                                           );
+                                                                                       
+                                                                                           blocks.forEach(block => {
+                                                                                               allElements.push(
                                                                                                    React.createElement(
-                                                                                                       'div', 
-                                                                                                       { 
-                                                                                                           className: 'grid items-center text-xs',
+                                                                                                       'div',
+                                                                                                       {
+                                                                                                           key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
+                                                                                                           className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                               hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                           } transition-all relative group/gap`,
                                                                                                            style: { 
-                                                                                                               gridTemplateColumns: '130px 1fr',
-                                                                                                               width: '100%'
+                                                                                                               width: '100%',
+                                                                                                               backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
                                                                                                            }
                                                                                                        },
                                                                                                        React.createElement(
                                                                                                            'div', 
                                                                                                            { 
-                                                                                                               className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                                                                               style: { minWidth: '130px', textAlign: 'center' }
-                                                                                                           },
-                                                                                                           React.createElement(
-                                                                                                               'div', 
-                                                                                                               { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
-                                                                                                               React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                                                                   `${block.startTime} - ${block.endTime}`
-                                                                                                               )
-                                                                                                           )
-                                                                                                       ),
-                                                                                                       React.createElement(
-                                                                                                           'div', 
-                                                                                                           { 
-                                                                                                               className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                               className: 'grid items-center text-xs',
                                                                                                                style: { 
-                                                                                                                   textAlign: 'center',
-                                                                                                                   fontWeight: '500',
-                                                                                                                   color: '#d97706'
+                                                                                                                   gridTemplateColumns: '130px 1fr',
+                                                                                                                   width: '100%'
                                                                                                                }
                                                                                                            },
                                                                                                            React.createElement(
-                                                                                                               'span',
-                                                                                                               { className: 'text-sm font-medium' },
-                                                                                                               block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                               'div', 
+                                                                                                               { 
+                                                                                                                   className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                                   style: { minWidth: '130px', textAlign: 'center' }
+                                                                                                               },
+                                                                                                               React.createElement(
+                                                                                                                   'div', 
+                                                                                                                   { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                                   React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                                   React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                                       `${block.startTime} - ${block.endTime}`
+                                                                                                                   )
+                                                                                                               )
                                                                                                            ),
                                                                                                            React.createElement(
                                                                                                                'div', 
-                                                                                                               { className: 'text-[10px] text-amber-600 ml-1' },
-                                                                                                               `(${block.duration} min)`
+                                                                                                               { 
+                                                                                                                   className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                                   style: { 
+                                                                                                                       textAlign: 'center',
+                                                                                                                       fontWeight: '500',
+                                                                                                                       color: '#d97706'
+                                                                                                                   }
+                                                                                                               },
+                                                                                                               React.createElement(
+                                                                                                                   'span',
+                                                                                                                   { className: 'text-sm font-medium' },
+                                                                                                                   block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                               ),
+                                                                                                               React.createElement(
+                                                                                                                   'div', 
+                                                                                                                   { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                                   `(${block.duration} min)`
+                                                                                                               )
                                                                                                            )
-                                                                                                       )
-                                                                                                   ),
-                                                                                                   !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                                                                                       'div',
-                                                                                                       { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
-                                                                                                       React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
-                                                                                                               },
-                                                                                                               title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
                                                                                                        ),
-                                                                                                       !block.isBlocked && React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   setSelectedBreakForAssign({
-                                                                                                                       hallId: hall.id,
-                                                                                                                       date: dateStr,
-                                                                                                                       breakStartTime: block.startTime,
-                                                                                                                       breakEndTime: block.endTime,
-                                                                                                                       breakDuration: block.duration,
-                                                                                                                       availableMatches: filteredUnassignedMatches
-                                                                                                                   });
-                                                                                                                   setIsAssignToBreakModalOpen(true);
+                                                                                                       !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                                           'div',
+                                                                                                           { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                           React.createElement(
+                                                                                                               'button',
+                                                                                                               {
+                                                                                                                   className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                                   onClick: (e) => {
+                                                                                                                       e.stopPropagation();
+                                                                                                                       toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                                   },
+                                                                                                                   title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                                },
-                                                                                                               title: 'Priradiť zápas do voľného času'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                                                                       ),
-                                                                                                       block.isFirst && React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   handleDeleteBreakBefore({
-                                                                                                                       matchId: firstMatch.id,
-                                                                                                                       breakDuration: gapBeforeFirstMatch
-                                                                                                                   });
+                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                           ),
+                                                                                                           !block.isBlocked && React.createElement(
+                                                                                                               'button',
+                                                                                                               {
+                                                                                                                   className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                                   onClick: (e) => {
+                                                                                                                       e.stopPropagation();
+                                                                                                                       setSelectedBreakForAssign({
+                                                                                                                           hallId: hall.id,
+                                                                                                                           date: dateStr,
+                                                                                                                           breakStartTime: block.startTime,
+                                                                                                                           breakEndTime: block.endTime,
+                                                                                                                           breakDuration: block.duration,
+                                                                                                                           availableMatches: filteredUnassignedMatches
+                                                                                                                       });
+                                                                                                                       setIsAssignToBreakModalOpen(true);
+                                                                                                                   },
+                                                                                                                   title: 'Priradiť zápas do voľného času'
                                                                                                                },
-                                                                                                               title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                                                                                       )
-                                                                                                   ) : null
-                                                                                               )
-                                                                                           );
-                                                                                       });
+                                                                                                               React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                                           ),
+                                                                                                           block.isFirst && React.createElement(
+                                                                                                               'button',
+                                                                                                               {
+                                                                                                                   className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                                   onClick: (e) => {
+                                                                                                                       e.stopPropagation();
+                                                                                                                       handleDeleteBreakBefore({
+                                                                                                                           matchId: firstMatch.id,
+                                                                                                                           breakDuration: totalGapBeforeFirst
+                                                                                                                       });
+                                                                                                                   },
+                                                                                                                   title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
+                                                                                                               },
+                                                                                                               React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                           )
+                                                                                                       ) : null
+                                                                                                   )
+                                                                                               );
+                                                                                           });
+                                                                                       }
                                                                                    }
                                                                                }
                                                                            } catch (e) {
@@ -9618,17 +9653,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    currentMatchBreak = currentMatchCategory.matchBreak || 5;
                                                                                }
                                                                                
-                                                                               const currentMatchEndTime = new Date(currentMatchDate.getTime() + (currentMatchDuration + currentMatchBreak) * 60000);
+                                                                               // Koniec aktuálneho zápasu (čistý čas, bez prestávky)
+                                                                               const currentMatchEndTime = new Date(currentMatchDate.getTime() + currentMatchDuration * 60000);
                                                                                const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
                                                                                
+                                                                               // Začiatok nasledujúceho zápasu
                                                                                const nextMatchDate = nextMatch.scheduledTime.toDate();
                                                                                const nextStartMinutes = nextMatchDate.getHours() * 60 + nextMatchDate.getMinutes();
-                                                                               
-                                                                               let gapMinutes = nextStartMinutes - currentEndMinutes;
-                                                                               
-                                                                               const dateStr = getLocalDateStr(currentMatchDate);
-                                                                               const hallId = currentMatch.hallId;
-                                                                               const gapStartTime = formatTimeFromMinutes(currentEndMinutes);
                                                                                
                                                                                // ZÍSKAME DĹŽKU PRESTÁVKY PRE NASLEDUJÚCI ZÁPAS
                                                                                let nextMatchBreak = 5;
@@ -9637,153 +9668,150 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    nextMatchBreak = nextMatchCategory.matchBreak || 5;
                                                                                }
                                                                                
-                                                                               // VYPOČÍTAME UPRAVENÝ KONEC PRE ZOBRAZENIE (znížený o prestávku)
-                                                                               let displayGapMinutes = gapMinutes;
-                                                                               let effectiveEndMinutes = nextStartMinutes - nextMatchBreak;
+                                                                               // Celková medzera medzi zápasmi (od konca aktuálneho po začiatok nasledujúceho)
+                                                                               const totalGap = nextStartMinutes - currentEndMinutes;
                                                                                
-                                                                               if (gapMinutes > 0) {
-                                                                                   if (gapMinutes >= nextMatchBreak) {
-                                                                                       displayGapMinutes = gapMinutes - nextMatchBreak;
-                                                                                       effectiveEndMinutes = nextStartMinutes - nextMatchBreak;
-                                                                                   } else {
-                                                                                       displayGapMinutes = 0;
-                                                                                       effectiveEndMinutes = currentEndMinutes;
-                                                                                   }
-                                                                               }
+                                                                               // ZOBRAZOVACIA MEDZERA = celková medzera - prestávka pred nasledujúcim zápasom
+                                                                               let displayGapMinutes = totalGap - nextMatchBreak;
                                                                                
+                                                                               const dateStr = getLocalDateStr(currentMatchDate);
+                                                                               const hallId = currentMatch.hallId;
+                                                                               
+                                                                               // Začiatok zobrazovanej medzery = koniec aktuálneho zápasu
+                                                                               const gapStartTime = formatTimeFromMinutes(currentEndMinutes);
+                                                                               // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
+                                                                               const effectiveEndMinutes = nextStartMinutes - nextMatchBreak;
                                                                                const gapEndTime = formatTimeFromMinutes(effectiveEndMinutes);
                                                                                
                                                                                const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
-                                                                               if ((gapMinutes > 0 || (blocks && blocks.some(block => block.isBlocked))) && !isFilterActiveForGaps) {
-                                                                                   if (displayGapMinutes >= 0) {
-                                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                       // Získame bloky s informáciou o zablokovaní každého jednotlivého bloku
-                                                                                       const blocks = splitGapIntoBlocks(
-                                                                                           displayGapMinutes, maxBlockDuration, hallId, dateStr, 
-                                                                                           gapStartTime, gapEndTime, false,  // isGapBlocked už nepoužívame
-                                                                                           toggleBlockBreak, null, null, hasCompletedMatch, 
-                                                                                           userProfileData?.role, filteredUnassignedMatches,
-                                                                                           setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak
-                                                                                       );
-                                                                                       
-                                                                                       blocks.forEach(block => {
-                                                                                           allElements.push(
+                                                                               // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
+                                                                               if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
+                                                                                   const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
+                                                                                   // Použijeme upravenú funkciu splitGapIntoBlocks
+                                                                                   const blocks = splitGapIntoBlocks(
+                                                                                       displayGapMinutes, maxBlockDuration, hallId, dateStr, 
+                                                                                       gapStartTime, gapEndTime, false,
+                                                                                       toggleBlockBreak, null, null, hasCompletedMatch, 
+                                                                                       userProfileData?.role, filteredUnassignedMatches,
+                                                                                       setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak
+                                                                                   );
+                                                                                   
+                                                                                   blocks.forEach(block => {
+                                                                                       allElements.push(
+                                                                                           React.createElement(
+                                                                                               'div',
+                                                                                               {
+                                                                                                   key: `gap-${currentMatch.id}-${nextMatch.id}-block-${block.id}`,
+                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                   } transition-all relative group/gap`,
+                                                                                                   style: { 
+                                                                                                       width: '100%',
+                                                                                                       backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                   }
+                                                                                               },
                                                                                                React.createElement(
-                                                                                                   'div',
-                                                                                                   {
-                                                                                                       key: `gap-${currentMatch.id}-${nextMatch.id}-block-${block.id}`,
-                                                                                                       className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                                                                           hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                                                                       } transition-all relative group/gap`,
+                                                                                                   'div', 
+                                                                                                   { 
+                                                                                                       className: 'grid items-center text-xs',
                                                                                                        style: { 
-                                                                                                           width: '100%',
-                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                           gridTemplateColumns: '130px 1fr',
+                                                                                                           width: '100%'
                                                                                                        }
                                                                                                    },
                                                                                                    React.createElement(
                                                                                                        'div', 
                                                                                                        { 
-                                                                                                           className: 'grid items-center text-xs',
-                                                                                                           style: { 
-                                                                                                               gridTemplateColumns: '130px 1fr',
-                                                                                                               width: '100%'
-                                                                                                           }
+                                                                                                           className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                           style: { minWidth: '130px', textAlign: 'center' }
                                                                                                        },
                                                                                                        React.createElement(
                                                                                                            'div', 
-                                                                                                           { 
-                                                                                                               className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                                                                               style: { minWidth: '130px', textAlign: 'center' }
-                                                                                                           },
-                                                                                                           React.createElement(
-                                                                                                               'div', 
-                                                                                                               { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
-                                                                                                               React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                                                                   `${block.startTime} - ${block.endTime}`
-                                                                                                               )
-                                                                                                           )
-                                                                                                       ),
-                                                                                                       React.createElement(
-                                                                                                           'div', 
-                                                                                                           { 
-                                                                                                               className: 'px-0 py-0 flex items-center justify-center',
-                                                                                                               style: { 
-                                                                                                                   textAlign: 'center',
-                                                                                                                   fontWeight: '500',
-                                                                                                                   color: '#d97706'
-                                                                                                               }
-                                                                                                           },
-                                                                                                           React.createElement(
-                                                                                                               'span',
-                                                                                                               { className: 'text-sm font-medium' },
-                                                                                                               block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
-                                                                                                           ),
-                                                                                                           React.createElement(
-                                                                                                               'div', 
-                                                                                                               { className: 'text-[10px] text-amber-600 ml-1' },
-                                                                                                               `(${block.duration} min)`
+                                                                                                           { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                           React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                               `${block.startTime} - ${block.endTime}`
                                                                                                            )
                                                                                                        )
                                                                                                    ),
-                                                                                                   !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                                                                                       'div',
-                                                                                                       { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                           style: { 
+                                                                                                               textAlign: 'center',
+                                                                                                               fontWeight: '500',
+                                                                                                               color: '#d97706'
+                                                                                                           }
+                                                                                                       },
                                                                                                        React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   // Použijeme UNIKÁTNY kľúč pre tento konkrétny blok
-                                                                                                                   toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
-                                                                                                               },
-                                                                                                               title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                           'span',
+                                                                                                           { className: 'text-sm font-medium' },
+                                                                                                           block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
                                                                                                        ),
-                                                                                                       !block.isBlocked && React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   setSelectedBreakForAssign({
-                                                                                                                       hallId: hallId,
-                                                                                                                       date: dateStr,
-                                                                                                                       breakStartTime: block.startTime,
-                                                                                                                       breakEndTime: block.endTime,
-                                                                                                                       breakDuration: block.duration,
-                                                                                                                       availableMatches: filteredUnassignedMatches
-                                                                                                                   });
-                                                                                                                   setIsAssignToBreakModalOpen(true);
-                                                                                                               },
-                                                                                                               title: 'Priradiť zápas do voľného času'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                                                                       ),
-                                                                                                       !block.isBlocked && React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   handleDeleteBreak({
-                                                                                                                       matchId: currentMatch.id,
-                                                                                                                       nextMatchId: nextMatch.id,
-                                                                                                                       breakDuration: gapMinutes
-                                                                                                                   });
-                                                                                                               },
-                                                                                                               title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                           `(${block.duration} min)`
                                                                                                        )
-                                                                                                   ) : null
-                                                                                               )
-                                                                                           );
-                                                                                       });
-                                                                                   }
+                                                                                                   )
+                                                                                               ),
+                                                                                               !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                                   'div',
+                                                                                                   { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                   React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                           onClick: (e) => {
+                                                                                                               e.stopPropagation();
+                                                                                                               toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                           },
+                                                                                                           title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                   ),
+                                                                                                   !block.isBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: (e) => {
+                                                                                                               e.stopPropagation();
+                                                                                                               setSelectedBreakForAssign({
+                                                                                                                   hallId: hallId,
+                                                                                                                   date: dateStr,
+                                                                                                                   breakStartTime: block.startTime,
+                                                                                                                   breakEndTime: block.endTime,
+                                                                                                                   breakDuration: block.duration,
+                                                                                                                   availableMatches: filteredUnassignedMatches
+                                                                                                               });
+                                                                                                               setIsAssignToBreakModalOpen(true);
+                                                                                                           },
+                                                                                                           title: 'Priradiť zápas do voľného času'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                                   ),
+                                                                                                   !block.isBlocked && React.createElement(
+                                                                                                       'button',
+                                                                                                       {
+                                                                                                           className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: (e) => {
+                                                                                                               e.stopPropagation();
+                                                                                                               handleDeleteBreak({
+                                                                                                                   matchId: currentMatch.id,
+                                                                                                                   nextMatchId: nextMatch.id,
+                                                                                                                   breakDuration: totalGap
+                                                                                                               });
+                                                                                                           },
+                                                                                                           title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
+                                                                                                       },
+                                                                                                       React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                   )
+                                                                                               ) : null
+                                                                                           )
+                                                                                       );
+                                                                                   });
                                                                                }
                                                                            } catch (e) {
                                                                                console.error('Chyba pri výpočte medzery:', e);
