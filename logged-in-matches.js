@@ -9175,121 +9175,120 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            null, firstMatchBreak  // PRIDANÝ parameter matchBreak
                                                                                        );
                                                                                        
-                                                                                           blocks.forEach(block => {
-                                                                                               allElements.push(
+                                                                                       blocks.forEach(block => {
+                                                                                           allElements.push(
+                                                                                               React.createElement(
+                                                                                                   'div',
+                                                                                                   {
+                                                                                                       key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
+                                                                                                       className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                           hasCompletedMatch ? '' : 'hover:border-amber-500'
+                                                                                                       } transition-all relative group/gap`,
+                                                                                                       style: { 
+                                                                                                           width: '100%',
+                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                       }
+                                                                                                   },
                                                                                                    React.createElement(
-                                                                                                       'div',
-                                                                                                       {
-                                                                                                           key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
-                                                                                                           className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                                                                               hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                                                                           } transition-all relative group/gap`,
+                                                                                                       'div', 
+                                                                                                       { 
+                                                                                                           className: 'grid items-center text-xs',
                                                                                                            style: { 
-                                                                                                               width: '100%',
-                                                                                                               backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                               gridTemplateColumns: '130px 1fr',
+                                                                                                               width: '100%'
                                                                                                            }
                                                                                                        },
                                                                                                        React.createElement(
                                                                                                            'div', 
                                                                                                            { 
-                                                                                                               className: 'grid items-center text-xs',
-                                                                                                               style: { 
-                                                                                                                   gridTemplateColumns: '130px 1fr',
-                                                                                                                   width: '100%'
-                                                                                                               }
+                                                                                                               className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                               style: { minWidth: '130px', textAlign: 'center' }
                                                                                                            },
                                                                                                            React.createElement(
                                                                                                                'div', 
-                                                                                                               { 
-                                                                                                                   className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                                                                                   style: { minWidth: '130px', textAlign: 'center' }
-                                                                                                               },
-                                                                                                               React.createElement(
-                                                                                                                   'div', 
-                                                                                                                   { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                                   React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
-                                                                                                                   React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                                                                       `${block.startTime} - ${block.endTime}`
-                                                                                                                   )
-                                                                                                               )
-                                                                                                           ),
-                                                                                                           React.createElement(
-                                                                                                               'div', 
-                                                                                                               { 
-                                                                                                                   className: 'px-0 py-0 flex items-center justify-center',
-                                                                                                                   style: { 
-                                                                                                                       textAlign: 'center',
-                                                                                                                       fontWeight: '500',
-                                                                                                                       color: '#d97706'
-                                                                                                                   }
-                                                                                                               },
-                                                                                                               React.createElement(
-                                                                                                                   'span',
-                                                                                                                   { className: 'text-sm font-medium' },
-                                                                                                                   block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
-                                                                                                               ),
-                                                                                                               React.createElement(
-                                                                                                                   'div', 
-                                                                                                                   { className: 'text-[10px] text-amber-600 ml-1' },
-                                                                                                                   `(${block.duration} min)`
+                                                                                                               { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                               React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                                   `${block.startTime} - ${block.endTime}`
                                                                                                                )
                                                                                                            )
                                                                                                        ),
-                                                                                                       !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
-                                                                                                           'div',
-                                                                                                           { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                       React.createElement(
+                                                                                                           'div', 
+                                                                                                           { 
+                                                                                                               className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                               style: { 
+                                                                                                                   textAlign: 'center',
+                                                                                                                   fontWeight: '500',
+                                                                                                                   color: '#d97706'
+                                                                                                               }
+                                                                                                           },
                                                                                                            React.createElement(
-                                                                                                               'button',
-                                                                                                               {
-                                                                                                                   className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                                                                                   onClick: (e) => {
-                                                                                                                       e.stopPropagation();
-                                                                                                                       toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
-                                                                                                                   },
-                                                                                                                   title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
-                                                                                                               },
-                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                               'span',
+                                                                                                               { className: 'text-sm font-medium' },
+                                                                                                               block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
                                                                                                            ),
-                                                                                                           !block.isBlocked && React.createElement(
-                                                                                                               'button',
-                                                                                                               {
-                                                                                                                   className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                                   onClick: (e) => {
-                                                                                                                       e.stopPropagation();
-                                                                                                                       setSelectedBreakForAssign({
-                                                                                                                           hallId: hall.id,
-                                                                                                                           date: dateStr,
-                                                                                                                           breakStartTime: block.startTime,
-                                                                                                                           breakEndTime: block.endTime,
-                                                                                                                           breakDuration: block.duration,
-                                                                                                                           availableMatches: filteredUnassignedMatches
-                                                                                                                       });
-                                                                                                                       setIsAssignToBreakModalOpen(true);
-                                                                                                                   },
-                                                                                                                   title: 'Priradiť zápas do voľného času'
-                                                                                                               },
-                                                                                                               React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                                                                           ),
-                                                                                                           block.isFirst && React.createElement(
-                                                                                                               'button',
-                                                                                                               {
-                                                                                                                   className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                                   onClick: (e) => {
-                                                                                                                       e.stopPropagation();
-                                                                                                                       handleDeleteBreakBefore({
-                                                                                                                           matchId: firstMatch.id,
-                                                                                                                           breakDuration: totalGapBeforeFirst
-                                                                                                                       });
-                                                                                                                   },
-                                                                                                                   title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
-                                                                                                               },
-                                                                                                               React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                           React.createElement(
+                                                                                                               'div', 
+                                                                                                               { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                               `(${block.duration} min)`
                                                                                                            )
-                                                                                                       ) : null
-                                                                                                   )
-                                                                                               );
-                                                                                           });
-                                                                                       }
+                                                                                                       )
+                                                                                                   ),
+                                                                                                   !hasCompletedMatch && userProfileData?.role === 'admin' ? React.createElement(
+                                                                                                       'div',
+                                                                                                       { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                                       React.createElement(
+                                                                                                           'button',
+                                                                                                           {
+                                                                                                               className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                               onClick: (e) => {
+                                                                                                                   e.stopPropagation();
+                                                                                                                   toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                               },
+                                                                                                               title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                           },
+                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                       ),
+                                                                                                       !block.isBlocked && React.createElement(
+                                                                                                           'button',
+                                                                                                           {
+                                                                                                               className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                               onClick: (e) => {
+                                                                                                                   e.stopPropagation();
+                                                                                                                   setSelectedBreakForAssign({
+                                                                                                                       hallId: hall.id,
+                                                                                                                       date: dateStr,
+                                                                                                                       breakStartTime: block.startTime,
+                                                                                                                       breakEndTime: block.endTime,
+                                                                                                                       breakDuration: block.duration,
+                                                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                                                   });
+                                                                                                                   setIsAssignToBreakModalOpen(true);
+                                                                                                               },
+                                                                                                               title: 'Priradiť zápas do voľného času'
+                                                                                                           },
+                                                                                                           React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                                       ),
+                                                                                                       block.isFirst && React.createElement(
+                                                                                                           'button',
+                                                                                                           {
+                                                                                                               className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                               onClick: (e) => {
+                                                                                                                   e.stopPropagation();
+                                                                                                                   handleDeleteBreakBefore({
+                                                                                                                       matchId: firstMatch.id,
+                                                                                                                       breakDuration: totalGapBeforeFirst
+                                                                                                                   });
+                                                                                                               },
+                                                                                                               title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
+                                                                                                           },
+                                                                                                           React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                                       )
+                                                                                                   ) : null
+                                                                                               )
+                                                                                           );
+                                                                                       });
                                                                                    }
                                                                                }
                                                                            } catch (e) {
