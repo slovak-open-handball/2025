@@ -9173,7 +9173,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    // KONIEC VOĽNÉHO ČASU = začiatok prvého zápasu - prestávka pred prvým zápasom
                                                                                    const freeTimeEndMinutes = firstMatchStartMinutes - firstMatchBreak;
                                                                                    
-                                                                                   // DĹŽKA VOĽNÉHO ČASU (tu už NIE je potrebné odpočítavať prestávky)
+                                                                                   // DĹŽKA VOĽNÉHO ČASU
                                                                                    let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                    
                                                                                    const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
@@ -9192,6 +9192,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            null, firstMatchBreak
                                                                                        );
                                                                                        
+                                                                                       // Pre každý blok vytvoríme samostatný riadok s vlastným tlačidlom koša
                                                                                        blocks.forEach(block => {
                                                                                            allElements.push(
                                                                                                React.createElement(
@@ -9287,7 +9288,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            },
                                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                                        ),
-                                                                                                       block.isFirst && React.createElement(
+                                                                                                       // KAŽDÝ BLOK MÁ VLASTNÉ TLAČIDLO KOŠA (už nie len prvý)
+                                                                                                       React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
@@ -9298,7 +9300,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                        breakDuration: block.duration
                                                                                                                    });
                                                                                                                },
-                                                                                                               title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
+                                                                                                               title: 'Odstrániť túto medzeru (posunúť prvý zápas skôr)'
                                                                                                            },
                                                                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                                                                        )
