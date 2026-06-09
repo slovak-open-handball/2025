@@ -9157,23 +9157,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    // DĹŽKA VOĽNÉHO ČASU
                                                                                    let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                    
+                                                                                   // ** DEFINUJEME PREMENNÚ TU, KDE SA POUŽÍVA **
+                                                                                   const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                                   
                                                                                    // Ak je medzera menšia ako 0, nezobrazujeme nič
-                                                                                   if (displayGapMinutes > 0) {
+                                                                                   if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                        const gapStartTime = hallStartTimeStr;
                                                                                        const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                        
-                                                                                       const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                                                                       
-                                                                                       if (!isFilterActiveForGaps) {
-                                                                                           const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                           const blocks = splitGapIntoBlocks(
-                                                                                               displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
-                                                                                               gapStartTime, gapEndTime, false,
-                                                                                               toggleBlockBreak, null, null, hasCompletedMatch, 
-                                                                                               userProfileData?.role, filteredUnassignedMatches,
-                                                                                               setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore,
-                                                                                               null, firstMatchBreak  // PRIDANÝ parameter matchBreak
-                                                                                           );
+                                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
+                                                                                       const blocks = splitGapIntoBlocks(
+                                                                                           displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
+                                                                                           gapStartTime, gapEndTime, false,
+                                                                                           toggleBlockBreak, null, null, hasCompletedMatch, 
+                                                                                           userProfileData?.role, filteredUnassignedMatches,
+                                                                                           setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore,
+                                                                                           null, firstMatchBreak  // PRIDANÝ parameter matchBreak
+                                                                                       );
                                                                                        
                                                                                            blocks.forEach(block => {
                                                                                                allElements.push(
@@ -9658,10 +9658,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                // DĹŽKA VOĽNÉHO ČASU (len priestor, kde môže byť zápas)
                                                                                let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                
-                                                                               // ... zvyšok kódu ...
+                                                                               const dateStr = getLocalDateStr(currentMatchDate);
+                                                                               const hallId = currentMatch.hallId;
                                                                                
+                                                                               // Začiatok zobrazovanej medzery = koniec zápasu + prestávka
+                                                                               const gapStartTime = formatTimeFromMinutes(freeTimeStartMinutes);
+                                                                               // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
+                                                                               const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
+                                                                               
+                                                                               // ** DEFINUJEME PREMENNÚ TU, KDE SA POUŽÍVA **
+                                                                               const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                               
+                                                                               // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
+                                                                                   // Použijeme upravenú funkciu splitGapIntoBlocks s parametrom matchBreak
                                                                                    const blocks = splitGapIntoBlocks(
                                                                                        displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
