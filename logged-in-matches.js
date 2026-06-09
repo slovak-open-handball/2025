@@ -9056,8 +9056,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
                                                                    
-                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (pridáva prestávku medzi blokmi)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
+                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9090,9 +9090,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
                                                                            const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
-                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok (len pre dostatočne dlhé bloky)
+                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
-                                                                           const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
+                                                                           const isThisBlockBlocked = window.blockedBreaks ? !!window.blockedBreaks[uniqueBreakKey] : false;
                                                                    
                                                                            // PRIDÁME BLOK LEN AK JE DOSTATOČNE DLHÝ
                                                                            if (isBlockLongEnough) {
@@ -9105,7 +9105,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    isLast: (blockDuration === remainingMinutes),
                                                                                    isBlocked: isThisBlockBlocked,
                                                                                    uniqueKey: uniqueBreakKey,
-                                                                                   isBreak: false  // Toto je blok VOĽNÉHO ČASU (zápas)
+                                                                                   isBreak: false
                                                                                });
                                                                            }
                                                                            
@@ -9113,11 +9113,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
+                                                                           // AK PO TOMTO BLOKU EŠTE ZOSTÁVAJÚ ĎALŠIE BLOKY, PRIDÁME PRESTÁVKU (ALE NEZOBRAZÍME JU)
+                                                                           if (remainingMinutes > 0 && isBlockLongEnough) {
+                                                                               // Prestávka medzi blokmi - táto sa NEMÁ zobrazovať, len posunie čas
+                                                                               currentStartMinutes += matchBreak;
+                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
+                                                                           }
+                                                                           
                                                                            blockIndex++;
                                                                        }
                                                                        
                                                                        return blocks;
-                                                                   };
+};
                                                                                                                                       
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
