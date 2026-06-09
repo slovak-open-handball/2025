@@ -9056,8 +9056,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
                                                                    
-                                                                   // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
-                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
+                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (pridáva prestávku medzi blokmi)
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
                                                                        let currentStartMinutes = gapStartTimeFormatted ? (() => {
@@ -9102,16 +9102,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                uniqueKey: uniqueBreakKey
                                                                            });
                                                                            
-                                                                           // Posunieme sa o dĺžku bloku (BEZ PRIDÁVANIA PRESTÁVKY)
+                                                                           // Posunieme sa o dĺžku bloku
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
+                                                                           
+                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
+                                                                           // ALE DÔLEŽITÉ: PRESTÁVKA SA NEPRIPOČÍTA K remainingMinutes, LEN POSÚVA ČAS
+                                                                           if (remainingMinutes > 0) {
+                                                                               currentStartMinutes += matchBreak;  // PRESTÁVKA MEDZI ZÁPASMI
+                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času, ktorý môže byť vyplnený zápasom
+                                                                           }
                                                                            
                                                                            blockIndex++;
                                                                        }
                                                                        
                                                                        return blocks;
                                                                    };
-                                                                   
+                                                                                                                                      
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                                    
@@ -9162,7 +9169,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore,
-                                                                                           null,
+                                                                                           null, firstMatchBreak
                                                                                        );
                                                                                        
                                                                                        blocks.forEach(block => {
@@ -9668,7 +9675,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
                                                                                        setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak,
-                                                                                       null,
+                                                                                       null, currentMatchBreak 
                                                                                    );
                                                                                    
                                                                                    blocks.forEach(block => {
