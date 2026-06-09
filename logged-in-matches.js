@@ -9132,7 +9132,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            }
                                                                            
                                                                            blockIndex++;
-                                                                       }                                                                       
+                                                                       }
+                                                                       
+                                                                       console.log(`splitGapIntoBlocks: gapMinutes=${gapMinutes}, totalBlocksDuration=${totalBlocksDuration}, matchBreak=${matchBreak}, blocksCount=${blocks.length}`);
                                                                        
                                                                        return blocks;
                                                                    };
@@ -9688,7 +9690,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                    // Použijeme funkciu splitGapIntoBlocks - tá už NEODPOČÍTAVA prestávky, len ich používa na posun času medzi blokmi
                                                                                    const blocks = splitGapIntoBlocks(
-                                                                                       displayGapMinutes, maxBlockDuration, hallId, dateStr, 
+                                                                                       displayGapMinutes, maxBlockDuration, hall.id, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
                                                                                        toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                        userProfileData?.role, filteredUnassignedMatches,
