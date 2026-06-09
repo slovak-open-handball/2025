@@ -9056,7 +9056,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
                                                                    
-                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA
+                                                                   // Funkcia na rozdelenie medzery na bloky - KONEČNÁ VERZIA
                                                                    const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
@@ -9073,7 +9073,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        };
                                                                        
                                                                        // Minimálna dĺžka bloku, ktorý sa má zobraziť
-                                                                       const MIN_BLOCK_DURATION = 1;
+                                                                       const MIN_BLOCK_DURATION = 5; // Minimálne 5 minút na zobrazenie voľného času
                                                                        
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
@@ -9113,18 +9113,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // AK PO TOMTO BLOKU EŠTE ZOSTÁVAJÚ ĎALŠIE BLOKY, PRIDÁME PRESTÁVKU (ALE NEZOBRAZÍME JU)
-                                                                           if (remainingMinutes > 0 && isBlockLongEnough) {
+                                                                           // AK PO TOMTO BLOKU EŠTE ZOSTÁVAJÚ ĎALŠIE BLOKY, PRIDÁME PRESTÁVKU MEDZI BLOKMI
+                                                                           // Táto prestávka sa NEZOBRAZUJE, ale POSÚVA ČAS pre ďalší blok
+                                                                           if (remainingMinutes > 0) {
                                                                                // Prestávka medzi blokmi - táto sa NEMÁ zobrazovať, len posunie čas
+                                                                               // DÔLEŽITÉ: TÚTO PRESTÁVKU NEODPOČÍTAVAME Z remainingMinutes!
                                                                                currentStartMinutes += matchBreak;
-                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
+                                                                               // remainingMinutes zostáva nezmenené - prestávka nie je súčasťou voľného času
                                                                            }
                                                                            
                                                                            blockIndex++;
                                                                        }
                                                                        
                                                                        return blocks;
-};
+                                                                   };
                                                                                                                                       
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
