@@ -9072,15 +9072,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return `${hours}:${mins}`;
                                                                        };
                                                                        
-                                                                       // Dĺžka prestávky medzi zápasmi (z kategórie)
-                                                                       const matchBreak = 5;
+                                                                       // Minimálna dĺžka bloku, ktorý sa má zobraziť
+                                                                       const MIN_BLOCK_DURATION = 1;
                                                                        
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
-                                                                       
-                                                                       // Minimálna dĺžka bloku, ktorý sa má zobraziť
-                                                                       // Bloky kratšie ako matchBreak + 1 sa nezobrazia (lebo by sa do nich nezmestil ani zápas)
-                                                                       const MIN_BLOCK_DURATION = matchBreak + 1; // 6 minút
                                                                        
                                                                        let blockIndex = 0;
                                                                        // Rozdeľujeme, kým neostane žiadny čas
@@ -9089,7 +9085,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            let blockDuration = Math.min(maxBlockDuration, remainingMinutes);
                                                                            
                                                                            // SKONTROLUJEME, ČI JE BLOK DOSTATOČNE DLHÝ NA ZOBRAZENIE
-                                                                           // (musí byť dlhší ako prestávka, aby sa doň zmestil zápas)
                                                                            const isBlockLongEnough = blockDuration >= MIN_BLOCK_DURATION;
                                                                            
                                                                            const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
@@ -9099,7 +9094,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
                                                                            const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
                                                                    
-                                                                           // PRIDÁME BLOK LEN AK JE DOSTATOČNE DLHÝ (aspoň 6 minút)
+                                                                           // PRIDÁME BLOK LEN AK JE DOSTATOČNE DLHÝ
                                                                            if (isBlockLongEnough) {
                                                                                blocks.push({
                                                                                    id: `block-${blockIndex}`,
@@ -9114,31 +9109,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                });
                                                                            }
                                                                            
-                                                                           // Posunieme sa o dĺžku bloku (aj keď sme ho nepridali, čas sa posunie)
+                                                                           // Posunieme sa o dĺžku bloku
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
-                                                                           
-                                                                           // MEDZI BLOKMI PRIDÁME PRESTÁVKU LEN AK JE ZOSTÁVAJÚCI ČAS VÄČŠÍ AKO 0
-                                                                           // A LEN AK SME PRIDALI PREDCHÁDZAJÚCI BLOK (aby nevznikala prestávka na začiatku)
-                                                                           if (remainingMinutes > 0 && isBlockLongEnough) {
-                                                                               const breakStartMinutes = currentStartMinutes;
-                                                                               const breakEndMinutes = currentStartMinutes + matchBreak;
-                                                                               
-                                                                               blocks.push({
-                                                                                   id: `break-${blockIndex}`,
-                                                                                   startTime: formatTimeFromMinutes(breakStartMinutes),
-                                                                                   endTime: formatTimeFromMinutes(breakEndMinutes),
-                                                                                   duration: matchBreak,
-                                                                                   isBreak: true,  // Toto je PRESTÁVKA (NIE je to voľný čas na zápas)
-                                                                                   isFirst: false,
-                                                                                   isLast: false,
-                                                                                   isBlocked: false
-                                                                               });
-                                                                               
-                                                                               // Posunieme čas o dĺžku prestávky
-                                                                               currentStartMinutes += matchBreak;
-                                                                               // NEMENÍME remainingMinutes - prestávka nie je súčasťou voľného času
-                                                                           }
                                                                            
                                                                            blockIndex++;
                                                                        }
