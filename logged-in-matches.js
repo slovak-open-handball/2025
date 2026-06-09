@@ -9068,12 +9068,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return hours * 60 + minutes;
                                                                        })() : 0;
                                                                        
-                                                                       const formatTimeFromMinutesLocal = (minutes) => {
-                                                                           const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                                                                           const mins = (minutes % 60).toString().padStart(2, '0');
-                                                                           return `${hours}:${mins}`;
-                                                                       };
-                                                                       
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
                                                                        
