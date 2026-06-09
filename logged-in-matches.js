@@ -9082,13 +9082,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            const blockStartTime = formatTimeFromMinutesLocal(currentStartMinutes);
                                                                            const blockEndTime = formatTimeFromMinutesLocal(currentStartMinutes + blockDuration);
                                                                            
+                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok
+                                                                           const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
+                                                                           
+                                                                           // Skontrolujeme, či je tento konkrétny blok zablokovaný (nie celý pôvodný interval)
+                                                                           const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
+                                                                           
                                                                            blocks.push({
                                                                                id: `block-${blockIndex}`,
                                                                                startTime: blockStartTime,
                                                                                endTime: blockEndTime,
                                                                                duration: blockDuration,
                                                                                isFirst: blockIndex === 0,
-                                                                               isLast: (blockDuration === remainingMinutes)
+                                                                               isLast: (blockDuration === remainingMinutes),
+                                                                               isBlocked: isThisBlockBlocked,
+                                                                               uniqueKey: uniqueBreakKey
                                                                            });
                                                                            
                                                                            currentStartMinutes += blockDuration;
@@ -9133,7 +9141,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    let effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
                                                                                    
                                                                                    if (gapBeforeFirstMatch > 0) {
-                                                                                       // Pre zobrazenie používame čas konca znížený o prestávku
                                                                                        if (gapBeforeFirstMatch >= matchBreakDuration) {
                                                                                            displayGapMinutes = gapBeforeFirstMatch - matchBreakDuration;
                                                                                            effectiveEndMinutes = firstMatchStartMinutes - matchBreakDuration;
@@ -9164,7 +9171,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
                                                                                                            width: '100%',
-                                                                                                           backgroundColor: '#fffbeb'
+                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
                                                                                                        }
                                                                                                    },
                                                                                                    React.createElement(
@@ -9185,7 +9192,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'div', 
                                                                                                                { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                               React.createElement('i', { className: 'fa-solid fa-hourglass-half text-amber-600 text-xs flex-shrink-0' }),
+                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
                                                                                                                React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
                                                                                                                    `${block.startTime} - ${block.endTime}`
                                                                                                                )
@@ -9204,7 +9211,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'span',
                                                                                                                { className: 'text-sm font-medium' },
-                                                                                                               'VOĽNÝ ČAS '
+                                                                                                               block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
                                                                                                            ),
                                                                                                            React.createElement(
                                                                                                                'div', 
@@ -9217,6 +9224,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        'div',
                                                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
                                                                                                        React.createElement(
+                                                                                                           'button',
+                                                                                                           {
+                                                                                                               className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                               onClick: (e) => {
+                                                                                                                   e.stopPropagation();
+                                                                                                                   toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                               },
+                                                                                                               title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                           },
+                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                       ),
+                                                                                                       !block.isBlocked && React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
@@ -9634,15 +9653,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                
                                                                                const gapEndTime = formatTimeFromMinutes(effectiveEndMinutes);
                                                                                
-                                                                               const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hallId}_${dateStr}_${gapStartTime}`] : false;
                                                                                const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
-                                                                               if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
+                                                                               if ((gapMinutes > 0 || (blocks && blocks.some(block => block.isBlocked))) && !isFilterActiveForGaps) {
                                                                                    if (displayGapMinutes >= 0) {
                                                                                        const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
+                                                                                       // Získame bloky s informáciou o zablokovaní každého jednotlivého bloku
                                                                                        const blocks = splitGapIntoBlocks(
                                                                                            displayGapMinutes, maxBlockDuration, hallId, dateStr, 
-                                                                                           gapStartTime, gapEndTime, isGapBlocked,
+                                                                                           gapStartTime, gapEndTime, false,  // isGapBlocked už nepoužívame
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak
@@ -9659,7 +9678,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
                                                                                                            width: '100%',
-                                                                                                           backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
                                                                                                        }
                                                                                                    },
                                                                                                    React.createElement(
@@ -9680,7 +9699,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'div', 
                                                                                                                { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                               React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                               React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
                                                                                                                React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
                                                                                                                    `${block.startTime} - ${block.endTime}`
                                                                                                                )
@@ -9699,7 +9718,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'span',
                                                                                                                { className: 'text-sm font-medium' },
-                                                                                                               isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                               block.isBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
                                                                                                            ),
                                                                                                            React.createElement(
                                                                                                                'div', 
@@ -9714,16 +9733,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        React.createElement(
                                                                                                            'button',
                                                                                                            {
-                                                                                                               className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                               className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
                                                                                                                onClick: (e) => {
                                                                                                                    e.stopPropagation();
+                                                                                                                   // Použijeme UNIKÁTNY kľúč pre tento konkrétny blok
                                                                                                                    toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
                                                                                                                },
-                                                                                                               title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                               title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                            },
-                                                                                                           React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
                                                                                                        ),
-                                                                                                       !isGapBlocked && React.createElement(
+                                                                                                       !block.isBlocked && React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
@@ -9743,7 +9763,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            },
                                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                                        ),
-                                                                                                       !isGapBlocked && React.createElement(
+                                                                                                       !block.isBlocked && React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
