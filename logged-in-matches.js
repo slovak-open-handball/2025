@@ -9058,6 +9058,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
+
+                                                                   const formatTimeFromMinutes = (minutes) => {
+                                                                       const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                       const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                       return `${hours}:${mins}`;
+                                                                   };
                                                                    
                                                                    // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
                                                                    const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null) => {
@@ -9068,6 +9074,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return hours * 60 + minutes;
                                                                        })() : 0;
                                                                        
+                                                                       // Pomocná funkcia na formátovanie času z minút
+                                                                       const formatTimeFromMinutes = (minutes) => {
+                                                                           const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                           const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                           return `${hours}:${mins}`;
+                                                                       };
+                                                                       
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
                                                                        
@@ -9076,11 +9089,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        while (remainingMinutes > 0) {
                                                                            // Každý blok má dĺžku maxBlockDuration, posledný blok má zvyšok
                                                                            const blockDuration = Math.min(maxBlockDuration, remainingMinutes);
-                                                                           const blockStartTime = formatTimeFromMinutesLocal(currentStartMinutes);
+                                                                           const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
                                                                            
                                                                            // DÔLEŽITÉ: Koncový čas bloku je aktuálny start + dĺžka bloku
                                                                            // (žiadne odpočítavanie prestávky - prestávka sa odpočítava už pri výpočte gapMinutes)
-                                                                           const blockEndTime = formatTimeFromMinutesLocal(currentStartMinutes + blockDuration);
+                                                                           const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
                                                                            // Vytvoríme UNIKÁTNY identifikátor pre každý blok
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
