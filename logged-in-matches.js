@@ -9123,7 +9123,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    
                                                                                    if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
                                                                                        const blocks = splitGapIntoBlocks(
-                                                                                           maxBlockDuration, gapBeforeFirstMatch, maxBlockDuration, hall.id, dateStr, 
+                                                                                           gapBeforeFirstMatch, maxBlockDuration, hall.id, dateStr, 
                                                                                            gapStartTime, gapEndTime, isGapBlocked,
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
