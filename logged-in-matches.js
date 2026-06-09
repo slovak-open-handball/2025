@@ -9287,7 +9287,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                    e.stopPropagation();
                                                                                                                    handleDeleteBreakBefore({
                                                                                                                        matchId: firstMatch.id,
-                                                                                                                       breakDuration: totalGapBeforeFirst
+                                                                                                                       breakDuration: displayGapMinutes
                                                                                                                    });
                                                                                                                },
                                                                                                                title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
@@ -9794,7 +9794,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                handleDeleteBreak({
                                                                                                                    matchId: currentMatch.id,
                                                                                                                    nextMatchId: nextMatch.id,
-                                                                                                                   breakDuration: totalGap
+                                                                                                                   breakDuration: displayGapMinutes
                                                                                                                });
                                                                                                            },
                                                                                                            title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
