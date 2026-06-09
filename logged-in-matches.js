@@ -9073,30 +9073,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        };
                                                                        
                                                                        // Minimálna dĺžka bloku, ktorý sa má zobraziť
-                                                                       const MIN_BLOCK_DURATION = 5; // Minimálne 5 minút na zobrazenie voľného času
+                                                                       const MIN_BLOCK_DURATION = 5;
                                                                        
-                                                                       // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
                                                                        
                                                                        let blockIndex = 0;
                                                                        let totalBlocksDuration = 0;
                                                                        
-                                                                       // Rozdeľujeme, kým neostane žiadny čas
                                                                        while (remainingMinutes > 0) {
-                                                                           // Každý blok má dĺžku maxBlockDuration, posledný blok má zvyšok
                                                                            let blockDuration = Math.min(maxBlockDuration, remainingMinutes);
-                                                                           
-                                                                           // SKONTROLUJEME, ČI JE BLOK DOSTATOČNE DLHÝ NA ZOBRAZENIE
                                                                            const isBlockLongEnough = blockDuration >= MIN_BLOCK_DURATION;
                                                                            
                                                                            const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
                                                                            const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
-                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
                                                                            const isThisBlockBlocked = window.blockedBreaks ? !!window.blockedBreaks[uniqueBreakKey] : false;
                                                                    
-                                                                           // PRIDÁME BLOK LEN AK JE DOSTATOČNE DLHÝ
                                                                            if (isBlockLongEnough) {
                                                                                blocks.push({
                                                                                    id: `block-${blockIndex}`,
@@ -9112,17 +9105,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                totalBlocksDuration += blockDuration;
                                                                            }
                                                                            
-                                                                           // Posunieme sa o dĺžku bloku
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // ** OPRAVA: Prestávka medzi blokmi SA ODPOČÍTAVA z remainingMinutes **
-                                                                           // Prestávka je súčasťou voľného času, ale nezobrazuje sa ako samostatný blok
                                                                            if (remainingMinutes > 0) {
-                                                                               // Odpočítame prestávku zo zostávajúceho času
                                                                                const breakToSubtract = Math.min(matchBreak, remainingMinutes);
                                                                                remainingMinutes -= breakToSubtract;
-                                                                               // Čas začiatku sa posunie o prestávku (táto prestávka sa nezobrazuje)
                                                                                currentStartMinutes += breakToSubtract;
                                                                            }
                                                                            
@@ -9133,7 +9121,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        
                                                                        return blocks;
                                                                    };
-                                                                                                                                      
+                                                                                                                                                                                                         
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                                    
@@ -9288,7 +9276,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                    e.stopPropagation();
                                                                                                                    handleDeleteBreakBefore({
                                                                                                                        matchId: firstMatch.id,
-                                                                                                                       breakDuration: displayGapMinutes
+                                                                                                                       breakDuration: block.duration
                                                                                                                    });
                                                                                                                },
                                                                                                                title: 'Odstrániť všetky medzery (posunúť prvý zápas skôr)'
@@ -9795,7 +9783,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                handleDeleteBreak({
                                                                                                                    matchId: currentMatch.id,
                                                                                                                    nextMatchId: nextMatch.id,
-                                                                                                                   breakDuration: displayGapMinutes
+                                                                                                                   breakDuration: block.duration
                                                                                                                });
                                                                                                            },
                                                                                                            title: 'Odstrániť medzeru (posunúť nasledujúce zápasy skôr)'
