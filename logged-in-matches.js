@@ -9106,30 +9106,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        
                                                                        return blocks;
                                                                    };
-
-                                                                   // Funkcia na získanie maximálneho trvania zápasu v tomto dni (vrátane prestávky)
-                                                                   const getMaxMatchDurationInDay = (matchesList) => {
-                                                                       let maxDuration = 0;
-                                                                       for (const match of matchesList) {
-                                                                            if (match.scheduledTime) {
-                                                                                const category = categories.find(c => c.name === match.categoryName);
-                                                                                let matchDuration = 0;
-                                                                                let matchBreak = 5;
-                                                                                if (category) {
-                                                                                    const periods = category.periods || 2;
-                                                                                    const periodDuration = category.periodDuration || 20;
-                                                                                    const breakDuration = category.breakDuration || 2;
-                                                                                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                                    matchBreak = category.matchBreak || 5;
-                                                                                }
-                                                                                const totalWithBreak = matchDuration + matchBreak;
-                                                                                if (totalWithBreak > maxDuration) {
-                                                                                    maxDuration = totalWithBreak;
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        return maxDuration > 0 ? maxDuration : 45;
-                                                                    };
                                                                    
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
