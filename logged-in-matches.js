@@ -9075,35 +9075,42 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        // Ak je gapMinutes 0, nič nezobrazujeme
                                                                        if (gapMinutes <= 0) return [];
                                                                        
+                                                                       // Minimálna dĺžka bloku, ktorý sa má zobraziť (napr. 10 minút)
+                                                                       // Bloky kratšie ako táto hodnota sa nezobrazia
+                                                                       const MIN_BLOCK_DURATION = 10;
+                                                                       
                                                                        let blockIndex = 0;
                                                                        // Rozdeľujeme, kým neostane žiadny čas
                                                                        while (remainingMinutes > 0) {
                                                                            // Každý blok má dĺžku maxBlockDuration, posledný blok má zvyšok
-                                                                           const blockDuration = Math.min(maxBlockDuration, remainingMinutes);
-                                                                           const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
+                                                                           let blockDuration = Math.min(maxBlockDuration, remainingMinutes);
                                                                            
-                                                                           // Koncový čas bloku je aktuálny start + dĺžka bloku
+                                                                           // SKONTROLUJEME, ČI JE BLOK DOSTATOČNE DLHÝ NA ZOBRAZENIE
+                                                                           const isBlockLongEnough = blockDuration >= MIN_BLOCK_DURATION;
+                                                                           
+                                                                           const blockStartTime = formatTimeFromMinutes(currentStartMinutes);
                                                                            const blockEndTime = formatTimeFromMinutes(currentStartMinutes + blockDuration);
                                                                            
-                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok
+                                                                           // Vytvoríme UNIKÁTNY identifikátor pre každý blok (len pre dostatočne dlhé bloky)
                                                                            const uniqueBreakKey = `${hallId}_${dateStr}_${blockStartTime}`;
-                                                                           
-                                                                           // Skontrolujeme, či je tento konkrétny blok zablokovaný
                                                                            const isThisBlockBlocked = blockedBreaks ? !!blockedBreaks[uniqueBreakKey] : false;
                                                                    
-                                                                           blocks.push({
-                                                                               id: `block-${blockIndex}`,
-                                                                               startTime: blockStartTime,
-                                                                               endTime: blockEndTime,
-                                                                               duration: blockDuration,
-                                                                               isFirst: blockIndex === 0,
-                                                                               isLast: (blockDuration === remainingMinutes),
-                                                                               isBlocked: isThisBlockBlocked,
-                                                                               uniqueKey: uniqueBreakKey,
-                                                                               isBreak: false  // Toto je blok VOĽNÉHO ČASU (zápas)
-                                                                           });
+                                                                           // PRIDÁME BLOK LEN AK JE DOSTATOČNE DLHÝ
+                                                                           if (isBlockLongEnough) {
+                                                                               blocks.push({
+                                                                                   id: `block-${blockIndex}`,
+                                                                                   startTime: blockStartTime,
+                                                                                   endTime: blockEndTime,
+                                                                                   duration: blockDuration,
+                                                                                   isFirst: blockIndex === 0,
+                                                                                   isLast: (blockDuration === remainingMinutes),
+                                                                                   isBlocked: isThisBlockBlocked,
+                                                                                   uniqueKey: uniqueBreakKey,
+                                                                                   isBreak: false  // Toto je blok VOĽNÉHO ČASU (zápas)
+                                                                               });
+                                                                           }
                                                                            
-                                                                           // Posunieme sa o dĺžku bloku
+                                                                           // Posunieme sa o dĺžku bloku (aj keď sme ho nepridali, čas sa posunie)
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
