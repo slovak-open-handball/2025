@@ -9260,7 +9260,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
                                                                                                                onClick: (e) => {
                                                                                                                    e.stopPropagation();
-                                                                                                                   toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                                   toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
                                                                                                                },
                                                                                                                title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                            },
@@ -9767,7 +9767,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
                                                                                                            onClick: (e) => {
                                                                                                                e.stopPropagation();
-                                                                                                               toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
+                                                                                                               toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
                                                                                                            },
                                                                                                            title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                        },
