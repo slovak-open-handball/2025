@@ -9056,7 +9056,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
                                                                    
-                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (neodpočítava matchBreak z remainingMinutes)
+                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (odpočítava matchBreak z remainingMinutes)
                                                                    const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
@@ -9116,13 +9116,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            currentStartMinutes += blockDuration;
                                                                            remainingMinutes -= blockDuration;
                                                                            
-                                                                           // ** OPRAVA: Prestávka medzi blokmi sa NEODPOČÍTAVA z remainingMinutes **
-                                                                           // Táto prestávka sa NEMÁ zobrazovať, len posunie čas pre ďalší blok
-                                                                           // DÔLEŽITÉ: TÚTO PRESTÁVKU NEODPOČÍTAVAME z remainingMinutes!
+                                                                           // ** OPRAVA: Prestávka medzi blokmi SA ODPOČÍTAVA z remainingMinutes **
+                                                                           // Prestávka je súčasťou voľného času, ale nezobrazuje sa ako samostatný blok
                                                                            if (remainingMinutes > 0) {
-                                                                               // Prestávka medzi blokmi - táto sa NEMÁ zobrazovať, len posunie čas
-                                                                               currentStartMinutes += matchBreak;
-                                                                               // remainingMinutes zostáva nezmenené - prestávka nie je súčasťou voľného času
+                                                                               // Odpočítame prestávku zo zostávajúceho času
+                                                                               const breakToSubtract = Math.min(matchBreak, remainingMinutes);
+                                                                               remainingMinutes -= breakToSubtract;
+                                                                               // Čas začiatku sa posunie o prestávku (táto prestávka sa nezobrazuje)
+                                                                               currentStartMinutes += breakToSubtract;
                                                                            }
                                                                            
                                                                            blockIndex++;
