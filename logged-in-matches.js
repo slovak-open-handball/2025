@@ -9621,12 +9621,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        // PRIDANIE MEDZERY MEDZI ZÁPASMI
                                                                        const currentMatch = sortedArray[idx];
                                                                        const nextMatch = sortedArray[idx + 1];
-                                                                       
+    
                                                                        if (nextMatch && currentMatch.scheduledTime && nextMatch.scheduledTime) {
                                                                            try {
                                                                                const currentMatchDate = currentMatch.scheduledTime.toDate();
                                                                                const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
-                                                                               
+            
                                                                                let currentMatchDuration = 0;
                                                                                let currentMatchBreak = 5;
                                                                                if (currentMatchCategory) {
@@ -9636,7 +9636,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    currentMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
                                                                                    currentMatchBreak = currentMatchCategory.matchBreak || 5;
                                                                                }
-                                                                               
+            
                                                                                // Koniec aktuálneho zápasu (čistý čas, bez prestávky)
                                                                                const currentMatchEndTime = new Date(currentMatchDate.getTime() + currentMatchDuration * 60000);
                                                                                const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
@@ -9659,6 +9659,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const freeTimeEndMinutes = nextStartMinutes - nextMatchBreak;
                                                                                
                                                                                // DĹŽKA VOĽNÉHO ČASU (len priestor, kde môže byť zápas)
+                                                                               // Tu už NIE je potrebné odpočítavať prestávky - tie sú započítané v freeTimeStartMinutes a freeTimeEndMinutes
                                                                                let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                
                                                                                const dateStr = getLocalDateStr(currentMatchDate);
@@ -9669,13 +9670,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
                                                                                const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                
-                                                                               // ** DEFINUJEME PREMENNÚ TU, KDE SA POUŽÍVA **
                                                                                const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
                                                                                // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                   // Použijeme upravenú funkciu splitGapIntoBlocks s parametrom matchBreak
+                                                                                   // Použijeme funkciu splitGapIntoBlocks - tá už NEODPOČÍTAVA prestávky, len ich používa na posun času medzi blokmi
                                                                                    const blocks = splitGapIntoBlocks(
                                                                                        displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
