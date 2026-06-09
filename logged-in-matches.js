@@ -9006,7 +9006,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        
                                                        // ** HLAVNÁ ČASŤ - ZOBRAZENIE OBSAHU DŇA **
                                                        !isEmpty ? (
-                                                           // Normálne zobrazenie zápasov (pôvodný kód, ktorý funguje)
+                                                           // Normálne zobrazenie zápasov
                                                            React.createElement(
                                                                'div',
                                                                {
@@ -9035,77 +9035,75 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return `${hours}:${mins}`;
                                                                    };
                                                                    
+                                                                   // Funkcia na získanie maximálneho trvania zápasu v tomto dni (vrátane prestávky)
+                                                                   const getMaxMatchDurationInDay = (matchesList) => {
+                                                                       let maxDuration = 0;
+                                                                       for (const match of matchesList) {
+                                                                           if (match.scheduledTime) {
+                                                                               const category = categories.find(c => c.name === match.categoryName);
+                                                                               let matchDuration = 0;
+                                                                               let matchBreak = 5;
+                                                                               if (category) {
+                                                                                   const periods = category.periods || 2;
+                                                                                   const periodDuration = category.periodDuration || 20;
+                                                                                   const breakDuration = category.breakDuration || 2;
+                                                                                   matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                   matchBreak = category.matchBreak || 5;
+                                                                               }
+                                                                               const totalWithBreak = matchDuration + matchBreak;
+                                                                               if (totalWithBreak > maxDuration) {
+                                                                                   maxDuration = totalWithBreak;
+                                                                               }
+                                                                           }
+                                                                       }
+                                                                       return maxDuration > 0 ? maxDuration : 45;
+                                                                   };
+                                                                   
+                                                                   // Funkcia na rozdelenie medzery na bloky (BEZ OBMEDZENIA NA MAX 4)
+                                                                   const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak) => {
+                                                                       const blocks = [];
+                                                                       let remainingMinutes = gapMinutes;
+                                                                       let currentStartMinutes = gapStartTimeFormatted ? (() => {
+                                                                           const [hours, minutes] = gapStartTimeFormatted.split(':').map(Number);
+                                                                           return hours * 60 + minutes;
+                                                                       })() : 0;
+                                                                       
+                                                                       const formatTimeFromMinutesLocal = (minutes) => {
+                                                                           const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                           const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                           return `${hours}:${mins}`;
+                                                                       };
+                                                                       
+                                                                       let blockIndex = 0;
+                                                                       // Rozdeľujeme, kým neostane žiadny čas - BEZ OBMEDZENIA NA POČET BLOKOV
+                                                                       while (remainingMinutes > 0) {
+                                                                           // Každý blok má dĺžku maxBlockDuration, posledný blok má zvyšok
+                                                                           const blockDuration = Math.min(maxBlockDuration, remainingMinutes);
+                                                                           const blockStartTime = formatTimeFromMinutesLocal(currentStartMinutes);
+                                                                           const blockEndTime = formatTimeFromMinutesLocal(currentStartMinutes + blockDuration);
+                                                                           
+                                                                           blocks.push({
+                                                                               id: `block-${blockIndex}`,
+                                                                               startTime: blockStartTime,
+                                                                               endTime: blockEndTime,
+                                                                               duration: blockDuration,
+                                                                               isFirst: blockIndex === 0,
+                                                                               isLast: (blockDuration === remainingMinutes)
+                                                                           });
+                                                                           
+                                                                           currentStartMinutes += blockDuration;
+                                                                           remainingMinutes -= blockDuration;
+                                                                           blockIndex++;
+                                                                       }
+                                                                       
+                                                                       return blocks;
+                                                                   };
+                                                                   
                                                                    // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                                    
+                                                                   // PRE MEDZERU PRED PRVÝM ZÁPASOM
                                                                    if (sortedMatches.length > 0) {
-
-                                                                       const getMaxMatchDurationInDay = (sortedMatches, categories) => {
-                                                                           let maxDuration = 0;
-                                                                           for (const match of sortedMatches) {
-                                                                               if (match.scheduledTime) {
-                                                                                   const category = categories.find(c => c.name === match.categoryName);
-                                                                                   let matchDuration = 0;
-                                                                                   let matchBreak = 5;
-                                                                                   if (category) {
-                                                                                       const periods = category.periods || 2;
-                                                                                       const periodDuration = category.periodDuration || 20;
-                                                                                       const breakDuration = category.breakDuration || 2;
-                                                                                       matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                                       matchBreak = category.matchBreak || 5;
-                                                                                   }
-                                                                                   const totalWithBreak = matchDuration + matchBreak;
-                                                                                   if (totalWithBreak > maxDuration) {
-                                                                                       maxDuration = totalWithBreak;
-                                                                                   }
-                                                                               }
-                                                                           }
-                                                                           // Ak nie je žiadny zápas, použijeme predvolenú hodnotu 45 minút
-                                                                           return maxDuration > 0 ? maxDuration : 45;
-                                                                       };
-                                                                       
-                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches, categories);
-                                                                       
-                                                                       // Pomocná funkcia na rozdelenie medzery na bloky
-                                                                       const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak) => {
-                                                                           const blocks = [];
-                                                                           let remainingMinutes = gapMinutes;
-                                                                           let currentStartMinutes = gapStartTimeFormatted ? (() => {
-                                                                               const [hours, minutes] = gapStartTimeFormatted.split(':').map(Number);
-                                                                               return hours * 60 + minutes;
-                                                                           })() : 0;
-                                                                           
-                                                                           const formatTimeFromMinutesLocal = (minutes) => {
-                                                                               const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                                                                               const mins = (minutes % 60).toString().padStart(2, '0');
-                                                                               return `${hours}:${mins}`;
-                                                                           };
-                                                                           
-                                                                           let blockIndex = 0;
-                                                                           // Rozdeľujeme, kým neostane žiadny čas ALEBO kým nevytvoríme 4 bloky (maximálne)
-                                                                           while (remainingMinutes > 0 && blocks.length < 4) {
-                                                                               // Posledný blok môže byť kratší, ale berieme celý zvyšok
-                                                                               const blockDuration = (blocks.length === 3) ? remainingMinutes : Math.min(maxBlockDuration, remainingMinutes);
-                                                                               const blockStartTime = formatTimeFromMinutesLocal(currentStartMinutes);
-                                                                               const blockEndTime = formatTimeFromMinutesLocal(currentStartMinutes + blockDuration);
-                                                                               
-                                                                               blocks.push({
-                                                                                   id: `block-${blockIndex}`,
-                                                                                   startTime: blockStartTime,
-                                                                                   endTime: blockEndTime,
-                                                                                   duration: blockDuration,
-                                                                                   isFirst: blockIndex === 0,
-                                                                                   isLast: (blockDuration === remainingMinutes) || (blocks.length === 3)
-                                                                               });
-                                                                               
-                                                                               currentStartMinutes += blockDuration;
-                                                                               remainingMinutes -= blockDuration;
-                                                                               blockIndex++;
-                                                                           }
-                                                                           
-                                                                           return blocks;
-                                                                       };
-                                                                       
                                                                        const firstMatch = sortedMatches[0];
                                                                        if (firstMatch.scheduledTime) {
                                                                            try {
@@ -9124,9 +9122,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                    
                                                                                    if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
+                                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                        const blocks = splitGapIntoBlocks(
                                                                                            gapBeforeFirstMatch, maxBlockDuration, hall.id, dateStr, 
-                                                                                           hallStartTimeStr, formatTimeFromMinutes(firstMatchStartMinutes), isGapBlocked,
+                                                                                           hallStartTimeStr, formatTimeFromMinutes(firstMatchStartMinutes), false,
                                                                                            toggleBlockBreak, null, null, hasCompletedMatch, 
                                                                                            userProfileData?.role, filteredUnassignedMatches,
                                                                                            setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreakBefore
@@ -9143,7 +9142,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
                                                                                                            width: '100%',
-                                                                                                           backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                           backgroundColor: '#fffbeb'
                                                                                                        }
                                                                                                    },
                                                                                                    React.createElement(
@@ -9164,7 +9163,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'div', 
                                                                                                                { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                               React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                               React.createElement('i', { className: 'fa-solid fa-hourglass-half text-amber-600 text-xs flex-shrink-0' }),
                                                                                                                React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
                                                                                                                    `${block.startTime} - ${block.endTime}`
                                                                                                                )
@@ -9183,7 +9182,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            React.createElement(
                                                                                                                'span',
                                                                                                                { className: 'text-sm font-medium' },
-                                                                                                               isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                               'VOĽNÝ ČAS '
                                                                                                            ),
                                                                                                            React.createElement(
                                                                                                                'div', 
@@ -9196,18 +9195,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        'div',
                                                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
                                                                                                        React.createElement(
-                                                                                                           'button',
-                                                                                                           {
-                                                                                                               className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                                                                               onClick: (e) => {
-                                                                                                                   e.stopPropagation();
-                                                                                                                   toggleBlockBreak(hall.id, dateStr, block.startTime, block.endTime, block.duration);
-                                                                                                               },
-                                                                                                               title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
-                                                                                                           },
-                                                                                                           React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
-                                                                                                       ),
-                                                                                                       !isGapBlocked && React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
@@ -9227,7 +9214,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            },
                                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                                        ),
-                                                                                                       block.isFirst && !isGapBlocked && React.createElement(
+                                                                                                       block.isFirst && React.createElement(
                                                                                                            'button',
                                                                                                            {
                                                                                                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
@@ -9254,6 +9241,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    }
                                                                    
+                                                                   // PRE ZÁPASY A MEDZERY MEDZI NIMI
                                                                    sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                        let matchTime = '--:--';
                                                                        let endTime = '--:--';
@@ -9342,25 +9330,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        var letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                                                        
                                                                        const homeTeamColor = match.homeTeamColor || '#f3f4f6';
-                                                                       const homeTextColor = match.homeTextColor || '#000000';
                                                                        const awayTeamColor = match.awayTeamColor || '#f3f4f6';
-                                                                       const awayTextColor = match.awayTextColor || '#000000';
                                                                        
                                                                        allElements.push(
                                                                            React.createElement(
                                                                                'div',
                                                                                {
-                                                                                    key: 'match-' + match.id,
-                                                                                    className: `p-0 rounded border border-gray-200 ${
-                                                                                        hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
-                                                                                    } transition-all relative group/match bg-white ${
-                                                                                        hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
-                                                                                    }`,
-                                                                                    style: { 
-                                                                                        width: '100%',
-                                                                                        backgroundColor: 'white'
-                                                                                    }
-                                                                                },
+                                                                                   key: 'match-' + match.id,
+                                                                                   className: `p-0 rounded border border-gray-200 ${
+                                                                                       hasCompletedMatch ? '' : 'hover:border-blue-400 hover:shadow-sm'
+                                                                                   } transition-all relative group/match bg-white ${
+                                                                                       hasCompletedMatch ? 'cursor-default' : 'cursor-pointer'
+                                                                                   }`,
+                                                                                   style: { 
+                                                                                       width: '100%',
+                                                                                       backgroundColor: 'white'
+                                                                                   }
+                                                                               },
                                                                                React.createElement(
                                                                                    'div', 
                                                                                    { 
@@ -9572,6 +9558,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            )
                                                                        );
                                                                        
+                                                                       // PRIDANIE MEDZERY MEDZI ZÁPASMI
                                                                        const currentMatch = sortedArray[idx];
                                                                        const nextMatch = sortedArray[idx + 1];
                                                                        
@@ -9608,6 +9595,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                
                                                                                if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
                                                                                    if (gapMinutes >= 0) {
+                                                                                       const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                        const blocks = splitGapIntoBlocks(
                                                                                            gapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                            gapStartTime, gapEndTime, isGapBlocked,
@@ -9738,8 +9726,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            }
                                                                        }
                                                                    });
-                                               
-                                                                   // ** ZELENÝ RIADOK ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
+                                                       
+                                                                   // ZELENÝ RIADOK ZA POSLEDNÝM ZÁPASOM
                                                                    if (hasUnassignedMatches && sortedMatches.length > 0 && userProfileData?.role === 'admin' && !hasCompletedMatch) {
                                                                        const lastMatch = sortedMatches[sortedMatches.length - 1];
                                                                        if (lastMatch && lastMatch.scheduledTime) {
@@ -9748,7 +9736,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const dateStr = getLocalDateStr(lastMatchDate);
                                                                                const hallId = lastMatch.hallId;
                                                                                
-                                                                               // Vypočítame koniec posledného zápasu vrátane prestávky
                                                                                const lastMatchCategory = categories.find(c => c.name === lastMatch.categoryName);
                                                                                let lastMatchDuration = 0;
                                                                                let lastMatchBreak = 5;
@@ -9764,7 +9751,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const lastMatchEndMinutes = lastMatchEndTime.getHours() * 60 + lastMatchEndTime.getMinutes();
                                                                                const endTimeStr = formatTimeFromMinutes(lastMatchEndMinutes);
                                                                                
-                                                                               // Koniec voľného času nastavíme na 23:59
                                                                                const breakEndTimeStr = '23:59';
                                                                                
                                                                                allElements.push(
