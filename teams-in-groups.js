@@ -2691,53 +2691,6 @@ return React.createElement(
     'div',
     { className: 'flex flex-col w-full relative text-[87.5%]' },
     React.createElement(NotificationPortal, null),
-    React.createElement(NewTeamModal, {
-        isOpen: isModalOpen,
-        onClose: closeModal,
-        teamToEdit,
-        allTeams,
-        categoryIdToNameMap,
-        allGroupsByCategoryId,
-        defaultCategoryId: selectedCategoryId,
-        defaultGroupName: selectedGroupName,
-        unifiedSaveHandler,
-        showCategoryPrefix: showCategoryPrefix,
-        matchesData: matchesData
-    }),
-    React.createElement(ConfirmDeleteModal, {
-        isOpen: !!confirmModal?.open,
-        onClose: () => setConfirmModal(null),
-        onConfirm: handleConfirmRemove,
-        team: confirmModal?.team,
-        isConfirming: isConfirming
-    }),
-    React.createElement(ConfirmDeleteGapModal, {
-        isOpen: !!deleteGapModal?.open,
-        onClose: () => setDeleteGapModal(null),
-        onConfirm: () => {
-            if (deleteGapModal) {
-                handleDeleteGap(
-                    deleteGapModal.categoryName,
-                    deleteGapModal.groupName,
-                    deleteGapModal.position
-                );
-            }
-            setDeleteGapModal(null);
-        },
-        position: deleteGapModal?.position,
-        groupName: deleteGapModal?.groupName,
-        categoryName: deleteGapModal?.categoryName,
-        isConfirming: false
-    }),
-    React.createElement(SwapTeamsModal, {
-        isOpen: !!swapModal?.open,
-        onClose: () => setSwapModal(null),
-        onSwap: (team, targetGroup, targetTeam) => handleSwapTeams(team, targetGroup, targetTeam),
-        team: swapModal?.team,
-        allTeams: allTeams,
-        categoryIdToNameMap: categoryIdToNameMap,
-        allGroupsByCategoryId: allGroupsByCategoryId
-    }),
     React.createElement(
         'div',
         { className: 'w-full max-w-xs mx-auto mb-8' },
