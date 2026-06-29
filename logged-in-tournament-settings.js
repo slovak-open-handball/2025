@@ -174,25 +174,34 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             }
         }
         
-        changesContent = changes; // Toto je teraz pole, nie string
+        changesContent = changes;
       } else if (notificationData.type === 'deletePackage') {
         changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       } else if (notificationData.type === 'updatePagesSettings') {
-        // Spracovanie notifikácie pre zmenu viditeľnosti stránok v požadovanom formáte
+        // Spracovanie notifikácie pre zmenu viditeľnosti stránok
         const changedPages = notificationData.data.changedPages || [];
         if (changedPages.length > 0) {
-            const changes = [];
-            changedPages.forEach(page => {
-              const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
-              // Správne určenie pôvodného a nového stavu
-              const originalStatus = originalPage?.visible === true ? 'verejná' : 'skrytá';
-              const newStatus = page.visible === true ? 'verejná' : 'skrytá';
-              changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
-            });
-            changesContent = changes;
-          } else {
-            changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
-          }
+          const changes = [];
+          changedPages.forEach(page => {
+            const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
+            // Bezpečné určenie pôvodného a nového stavu
+            let originalStatus = 'skrytá';
+            let newStatus = 'skrytá';
+            
+            if (originalPage && originalPage.visible !== undefined) {
+              originalStatus = originalPage.visible ? 'verejná' : 'skrytá';
+            }
+            
+            if (page.visible !== undefined) {
+              newStatus = page.visible ? 'verejná' : 'skrytá';
+            }
+            
+            changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
+          });
+          changesContent = changes;
+        } else {
+          changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
+        }
       }
 
       await addDoc(notificationsCollectionRef, {
