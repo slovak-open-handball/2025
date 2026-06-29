@@ -1,3 +1,94 @@
+// ============================================================
+// WORKER SERVICE - MUSÍ BYŤ NA ZAČIATKU SÚBORU
+// ============================================================
+class TeamNameWorkerService {
+  constructor() {
+    this.workerUrl = 'https://teams-name.turnaj-slovak-open-handball.workers.dev';
+    this.cache = new Map();
+    this.pendingRequests = new Map();
+    this.allTeamsCache = null;
+    this.allTeamsCacheTime = null;
+    this.CACHE_TTL = 60000;
+  }
+
+  async getAllTeams() {
+    if (this.allTeamsCache && this.allTeamsCacheTime) {
+      if (Date.now() - this.allTeamsCacheTime < this.CACHE_TTL) {
+        console.log('📦 Using cached teams:', this.allTeamsCache.length);
+        return this.allTeamsCache;
+      }
+    }
+
+    const requestKey = 'allTeams';
+    if (this.pendingRequests.has(requestKey)) {
+      return this.pendingRequests.get(requestKey);
+    }
+
+    try {
+      console.log('🌐 Fetching all teams from worker...');
+      const response = await fetch(`${this.workerUrl}/api/all-teams`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.teams) {
+        console.log('✅ Got', data.teams.length, 'teams from worker');
+        this.allTeamsCache = data.teams;
+        this.allTeamsCacheTime = Date.now();
+        return data.teams;
+      }
+      
+      return [];
+
+    } catch (error) {
+      console.error('❌ Worker error:', error);
+      return [];
+    }
+  }
+
+  async getTeamName(userId) {
+    if (!userId) return null;
+    if (this.cache.has(userId)) return this.cache.get(userId);
+
+    try {
+      const response = await fetch(`${this.workerUrl}/api/team-name?userId=${encodeURIComponent(userId)}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data.teamName) this.cache.set(userId, data.teamName);
+      return data.teamName || null;
+    } catch (error) {
+      console.error('❌ Error:', error);
+      return null;
+    }
+  }
+
+  clearCache() {
+    this.cache.clear();
+    this.allTeamsCache = null;
+    this.allTeamsCacheTime = null;
+    this.pendingRequests.clear();
+  }
+
+  async testWorker() {
+    try {
+      const response = await fetch(`${this.workerUrl}/api/test`);
+      return await response.json();
+    } catch (error) {
+      console.error('Worker test failed:', error);
+      throw error;
+    }
+  }
+}
+
+// 🔥 INICIALIZÁCIA OKAMŽITE - PRED VŠETKÝM OSTATNÝM
+window.teamNameWorkerService = new TeamNameWorkerService();
+console.log('✅ TeamNameWorkerService initialized with getAllTeams()');
+
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
