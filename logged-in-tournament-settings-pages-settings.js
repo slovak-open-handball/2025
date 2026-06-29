@@ -260,12 +260,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           )
         )
       )
-    ),
-    React.createElement(
-      'div',
-      { className: 'text-sm text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200' },
-      React.createElement('strong', null, 'Info:'),
-      ' Zmeny sa prejavia okamžite po uložení. Pre zobrazenie zmien môže byť potrebné obnoviť stránku.'
     )
   );
 }
