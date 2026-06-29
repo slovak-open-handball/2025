@@ -3457,46 +3457,39 @@ const createPlaceChangeNotification = async (actionType, changesArray, placeData
 };
 
 let isEmailSyncListenerSetup = false;
-const handleDataUpdateAndRender = (event) => {
-    const userProfileData = event.detail;
+
+const renderMap = (userProfileData) => {
     const root = document.getElementById('root');
     if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
-    if (userProfileData) {
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            onAuthStateChanged(window.auth, async user => {
-                if (user) {
-                    try {
-                        const ref = doc(window.db, 'users', user.uid);
-                        const snap = await getDoc(ref);
-                        if (snap.exists()) {
-                            const oldEmail = snap.data().email;
-                            if (user.email !== oldEmail) {
-                                await updateDoc(ref, { email: user.email });
-                                await addDoc(collection(window.db, 'notifications'), {
-                                    userEmail: user.email,
-                                    changes: `Zmena e-mailu z '${oldEmail}' na '${user.email}'`,
-                                    timestamp: new Date(),
-                                });
-                                window.showGlobalNotification('E-mail aktualizovaný', 'success');
-                            }
-                        }
-                    } catch (err) {
-                        console.error("Chyba synchronizácie emailu:", err);
-                        window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
-                    }
-                }
-            });
-            isEmailSyncListenerSetup = true;
-        }
-        ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData }));
-    } else {
-        ReactDOM.createRoot(root).render(
-            React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            )
-        );
-    }
+    
+    console.log("Renderujem mapu, userProfileData:", userProfileData ? 'prihlásený' : 'neprihlásený');
+    ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData: userProfileData || null }));
 };
+
+// Listener pre zmeny v autentifikácii
+const handleDataUpdateAndRender = (event) => {
+    const userProfileData = event.detail;
+    renderMap(userProfileData);
+};
+
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+// Okamžité vykreslenie mapy - mapa je verejná, takže sa zobrazí vždy
+if (document.getElementById('root')) {
+    // Počkáme na načítanie Leafletu
+    const waitForLeaflet = () => {
+        if (typeof L !== 'undefined') {
+            // Leaflet je načítaný, môžeme renderovať
+            renderMap(window.globalUserProfileData || null);
+        } else {
+            // Počkáme 100ms a skúsime znova
+            setTimeout(waitForLeaflet, 100);
+        }
+    };
+    
+    // Spustíme čakanie na Leaflet
+    waitForLeaflet();
+}
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
