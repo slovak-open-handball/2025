@@ -39,6 +39,10 @@ import {
     where,
     limit
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    getFunctions,
+    httpsCallable
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 // Vložený konfiguračný objekt
 const firebaseConfig = {
@@ -50,9 +54,14 @@ const firebaseConfig = {
     appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
+// 🌐 URL Cloudflare Worker pre nastavenie claimov
+const WORKER_URL = "https://claim.turnaj-slovak-open-handball.workers.dev/"; // 🚨 ZMEŇ ZA SVOJU URL!
+
 // 🔒 KONTROLA DOMÉNY - Povolené domény pre prístup
 const ALLOWED_DOMAINS = [
     'slovak-open-handball.github.io',  // GitHub Pages doména
+    'localhost',                        // Lokálny vývoj
+    '127.0.0.1'                        // Lokálny vývoj
 ];
 
 // Funkcia na kontrolu, či je aktuálna doména povolená
@@ -69,11 +78,70 @@ const isAllowedDomain = () => {
     return isAllowed;
 };
 
-// 🔒 Funkcia na získanie GitHub Pages tokenu (ak existuje)
-const getGitHubAccessToken = () => {
-    // Môžeme použiť localStorage pre dočasné uloženie tokenu
-    // Token by mal byť nastavený pri prihlásení z GitHub stránky
-    return localStorage.getItem('github_access_token') || null;
+// 🔑 FUNKCIA NA NASTAVENIE GITHUB PRÍSTUPU CEZ WORKER
+const setupGitHubAccess = async (user) => {
+    if (!user) {
+        console.warn('❌ Nie je prihlásený žiadny používateľ.');
+        return false;
+    }
+
+    try {
+        // 1. Skontrolujeme, či už má GitHub prístup
+        const idTokenResult = await user.getIdTokenResult();
+        if (idTokenResult.claims.githubAccess === true) {
+            console.log('✅ GitHub prístup už je nastavený.');
+            return true;
+        }
+
+        console.log('🔄 Nastavujem GitHub prístup cez Worker...');
+
+        // 2. Získame aktuálny ID token
+        const idToken = await user.getIdToken();
+        
+        // 3. Zavoláme Cloudflare Worker
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // 4. Spracujeme odpoveď
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Worker odpovedal chybou:', response.status, errorText);
+            
+            // Skúsime parsovať JSON chybu
+            try {
+                const errorJson = JSON.parse(errorText);
+                throw new Error(errorJson.error || `HTTP ${response.status}: ${response.statusText}`);
+            } catch (e) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        }
+
+        const result = await response.json();
+        console.log('✅ GitHub prístup nastavený:', result);
+
+        // 5. 🔄 DÔLEŽITÉ: Obnovíme token, aby sa zmena prejavila
+        await user.getIdToken(true);
+        console.log('🔄 Token obnovený s novými claims.');
+
+        // 6. Overíme, či sa claim naozaj nastavil
+        const newTokenResult = await user.getIdTokenResult();
+        if (newTokenResult.claims.githubAccess === true) {
+            console.log('✅ GitHub prístup úspešne overený!');
+            return true;
+        } else {
+            console.warn('⚠️ GitHub prístup nebol overený po obnovení tokenu.');
+            return false;
+        }
+
+    } catch (error) {
+        console.error('❌ Chyba pri nastavovaní GitHub prístupu:', error);
+        return false;
+    }
 };
 
 // URL adresa Google Apps Scriptu na odosielanie e-mailov
@@ -148,6 +216,7 @@ const roleAccess = {
 let app;
 let db;
 let auth;
+let functions;
 
 // Cache pre nastavenia viditeľnosti stránok
 let pageVisibilityCache = null;
@@ -176,12 +245,14 @@ const setupFirebase = () => {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+        functions = getFunctions(app);
         
         console.log("AuthManager: Firebase inicializovaný.");
 
         // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
         window.db = db;
+        window.functions = functions;
         window.firebaseConfig = firebaseConfig;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updateEmail = updateEmail;
@@ -190,6 +261,9 @@ const setupFirebase = () => {
         
         // 🔒 Pridáme funkciu na kontrolu domény
         window.isAllowedDomain = isAllowedDomain;
+        
+        // 🔑 Pridáme funkciu na nastavenie GitHub prístupu
+        window.setupGitHubAccess = setupGitHubAccess;
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
@@ -455,7 +529,20 @@ const handleAuthState = async () => {
         if (user) {
             console.log("AuthManager: Používateľ prihlásený:", user.uid);
             
-            // 🔒 Kontrola GitHub prístupu cez custom claim
+            // 🔑 NASTAVENIE GITHUB PRÍSTUPU CEZ WORKER
+            // Toto sa vykoná hneď po prihlásení, pred načítaním profilu
+            const accessSetup = await setupGitHubAccess(user);
+            
+            if (!accessSetup) {
+                console.warn("🔒 Nepodarilo sa nastaviť GitHub prístup. Skúšam pokračovať...");
+                // Môžeme pokračovať, ale bez GitHub prístupu nebudú fungovať pravidlá
+                // Ak chceš prísne obmedzenie, odkomentuj nasledujúce riadky:
+                // await signOut(auth);
+                // window.location.href = `${appBasePath}/login.html?status=access_denied`;
+                // return;
+            }
+            
+            // 🔒 Kontrola GitHub prístupu cez custom claim (po nastavení)
             const hasGitHubAccess = await checkGitHubAccess(user);
             
             if (!hasGitHubAccess) {
