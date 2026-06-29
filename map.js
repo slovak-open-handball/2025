@@ -2275,13 +2275,6 @@ const MapApp = ({ userProfileData }) => {
                       ),
                       selectedPlace.capacity
                     ),
-                  
-                  // Cena ubytovania
-                  selectedPlace.pricePerNight && selectedPlace.type === 'ubytovanie' &&
-                    React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
-                      React.createElement('strong', null, 'Cena pre kluby: '),
-                      `${formatPrice(selectedPlace.pricePerNight)} €/os/noc`
-                    ),
 
                     // Farby pre ubytovanie
                     selectedPlace.type === 'ubytovanie' && (
@@ -2296,28 +2289,6 @@ const MapApp = ({ userProfileData }) => {
                         }, '')
                       )
                     ),
-                  
-                  // NOVÉ: Náklady
-                  selectedPlace.costPerNight && selectedPlace.type === 'ubytovanie' &&
-                    React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
-                      React.createElement('strong', null, 'Náklady: '),
-                      `${formatPrice(selectedPlace.costPerNight)} €/os/noc`
-                    ),
-                  
-                  // NOVÉ: Ceny stravovania
-                  selectedPlace.type === 'stravovanie' && (
-                    React.createElement('div', { className: 'mb-3' },
-                      React.createElement('strong', { className: 'block text-gray-700 mb-1' }, 'Ceny:'),
-                      selectedPlace.breakfastPrice != null && 
-                        React.createElement('p', { className: 'text-gray-600' }, `• Raňajky: ${formatPrice(selectedPlace.breakfastPrice)} €`),
-                      selectedPlace.lunchPrice != null && 
-                        React.createElement('p', { className: 'text-gray-600' }, `• Obed: ${formatPrice(selectedPlace.lunchPrice)} €`),
-                      selectedPlace.dinnerPrice != null && 
-                        React.createElement('p', { className: 'text-gray-600' }, `• Večera: ${formatPrice(selectedPlace.dinnerPrice)} €`),
-                      (selectedPlace.breakfastPrice == null && selectedPlace.lunchPrice == null && selectedPlace.dinnerPrice == null) &&
-                        React.createElement('p', { className: 'text-gray-500 italic' }, 'Ceny nie sú nastavené')
-                    )
-                  )
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
