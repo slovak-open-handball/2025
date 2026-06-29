@@ -4008,14 +4008,10 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-} else {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        ));
-    }
+
+// 🔥 DÔLEŽITÉ: VŽDY VYKRESLÍME KOMPONENT, aj keď nemáme userProfileData
+const rootElement = document.getElementById('root');
+if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(React.createElement(AddTeamsGroupApp, { userProfileData: window.globalUserProfileData || null }));
 }
