@@ -211,7 +211,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
               React.createElement(
                 'span',
                 { className: `text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}` },
-                page.visible ? 'verejná' : 'Skrytá'
+                page.visible ? 'Verejná' : 'Skrytá'
               ),
               React.createElement(
                 'button',
@@ -252,7 +252,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           className: `font-medium py-2 px-6 rounded-lg transition-colors ${
             hasChanges && !saving
               ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-green-500 text-white opacity-50 cursor-not-allowed'
           }`
         },
         saving ? 'Ukladám...' : 'Uložiť zmeny'
