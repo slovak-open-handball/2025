@@ -187,23 +187,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       { className: 'text-gray-600 text-sm' },
       'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre verejnosť.'
     ),
-    !collectionExists && React.createElement(
-      'div',
-      { className: 'bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4' },
-      React.createElement(
-        'div',
-        { className: 'flex' },
-        React.createElement(
-          'div',
-          { className: 'ml-3' },
-          React.createElement(
-            'p',
-            { className: 'text-sm text-yellow-700' },
-            'Kolekcia stránok zatiaľ neexistuje. Všetky stránky sú predvolene skryté. Po uložení nastavení sa kolekcia vytvorí.'
-          )
-        )
-      )
-    ),
     React.createElement(
       'div',
       { className: 'bg-gray-50 rounded-lg overflow-hidden border border-gray-200' },
