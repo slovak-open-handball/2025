@@ -141,6 +141,14 @@ const PAGE_VISIBILITY_CACHE_TTL = 60000; // 1 minúta
 let pageVisibilityUnsubscribe = null;
 let currentPageVisibilityListenerActive = false;
 
+// 🆕 Pomocná funkcia na kontrolu, či je používateľ "skutočne" prihlásený
+const isReallyLoggedIn = () => {
+    if (!window.globalUserProfileData) return false;
+    if (window.isAnonymousUser === true) return false;
+    if (window.globalUserProfileData.role === 'anonymous') return false;
+    return true;
+};
+
 // 🆕 Pomocná funkcia na kontrolu, či je App Check podporovaný v prehliadači
 const isAppCheckSupported = () => {
     try {
@@ -276,6 +284,16 @@ const checkCurrentPageVisibility = async () => {
         return;
     }
     
+    // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Ak je používateľ prihlásený, má prístup vždy
+    if (fileName === 'map.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            console.log("AuthManager: Prihlásený používateľ má prístup na mapu vždy.");
+            return;
+        }
+        // Ak nie je prihlásený, pokračujeme v kontrole nastavení
+    }
+    
     // Získame aktuálne nastavenia (použijeme cache)
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
@@ -305,6 +323,12 @@ const checkCurrentPageVisibility = async () => {
             const userProfileData = window.globalUserProfileData;
             if (userProfileData && userProfileData.role && hasAccessToPage(userProfileData.role, fileName)) {
                 console.log(`AuthManager: Prihlásený používateľ s rolou "${userProfileData.role}" má prístup k skrytej stránke "${fileName}". Nechávam ho.`);
+                return;
+            }
+            
+            // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Ak je prihlásený, má prístup aj keď je skrytá
+            if (fileName === 'map.html') {
+                console.log(`AuthManager: Prihlásený používateľ má prístup na mapu aj keď je skrytá v nastaveniach.`);
                 return;
             }
         }
@@ -377,6 +401,16 @@ const isPageAccessibleForGuest = async () => {
     
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
+    
+    // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Mapa je vždy prístupná pre prihlásených
+    if (fileName === 'map.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            console.log("AuthManager: Prihlásený používateľ má prístup na mapu vždy.");
+            return true;
+        }
+        // Ak nie je prihlásený, pokračujeme v kontrole nastavení
+    }
     
     // Ak stránka nie je v zozname publicPages, nie je prístupná
     if (!publicPages.includes(fileName)) {
@@ -620,7 +654,15 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
-                                // PRE VŠETKY OSTATNÉ STRÁNKY (nie registračné):
+                                // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Prihlásený používateľ má vždy prístup na mapu
+                                if (currentPage === 'map.html') {
+                                    console.log("AuthManager: Prihlásený používateľ má prístup na mapu.");
+                                    window.globalUserProfileData = userProfileData;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                    return;
+                                }
+                                
+                                // PRE VŠETKY OSTATNÉ STRÁNKY (nie registračné a nie mapa):
                                 // PRIHLÁSENÝ POUŽÍVATEĽ MÁ PRÍSTUP KU VŠETKÝM STRÁNKAM
                                 // Iba výnimka: ak je na stránke, ktorá je len pre neprihlásených (guest only)
                                 if (isCurrentPageGuestOnly) {
