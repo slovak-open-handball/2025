@@ -180,7 +180,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     React.createElement(
       'div',
       { className: 'flex justify-between items-center' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránok')
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti webových stránok')
     ),
     React.createElement(
       'p',
