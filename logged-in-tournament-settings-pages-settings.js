@@ -1,5 +1,8 @@
 // logged-in-tournament-settings-pages-settings.js
 
+// Import potrebných Firebase funkcií
+import { collection, getDocs, doc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 const { useState, useEffect } = React;
 
 function PagesSettings({ db, showNotification, sendAdminNotification }) {
@@ -68,14 +71,18 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           setOriginalPages(JSON.parse(JSON.stringify(allPages)));
         }
       } catch (error) {
-        showNotification(`Chyba pri načítaní nastavení stránok: ${error.message}`, 'error');
+        if (showNotification) {
+          showNotification(`Chyba pri načítaní nastavení stránok: ${error.message}`, 'error');
+        } else {
+          console.error('Chyba pri načítaní nastavení stránok:', error);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchPages();
-  }, [db]);
+  }, [db, showNotification]);
 
   // Zmena viditeľnosti stránky
   const handleToggleVisibility = (pageId) => {
@@ -103,7 +110,9 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       });
 
       if (changedPages.length === 0) {
-        showNotification('Žiadne zmeny na uloženie.', 'info');
+        if (showNotification) {
+          showNotification('Žiadne zmeny na uloženie.', 'info');
+        }
         setSaving(false);
         return;
       }
@@ -123,21 +132,29 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       setHasChanges(false);
 
       // Odošleme notifikáciu administrátorom
-      const changesDescription = changedPages
-        .map(p => `${p.label}: ${p.visible ? 'viditeľná' : 'skrytá'}`)
-        .join('; ');
-      
-      await sendAdminNotification({
-        type: 'updatePagesSettings',
-        data: {
-          changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
-          changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
-        }
-      });
+      if (sendAdminNotification) {
+        const changesDescription = changedPages
+          .map(p => `${p.label}: ${p.visible ? 'viditeľná' : 'skrytá'}`)
+          .join('; ');
+        
+        await sendAdminNotification({
+          type: 'updatePagesSettings',
+          data: {
+            changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
+            changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
+          }
+        });
+      }
 
-      showNotification('Nastavenia stránok boli úspešne uložené!', 'success');
+      if (showNotification) {
+        showNotification('Nastavenia stránok boli úspešne uložené!', 'success');
+      }
     } catch (error) {
-      showNotification(`Chyba pri ukladaní nastavení stránok: ${error.message}`, 'error');
+      if (showNotification) {
+        showNotification(`Chyba pri ukladaní nastavení stránok: ${error.message}`, 'error');
+      } else {
+        console.error('Chyba pri ukladaní nastavení stránok:', error);
+      }
     } finally {
       setSaving(false);
     }
@@ -147,86 +164,109 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
   const handleReset = () => {
     setPages(JSON.parse(JSON.stringify(originalPages)));
     setHasChanges(false);
-    showNotification('Zmeny boli zahodené.', 'info');
+    if (showNotification) {
+      showNotification('Zmeny boli zahodené.', 'info');
+    }
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
+    return React.createElement(
+      'div',
+      { className: 'flex justify-center items-center py-12' },
+      React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500' })
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Nastavenia viditeľnosti stránok</h2>
-        <div className="flex gap-3">
-          {hasChanges && (
-            <button
-              onClick={handleReset}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Zahodiť zmeny
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges || saving}
-            className={`font-medium py-2 px-6 rounded-lg transition-colors ${
+  return React.createElement(
+    'div',
+    { className: 'space-y-6' },
+    React.createElement(
+      'div',
+      { className: 'flex justify-between items-center' },
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránok'),
+      React.createElement(
+        'div',
+        { className: 'flex gap-3' },
+        hasChanges && React.createElement(
+          'button',
+          {
+            onClick: handleReset,
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors'
+          },
+          'Zahodiť zmeny'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSave,
+            disabled: !hasChanges || saving,
+            className: `font-medium py-2 px-6 rounded-lg transition-colors ${
               hasChanges && !saving
                 ? 'bg-green-500 hover:bg-green-600 text-white'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {saving ? 'Ukladám...' : 'Uložiť zmeny'}
-          </button>
-        </div>
-      </div>
-
-      <p className="text-gray-600 text-sm">
-        Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii.
-        Skryté stránky nebudú dostupné pre bežných používateľov.
-      </p>
-
-      <div className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-        <div className="grid grid-cols-1 divide-y divide-gray-200">
-          {pages.map((page) => (
-            <div
-              key={page.id}
-              className="flex items-center justify-between p-4 hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <span className="font-medium text-gray-800">{page.label}</span>
-                <span className="text-sm text-gray-500">(ID: {page.id})</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}`}>
-                  {page.visible ? 'Viditeľná' : 'Skrytá'}
-                </span>
-                <button
-                  onClick={() => handleToggleVisibility(page.id)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            }`
+          },
+          saving ? 'Ukladám...' : 'Uložiť zmeny'
+        )
+      )
+    ),
+    React.createElement(
+      'p',
+      { className: 'text-gray-600 text-sm' },
+      'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre bežných používateľov.'
+    ),
+    React.createElement(
+      'div',
+      { className: 'bg-gray-50 rounded-lg overflow-hidden border border-gray-200' },
+      React.createElement(
+        'div',
+        { className: 'grid grid-cols-1 divide-y divide-gray-200' },
+        pages.map((page) =>
+          React.createElement(
+            'div',
+            {
+              key: page.id,
+              className: 'flex items-center justify-between p-4 hover:bg-gray-100 transition-colors'
+            },
+            React.createElement(
+              'div',
+              { className: 'flex items-center gap-4' },
+              React.createElement('span', { className: 'font-medium text-gray-800' }, page.label),
+              React.createElement('span', { className: 'text-sm text-gray-500' }, `(ID: ${page.id})`)
+            ),
+            React.createElement(
+              'div',
+              { className: 'flex items-center gap-3' },
+              React.createElement(
+                'span',
+                { className: `text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}` },
+                page.visible ? 'Viditeľná' : 'Skrytá'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => handleToggleVisibility(page.id),
+                  className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                     page.visible ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      page.visible ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
-        <strong>Info:</strong> Zmeny sa prejavia okamžite po uložení. Pre zobrazenie zmien môže byť potrebné obnoviť stránku.
-      </div>
-    </div>
+                  }`
+                },
+                React.createElement('span', {
+                  className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    page.visible ? 'translate-x-6' : 'translate-x-1'
+                  }`
+                })
+              )
+            )
+          )
+        )
+      )
+    ),
+    React.createElement(
+      'div',
+      { className: 'text-sm text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200' },
+      React.createElement('strong', null, 'Info:'),
+      ' Zmeny sa prejavia okamžite po uložení. Pre zobrazenie zmien môže byť potrebné obnoviť stránku.'
+    )
   );
 }
 
