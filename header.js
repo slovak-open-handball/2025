@@ -354,6 +354,11 @@ const setupPagesVisibilityListener = () => {
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
+    // Ak ešte nemáme načítané dáta, nič nerobíme (odkazy zostanú skryté)
+    if (Object.keys(pagesVisibility).length === 0) {
+        console.log("header.js: pagesVisibility je prázdny, čakám na dáta z Firestore");
+        return;
+    }
     
     // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
@@ -361,7 +366,9 @@ const updateNavigationLinks = () => {
     navLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;        
+        const isVisible = pageConfig && pageConfig.visible === true;
+        
+        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}`);
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
