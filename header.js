@@ -391,25 +391,6 @@ const updateNavigationLinks = () => {
         homeLink.classList.remove('hidden');
         homeLink.style.display = '';
     }
-
-    // 4. Špeciálne spracovanie pre "map" - mapa je vždy viditeľná pre prihlásených používateľov
-    const mapLink = document.getElementById('map-link');
-    if (mapLink) {
-        const isLoggedIn = isReallyLoggedIn();
-        const pageConfig = pagesVisibility['map'];
-        // Mapa je viditeľná ak je povolená v nastaveniach ALEBO ak je používateľ prihlásený
-        const isVisible = (pageConfig && pageConfig.visible === true) || isLoggedIn;
-        
-        if (isVisible) {
-            mapLink.classList.remove('hidden');
-            mapLink.style.display = '';
-            mapLink.dataset.visible = 'true';
-        } else {
-            mapLink.classList.add('hidden');
-            mapLink.style.display = 'none';
-            mapLink.dataset.visible = 'false';
-        }
-    }
 };
 
 // Inicializácia viditeľnosti - najprv všetko skryjeme
