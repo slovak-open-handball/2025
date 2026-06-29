@@ -2638,7 +2638,8 @@ let isTeamNameReplacerInitialized = false;
         getGroupType: getGroupTypeSync,
         getGroupTypeSync: getGroupTypeSync,
         loadGroupsData: loadGroupsData,
-        getGroupsCache: () => groupsCache
+        getGroupsCache: () => groupsCache,
+        isDataReady: () => isDataReady,
     };
     
     // Spustenie sledovania
