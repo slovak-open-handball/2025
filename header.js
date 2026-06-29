@@ -5,7 +5,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null;
 let unsubscribeFromUserSettings = null;
-let unsubscribeFromPagesVisibility = null; // Nový listener pre viditeľnosť stránok
+let unsubscribeFromPagesVisibility = null;
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
@@ -27,15 +27,9 @@ let pagesVisibility = {};
  * @returns {boolean} - true pre email používateľa, false pre anonymného alebo neprihláseného
  */
 const isReallyLoggedIn = () => {
-    // Ak nie je profil, nie je prihlásený
     if (!window.globalUserProfileData) return false;
-    
-    // Anonymný používateľ nie je považovaný za prihláseného
     if (window.isAnonymousUser === true) return false;
-    
-    // Ak má rolu 'anonymous', tiež nie je prihlásený
     if (window.globalUserProfileData.role === 'anonymous') return false;
-    
     return true;
 };
 
@@ -109,40 +103,28 @@ const formatNotificationMessage = (text) => {
         return text.map(item => formatNotificationMessage(item)).join('<br>');
     }
     
-    // Rozdelíme text podľa apostrofov
     const parts = text.split("'");
     
-    // Ak nemáme aspoň 3 časti (teda aspoň jeden pár apostrofov), vrátime pôvodný text
     if (parts.length < 3) {
         return text;
     }
 
-    let formattedText = parts[0]; // Začneme prvou časťou (pred prvým apostrofom)
+    let formattedText = parts[0];
     
-    // Prechádzame cez páry apostrofov
     for (let i = 1; i < parts.length; i++) {
-        // Každý pár apostrofov tvorí: [text medzi 1. a 2. apostrofom] a potom [text za 2. apostrofom]
-        // i je nepárne pre text medzi apostrofmi, párne pre text za apostrofmi
-        
         if (i % 2 === 1) {
-            // Nepárny index = text medzi apostrofmi (1., 3., 5., ... výskyt)
-            // Podľa toho, koľký pár to je, určíme formátovanie
-            const pairIndex = Math.floor(i / 2) + 1; // Ktorý pár apostrofov to je (1., 2., 3., ...)
+            const pairIndex = Math.floor(i / 2) + 1;
             
             if (pairIndex % 2 === 1) {
-                // 1., 3., 5., ... pár → šikmé písmo
                 formattedText += `<em>${parts[i]}</em>`;
             } else {
-                // 2., 4., 6., ... pár → bold
                 formattedText += `<strong>${parts[i]}</strong>`;
             }
         } else {
-            // Párny index = text za apostrofmi (za 2., 4., 6., ... apostrofom)
             formattedText += parts[i];
         }
     }
     
-    // Formátovanie telefónnych čísel
     formattedText = formattedText.replace(/(<em>|\+?[0-9\s]+<\/em>)/g, (match) => {
         if (match.includes('+')) {
             const number = match.replace(/<\/?em>/g, '');
@@ -163,7 +145,6 @@ const formatNotificationMessage = (text) => {
 };
 
 const showDatabaseNotification = (message, type = 'info') => {
-    // Už by nemalo byť pole, lebo sme ho spojili vyššie, ale pre istotu
     if (Array.isArray(message)) {
         message = message.join('<br>');
     }
@@ -191,7 +172,6 @@ const showDatabaseNotification = (message, type = 'info') => {
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
-    // Rovno naformátujeme celú správu
     const formattedMessage = formatNotificationMessage(message);
 
     notificationElement.innerHTML = `
@@ -259,7 +239,7 @@ const getHeaderColorByRole = (role) => {
     case 'volunteer':
       return '#FFAC1C';
     default:
-      return '#1D4ED8';  // Predvolená modrá pre neprihlásených/anonymných
+      return '#1D4ED8';
   }
 }
 
@@ -281,10 +261,8 @@ const setupUserSettingsListener = (userId) => {
             const userData = docSnap.data();
             
             if (userData.hasOwnProperty('displayNotifications')) {
-                const oldValue = currentDisplayNotifications;
                 currentDisplayNotifications = userData.displayNotifications;                
             } else {
-                const oldValue = currentDisplayNotifications;
                 currentDisplayNotifications = false;                
             }
             
@@ -325,7 +303,7 @@ const loadInitialDisplayNotifications = async (userId) => {
     return false;
 };
 
-// NOVÁ FUNKCIA: Načítanie viditeľnosti stránok z Firestore
+// Načítanie viditeľnosti stránok z Firestore
 const loadPagesVisibility = async () => {
     if (!window.db) {
         console.warn("header.js: Chýba db pre načítanie viditeľnosti stránok.");
@@ -357,14 +335,13 @@ const loadPagesVisibility = async () => {
     }
 };
 
-// NOVÁ FUNKCIA: Nastavenie listenera pre zmeny viditeľnosti stránok
+// Nastavenie listenera pre zmeny viditeľnosti stránok
 const setupPagesVisibilityListener = () => {
     if (!window.db) {
         console.warn("header.js: Chýba db pre nastavenie listenera viditeľnosti stránok.");
         return;
     }
 
-    // Zrušíme starý listener ak existuje
     if (unsubscribeFromPagesVisibility) {
         unsubscribeFromPagesVisibility();
         unsubscribeFromPagesVisibility = null;
@@ -392,7 +369,7 @@ const setupPagesVisibilityListener = () => {
     });
 };
 
-// NOVÁ FUNKCIA: Aktualizácia navigačných odkazov podľa viditeľnosti stránok
+// Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
     console.log("header.js: Aktualizujem navigačné odkazy, pagesVisibility:", pagesVisibility);
     
@@ -404,7 +381,7 @@ const updateNavigationLinks = () => {
         const pageConfig = pagesVisibility[pageId];
         const isVisible = pageConfig && pageConfig.visible === true;
         
-        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}, config:`, pageConfig);
+        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}`);
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
@@ -427,41 +404,40 @@ const updateNavigationLinks = () => {
     }
 };
 
+// Inicializácia viditeľnosti - najprv všetko skryjeme
 const initializeNavigationVisibility = () => {
-    // Najprv všetky odkazy s data-page skryjeme
     const navLinks = document.querySelectorAll('[data-page]');
     navLinks.forEach(link => {
         link.classList.add('hidden');
     });
     
-    // Home link necháme viditeľný
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
     }
     
-    // Register link tiež skryjeme (ukáže sa neskôr podľa logiky)
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         registerLink.classList.add('hidden');
     }
+    
+    console.log("header.js: Inicializovaná viditeľnosť - všetky odkazy skryté okrem home");
 };
 
-// NOVÁ FUNKCIA: Kontrola prístupu k aktuálnej stránke
+// Kontrola prístupu k aktuálnej stránke
 const checkCurrentPageAccess = () => {
-    // Získame názov aktuálnej stránky z URL
     const currentPath = window.location.pathname;
     const currentPage = currentPath.split('/').pop().replace('.html', '');
     
-    // Ak sme na hlavnej stránke alebo login/register, neblokujeme
-    if (currentPage === '' || currentPage === 'index' || currentPage === 'login' || currentPage === 'register' || currentPage === 'logged-in-registration') {
+    // Povolené stránky bez kontroly
+    const allowedPages = ['', 'index', 'login', 'register', 'logged-in-registration'];
+    if (allowedPages.includes(currentPage)) {
         return true;
     }
     
-    // Skontrolujeme, či je stránka v zozname viditeľnosti
     const pageConfig = pagesVisibility[currentPage];
     
-    // Ak stránka nie je v databáze, predpokladáme že je viditeľná (pre kompatibilitu)
+    // Ak stránka nie je v databáze, predpokladáme že je viditeľná
     if (!pageConfig) {
         return true;
     }
@@ -487,7 +463,12 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    if (window.location.pathname.includes('register.html')) {
+    // NAJPRV AKTUALIZUJEME NAVIGAČNÉ ODKAZY (NEZÁVISLE OD PRIHLÁSENIA)
+    // Toto je kľúčová zmena - viditeľnosť stránok platí pre všetkých
+    updateNavigationLinks();
+    checkCurrentPageAccess();
+
+    if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
         headerElement.classList.remove('invisible'); 
         authLink.classList.remove('hidden');
@@ -501,7 +482,6 @@ const updateHeaderLinks = (userProfileData) => {
     }
 
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {        
-        // Kľúčová zmena: Používame isReallyLoggedIn() namiesto priamej kontroly userProfileData
         const isLoggedIn = isReallyLoggedIn();
         
         if (isLoggedIn) {            
@@ -512,40 +492,34 @@ const updateHeaderLinks = (userProfileData) => {
             
             if (userProfileData.id && currentUserId !== userProfileData.id) {                
                 currentUserId = userProfileData.id;                
-                loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {                    
+                loadInitialDisplayNotifications(userProfileData.id).then(() => {                    
                     if (unsubscribeFromUserSettings) {
                         unsubscribeFromUserSettings();
                         unsubscribeFromUserSettings = null;
                     }
                     
-                    // Nastavíme nový listener nastavení
                     unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.id);
                     
-                    // Zrušíme starý listener notifikácií
                     if (unsubscribeFromNotifications) {
                         unsubscribeFromNotifications();
                         unsubscribeFromNotifications = null;
                     }
                     
-                    // Vyčistíme Set zobrazených notifikácií
                     shownNotificationIds.clear();
                     
-                    // Nastavíme listener notifikácií IBA pre adminov
                     if (userProfileData.role === 'admin') {
                         setupNotificationListenerForAdmin(userProfileData);
                     }
                 }).catch(error => {
-                    console.error("   CHYBA pri loadInitialDisplayNotifications:", error);
+                    console.error("CHYBA pri loadInitialDisplayNotifications:", error);
                 });
             } 
         } else {            
-            // Neprihlásený alebo anonymný používateľ - zobrazíme prihlasovacie tlačidlo
             authLink.classList.remove('hidden');
             profileLink.classList.add('hidden');
             logoutButton.classList.add('hidden');
-            headerElement.style.backgroundColor = getHeaderColorByRole(null); // Predvolená modrá
+            headerElement.style.backgroundColor = getHeaderColorByRole(null);
             
-            // Vyčistenie všetkých listenerov (anonymní používatelia nemajú notifikácie)
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
@@ -563,32 +537,20 @@ const updateHeaderLinks = (userProfileData) => {
 
         updateRegistrationLinkVisibility(userProfileData);
         
-        // Aktualizujeme navigačné odkazy podľa viditeľnosti stránok
-        updateNavigationLinks();
-        
-        // Skontrolujeme prístup k aktuálnej stránke
-        checkCurrentPageAccess();
-        
         headerElement.classList.remove('invisible');
     }
 };
 
-// ===== UPRAVENÁ FUNKCIA =====
 // Anonymný používateľ by mal vidieť tlačidlo registrácie, keď je registrácia otvorená
 const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    // Kontrola, či je registrácia otvorená
     const isRegistrationOpen = window.registrationDates && 
         new Date() >= window.registrationDates.registrationStartDate.toDate() && 
         new Date() <= window.registrationDates.registrationEndDate.toDate();
     const hasCategories = window.hasCategories;
 
-    // Podmienky na zobrazenie registračného tlačidla:
-    // 1. Musia byť dostupné kategórie
-    // 2. Registrácia musí byť otvorená
-    // 3. Používateľ NIE JE email prihlásený (anonymný alebo žiaden profil)
     const shouldShowRegisterLink = hasCategories && isRegistrationOpen && !isReallyLoggedIn();
 
     if (shouldShowRegisterLink) {
@@ -600,12 +562,10 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
-    // Notifikácie sú LEN pre adminov a LEN pre email používateľov
     if (unsubscribeFromNotifications) {
         return;
     }
     
-    // Kontrola, či naozaj ide o admina a nie je anonymný
     if (!userProfileData || userProfileData.role !== 'admin') {
         console.log("header.js: Notifikácie nastavené len pre adminov.");
         return;
@@ -629,7 +589,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             return;
         }
         
-        // Dodatočná kontrola, že používateľ nie je anonymný
         if (window.isAnonymousUser === true) {
             return;
         }
@@ -671,10 +630,8 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     
                     let changesMessage = '';
                     
-                    // === JEDNODUCHŠIE SPRACOVANIE ===
                     if (newNotification.changes) {
                         if (Array.isArray(newNotification.changes)) {
-                            // Ak je to pole, vezmeme ho ako celok - formatNotificationMessage si poradí
                             changesMessage = newNotification.changes;
                         } else {
                             changesMessage = String(newNotification.changes);
@@ -689,13 +646,11 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     
                     if (newNotification.userEmail) {
                         if (Array.isArray(changesMessage)) {
-                            // Ak je to pole, spojíme ho a pridáme e-mail na začiatok
                             changesMessage = `Používateľ ${newNotification.userEmail}:<br>${changesMessage.join('<br>')}`;
                         } else {
                             changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
                         }
                     } else if (Array.isArray(changesMessage)) {
-                        // Ak nie je e-mail, ale je to pole, spojíme ho
                         changesMessage = changesMessage.join('<br>');
                     }                 
                     
