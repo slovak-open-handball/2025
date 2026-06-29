@@ -436,6 +436,34 @@ const updateNavigationLinks = () => {
     }
 };
 
+// NOVÁ FUNKCIA: Kontrola prístupu k aktuálnej stránke
+const checkCurrentPageAccess = () => {
+    // Získame názov aktuálnej stránky z URL
+    const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+    
+    // Ak sme na hlavnej stránke alebo login/register, neblokujeme
+    if (currentPage === '' || currentPage === 'index' || currentPage === 'login' || currentPage === 'register') {
+        return true;
+    }
+    
+    // Skontrolujeme, či je stránka v zozname viditeľnosti
+    const pageConfig = pagesVisibility[currentPage];
+    
+    // Ak stránka nie je v databáze, predpokladáme že je viditeľná (pre kompatibilitu)
+    if (!pageConfig) {
+        return true;
+    }
+    
+    // Ak je stránka skrytá, presmerujeme na hlavnú stránku
+    if (pageConfig.visible === false) {
+        console.warn(`header.js: Stránka '${currentPage}' je skrytá, presmerovanie na hlavnú stránku.`);
+        window.location.href = 'index.html';
+        return false;
+    }
+    
+    return true;
+};
+
 const updateHeaderLinks = (userProfileData) => {    
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
@@ -525,6 +553,9 @@ const updateHeaderLinks = (userProfileData) => {
         
         // Aktualizujeme navigačné odkazy podľa viditeľnosti stránok
         updateNavigationLinks();
+        
+        // Skontrolujeme prístup k aktuálnej stránke
+        checkCurrentPageAccess();
         
         headerElement.classList.remove('invisible');
     }
