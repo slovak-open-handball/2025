@@ -923,11 +923,24 @@ const AddTeamsGroupApp = (props) => {
     
         if (checkAndApplyMapping()) return;
         
+        // 🆕 Poslúchač pre event matchTrackerReady
+        const handleMatchTrackerReady = () => {
+            forceRerender();
+        };
+        
+        window.addEventListener('matchTrackerReady', handleMatchTrackerReady);
+        
+        // Pôvodný poslúchač
         const handleTeamNameMappingReady = () => {
             forceRerender();
         };
         
         window.addEventListener('teamNameMappingReady', handleTeamNameMappingReady);
+    
+        // Kontrola, či už je matchTracker pripravený (pre prípad, že by sme nestihli zachytiť event)
+        if (window.matchTracker && window.matchTracker.isDataReady) {
+            forceRerender();
+        }
     
         const interval = setInterval(() => {
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
@@ -935,14 +948,14 @@ const AddTeamsGroupApp = (props) => {
                 forceRerender();
             }
         }, 2000);
-        
+      
         return () => {
             isMounted = false;
+            window.removeEventListener('matchTrackerReady', handleMatchTrackerReady);
             window.removeEventListener('teamNameMappingReady', handleTeamNameMappingReady);
             clearInterval(interval);
         };
-    }, []);
-  
+    }, []);  
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
