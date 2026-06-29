@@ -11,11 +11,12 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [originalPages, setOriginalPages] = useState([]);
+  const [collectionExists, setCollectionExists] = useState(false);
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
-    { id: 'matches', label: 'Zápasy', defaultVisible: true },
-    { id: 'tables', label: 'Tabuľky', defaultVisible: true },
+    { id: 'matches', label: 'Zápasy', defaultVisible: false }, // Zmenené na false
+    { id: 'tables', label: 'Tabuľky', defaultVisible: false }, // Zmenené na false
   ];
 
   // Načítanie nastavení stránok z Firestore
@@ -29,23 +30,25 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
         const pagesSnapshot = await getDocs(pagesRef);
         
         if (pagesSnapshot.empty) {
-          // Ak kolekcia neexistuje, vytvoríme predvolené nastavenia
+          // Ak kolekcia neexistuje, vytvoríme predvolené nastavenia (všetky skryté)
+          setCollectionExists(false);
           const defaultPages = PAGE_DEFINITIONS.map(page => ({
             id: page.id,
             label: page.label,
-            visible: page.defaultVisible,
+            visible: false, // Všetky stránky budú skryté
           }));
           setPages(defaultPages);
           setOriginalPages(JSON.parse(JSON.stringify(defaultPages)));
         } else {
           // Načítame existujúce nastavenia
+          setCollectionExists(true);
           const pagesData = [];
           pagesSnapshot.forEach(doc => {
             const data = doc.data();
             pagesData.push({
               id: doc.id,
               label: data.label || doc.id,
-              visible: data.visible !== undefined ? data.visible : true,
+              visible: data.visible !== undefined ? data.visible : false, // Predvolene false, ak nie je definované
             });
           });
           
@@ -56,7 +59,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             .map(p => ({
               id: p.id,
               label: p.label,
-              visible: p.defaultVisible,
+              visible: false, // Nové stránky budú skryté
             }));
           
           const allPages = [...pagesData, ...missingPages];
@@ -123,6 +126,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       // Aktualizujeme pôvodné dáta
       setOriginalPages(JSON.parse(JSON.stringify(pages)));
       setHasChanges(false);
+      setCollectionExists(true); // Po uložení už kolekcia existuje
 
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
@@ -207,6 +211,23 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       'p',
       { className: 'text-gray-600 text-sm' },
       'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre verejnosť.'
+    ),
+    !collectionExists && React.createElement(
+      'div',
+      { className: 'bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4' },
+      React.createElement(
+        'div',
+        { className: 'flex' },
+        React.createElement(
+          'div',
+          { className: 'ml-3' },
+          React.createElement(
+            'p',
+            { className: 'text-sm text-yellow-700' },
+            'Kolekcia stránok zatiaľ neexistuje. Všetky stránky sú predvolene skryté. Po uložení nastavení sa kolekcia vytvorí.'
+          )
+        )
+      )
     ),
     React.createElement(
       'div',
