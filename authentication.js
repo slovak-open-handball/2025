@@ -34,7 +34,9 @@ import {
     getDoc,
     onSnapshot,
     collection,
-    getDocs
+    getDocs,
+    query,
+    where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // 🆕 Import pre App Check
 import {
@@ -133,6 +135,10 @@ let appCheck;
 let pageVisibilityCache = null;
 let pageVisibilityCacheTime = null;
 const PAGE_VISIBILITY_CACHE_TTL = 60000; // 1 minúta
+
+// 🆕 Real-time listener pre zmeny viditeľnosti stránok
+let pageVisibilityUnsubscribe = null;
+let currentPageVisibilityListenerActive = false;
 
 // 🆕 Pomocná funkcia na kontrolu, či je App Check podporovaný v prehliadači
 const isAppCheckSupported = () => {
@@ -234,6 +240,109 @@ const loadPageVisibilitySettings = async () => {
     } catch (error) {
         console.warn("AuthManager: Chyba pri načítaní nastavení viditeľnosti stránok:", error);
         return null;
+    }
+};
+
+// 🆕 Funkcia na nastavenie real-time listenera pre zmeny viditeľnosti stránok
+const setupPageVisibilityListener = () => {
+    if (!db) {
+        console.warn("AuthManager: Firebase DB nie je inicializovaná, nemožno nastaviť listener.");
+        return;
+    }
+    
+    // Zrušíme predchádzajúci listener ak existuje
+    if (pageVisibilityUnsubscribe) {
+        pageVisibilityUnsubscribe();
+        pageVisibilityUnsubscribe = null;
+        currentPageVisibilityListenerActive = false;
+    }
+    
+    console.log("AuthManager: Nastavujem real-time listener pre zmeny viditeľnosti stránok...");
+    
+    const pagesRef = collection(db, 'pages');
+    
+    pageVisibilityUnsubscribe = onSnapshot(pagesRef, (snapshot) => {
+        console.log("AuthManager: Detekovaná zmena v nastaveniach viditeľnosti stránok.");
+        
+        // Aktualizujeme cache
+        const visibilitySettings = {};
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.visible === false) {
+                visibilitySettings[doc.id] = false;
+            } else if (data.visible === true) {
+                visibilitySettings[doc.id] = true;
+            }
+        });
+        
+        // Aktualizujeme cache
+        pageVisibilityCache = visibilitySettings;
+        pageVisibilityCacheTime = Date.now();
+        
+        console.log("AuthManager: Aktualizované nastavenia viditeľnosti stránok:", visibilitySettings);
+        
+        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYVNENÁ ZMENOU
+        checkCurrentPageVisibility();
+        
+    }, (error) => {
+        console.error("AuthManager: Chyba pri real-time listenere pre viditeľnosť stránok:", error);
+    });
+    
+    currentPageVisibilityListenerActive = true;
+};
+
+// 🆕 Funkcia na kontrolu viditeľnosti aktuálnej stránky a prípadné presmerovanie
+const checkCurrentPageVisibility = async () => {
+    // Ak to nie je HTML stránka, nič nerobíme
+    if (!isHtmlPage()) {
+        return;
+    }
+    
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    
+    // Ak sme na index.html, vždy necháme - je to vstupná stránka
+    if (fileName === 'index.html') {
+        return;
+    }
+    
+    // Získame aktuálne nastavenia (použijeme cache)
+    const settings = await loadPageVisibilitySettings();
+    if (!settings) {
+        // Ak sa nepodarilo načítať nastavenia, predpokladáme že stránka je verejná
+        return;
+    }
+    
+    // Odstránime .html z názvu pre vyhľadávanie v databáze
+    const pageId = fileName.replace('.html', '');
+    
+    // Kontrola, či je stránka v nastaveniach
+    if (settings[pageId] === undefined) {
+        // Stránka nie je v nastaveniach - považujeme za verejnú
+        return;
+    }
+    
+    const isVisible = settings[pageId];
+    
+    // AK JE STRÁNKA SKRYTÁ (visible = false)
+    if (!isVisible) {
+        console.log(`AuthManager: Stránka "${fileName}" bola skrytá v nastaveniach. Presmerovávam na index.html.`);
+        
+        // Kontrola či nie sme prihlásený (ak sme, môžeme mať prístup aj k skrytým stránkam)
+        const user = auth.currentUser;
+        if (user) {
+            // Prihlásený používateľ - kontrolujeme či má právo na túto stránku
+            const userProfileData = window.globalUserProfileData;
+            if (userProfileData && userProfileData.role && hasAccessToPage(userProfileData.role, fileName)) {
+                console.log(`AuthManager: Prihlásený používateľ s rolou "${userProfileData.role}" má prístup k skrytej stránke "${fileName}". Nechávam ho.`);
+                return;
+            }
+        }
+        
+        // Presmerujeme na index.html
+        const indexUrl = `${appBasePath}/index.html`;
+        console.log(`AuthManager: Presmerúvam na: ${indexUrl}`);
+        window.location.href = indexUrl;
     }
 };
 
@@ -641,6 +750,11 @@ const handleAuthState = async () => {
             if (registrationLogoutTimeout) {
                 clearTimeout(registrationLogoutTimeout);
             }
+            if (pageVisibilityUnsubscribe) {
+                pageVisibilityUnsubscribe();
+                pageVisibilityUnsubscribe = null;
+                currentPageVisibilityListenerActive = false;
+            }
         });
     });
 
@@ -650,4 +764,19 @@ const handleAuthState = async () => {
 window.addEventListener('DOMContentLoaded', async () => {
     setupFirebase();
     handleAuthState();
+    
+    // 🆕 Po dokončení inicializácie nastavíme real-time listener pre viditeľnosť stránok
+    // Počkáme kým sa načíta Firebase a potom nastavíme listener
+    const checkAndSetupListener = () => {
+        if (db && auth) {
+            console.log("AuthManager: Inicializácia Firebase dokončená, nastavujem listener pre viditeľnosť stránok.");
+            setupPageVisibilityListener();
+        } else {
+            console.log("AuthManager: Čakám na inicializáciu Firebase pred nastavením listenera pre viditeľnosť stránok.");
+            setTimeout(checkAndSetupListener, 500);
+        }
+    };
+    
+    // Spustíme kontrolu po krátkom čase, aby sme mali istotu že Firebase je inicializovaný
+    setTimeout(checkAndSetupListener, 1000);
 });
