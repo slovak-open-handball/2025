@@ -360,7 +360,7 @@ const updateNavigationLinks = () => {
     }
     
     // 🔥 1. Spracovanie VEREJNÝCH odkazov s data-page atribútom
-    // Tieto odkazy sa riadia viditeľnosťou v DB
+    // Tieto odkazy sa riadia VÝHRADNE viditeľnosťou v DB
     const publicNavLinks = document.querySelectorAll('[data-page]');
     
     publicNavLinks.forEach(link => {
@@ -368,7 +368,7 @@ const updateNavigationLinks = () => {
         const pageConfig = pagesVisibility[pageId];
         const isVisible = pageConfig && pageConfig.visible === true;
         
-        // Aktualizujeme viditeľnosť odkazu
+        // Aktualizujeme viditeľnosť odkazu - LEN podľa DB
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
@@ -380,26 +380,8 @@ const updateNavigationLinks = () => {
         }
     });
 
-    // 🔥 2. ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH POUŽÍVATEĽOV
-    // Prihlásený používateľ vidí verejné odkazy vždy (aj keď sú v DB skryté)
-    const isLoggedIn = isReallyLoggedIn();
-    if (isLoggedIn) {
-        // Verejný odkaz na mapu - prihlásený vidí vždy
-        const publicMapLink = document.getElementById('public-map-link');
-        if (publicMapLink) {
-            publicMapLink.classList.remove('hidden');
-            publicMapLink.style.display = '';
-            publicMapLink.dataset.visible = 'true';
-        }
-        
-        // Verejný odkaz na teams-in-groups - prihlásený vidí vždy
-        const publicTeamsLink = document.getElementById('public-teams-in-groups-link');
-        if (publicTeamsLink) {
-            publicTeamsLink.classList.remove('hidden');
-            publicTeamsLink.style.display = '';
-            publicTeamsLink.dataset.visible = 'true';
-        }
-    }
+    // 🔥 2. ŽIADNE ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH
+    // public-map-link a public-teams-in-groups-link sa riadia VÝHRADNE DB
 
     // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
@@ -449,7 +431,7 @@ const checkCurrentPageAccess = () => {
     }
     
     // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU A TEAMS-IN-GROUPS
-    // Prihlásený používateľ má prístup vždy
+    // Prihlásený používateľ má prístup na verejné stránky vždy
     const isLoggedIn = isReallyLoggedIn();
     if (isLoggedIn && (currentPage === 'map' || currentPage === 'teams-in-groups')) {
         return true;
