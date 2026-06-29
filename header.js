@@ -401,40 +401,20 @@ const updateNavigationLinks = () => {
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
-            // Ak máme label v konfigurácii, aktualizujeme text odkazu
-            if (pageConfig.label && link.textContent.trim() !== pageConfig.label) {
-                link.textContent = pageConfig.label;
-            }
+            // NEMENÍME text odkazu - ponechávame pôvodný z HTML
+            // Odstránili sme časť, ktorá menila text podľa label z databázy
         } else {
             link.classList.add('hidden');
         }
     });
 
-    // 2. Špeciálne spracovanie pre "teams-in-groups" - už má data-page atribút
-    // Toto je už pokryté vyššie, ale necháme pre istotu
-    const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
-    if (teamsInGroupsLink) {
-        const pageConfig = pagesVisibility['teams-in-groups'];
-        const isVisible = pageConfig && pageConfig.visible === true;
-        
-        if (isVisible) {
-            teamsInGroupsLink.classList.remove('hidden');
-            teamsInGroupsLink.href = 'teams-in-groups.html';
-            if (pageConfig.label) {
-                teamsInGroupsLink.textContent = pageConfig.label;
-            }
-        } else {
-            teamsInGroupsLink.classList.add('hidden');
-        }
-    }
-
-    // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
+    // 2. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         updateRegistrationLinkVisibility(window.globalUserProfileData);
     }
 
-    // 4. Home link - vždy viditeľný
+    // 3. Home link - vždy viditeľný
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
