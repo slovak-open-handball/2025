@@ -353,37 +353,29 @@ const setupPagesVisibilityListener = () => {
 };
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
-const updateNavigationLinks = () => {
-    console.log("header.js: updateNavigationLinks volaný, pagesVisibility:", pagesVisibility);
-    
+const updateNavigationLinks = () => {    
     // Ak ešte nemáme načítané dáta, nič nerobíme (odkazy zostanú skryté)
     if (Object.keys(pagesVisibility).length === 0) {
-        console.log("header.js: pagesVisibility je prázdny, čakám na dáta z Firestore");
         return;
     }
     
     // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
-    console.log(`header.js: Nájdených ${navLinks.length} odkazov s data-page`);
     
     navLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;
-        
-        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}`);
+        const isVisible = pageConfig && pageConfig.visible === true;        
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
             link.dataset.visible = 'true';
-            console.log(`header.js: ZOBRAZUJEM odkaz '${pageId}'`);
         } else {
             link.classList.add('hidden');
             link.style.display = 'none';
             link.dataset.visible = 'false';
-            console.log(`header.js: SKRÝVAM odkaz '${pageId}'`);
         }
     });
 
@@ -419,9 +411,7 @@ const initializeNavigationVisibility = () => {
     if (registerLink) {
         registerLink.classList.add('hidden');
         registerLink.style.display = 'none';
-    }
-    
-    console.log("header.js: Inicializovaná viditeľnosť - všetky odkazy skryté (display:none)");
+    }    
 };
 
 // Kontrola prístupu k aktuálnej stránke
