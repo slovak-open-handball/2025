@@ -75,12 +75,6 @@ const MapApp = ({ userProfileData }) => {
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
     const [newCapacity, setNewCapacity] = useState('');
-    const [isAddingPlace, setIsAddingPlace] = useState(false);
-    const [tempAddPosition, setTempAddPosition] = useState(null);
-    const tempMarkerRef = useRef(null);
-    const moveHandlerRef = useRef(null);
-    const addClickHandlerRef = useRef(null);
-    const [selectedAddPosition, setSelectedAddPosition] = useState(null);
     const [editCapacity, setEditCapacity] = useState('');
     const [nameTypeError, setNameTypeError] = useState(null);
     const [accommodationTypes, setAccommodationTypes] = useState([]);
@@ -111,43 +105,15 @@ const MapApp = ({ userProfileData }) => {
     const [editHallRentalPrices, setEditHallRentalPrices] = useState({});
     const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
-    // NOVÉ: Premenná pre rozbaľovacie menu typov ubytovania
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
 
-    const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
     const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
 
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
     const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
     const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
     const [editHeaderTextColor, setEditHeaderTextColor] = useState('#000000');
-
-    const formatDateForDisplay = (dateStr) => {
-        if (!dateStr) return '';
-        const [year, month, day] = dateStr.split('-');
-        return `${day}. ${month}. ${year}`;
-    };
-
-    const formatPrice = (price) => {
-        if (price == null) return '';
-        return price.toFixed(2).replace('.', ',');
-    };
-
-    const waitForMarkerRender = () => {
-      return new Promise((resolve) => {
-        const check = () => {
-          if (tempMarkerRef.current && mapRef.current && leafletMap.current) {
-            requestAnimationFrame(() => {
-              resolve();
-            });
-          } else {
-            setTimeout(check, 50);
-          }
-        };
-        check();
-      });
-    };
   
     const accommodationAvailabilityEdit = useMemo(() => {
       if (!accommodationTypes.length || !selectedPlace) return {};
@@ -294,79 +260,6 @@ const MapApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    useEffect(() => {
-        const checkIfSportHallHasMatches = async () => {
-            if (!selectedPlace || !window.db || selectedPlace.type !== 'sportova_hala') {
-                setIsSportHallAssigned(false);
-                return;
-            }
-            
-            try {
-                // Načítaj všetky zápasy, ktoré majú priradenú túto halu
-                const matchesRef = collection(window.db, 'matches');
-                const matchesSnapshot = await getDocs(matchesRef);
-                
-                let hasMatches = false;
-                
-                matchesSnapshot.forEach((matchDoc) => {
-                    const matchData = matchDoc.data();
-                    if (matchData.hallId === selectedPlace.id) {
-                        hasMatches = true;
-                    }
-                });
-                
-                setIsSportHallAssigned(hasMatches);
-                
-                if (hasMatches) {
-                    console.log(`Športová hala ${selectedPlace.name} má priradené zápasy - tlačidlo na odstránenie bude zablokované`);
-                }
-            } catch (err) {
-                console.error("Chyba pri kontrole priradenia zápasov pre športovú halu:", err);
-                setIsSportHallAssigned(false);
-            }
-        };
-        
-        checkIfSportHallHasMatches();
-    }, [selectedPlace, places]);
-
-    useEffect(() => {
-      const checkIfPlaceIsAssigned = async () => {
-        if (!selectedPlace || !window.db) return;
-        
-        try {
-          // Načítaj všetkých používateľov a skontroluj, či niektorý tím má priradené toto miesto
-          const allUsers = await getDocs(collection(window.db, 'users'));
-          let assigned = false;
-          
-          for (const userDoc of allUsers.docs) {
-            const userData = userDoc.data();
-            const teams = userData.teams || {};
-            
-            for (const category in teams) {
-              const teamArray = teams[category];
-              if (!Array.isArray(teamArray)) continue;
-              
-              for (const team of teamArray) {
-                if (team.accommodation?.name === selectedPlace.name) {
-                  assigned = true;
-                  break;
-                }
-              }
-              if (assigned) break;
-            }
-            if (assigned) break;
-          }
-          
-          setIsPlaceAssigned(assigned);
-        } catch (err) {
-          console.error("Chyba pri kontrole priradenia miesta:", err);
-          setIsPlaceAssigned(false);
-        }
-      };
-      
-      checkIfPlaceIsAssigned();
-    }, [selectedPlace, places]);
-
     // NOVÉ: Effect pre zatváranie dropdownu pri kliknutí mimo
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -468,85 +361,6 @@ const MapApp = ({ userProfileData }) => {
             setPriceError(null);
         }
     }, [editPricePerNight, editCostPerNight, editType, isEditingNameAndType]);
-      
-    useEffect(() => {
-        if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType || !newCapacity) {
-            setCapacityError(null);
-            return;
-        }
- 
-        const cap = parseInt(newCapacity, 10);
-        if (isNaN(cap) || cap <= 0) {
-            setCapacityError('Kapacita musí byť kladné číslo');
-            return;
-        }
- 
-        const avail = accommodationAvailabilityAdd[selectedAccommodationType];
-        if (!avail) {
-            setCapacityError('Neviem zistiť dostupnú kapacitu');
-            return;
-        }
- 
-        if (cap > avail.free) {
-            setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
-        } else {
-            setCapacityError(null);
-        }
-    }, [newCapacity, selectedAccommodationType, newPlaceType, accommodationAvailabilityAdd]);
-    
-    useEffect(() => {
-        if (!isEditingNameAndType) {
-            setCapacityError(null);
-            return;
-        }
- 
-        if (editType !== 'ubytovanie' || !editAccommodationType || !editCapacity) {
-            setCapacityError(null);
-            return;
-        }
- 
-        const cap = parseInt(editCapacity, 10);
-        if (isNaN(cap) || cap <= 0) {
-            setCapacityError('Kapacita musí byť kladné číslo');
-            return;
-        }
- 
-        const avail = accommodationAvailabilityEdit[editAccommodationType];
-        if (!avail) {
-            setCapacityError('Neviem zistiť dostupnú kapacitu');
-            return;
-        }
- 
-        if (cap > avail.free) {
-            setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
-        } else {
-            setCapacityError(null);
-        }
-    }, [editCapacity, editAccommodationType, editType, isEditingNameAndType, accommodationAvailabilityEdit]);
-    
-    // NOVÉ: Validácia cien pre stravovanie (pridávanie)
-    useEffect(() => {
-        if (newPlaceType !== 'stravovanie') {
-            setMealPriceError(null);
-            return;
-        }
- 
-        const breakfastPrice = newBreakfastPrice ? parseFloat(newBreakfastPrice) : null;
-        const lunchPrice = newLunchPrice ? parseFloat(newLunchPrice) : null;
-        const dinnerPrice = newDinnerPrice ? parseFloat(newDinnerPrice) : null;
-        
-        let error = null;
-        
-        if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
-            error = 'Cena za raňajky musí byť kladné číslo';
-        } else if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
-            error = 'Cena za obed musí byť kladné číslo';
-        } else if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
-            error = 'Cena za večeru musí byť kladné číslo';
-        }
-        
-        setMealPriceError(error);
-    }, [newBreakfastPrice, newLunchPrice, newDinnerPrice, newPlaceType]);
     
     // NOVÉ: Validácia cien pre stravovanie (editácia)
     useEffect(() => {
@@ -690,66 +504,6 @@ const MapApp = ({ userProfileData }) => {
             }
         }, 100);
     };
-    
-    const handleSaveNewLocation = async () => {
-        if (!selectedPlace || !tempLocation || !window.db) return;
-  
-        try {
-            const placeRef = doc(window.db, 'places', selectedPlace.id);
-  
-            const originalLocation = {
-                lat: selectedPlace.lat,
-                lng: selectedPlace.lng,
-            };
-  
-            const newLocation = {
-                lat: tempLocation.lat,
-                lng: tempLocation.lng,
-            };
-  
-            await updateDoc(placeRef, {
-                location: new GeoPoint(tempLocation.lat, tempLocation.lng),
-                lat: tempLocation.lat,
-                lng: tempLocation.lng,
-                updatedAt: Timestamp.now(),
-            });
-  
-            // Notifikácia iba ak sa súradnice zmenili
-            if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
-                const changesList = [];
-                const placeTypeLabel = typeLabels[selectedPlace.type] || selectedPlace.type || 'neznámy typ';
-                changesList.push(`Úprava miesta: '''${selectedPlace.name || '(bez názvu)'} (${placeTypeLabel})'`);
-                changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
-          
-                await createPlaceChangeNotification('place_field_updated', changesList, {
-                    id: selectedPlace.id,
-                    name: selectedPlace.name,
-                    type: selectedPlace.type,
-                });
-            }
-  
-            setSelectedPlace(prev => prev ? {
-                ...prev,
-                lat: tempLocation.lat,
-                lng: tempLocation.lng
-            } : null);
-  
-            window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
-            setIsEditingLocation(false);
-            setTempLocation(null);
-  
-            if (editMarkerRef.current) {
-                if (editMarkerRef.current._clickHandler) {
-                    leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-                }
-                editMarkerRef.current.remove();
-                editMarkerRef.current = null;
-            }
-        } catch (err) {
-            console.error("Chyba pri ukladaní novej polohy:", err);
-            window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
-        }
-    }; 
     
     // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
     const handleAccommodationButtonClick = () => {
@@ -1152,34 +906,6 @@ const MapApp = ({ userProfileData }) => {
         }
     }, [selectedPlace]);
     
-    const addFreeCapacity = useMemo(() => {
-      if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType) return null;
-      const selectedTypeConfig = accommodationTypes.find(t => t.type === selectedAccommodationType);
-      if (!selectedTypeConfig) return 0;
-      const total = selectedTypeConfig.capacity || 0;
-      const occupied = places
-        .filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationType)
-        .reduce((sum, p) => sum + (p.capacity || 0), 0);
-      return total - occupied;
-    }, [newPlaceType, selectedAccommodationType, accommodationTypes, places]);
- 
-    const editFreeCapacity = useMemo(() => {
-      if (editType !== 'ubytovanie' || !editAccommodationType) return null;
-      const selectedTypeConfig = accommodationTypes.find(t => t.type === editAccommodationType);
-      if (!selectedTypeConfig) return 0;
-      const total = selectedTypeConfig.capacity || 0;
-      let occupied = places
-        .filter(p => p.type === 'ubytovanie' && p.accommodationType === editAccommodationType)
-        .reduce((sum, p) => sum + (p.capacity || 0), 0);
-      const oldType = selectedPlace?.type;
-      const oldAccType = selectedPlace?.accommodationType;
-      const oldCap = selectedPlace?.capacity || 0;
-      if (oldType === 'ubytovanie' && oldAccType === editAccommodationType) {
-        occupied -= oldCap;
-      }
-      return total - occupied;
-    }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
-    
     // NOVÉ: Získanie názvu vybraného typu ubytovania pre zobrazenie v tlačidle
     const getSelectedAccommodationTypeLabel = () => {
         if (!selectedAccommodationTypeFilter) return 'Všetky typy';
@@ -1569,29 +1295,6 @@ const MapApp = ({ userProfileData }) => {
         )
     )
   );
-};
-
-const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
-    if (!window.db || !changesArray?.length) return;
-    const currentUserEmail = window.globalUserProfileData?.email || null;
-    
-    const placeType = placeData?.type ? typeLabels[placeData.type] || placeData.type : 'neznámy typ';
-    
-    try {
-        await addDoc(collection(window.db, 'notifications'), {
-            userEmail: currentUserEmail || "",
-            performedBy: currentUserEmail || null,
-            changes: changesArray,
-            timestamp: Timestamp.now(),
-            actionType: actionType,
-            relatedPlaceId: placeData.id || null,
-            relatedPlaceName: placeData.name || null,
-            relatedPlaceType: placeData.type || null,
-        });
-        console.log("[NOTIFIKÁCIA – viaceré zmeny]", changesArray);
-    } catch (err) {
-        console.error("[CHYBA pri ukladaní notifikácie]", err);
-    }
 };
 
 let isEmailSyncListenerSetup = false;
