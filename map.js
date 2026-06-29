@@ -2415,32 +2415,7 @@ const MapApp = ({ userProfileData }) => {
                                   React.createElement('div', null,
                                     React.createElement('span', { className: 'font-medium' }, place.type === 'ubytovanie' ? 'Lôžok: ' : 'Kapacita: '),
                                     place.capacity
-                                  ),
-                                
-                                place.type === 'ubytovanie' && place.pricePerNight &&
-                                  React.createElement('div', null,
-                                    React.createElement('span', { className: 'font-medium' }, 'Cena pre kluby: '),
-                                    `${formatPrice(place.pricePerNight)} €/os/noc`
-                                  ),
-                                
-                                place.type === 'ubytovanie' && place.costPerNight &&
-                                  React.createElement('div', null,
-                                    React.createElement('span', { className: 'font-medium' }, 'Náklady: '),
-                                    `${formatPrice(place.costPerNight)} €/os/noc`
-                                  ),
-                                
-                                place.type === 'stravovanie' && (
-                                  React.createElement('div', null,
-                                    React.createElement('span', { className: 'font-medium' }, 'Ceny: '),
-                                    (place.breakfastPrice || place.lunchPrice || place.dinnerPrice) ?
-                                      React.createElement('span', null,
-                                        place.breakfastPrice ? `Raňajky: ${formatPrice(place.breakfastPrice)}€ ` : '',
-                                        place.lunchPrice ? `Obed: ${formatPrice(place.lunchPrice)}€ ` : '',
-                                        place.dinnerPrice ? `Večera: ${formatPrice(place.dinnerPrice)}€` : ''
-                                      ) :
-                                      React.createElement('span', { className: 'text-gray-400' }, '–')
                                   )
-                                )
                               )
                             )
                           );
