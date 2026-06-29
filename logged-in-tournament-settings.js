@@ -181,17 +181,18 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         // Spracovanie notifikácie pre zmenu viditeľnosti stránok v požadovanom formáte
         const changedPages = notificationData.data.changedPages || [];
         if (changedPages.length > 0) {
-          const changes = [];
-          changedPages.forEach(page => {
-            const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
-            const originalStatus = originalPage?.visible ? 'verejná' : 'skrytá';
-            const newStatus = page.visible ? 'verejná' : 'skrytá';
-            changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
-          });
-          changesContent = changes;
-        } else {
-          changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
-        }
+            const changes = [];
+            changedPages.forEach(page => {
+              const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
+              // Správne určenie pôvodného a nového stavu
+              const originalStatus = originalPage?.visible === true ? 'verejná' : 'skrytá';
+              const newStatus = page.visible === true ? 'verejná' : 'skrytá';
+              changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
+            });
+            changesContent = changes;
+          } else {
+            changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
+          }
       }
 
       await addDoc(notificationsCollectionRef, {
