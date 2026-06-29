@@ -19,6 +19,20 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     { id: 'matches', label: 'Zápasy', defaultVisible: false },
   ];
 
+  // Pomocná funkcia na zoradenie stránok podľa PAGE_DEFINITIONS
+  const sortPagesByDefinition = (pagesArray) => {
+    const orderMap = {};
+    PAGE_DEFINITIONS.forEach((def, index) => {
+      orderMap[def.id] = index;
+    });
+    
+    return [...pagesArray].sort((a, b) => {
+      const orderA = orderMap[a.id] !== undefined ? orderMap[a.id] : Infinity;
+      const orderB = orderMap[b.id] !== undefined ? orderMap[b.id] : Infinity;
+      return orderA - orderB;
+    });
+  };
+
   // Načítanie nastavení stránok z Firestore
   useEffect(() => {
     if (!db) return;
@@ -63,8 +77,10 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             }));
           
           const allPages = [...pagesData, ...missingPages];
-          setPages(allPages);
-          setOriginalPages(JSON.parse(JSON.stringify(allPages)));
+          // Zoradíme stránky podľa PAGE_DEFINITIONS
+          const sortedPages = sortPagesByDefinition(allPages);
+          setPages(sortedPages);
+          setOriginalPages(JSON.parse(JSON.stringify(sortedPages)));
         }
       } catch (error) {
         if (showNotification) {
@@ -82,13 +98,15 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Zmena viditeľnosti stránky
   const handleToggleVisibility = (pageId) => {
-    setPages(prevPages => 
-      prevPages.map(page => 
+    setPages(prevPages => {
+      const updatedPages = prevPages.map(page => 
         page.id === pageId 
           ? { ...page, visible: !page.visible }
           : page
-      )
-    );
+      );
+      // Po zmene zachováme zoradenie
+      return sortPagesByDefinition(updatedPages);
+    });
     setHasChanges(true);
   };
 
