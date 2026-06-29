@@ -93,12 +93,10 @@
     <script>
         const checkReadyAndRender = () => {
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
             if (typeof TournamentSettingsApp === 'undefined') {
-                console.error("Chyba: Komponent TournamentSettingsApp nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
@@ -111,12 +109,9 @@
                     
                     const root = ReactDOM.createRoot(rootElement);
                     root.render(React.createElement(TournamentSettingsApp, null));
-                    console.log("logged-in-tournament-settings.html: React App vykreslená.");
                 } else {
                     setTimeout(checkReadyAndRender, 100);
                 }
-            } else {
-                console.error("logged-in-tournament-settings.html: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
             }
         };
 
