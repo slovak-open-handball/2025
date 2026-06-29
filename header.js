@@ -430,7 +430,7 @@ const checkCurrentPageAccess = () => {
     const currentPage = currentPath.split('/').pop().replace('.html', '');
     
     // Povolené stránky bez kontroly
-    const allowedPages = ['', 'index', 'login', 'register', 'logged-in-registration'];
+    const allowedPages = ['', 'index', 'login', 'register'];
     if (allowedPages.includes(currentPage)) {
         return true;
     }
