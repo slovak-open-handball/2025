@@ -18,6 +18,9 @@ let currentUserId = null;
 // Set pre sledovanie už zobrazených notifikácií
 let shownNotificationIds = new Set();
 
+// Globálna premenná pre viditeľnosť stránok
+let pagesVisibility = {};
+
 /**
  * Kontroluje, či je používateľ "skutočne" prihlásený (email používateľ, nie anonymný)
  * @returns {boolean} - true pre email používateľa, false pre anonymného alebo neprihláseného
@@ -316,6 +319,80 @@ const loadInitialDisplayNotifications = async (userId) => {
     return false;
 };
 
+// NOVÁ FUNKCIA: Načítanie viditeľnosti stránok z Firestore
+const loadPagesVisibility = async () => {
+    if (!window.db) {
+        console.warn("header.js: Chýba db pre načítanie viditeľnosti stránok.");
+        return;
+    }
+
+    try {
+        const pagesRef = collection(window.db, 'pages');
+        const pagesSnapshot = await getDocs(pagesRef);
+        
+        pagesVisibility = {};
+        
+        if (!pagesSnapshot.empty) {
+            pagesSnapshot.forEach(doc => {
+                const data = doc.data();
+                pagesVisibility[doc.id] = {
+                    visible: data.visible !== undefined ? data.visible : false,
+                    label: data.label || doc.id
+                };
+            });
+        }
+        
+        // Aktualizujeme navigáciu po načítaní viditeľnosti stránok
+        updateNavigationLinks();
+    } catch (error) {
+        console.error("header.js: Chyba pri načítaní viditeľnosti stránok:", error);
+    }
+};
+
+// NOVÁ FUNKCIA: Nastavenie listenera pre zmeny viditeľnosti stránok
+const setupPagesVisibilityListener = () => {
+    if (!window.db) {
+        console.warn("header.js: Chýba db pre nastavenie listenera viditeľnosti stránok.");
+        return;
+    }
+
+    const pagesRef = collection(window.db, 'pages');
+    
+    return onSnapshot(pagesRef, (snapshot) => {
+        pagesVisibility = {};
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            pagesVisibility[doc.id] = {
+                visible: data.visible !== undefined ? data.visible : false,
+                label: data.label || doc.id
+            };
+        });
+        
+        // Aktualizujeme navigáciu pri každej zmene
+        updateNavigationLinks();
+    }, (error) => {
+        console.error("header.js: Chyba pri počúvaní zmien viditeľnosti stránok:", error);
+    });
+};
+
+// NOVÁ FUNKCIA: Aktualizácia navigačných odkazov podľa viditeľnosti stránok
+const updateNavigationLinks = () => {
+    const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
+    if (!teamsInGroupsLink) return;
+
+    // Skontrolujeme, či je stránka "teams-in-groups" verejná
+    const pageConfig = pagesVisibility['teams-in-groups'];
+    const isVisible = pageConfig && pageConfig.visible === true;
+
+    if (isVisible) {
+        teamsInGroupsLink.classList.remove('hidden');
+        teamsInGroupsLink.href = 'teams-in-groups.html';
+    } else {
+        teamsInGroupsLink.classList.add('hidden');
+    }
+};
+
 const updateHeaderLinks = (userProfileData) => {    
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
@@ -402,6 +479,10 @@ const updateHeaderLinks = (userProfileData) => {
         }
 
         updateRegistrationLinkVisibility(userProfileData);
+        
+        // Aktualizujeme navigačné odkazy podľa viditeľnosti stránok
+        updateNavigationLinks();
+        
         headerElement.classList.remove('invisible');
     }
 };
@@ -575,6 +656,7 @@ const setupFirestoreListeners = () => {
             window.isRegistrationDataLoaded = true;
             updateHeaderLinks(window.globalUserProfileData);
         });
+        
         const categoriesDocRef = doc(window.db, "settings", "categories");
         onSnapshot(categoriesDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -595,6 +677,12 @@ const setupFirestoreListeners = () => {
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             updateHeaderLinks(window.globalUserProfileData);
         });
+
+        // NASTAVENIE LISTENERA PRE VIDITEĽNOSŤ STRÁNOK
+        setupPagesVisibilityListener();
+        
+        // NAČÍTANIE VIDITEĽNOSTI STRÁNOK
+        loadPagesVisibility();
 
         if (registrationCheckIntervalId) {
             clearInterval(registrationCheckIntervalId);
@@ -645,11 +733,13 @@ window.loadHeaderAndScripts = async () => {
         } else {
             console.warn("header.js: Tlačidlo logout-button nebolo nájdené!");
         }
+        
         window.addEventListener('globalDataUpdated', (event) => {
             window.isGlobalAuthReady = true; 
             setupFirestoreListeners();
             updateHeaderLinks(event.detail);
         });
+        
         if (window.isGlobalAuthReady) {
              setupFirestoreListeners();
              updateHeaderLinks(window.globalUserProfileData);
