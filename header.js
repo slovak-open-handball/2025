@@ -391,6 +391,25 @@ const updateNavigationLinks = () => {
         homeLink.classList.remove('hidden');
         homeLink.style.display = '';
     }
+
+    // 4. Špeciálne spracovanie pre "map" - mapa je vždy viditeľná pre prihlásených používateľov
+    const mapLink = document.getElementById('map-link');
+    if (mapLink) {
+        const isLoggedIn = isReallyLoggedIn();
+        const pageConfig = pagesVisibility['map'];
+        // Mapa je viditeľná ak je povolená v nastaveniach ALEBO ak je používateľ prihlásený
+        const isVisible = (pageConfig && pageConfig.visible === true) || isLoggedIn;
+        
+        if (isVisible) {
+            mapLink.classList.remove('hidden');
+            mapLink.style.display = '';
+            mapLink.dataset.visible = 'true';
+        } else {
+            mapLink.classList.add('hidden');
+            mapLink.style.display = 'none';
+            mapLink.dataset.visible = 'false';
+        }
+    }
 };
 
 // Inicializácia viditeľnosti - najprv všetko skryjeme
@@ -411,7 +430,14 @@ const initializeNavigationVisibility = () => {
     if (registerLink) {
         registerLink.classList.add('hidden');
         registerLink.style.display = 'none';
-    }    
+    }
+
+    // Mapa je predvolene skrytá, ale bude sa kontrolovať v updateNavigationLinks
+    const mapLink = document.getElementById('map-link');
+    if (mapLink) {
+        mapLink.classList.add('hidden');
+        mapLink.style.display = 'none';
+    }
 };
 
 // Kontrola prístupu k aktuálnej stránke
@@ -423,6 +449,22 @@ const checkCurrentPageAccess = () => {
     const allowedPages = ['', 'index', 'login', 'admin-register'];
     if (allowedPages.includes(currentPage)) {
         return true;
+    }
+    
+    // Špeciálne pravidlo pre mapu - prihlásení používatelia majú prístup vždy
+    if (currentPage === 'map') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return true;
+        }
+        // Ak nie je prihlásený, kontrolujeme nastavenia
+        const pageConfig = pagesVisibility['map'];
+        if (pageConfig && pageConfig.visible === true) {
+            return true;
+        }
+        // Inak presmerujeme
+        window.location.href = 'index.html';
+        return false;
     }
     
     const pageConfig = pagesVisibility[currentPage];
@@ -463,6 +505,18 @@ const updateHeaderLinks = (userProfileData) => {
         if (!isVisible) {
             teamsLink.classList.add('hidden');
             teamsLink.style.display = 'none';
+        }
+    }
+
+    // DODATOČNÁ KONTROLA: Mapa - špeciálne pravidlo pre prihlásených používateľov
+    const mapLink = document.getElementById('map-link');
+    if (mapLink) {
+        const isLoggedIn = isReallyLoggedIn();
+        const pageConfig = pagesVisibility['map'];
+        const isVisible = (pageConfig && pageConfig.visible === true) || isLoggedIn;
+        if (!isVisible) {
+            mapLink.classList.add('hidden');
+            mapLink.style.display = 'none';
         }
     }
 
