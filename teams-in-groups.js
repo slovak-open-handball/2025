@@ -3979,55 +3979,79 @@ return React.createElement(
 };
 
 // Inicializácia aplikácie
+// ============================================================
+// INICIALIZÁCIA APLIKÁCIE - OPRAVENÁ
+// ============================================================
 let isEmailSyncListenerSetup = false;
+
 const handleDataUpdateAndRender = (event) => {
-    const userProfileData = event.detail;
+    const userProfileData = event?.detail || null;
     const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    
+    if (!rootElement || typeof ReactDOM === 'undefined' || typeof React === 'undefined') {
+        console.error('❌ Root element or React not available');
+        return;
+    }
+
+    try {
         const root = ReactDOM.createRoot(rootElement);
-        if (userProfileData) {
-            root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
-            if (window.auth && window.db && !isEmailSyncListenerSetup) {
-                onAuthStateChanged(window.auth, async (user) => {
-                    if (user) {
-                        try {
-                            const userProfileRef = doc(window.db, 'users', user.uid);
-                            const docSnap = await getDoc(userProfileRef);
-                            if (docSnap.exists()) {
-                                const firestoreEmail = docSnap.data().email;
-                                if (user.email !== firestoreEmail) {
-                                    await updateDoc(userProfileRef, { email: user.email });
-                                    const notificationsCollectionRef = collection(window.db, 'notifications');
-                                    await addDoc(notificationsCollectionRef, {
-                                        userEmail: user.email,
-                                        changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                        timestamp: new Date(),
-                                    });
-                                }
+        
+        // 🔥 VŽDY VYKRESLÍME KOMPONENT, aj keď nemáme dáta
+        root.render(React.createElement(AddTeamsGroupApp, { 
+            userProfileData: userProfileData || null 
+        }));
+        
+        console.log('✅ App rendered successfully');
+        
+        // Synchronizácia e-mailu (iba ak je používateľ prihlásený)
+        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(window.db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                await updateDoc(userProfileRef, { email: user.email });
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email,
+                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(),
+                                });
                             }
-                        } catch (error) {
-                            console.error("Chyba pri synchronizácii e-mailu:", error);
                         }
+                    } catch (error) {
+                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
-                });
-                isEmailSyncListenerSetup = true;
-            }
-        } else {
-            root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            ));
+                }
+            });
+            isEmailSyncListenerSetup = true;
         }
+    } catch (error) {
+        console.error('❌ Error rendering app:', error);
+        // Zobraz chybu v UI
+        rootElement.innerHTML = `
+            <div class="text-center py-16">
+                <p class="text-red-600 text-lg">Chyba pri načítaní aplikácie</p>
+                <p class="text-gray-500 text-sm">${error.message}</p>
+            </div>
+        `;
     }
 };
+
+// Pridaj poslúchač pre event
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+
+// 🔥 OKAMŽITE VYKRESLI APLIKÁCIU (aj bez dát)
+const rootElement = document.getElementById('root');
+if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    console.log('🚀 Rendering app immediately...');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(React.createElement(AddTeamsGroupApp, { 
+        userProfileData: window.globalUserProfileData || null 
+    }));
 } else {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        ));
-    }
+    console.error('❌ Cannot render: root element or React not available');
 }
