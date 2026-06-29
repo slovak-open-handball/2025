@@ -432,22 +432,6 @@ const checkCurrentPageAccess = () => {
         return true;
     }
     
-    // Špeciálne pravidlo pre mapu - prihlásení používatelia majú prístup vždy
-    if (currentPage === 'map') {
-        const isLoggedIn = isReallyLoggedIn();
-        if (isLoggedIn) {
-            return true;
-        }
-        // Ak nie je prihlásený, kontrolujeme nastavenia
-        const pageConfig = pagesVisibility['map'];
-        if (pageConfig && pageConfig.visible === true) {
-            return true;
-        }
-        // Inak presmerujeme
-        window.location.href = 'index.html';
-        return false;
-    }
-    
     const pageConfig = pagesVisibility[currentPage];
     
     // Ak stránka nie je v databáze, predpokladáme že je viditeľná
@@ -486,18 +470,6 @@ const updateHeaderLinks = (userProfileData) => {
         if (!isVisible) {
             teamsLink.classList.add('hidden');
             teamsLink.style.display = 'none';
-        }
-    }
-
-    // DODATOČNÁ KONTROLA: Mapa - špeciálne pravidlo pre prihlásených používateľov
-    const mapLink = document.getElementById('map-link');
-    if (mapLink) {
-        const isLoggedIn = isReallyLoggedIn();
-        const pageConfig = pagesVisibility['map'];
-        const isVisible = (pageConfig && pageConfig.visible === true) || isLoggedIn;
-        if (!isVisible) {
-            mapLink.classList.add('hidden');
-            mapLink.style.display = 'none';
         }
     }
 
