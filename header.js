@@ -471,7 +471,17 @@ const updateHeaderLinks = (userProfileData) => {
     updateNavigationLinks();
     checkCurrentPageAccess();
 
-    // 🔥 ODSTRÁNENÁ DODATOČNÁ KONTROLA - už je v updateNavigationLinks
+    // 🔥 ODSTRÁNENÁ DUPLICITNÁ KONTROLA - už je v updateNavigationLinks
+    // Táto časť bola odstránená, pretože spôsobovala problémy:
+    // const teamsLink = document.getElementById('teams-in-groups-link');
+    // if (teamsLink) {
+    //     const pageConfig = pagesVisibility['teams-in-groups'];
+    //     const isVisible = pageConfig && pageConfig.visible === true;
+    //     if (!isVisible) {
+    //         teamsLink.classList.add('hidden');
+    //         teamsLink.style.display = 'none';
+    //     }
+    // }
     
     if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
