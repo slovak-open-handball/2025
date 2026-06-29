@@ -482,7 +482,6 @@ const AddTeamsGroupApp = (props) => {
                 }
             }, 100);
         } catch (err) {
-            console.error("Chyba pri výmene tímov:", err);
             notify("Nepodarilo sa vymeniť tímy: " + err.message, "error");
         } finally {
             setIsSwapping(false);
@@ -606,7 +605,6 @@ const AddTeamsGroupApp = (props) => {
                 try {
                     await updateDoc(docRef, { [categoryName]: teams });
                 } catch (err) {
-                    console.error("[CHYBA superstructure update]:", err);
                 }
             } else {
                 // Základné skupiny – používatelia
@@ -656,7 +654,6 @@ const AddTeamsGroupApp = (props) => {
                             [`teams.${categoryName}`]: teamsInCategory
                         });
                     } catch (err) {
-                        console.error(`[CHYBA] Používateľ ${userDoc.id}:`, err);
                     }
                 }
             }
@@ -670,7 +667,6 @@ const AddTeamsGroupApp = (props) => {
                 notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené tímy na posunutie.`, "info");
             }
         } catch (err) {
-            console.error("Chyba pri odstraňovaní diery:", err);
             notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
         }
     };
@@ -745,7 +741,6 @@ const AddTeamsGroupApp = (props) => {
                 newOrder: team.newOrder || team.order || null
             });
         } catch (err) {
-            console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
         }
     };
 
@@ -888,7 +883,6 @@ const AddTeamsGroupApp = (props) => {
 
             notify(`Tím '${teamToDelete.teamName}' bol odstránený zo skupiny. Ostatné tímy zostávajú s pôvodnými poradovými číslami.`, "success");
         } catch (error) {
-            console.error("Chyba pri odstraňovaní tímu:", error);
             notify("Nepodarilo sa odstrániť tím zo skupiny.", "error");
         }
     };
@@ -936,7 +930,6 @@ const AddTeamsGroupApp = (props) => {
    
             notify(`Tím '${team.teamName}' bol presunutý medzi tímy bez skupiny.`, "success");
         } catch (err) {
-            console.error("Chyba pri zrušení zaradenia tímu:", err);
             notify("Nepodarilo sa presunúť tím medzi tímy bez skupiny.", "error");
         }
     };
@@ -1040,7 +1033,6 @@ const AddTeamsGroupApp = (props) => {
 
             notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
         } catch (err) {
-            console.error("Chyba pri aktualizácii tímu:", err);
             notify("Nepodarilo sa aktualizovať tím.", "error");
         }
     }
@@ -1125,123 +1117,11 @@ const AddTeamsGroupApp = (props) => {
 
             notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
         } catch (err) {
-            console.error("Chyba pri aktualizácii tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
         }
     }
 };
-  
-    const handleAddNewTeam = async ({ categoryId, groupName, teamName, order }) => {
-      if (!window.db) {
-        notify("Firestore nie je inicializovaný.", "error");
-        return;
-      }
-      const categoryName = categoryIdToNameMap[categoryId];
 
-      // Tu pridávame kontrolu, či je tím superštruktúrny
-      const isSuperstructureTeam = true; // Pretože táto funkcia sa volá len pre superstructure tímy
-      const fullTeamName = isSuperstructureTeam
-        ? `${categoryName} ${teamName.trim()}`
-        : teamName.trim();
-
-      const isDuplicateFinal = allTeams.some(team => team.teamName === fullTeamName);
-      if (isDuplicateFinal) {
-        notify(`Tím '${fullTeamName}' už existuje. Ukladanie zrušené.`, "error");
-        return;
-      }
-      try {
-        const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-        const docSnap = await getDoc(superstructureDocRef);
-        const globalTeamsData = docSnap.exists() ? docSnap.data() : {};
-        const currentTeamsForCategory = globalTeamsData[categoryName] || [];
-        const teamsInTargetGroup = currentTeamsForCategory.filter(t => t.groupName === groupName);
-        let maxOrder = 0;
-        teamsInTargetGroup.forEach(t => {
-          if (t.order > maxOrder) maxOrder = t.order;
-        });
-        const newOrder = order != null ? parseInt(order, 10) : (groupName ? maxOrder + 1 : null);
-        const newTeam = {
-          teamName: fullTeamName,
-          groupName: groupName || null,
-          order: newOrder,
-          id: crypto.randomUUID()
-        };
-        const updatedTeamsArray = [...currentTeamsForCategory, newTeam];
-        await setDoc(superstructureDocRef, {
-          ...globalTeamsData,
-          [categoryName]: updatedTeamsArray
-        }, { merge: true });
-        await createTeamAssignmentNotification('add_new_global', {
-          id: newTeam.id,
-          teamName: teamName.trim(),
-          category: categoryName,
-          groupName: groupName || null,
-          order: newOrder
-        });
-
-        notify(`Nový tím '${fullTeamName}' bol pridaný ${groupName ? `do skupiny '${groupName}'` : 'bez skupiny'}.`, "success");
-      } catch (error) {
-        console.error("Chyba pri pridávaní nového tímu:", error);
-        notify("Nepodarilo sa pridať nový tím do skupiny.", "error");
-      }
-    };
-    const handleUpdateUserTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
-        if (!window.db || !originalTeam?.uid || !originalTeam?.id) return;
-   
-        const categoryName = categoryIdToNameMap[categoryId];
-        if (categoryName !== originalTeam.category) {
-            notify("Kategóriu tímu nemôžete meniť.", "error");
-            return;
-        }
-   
-        const finalTeamName = `${teamName.trim()}`;
-        const userRef = doc(window.db, 'users', originalTeam.uid);
-   
-        try {
-            const userSnap = await getDoc(userRef);
-            if (!userSnap.exists()) {
-                notify("Používateľ už neexistuje.", "error");
-                return;
-            }
-            const userData = userSnap.data();
-            const teamsInCategory = [...(userData.teams?.[categoryName] || [])];
-            const teamIndex = teamsInCategory.findIndex(t => t.teamName === originalTeam.teamName);
-            if (teamIndex === -1) {
-                notify("Tím sa nenašiel v profile používateľa (podľa názvu).", "error");
-                return;
-            }
-   
-          const newGroup = groupName || null;
-          let newOrder = null;
-         
-            if (groupName) {
-                const othersInGroup = teamsInCategory.filter(t => t.groupName === newGroup && t.teamName !== originalTeam.teamName);
-                const max = othersInGroup.reduce((m, t) => Math.max(m, t.order || 0), 0);
-                newOrder = order != null ? parseInt(order, 10) : max + 1;
-            }
-   
-            teamsInCategory[teamIndex] = {
-                ...teamsInCategory[teamIndex],
-                teamName: teamName.trim(),
-                groupName: groupName || null,
-                order: newOrder
-            };
-            await updateDoc(userRef, { [`teams.${categoryName}`]: teamsInCategory });
-   
-            const action = originalTeam.groupName === groupName ? 'change_group_user' : 'assign_user';
-            await createTeamAssignmentNotification(action, {
-                id: originalTeam.id,
-                teamName: teamName.trim(),
-                category: categoryName,
-                groupName: groupName || null
-            });
-   
-            notify(`Tím '${finalTeamName}' bol ${groupName ? 'zaradený/upravený' : 'odstránený zo skupiny'} v kategórii '${categoryName}'.`, "success");
-        } catch (err) {
-            console.error("Chyba pri aktualizácii tímu:", err);
-            notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
-        }
-    };
     // ===================================================================
     // Zvyšok kódu – listenery, render funkcie, return
     // ===================================================================
@@ -1317,7 +1197,6 @@ const AddTeamsGroupApp = (props) => {
             });
             setMatchesData(loadedMatches);
         }, (error) => {
-            console.error('Chyba pri načítaní zápasov:', error);
         });
 
         const unsubscribePlaces = onSnapshot(collection(window.db, 'places'), (snapshot) => {
@@ -2430,19 +2309,15 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
     
     if (!rootElement || typeof ReactDOM === 'undefined' || typeof React === 'undefined') {
-        console.error('❌ Root element or React not available');
         return;
     }
 
     try {
         const root = ReactDOM.createRoot(rootElement);
         
-        // 🔥 VŽDY VYKRESLÍME KOMPONENT, aj keď nemáme dáta
         root.render(React.createElement(AddTeamsGroupApp, { 
             userProfileData: userProfileData || null 
-        }));
-        
-        console.log('✅ App rendered successfully');
+        }));        
         
         // Synchronizácia e-mailu (iba ak je používateľ prihlásený)
         if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
@@ -2464,14 +2339,12 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
                 }
             });
             isEmailSyncListenerSetup = true;
         }
     } catch (error) {
-        console.error('❌ Error rendering app:', error);
         // Zobraz chybu v UI
         rootElement.innerHTML = `
             <div class="text-center py-16">
@@ -2488,7 +2361,6 @@ window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 // 🔥 OKAMŽITE VYKRESLI APLIKÁCIU (aj bez dát)
 const rootElement = document.getElementById('root');
 if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-    console.log('🚀 Rendering app immediately...');
     const root = ReactDOM.createRoot(rootElement);
     root.render(React.createElement(AddTeamsGroupApp, { 
         userProfileData: window.globalUserProfileData || null 
