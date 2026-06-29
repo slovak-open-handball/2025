@@ -178,17 +178,19 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'deletePackage') {
         changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       } else if (notificationData.type === 'updatePagesSettings') {
-        // Spracovanie notifikácie pre zmenu viditeľnosti stránok
+        // Spracovanie notifikácie pre zmenu viditeľnosti stránok v požadovanom formáte
         const changedPages = notificationData.data.changedPages || [];
         if (changedPages.length > 0) {
-          const changes = [`Zmena viditeľnosti stránok:`];
+          const changes = [];
           changedPages.forEach(page => {
-            const status = page.visible ? 'verejná' : 'skrytá';
-            changes.push(`- ${page.label}: ${status}`);
+            const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
+            const originalStatus = originalPage?.visible ? 'verejná' : 'skrytá';
+            const newStatus = page.visible ? 'verejná' : 'skrytá';
+            changes.push(`Zmena viditeľnosti stránky ${page.label} z '${originalStatus}' na '${newStatus}'`);
           });
           changesContent = changes;
         } else {
-          changesContent = ['Zmena viditeľnosti stránok bola vykonaná.'];
+          changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
         }
       }
 
