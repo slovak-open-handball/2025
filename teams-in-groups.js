@@ -3975,37 +3975,35 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
-        if (userProfileData) {
-            root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
-            if (window.auth && window.db && !isEmailSyncListenerSetup) {
-                onAuthStateChanged(window.auth, async (user) => {
-                    if (user) {
-                        try {
-                            const userProfileRef = doc(window.db, 'users', user.uid);
-                            const docSnap = await getDoc(userProfileRef);
-                            if (docSnap.exists()) {
-                                const firestoreEmail = docSnap.data().email;
-                                if (user.email !== firestoreEmail) {
-                                    await updateDoc(userProfileRef, { email: user.email });
-                                    const notificationsCollectionRef = collection(window.db, 'notifications');
-                                    await addDoc(notificationsCollectionRef, {
-                                        userEmail: user.email,
-                                        changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                        timestamp: new Date(),
-                                    });
-                                }
+        // VŽDY VYKRESLÍME KOMPONENT, aj keď nie je prihlásený používateľ
+        // Komponent si sám zistí, či má dáta alebo nie
+        root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
+        
+        // Synchronizácia e-mailu (iba ak je používateľ prihlásený)
+        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(window.db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                await updateDoc(userProfileRef, { email: user.email });
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email,
+                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(),
+                                });
                             }
-                        } catch (error) {
-                            console.error("Chyba pri synchronizácii e-mailu:", error);
                         }
+                    } catch (error) {
+                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
-                });
-                isEmailSyncListenerSetup = true;
-            }
-        } else {
-            root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            ));
+                }
+            });
+            isEmailSyncListenerSetup = true;
         }
     }
 };
@@ -4019,311 +4017,5 @@ if (window.globalUserProfileData) {
         root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
             React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
         ));
-    }
-}
-
-
-
-
-
-
-
-
-
-
-// Funkcia pre konzolu - presun tímu do inej skupiny (aj pri existujúcich zápasoch)
-window.moveTeamToGroup = async (teamName, targetCategoryName, targetGroupName, targetOrder) => {
-    if (!window.db) {
-        console.error("❌ Firebase nie je inicializovaný!");
-        return;
-    }
-        
-    // 1. Najprv načítame všetky tímy z Firestore
-    const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
-    const superstructureDocRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-    const usersCollectionRef = collection(window.db, 'users');
-    
-    try {
-        // Načítame superstructure tímy
-        const superstructureSnap = await getDoc(superstructureDocRef);
-        const superstructureData = superstructureSnap.exists() ? superstructureSnap.data() : {};
-        
-        // Načítame používateľské tímy
-        const usersSnap = await getDocs(usersCollectionRef);
-        
-        // Zostavíme zoznam všetkých tímov
-        const allTeams = [];
-        let foundTeam = null;
-        let teamSource = null;
-        let teamUserDoc = null;
-        
-        // Prehľadávame superstructure tímy
-        for (const [categoryName, teams] of Object.entries(superstructureData)) {
-            for (const team of teams) {
-                const teamObj = {
-                    ...team,
-                    category: categoryName,
-                    isSuperstructureTeam: true,
-                    uid: 'global'
-                };
-                allTeams.push(teamObj);
-                if (team.teamName === teamName) {
-                    foundTeam = teamObj;
-                    teamSource = 'superstructure';
-                }
-            }
-        }
-        
-        // Prehľadávame používateľské tímy
-        for (const userDoc of usersSnap.docs) {
-            const userData = userDoc.data();
-            if (userData.teams) {
-                for (const [categoryName, teams] of Object.entries(userData.teams)) {
-                    for (const team of teams) {
-                        const teamObj = {
-                            ...team,
-                            category: categoryName,
-                            isSuperstructureTeam: false,
-                            uid: userDoc.id
-                        };
-                        allTeams.push(teamObj);
-                        if (team.teamName === teamName) {
-                            foundTeam = teamObj;
-                            teamSource = 'user';
-                            teamUserDoc = userDoc;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (!foundTeam) {
-            console.error(`❌ Tím "${teamName}" sa nenašiel!`);
-            return;
-        }
-        
-        // 2. Načítame kategórie a skupiny
-        const categoriesRef = doc(window.db, 'settings', 'categories');
-        const groupsRef = doc(window.db, 'settings', 'groups');
-        
-        const [categoriesSnap, groupsSnap] = await Promise.all([
-            getDoc(categoriesRef),
-            getDoc(groupsRef)
-        ]);
-        
-        const categoryIdToNameMap = {};
-        if (categoriesSnap.exists()) {
-            const categoryData = categoriesSnap.data();
-            Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
-                if (categoryObject && categoryObject.name) {
-                    categoryIdToNameMap[categoryId] = categoryObject.name;
-                }
-            });
-        }
-        
-        const allGroupsByCategoryId = {};
-        if (groupsSnap.exists()) {
-            const groupData = groupsSnap.data();
-            Object.entries(groupData).forEach(([categoryId, groupArray]) => {
-                if (Array.isArray(groupArray)) {
-                    allGroupsByCategoryId[categoryId] = groupArray.map(group => ({
-                        name: group.name,
-                        type: group.type
-                    }));
-                }
-            });
-        }
-        
-        // 3. Nájdeme ID cieľovej kategórie
-        const targetCategoryId = Object.keys(categoryIdToNameMap).find(
-            id => categoryIdToNameMap[id] === targetCategoryName
-        );
-        
-        if (!targetCategoryId) {
-            return;
-        }        
-        
-        // 4. Overíme, či cieľová skupina existuje
-        const groupsInCategory = allGroupsByCategoryId[targetCategoryId] || [];
-        const targetGroup = groupsInCategory.find(g => g.name === targetGroupName);
-        
-        if (!targetGroup) {
-            return;
-        }        
-        
-        // 5. Kontrola poradia
-        if (targetOrder && (isNaN(targetOrder) || targetOrder < 1)) {
-            return;
-        }
-        
-        // 6. Vykonáme presun podľa typu tímu
-        if (foundTeam.isSuperstructureTeam) {
-            await moveSuperstructureTeamDirect(foundTeam, targetCategoryName, targetGroupName, targetOrder, superstructureDocRef);
-        } else {
-            await moveUserTeamDirect(foundTeam, targetCategoryName, targetGroupName, targetOrder, teamUserDoc);
-        }
-        
-    } catch (err) {
-        console.error("❌ Chyba pri vyhľadávaní tímu:", err);
-    }
-};
-
-// Pomocná funkcia pre superstructure tímy (priamo s Firestore)
-async function moveSuperstructureTeamDirect(team, targetCategoryName, targetGroupName, targetOrder, superstructureDocRef) {
-    try {
-        const docSnap = await getDoc(superstructureDocRef);
-        if (!docSnap.exists()) {
-            console.error("❌ Dokument superstructureGroups neexistuje!");
-            return;
-        }
-        
-        const data = docSnap.data() || {};
-        const sourceCategory = team.category;
-        
-        // Získame tímy v zdrojovej kategórii
-        let sourceTeams = [...(data[sourceCategory] || [])];
-        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
-        
-        if (teamIndex === -1) {
-            console.error("❌ Tím sa nenašiel v zdrojovej kategórii!");
-            return;
-        }
-        
-        // Odstránime tím zo zdrojovej kategórie
-        const movedTeam = { ...sourceTeams[teamIndex] };
-        sourceTeams.splice(teamIndex, 1);
-        
-        // Získame tímy v cieľovej kategórii
-        let targetTeams = [...(data[targetCategoryName] || [])];
-        
-        // Ak je cieľová skupina rovnaká ako zdrojová, použijeme upravené pole
-        if (sourceCategory === targetCategoryName) {
-            targetTeams = sourceTeams;
-        }
-        
-        // Zoradíme tímy v cieľovej skupine podľa poradia
-        const teamsInTargetGroup = targetTeams.filter(t => t.groupName === targetGroupName);
-        const otherTeams = targetTeams.filter(t => t.groupName !== targetGroupName);
-        
-        // Aktualizujeme poradie tímu
-        movedTeam.groupName = targetGroupName;
-        
-        // Určíme nové poradie
-        let newOrder = targetOrder;
-        if (!newOrder || newOrder === 0) {
-            const maxOrder = Math.max(...teamsInTargetGroup.map(t => t.order || 0), 0);
-            newOrder = maxOrder + 1;
-        } else {
-            // Posunieme tímy s poradím >= newOrder
-            const teamsToShift = teamsInTargetGroup.filter(t => t.order >= newOrder);
-            for (const t of teamsToShift) {
-                const idx = targetTeams.findIndex(tt => tt.id === t.id);
-                if (idx !== -1) {
-                    targetTeams[idx] = { ...t, order: (t.order || 0) + 1 };
-                }
-            }
-        }
-        
-        movedTeam.order = newOrder;
-        
-        // Pridáme tím do cieľovej skupiny
-        const updatedTargetTeams = [...otherTeams, movedTeam];
-        
-        // Uložíme zmeny
-        const updatePayload = {};
-        if (sourceCategory === targetCategoryName) {
-            updatePayload[sourceCategory] = updatedTargetTeams;
-        } else {
-            updatePayload[sourceCategory] = sourceTeams;
-            updatePayload[targetCategoryName] = updatedTargetTeams;
-        }
-        
-        await updateDoc(superstructureDocRef, updatePayload);        
-        
-        // Obnovíme stránku pre zobrazenie zmien
-        setTimeout(() => location.reload(), 1500);
-        
-    } catch (err) {
-        console.error("❌ Chyba pri presune superstructure tímu:", err);
-    }
-}
-
-// Pomocná funkcia pre používateľské tímy
-async function moveUserTeamDirect(team, targetCategoryName, targetGroupName, targetOrder, userDoc) {
-    try {
-        const userRef = doc(window.db, 'users', userDoc.id);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-            return;
-        }
-        
-        const userData = userSnap.data();
-        const sourceCategory = team.category;
-        
-        // Získame tímy v zdrojovej kategórii
-        let sourceTeams = [...(userData.teams?.[sourceCategory] || [])];
-        const teamIndex = sourceTeams.findIndex(t => t.id === team.id);
-        
-        if (teamIndex === -1) {
-            console.error("❌ Tím sa nenašiel v profile používateľa!");
-            return;
-        }
-        
-        // Odstránime tím zo zdrojovej kategórie
-        const movedTeam = { ...sourceTeams[teamIndex] };
-        sourceTeams.splice(teamIndex, 1);
-        
-        // Získame tímy v cieľovej kategórii
-        let targetTeams;
-        if (sourceCategory === targetCategoryName) {
-            targetTeams = sourceTeams;
-        } else {
-            targetTeams = [...(userData.teams?.[targetCategoryName] || [])];
-        }
-        
-        // Zoradíme tímy v cieľovej skupine
-        const teamsInTargetGroup = targetTeams.filter(t => t.groupName === targetGroupName);
-        const otherTeams = targetTeams.filter(t => t.groupName !== targetGroupName);
-        
-        // Aktualizujeme tím
-        movedTeam.groupName = targetGroupName;
-        
-        // Určíme nové poradie
-        let newOrder = targetOrder;
-        if (!newOrder || newOrder === 0) {
-            const maxOrder = Math.max(...teamsInTargetGroup.map(t => t.order || 0), 0);
-            newOrder = maxOrder + 1;
-        } else {
-            // Posunieme tímy s poradím >= newOrder
-            const teamsToShift = teamsInTargetGroup.filter(t => t.order >= newOrder);
-            for (const t of teamsToShift) {
-                const idx = targetTeams.findIndex(tt => tt.id === t.id);
-                if (idx !== -1) {
-                    targetTeams[idx] = { ...t, order: (t.order || 0) + 1 };
-                }
-            }
-        }
-        
-        movedTeam.order = newOrder;
-        
-        // Pridáme tím do cieľovej skupiny
-        const updatedTargetTeams = [...otherTeams, movedTeam];
-        
-        // Uložíme zmeny
-        if (sourceCategory === targetCategoryName) {
-            await updateDoc(userRef, { [`teams.${sourceCategory}`]: updatedTargetTeams });
-        } else {
-            await updateDoc(userRef, { 
-                [`teams.${sourceCategory}`]: sourceTeams,
-                [`teams.${targetCategoryName}`]: updatedTargetTeams
-            });
-        }        
-        
-        // Obnovíme stránku pre zobrazenie zmien
-        setTimeout(() => location.reload(), 1500);
-        
-    } catch (err) {
-        console.error("❌ Chyba pri presune používateľského tímu:", err);
     }
 }
