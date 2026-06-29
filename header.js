@@ -348,6 +348,8 @@ const loadPagesVisibility = async () => {
             });
         }
         
+        console.log("header.js: Načítaná viditeľnosť stránok:", pagesVisibility);
+        
         // Aktualizujeme navigáciu po načítaní viditeľnosti stránok
         updateNavigationLinks();
     } catch (error) {
@@ -381,6 +383,8 @@ const setupPagesVisibilityListener = () => {
             };
         });
         
+        console.log("header.js: Zmena viditeľnosti stránok (listener):", pagesVisibility);
+        
         // Aktualizujeme navigáciu pri každej zmene
         updateNavigationLinks();
     }, (error) => {
@@ -390,6 +394,8 @@ const setupPagesVisibilityListener = () => {
 
 // NOVÁ FUNKCIA: Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
+    console.log("header.js: Aktualizujem navigačné odkazy, pagesVisibility:", pagesVisibility);
+    
     // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
     
@@ -398,11 +404,11 @@ const updateNavigationLinks = () => {
         const pageConfig = pagesVisibility[pageId];
         const isVisible = pageConfig && pageConfig.visible === true;
         
+        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}, config:`, pageConfig);
+        
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
-            // NEMENÍME text odkazu - ponechávame pôvodný z HTML
-            // Odstránili sme časť, ktorá menila text podľa label z databázy
         } else {
             link.classList.add('hidden');
         }
@@ -418,6 +424,26 @@ const updateNavigationLinks = () => {
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
+    }
+};
+
+const initializeNavigationVisibility = () => {
+    // Najprv všetky odkazy s data-page skryjeme
+    const navLinks = document.querySelectorAll('[data-page]');
+    navLinks.forEach(link => {
+        link.classList.add('hidden');
+    });
+    
+    // Home link necháme viditeľný
+    const homeLink = document.getElementById('home-link');
+    if (homeLink) {
+        homeLink.classList.remove('hidden');
+    }
+    
+    // Register link tiež skryjeme (ukáže sa neskôr podľa logiky)
+    const registerLink = document.getElementById('register-link');
+    if (registerLink) {
+        registerLink.classList.add('hidden');
     }
 };
 
@@ -789,6 +815,9 @@ window.loadHeaderAndScripts = async () => {
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = headerHtml;
         }
+
+        // INICIALIZÁCIA: Najprv všetky odkazy skryjeme
+        initializeNavigationVisibility();
 
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
