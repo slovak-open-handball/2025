@@ -14,15 +14,8 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
-    { id: 'home', label: 'Domovská stránka', defaultVisible: true },
-    { id: 'tournament', label: 'Turnaj', defaultVisible: true },
     { id: 'matches', label: 'Zápasy', defaultVisible: true },
     { id: 'tables', label: 'Tabuľky', defaultVisible: true },
-    { id: 'registration', label: 'Registrácia', defaultVisible: true },
-    { id: 'myData', label: 'Moje údaje', defaultVisible: true },
-    { id: 'hallPanel', label: 'Panel pre haly', defaultVisible: true },
-    { id: 'adminPanel', label: 'Administrátorský panel', defaultVisible: true },
-    // Pridajte ďalšie stránky podľa potreby
   ];
 
   // Načítanie nastavení stránok z Firestore
