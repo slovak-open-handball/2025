@@ -180,24 +180,21 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'updatePagesSettings') {
         const changedPages = notificationData.data.changedPages || [];
         const originalPages = notificationData.data.originalPages || [];
-        
+  
         if (changedPages.length > 0) {
           const changes = [];
           changedPages.forEach(page => {
-            // Nájdeme pôvodný stav priamo z odoslaných originalPages
+            // Nájdeme pôvodný stav
             const originalPage = originalPages.find(p => p.id === page.id);
             
-            // Určíme pôvodný a nový stav
+            // Určíme pôvodný stav
             let originalStatus = 'skrytá';
-            let newStatus = 'verejná';
-            
             if (originalPage) {
               originalStatus = originalPage.visible ? 'verejná' : 'skrytá';
             }
             
-            if (page.visible !== undefined) {
-              newStatus = page.visible ? 'verejná' : 'skrytá';
-            }
+            // Určíme nový stav - PRIAMO z page.visible
+            let newStatus = page.visible ? 'verejná' : 'skrytá';
             
             changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
           });
