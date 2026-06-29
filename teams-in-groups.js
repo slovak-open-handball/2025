@@ -2718,32 +2718,8 @@ return React.createElement(
                 style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
             },
             React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-            // Zobraziť všetky dostupné skupiny bez filtrovania podľa typu
             availableGroupsForSelect.map((group, index) =>
                 React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
-            )
-        ),
-        
-        React.createElement(
-            'div',
-            { className: 'mt-4 flex items-center justify-center' },
-            React.createElement(
-                'label',
-                { 
-                    className: 'flex items-center space-x-2 cursor-pointer',
-                    title: 'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
-                },
-                React.createElement('input', {
-                    type: 'checkbox',
-                    checked: showCategoryPrefix,
-                    onChange: (e) => setShowCategoryPrefix(e.target.checked),
-                    className: 'w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
-                }),
-                React.createElement(
-                    'span',
-                    { className: 'text-sm font-medium text-gray-700' },
-                    'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
-                )
             )
         )
     ),
