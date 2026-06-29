@@ -354,24 +354,34 @@ const setupPagesVisibilityListener = () => {
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
+    console.log("header.js: updateNavigationLinks volaný, pagesVisibility:", pagesVisibility);
+    
     // Ak ešte nemáme načítané dáta, nič nerobíme (odkazy zostanú skryté)
     if (Object.keys(pagesVisibility).length === 0) {
+        console.log("header.js: pagesVisibility je prázdny, čakám na dáta z Firestore");
         return;
     }
     
     // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
+    console.log(`header.js: Nájdených ${navLinks.length} odkazov s data-page`);
     
     navLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;        
+        const isVisible = pageConfig && pageConfig.visible === true;
         
-        // Aktualizujeme viditeľnosť odkazu
+        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}, element:`, link);
+        
+        // Aktualizujeme viditeľnosť odkazu - POUŽIJEME PRIAMO STYLE
         if (isVisible) {
             link.classList.remove('hidden');
+            link.style.display = ''; // Odstránime inline style
+            console.log(`header.js: ZOBRAZUJEM odkaz '${pageId}'`);
         } else {
             link.classList.add('hidden');
+            link.style.display = 'none'; // PRIAMO NASTAVÍME display:none
+            console.log(`header.js: SKRÝVAM odkaz '${pageId}'`);
         }
     });
 
@@ -385,6 +395,7 @@ const updateNavigationLinks = () => {
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
+        homeLink.style.display = '';
     }
 };
 
@@ -393,17 +404,22 @@ const initializeNavigationVisibility = () => {
     const navLinks = document.querySelectorAll('[data-page]');
     navLinks.forEach(link => {
         link.classList.add('hidden');
+        link.style.display = 'none'; // PRIAMO NASTAVÍME display:none
     });
     
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
+        homeLink.style.display = '';
     }
     
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         registerLink.classList.add('hidden');
-    }    
+        registerLink.style.display = 'none';
+    }
+    
+    console.log("header.js: Inicializovaná viditeľnosť - všetky odkazy skryté (display:none)");
 };
 
 // Kontrola prístupu k aktuálnej stránke
