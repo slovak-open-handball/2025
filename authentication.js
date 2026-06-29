@@ -34,15 +34,13 @@ import {
     getDoc,
     onSnapshot,
     collection,
-    getDocs,
-    query,
-    where,
-    limit
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// 🆕 Import pre App Check
 import {
-    getFunctions,
-    httpsCallable
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+    initializeAppCheck,
+    ReCaptchaEnterpriseProvider
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
 // Vložený konfiguračný objekt
 const firebaseConfig = {
@@ -54,95 +52,8 @@ const firebaseConfig = {
     appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
-// 🌐 URL Cloudflare Worker pre nastavenie claimov
-const WORKER_URL = "https://claim.turnaj-slovak-open-handball.workers.dev/"; // 🚨 ZMEŇ ZA SVOJU URL!
-
-// 🔒 KONTROLA DOMÉNY - Povolené domény pre prístup
-const ALLOWED_DOMAINS = [
-    'slovak-open-handball.github.io',  // GitHub Pages doména
-    'localhost',                        // Lokálny vývoj
-    '127.0.0.1'                        // Lokálny vývoj
-];
-
-// Funkcia na kontrolu, či je aktuálna doména povolená
-const isAllowedDomain = () => {
-    const hostname = window.location.hostname;
-    const isAllowed = ALLOWED_DOMAINS.some(domain => hostname.includes(domain));
-    
-    if (!isAllowed) {
-        console.warn(`🔒 Prístup zamietnutý: Doména "${hostname}" nie je v zozname povolených domén.`);
-    } else {
-        console.log(`✅ Doména "${hostname}" je povolená.`);
-    }
-    
-    return isAllowed;
-};
-
-// 🔑 FUNKCIA NA NASTAVENIE GITHUB PRÍSTUPU CEZ WORKER
-const setupGitHubAccess = async (user) => {
-    if (!user) {
-        console.warn('❌ Nie je prihlásený žiadny používateľ.');
-        return false;
-    }
-
-    try {
-        // 1. Skontrolujeme, či už má GitHub prístup
-        const idTokenResult = await user.getIdTokenResult();
-        if (idTokenResult.claims.githubAccess === true) {
-            console.log('✅ GitHub prístup už je nastavený.');
-            return true;
-        }
-
-        console.log('🔄 Nastavujem GitHub prístup cez Worker...');
-
-        // 2. Získame aktuálny ID token
-        const idToken = await user.getIdToken();
-        
-        // 3. Zavoláme Cloudflare Worker
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${idToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // 4. Spracujeme odpoveď
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Worker odpovedal chybou:', response.status, errorText);
-            
-            // Skúsime parsovať JSON chybu
-            try {
-                const errorJson = JSON.parse(errorText);
-                throw new Error(errorJson.error || `HTTP ${response.status}: ${response.statusText}`);
-            } catch (e) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-        }
-
-        const result = await response.json();
-        console.log('✅ GitHub prístup nastavený:', result);
-
-        // 5. 🔄 DÔLEŽITÉ: Obnovíme token, aby sa zmena prejavila
-        await user.getIdToken(true);
-        console.log('🔄 Token obnovený s novými claims.');
-
-        // 6. Overíme, či sa claim naozaj nastavil
-        const newTokenResult = await user.getIdTokenResult();
-        if (newTokenResult.claims.githubAccess === true) {
-            console.log('✅ GitHub prístup úspešne overený!');
-            return true;
-        } else {
-            console.warn('⚠️ GitHub prístup nebol overený po obnovení tokenu.');
-            return false;
-        }
-
-    } catch (error) {
-        console.error('❌ Chyba pri nastavovaní GitHub prístupu:', error);
-        return false;
-    }
-};
+// 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
+const APP_CHECK_SITE_KEY = "6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x";
 
 // URL adresa Google Apps Scriptu na odosielanie e-mailov
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -216,27 +127,39 @@ const roleAccess = {
 let app;
 let db;
 let auth;
-let functions;
+let appCheck;
 
 // Cache pre nastavenia viditeľnosti stránok
 let pageVisibilityCache = null;
 let pageVisibilityCacheTime = null;
 const PAGE_VISIBILITY_CACHE_TTL = 60000; // 1 minúta
 
-// 🔒 Funkcia na kontrolu GitHub prístupu cez custom claim
-const checkGitHubAccess = async (user) => {
-    if (!user) return false;
-    
+// 🆕 Pomocná funkcia na kontrolu, či je App Check podporovaný v prehliadači
+const isAppCheckSupported = () => {
     try {
-        // Získame ID token a overíme custom claim
-        const idTokenResult = await user.getIdTokenResult();
-        const hasGitHubAccess = idTokenResult.claims.githubAccess === true;
-        
-        console.log(`🔒 GitHub access check: ${hasGitHubAccess ? '✅ POVOLENÝ' : '❌ ZAMIETNUTÝ'}`);
-        return hasGitHubAccess;
-    } catch (error) {
-        console.error('Chyba pri kontrole GitHub prístupu:', error);
+        // Kontrola, či je dostupný window a localStorage (pre debug token)
+        return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+    } catch (e) {
+        console.warn("AuthManager: App Check nie je podporovaný v tomto prostredí:", e);
         return false;
+    }
+};
+
+// 🆕 Funkcia na nastavenie debug tokenu pre lokálny vývoj
+const setupAppCheckDebug = () => {
+    // Debug token sa nastavuje len pre lokálny vývoj (localhost)
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname === '';
+    
+    if (isLocalhost) {
+        // Povolenie debug tokenu pre lokálny vývoj
+        // Po prvom načítaní sa v konzole zobrazí debug token, ktorý treba zaregistrovať vo Firebase Console
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+        console.log("AuthManager: 🔧 App Check debug mód aktivovaný pre localhost. Skontroluj konzolu pre debug token.");
+        
+        // Upozornenie pre vývojára
+        console.log("%c⚠️ App Check Debug Mód aktívny! Nezabudni zaregistrovať debug token vo Firebase Console → App Check → Debug tokens", "color: orange; font-size: 14px;");
     }
 };
 
@@ -245,32 +168,38 @@ const setupFirebase = () => {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        functions = getFunctions(app);
+        
+        // 🆕 Dočasne vypnutý App Check - aktivuj neskôr
+        // if (isAppCheckSupported()) {
+        //     setupAppCheckDebug();
+        //     
+        //     appCheck = initializeAppCheck(app, {
+        //         provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+        //         isTokenAutoRefreshEnabled: true
+        //     });
+        //     console.log("AuthManager: ✅ Firebase App Check inicializovaný s reCAPTCHA Enterprise.");
+        // } else {
+        //     console.warn("AuthManager: ⚠️ App Check nie je podporovaný, pokračujem bez neho.");
+        // }
         
         console.log("AuthManager: Firebase inicializovaný.");
 
         // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
         window.db = db;
-        window.functions = functions;
         window.firebaseConfig = firebaseConfig;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
-        
-        // 🔒 Pridáme funkciu na kontrolu domény
-        window.isAllowedDomain = isAllowedDomain;
-        
-        // 🔑 Pridáme funkciu na nastavenie GitHub prístupu
-        window.setupGitHubAccess = setupGitHubAccess;
+        window.appCheck = appCheck;
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
 };
 
-// Funkcia na načítanie nastavení viditeľnosti stránok z Firestore
+// 🆕 Funkcia na načítanie nastavení viditeľnosti stránok z Firestore
 const loadPageVisibilitySettings = async () => {
     if (!db) return null;
     
@@ -308,14 +237,16 @@ const loadPageVisibilitySettings = async () => {
     }
 };
 
-// Funkcia na kontrolu, či je stránka verejná podľa nastavení v databáze
+// 🆕 Funkcia na kontrolu, či je stránka verejná podľa nastavení v databáze
 const isPageVisibleInSettings = async (pageId) => {
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
+        // Ak sa nepodarilo načítať nastavenia, predpokladáme že stránka je verejná (bezpečnostný predvolený stav)
         console.log(`AuthManager: Nepodarilo sa načítať nastavenia, stránka "${pageId}" sa považuje za verejnú.`);
         return true;
     }
     
+    // Ak stránka nie je v nastaveniach, predpokladáme že je verejná
     if (settings[pageId] === undefined) {
         console.log(`AuthManager: Stránka "${pageId}" nie je v nastaveniach, považuje sa za verejnú.`);
         return true;
@@ -326,14 +257,15 @@ const isPageVisibleInSettings = async (pageId) => {
     return isVisible;
 };
 
-// Pomocná funkcia na kontrolu, či je stránka HTML stránka (obsahuje .html)
+// 🆕 Pomocná funkcia na kontrolu, či je stránka HTML stránka (obsahuje .html)
 const isHtmlPage = () => {
     const currentPath = window.location.pathname;
     return currentPath.includes('.html');
 };
 
-// Pomocná funkcia na získanie názvu súboru z cesty (len ak obsahuje .html)
+// 🆕 Pomocná funkcia na získanie názvu súboru z cesty (len ak obsahuje .html)
 const getFileNameFromPath = (path) => {
+    // Ak cesta neobsahuje .html, vrátime prázdny reťazec
     if (!path.includes('.html')) {
         return '';
     }
@@ -343,6 +275,7 @@ const getFileNameFromPath = (path) => {
 
 // Pomocná funkcia na kontrolu, či je stránka verejná (prístupná pre neprihlásených)
 const isPublicPage = () => {
+    // Ak to nie je HTML stránka, považujeme ju za verejnú (napr. root cesta)
     if (!isHtmlPage()) {
         console.log(`AuthManager: isPublicPage() - aktuálna cesta "${window.location.pathname}" nie je HTML stránka, považujem za verejnú.`);
         return true;
@@ -355,8 +288,10 @@ const isPublicPage = () => {
     return result;
 };
 
-// Kontrola, či je stránka prístupná pre neprihláseného používateľa
+// 🆕 UPRAVENÁ FUNKCIA: Kontrola, či je stránka prístupná pre neprihláseného používateľa
+// Berie do úvahy nastavenia viditeľnosti z databázy
 const isPageAccessibleForGuest = async () => {
+    // Ak to nie je HTML stránka, je vždy prístupná
     if (!isHtmlPage()) {
         return true;
     }
@@ -364,15 +299,19 @@ const isPageAccessibleForGuest = async () => {
     const currentPath = window.location.pathname;
     const fileName = getFileNameFromPath(currentPath);
     
+    // Ak stránka nie je v zozname publicPages, nie je prístupná
     if (!publicPages.includes(fileName)) {
         console.log(`AuthManager: Stránka "${fileName}" nie je v zozname verejných stránok.`);
         return false;
     }
     
+    // Ak je to index.html, vždy je prístupná
     if (fileName === 'index.html') {
         return true;
     }
     
+    // Skontrolujeme nastavenia viditeľnosti z databázy
+    // Odstránime .html z názvu pre vyhľadávanie v databáze
     const pageId = fileName.replace('.html', '');
     const isVisible = await isPageVisibleInSettings(pageId);
     
@@ -387,6 +326,7 @@ const isPageAccessibleForGuest = async () => {
 
 // Pomocná funkcia na kontrolu, či je stránka dostupná LEN pre neprihlásených používateľov
 const isGuestOnlyPage = () => {
+    // Ak to nie je HTML stránka, nie je to guest-only stránka
     if (!isHtmlPage()) {
         return false;
     }
@@ -400,6 +340,7 @@ const isGuestOnlyPage = () => {
 
 // Pomocná funkcia na kontrolu, či sme na login stránke
 const isOnLoginPage = () => {
+    // Ak to nie je HTML stránka, nie je to login stránka
     if (!isHtmlPage()) {
         return false;
     }
@@ -413,6 +354,7 @@ const isOnLoginPage = () => {
 
 // Pomocná funkcia na kontrolu, či sme na jednej z registračných stránok
 const isOnRegistrationPage = () => {
+    // Ak to nie je HTML stránka, nie je to registračná stránka
     if (!isHtmlPage()) {
         return false;
     }
@@ -434,6 +376,7 @@ const isPrivatePage = () => {
 const hasAccessToPage = (userRole, currentPage) => {
     if (!userRole || !currentPage) return false;
     
+    // Ak rola nemá definovaný prístup, vráti false
     if (!roleAccess[userRole]) {
         console.log(`AuthManager: Rola "${userRole}" nemá definovaný žiadny prístup.`);
         return false;
@@ -451,20 +394,24 @@ let registrationLogoutTimeout = null;
 
 // Funkcia na kontrolu registračného časovača
 const checkRegistrationTimer = (userProfileData) => {
+    // Zrušíme predchádzajúci timeout ak existuje
     if (registrationLogoutTimeout) {
         clearTimeout(registrationLogoutTimeout);
         registrationLogoutTimeout = null;
     }
     
+    // Kontrola či sme na registračnej stránke
     if (!isOnRegistrationPage()) {
         return;
     }
     
+    // Kontrola či máme registrationDate v profile
     if (!userProfileData || !userProfileData.registrationDate) {
         console.log("AuthManager: Chýba registrationDate v profile používateľa.");
         return;
     }
     
+    // Konverzia registrationDate na timestamp v milisekundách
     let registrationTimestamp;
     if (userProfileData.registrationDate.seconds) {
         registrationTimestamp = userProfileData.registrationDate.seconds * 1000;
@@ -476,14 +423,17 @@ const checkRegistrationTimer = (userProfileData) => {
     }
     
     const currentTime = Date.now();
-    const expiryTime = registrationTimestamp + 20000;
+    const expiryTime = registrationTimestamp + 20000; // +20 sekúnd
     const timeUntilExpiry = expiryTime - currentTime;
     
-    console.log(`AuthManager: Kontrola časovača registrácie - zostáva: ${timeUntilExpiry}ms`);
+    console.log(`AuthManager: Kontrola časovača registrácie - aktuálny čas: ${new Date(currentTime).toLocaleTimeString()}, expirácia: ${new Date(expiryTime).toLocaleTimeString()}, zostáva: ${timeUntilExpiry}ms`);
     
     if (timeUntilExpiry > 0) {
+        // Aktuálny čas je menší ako registrationDate + 30 sekúnd
+        // Používateľ OSTÁVA na stránke a po uplynutí času sa odhlási
+        console.log(`AuthManager: Čas 30 sekúnd ešte neuplynul, používateľ ostáva na stránke. Nastavujem odhlásenie o ${timeUntilExpiry}ms`);
         registrationLogoutTimeout = setTimeout(async () => {
-            console.log("AuthManager: Uplynul čas 20 sekúnd od registrácie, odhlasujem používateľa.");
+            console.log("AuthManager: Uplynul čas 30 sekúnd od registrácie, odhlasujem používateľa.");
             try {
                 await signOut(auth);
                 window.globalUserProfileData = null;
@@ -495,8 +445,11 @@ const checkRegistrationTimer = (userProfileData) => {
             }
         }, timeUntilExpiry);
     } else {
-        console.log("AuthManager: Čas 20 sekúnd od registrácie už uplynul, presmerúvam na logged-in-my-data.html");
+        // Aktuálny čas je väčší ako registrationDate + 30 sekúnd
+        // Používateľ by mal byť presmerovaný na logged-in-my-data.html
+        console.log("AuthManager: Čas 30 sekúnd od registrácie už uplynul, presmerúvam na logged-in-my-data.html");
         
+        // Presmerujeme iba ak sme na registračnej stránke
         if (isOnRegistrationPage()) {
             const targetPath = `${appBasePath}/logged-in-my-data.html`;
             console.log(`AuthManager: Presmerúvam na ${targetPath}`);
@@ -505,54 +458,13 @@ const checkRegistrationTimer = (userProfileData) => {
     }
 };
 
-// 🔒 HLAVNÁ FUNKCIA SPRACOVANIA AUTENTIFIKÁCIE S KONTROLOU DOMÉNY
+// 🆕 UPRAVENÁ FUNKCIA: Spracovanie stavu autentifikácie
 const handleAuthState = async () => {
-    // 🔒 Najprv skontrolujeme, či je doména povolená
-    if (!isAllowedDomain()) {
-        console.error("🔒 PRÍSTUP ZAMIETNUTÝ: Neplatná doména!");
-        document.body.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                <div>
-                    <h1 style="color: #d32f2f;">🚫 Prístup zamietnutý</h1>
-                    <p style="font-size: 18px; color: #555;">Táto aplikácia je prístupná iba z povolených domén.</p>
-                    <p style="font-size: 14px; color: #888;">Aktuálna doména: <strong>${window.location.hostname}</strong></p>
-                    <p style="font-size: 14px; color: #888;">Povolené domény: ${ALLOWED_DOMAINS.join(', ')}</p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
     onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
 
         if (user) {
             console.log("AuthManager: Používateľ prihlásený:", user.uid);
-            
-            // 🔑 NASTAVENIE GITHUB PRÍSTUPU CEZ WORKER
-            // Toto sa vykoná hneď po prihlásení, pred načítaním profilu
-            const accessSetup = await setupGitHubAccess(user);
-            
-            if (!accessSetup) {
-                console.warn("🔒 Nepodarilo sa nastaviť GitHub prístup. Skúšam pokračovať...");
-                // Môžeme pokračovať, ale bez GitHub prístupu nebudú fungovať pravidlá
-                // Ak chceš prísne obmedzenie, odkomentuj nasledujúce riadky:
-                // await signOut(auth);
-                // window.location.href = `${appBasePath}/login.html?status=access_denied`;
-                // return;
-            }
-            
-            // 🔒 Kontrola GitHub prístupu cez custom claim (po nastavení)
-            const hasGitHubAccess = await checkGitHubAccess(user);
-            
-            if (!hasGitHubAccess) {
-                console.warn("🔒 Používateľ nemá GitHub prístup. Odhlasujem...");
-                await signOut(auth);
-                window.globalUserProfileData = null;
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                window.location.href = `${appBasePath}/login.html?status=access_denied`;
-                return;
-            }
             
             // Správna cesta k profilovému dokumentu
             const userDocRef = doc(db, `users/${user.uid}`);
@@ -583,14 +495,18 @@ const handleAuthState = async () => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
+                            // Ak prebieha registrácia admina
                             if (window.isRegisteringAdmin && userProfileData.role === 'admin' && (userProfileData.approved === false || userProfileData.approved === true)) {
                                 console.log("AuthManager: Prebieha registrácia administrátora.");
                                 window.globalUserProfileData = userProfileData;
                                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                
+                                // Spustíme kontrolu časovača registrácie
                                 checkRegistrationTimer(userProfileData);
                                 return;
                             }
 
+                            // Neschválený administrátor
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 console.warn("AuthManager: Nepovolený administrátor detekovaný.");
                                 signOut(auth).then(() => {
@@ -601,6 +517,7 @@ const handleAuthState = async () => {
                                 return;
                             } 
                             
+                            // Schválení používatelia
                             else if (userProfileData.approved === true) {
                                 const targetPathMyData = `${appBasePath}/logged-in-my-data.html`;
                                 const currentPage = getFileNameFromPath(window.location.pathname);
@@ -609,8 +526,14 @@ const handleAuthState = async () => {
                                 const isCurrentPageGuestOnly = isGuestOnlyPage();
                                 const isOnRegPage = isOnRegistrationPage();
                                 
+                                // Spustíme kontrolu časovača registrácie (pre prípad že sme na registračnej stránke)
+                                // Táto funkcia sa postará o:
+                                // - ak čas ešte neuplynul: nastaví timeout na odhlásenie
+                                // - ak čas už uplynul: presmeruje na my-data
                                 checkRegistrationTimer(userProfileData);
                                 
+                                // AK SME NA REGISTRAČNEJ STRÁNKE:
+                                // Nevykonávame ŽIADNE ďalšie presmerovanie - checkRegistrationTimer už rozhodol
                                 if (isOnRegPage) {
                                     console.log(`AuthManager: Prihlásený používateľ na registračnej stránke "${currentPage}". Žiadne presmerovanie (časovač je spustený).`);
                                     window.globalUserProfileData = userProfileData;
@@ -618,24 +541,30 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
+                                // PRE VŠETKY OSTATNÉ STRÁNKY (nie registračné):
+                                // PRIHLÁSENÝ POUŽÍVATEĽ MÁ PRÍSTUP KU VŠETKÝM STRÁNKAM
+                                // Iba výnimka: ak je na stránke, ktorá je len pre neprihlásených (guest only)
                                 if (isCurrentPageGuestOnly) {
                                     console.log(`AuthManager: Prihlásený používateľ na stránke určenej len pre neprihlásených ("${currentPage}"). Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                     return;
                                 }
                                 
+                                // Ak je na login stránke, presmeruj na my-data
                                 if (isOnLoginPage()) {
                                     console.log(`AuthManager: Prihlásený používateľ na login stránke. Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                     return;
                                 }
                                 
+                                // Pre neverejné stránky kontrolujeme prístup podľa roly (len ak ide o HTML stránku)
                                 if (isHtmlPage() && !isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
                                     console.log(`AuthManager: Používateľ s rolou "${userRole}" nemá prístup na stránku "${currentPage}". Presmerovávam na ${targetPathMyData}`);
                                     window.location.href = targetPathMyData;
                                     return;
                                 }
                                 
+                                // Inak nechaj používateľa na aktuálnej stránke (má prístup)
                                 console.log(`AuthManager: Prihlásený používateľ s rolou "${userRole}" má prístup na stránku "${currentPage}".`);
                             }
 
@@ -666,21 +595,27 @@ const handleAuthState = async () => {
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             
+            // Zrušíme timeout ak existuje
             if (registrationLogoutTimeout) {
                 clearTimeout(registrationLogoutTimeout);
                 registrationLogoutTimeout = null;
             }
             
+            // NEPRIHLÁSENÝ POUŽÍVATEĽ - má prístup LEN k verejným stránkam
+            // Ak aktuálna cesta nie je HTML stránka (napr. root), necháme ho tam
             if (!isHtmlPage()) {
                 console.log(`AuthManager: Neprihlásený používateľ na ne-HTML stránke "${window.location.pathname}". Žiadne presmerovanie.`);
                 return;
             }
             
             const currentFileName = getFileNameFromPath(window.location.pathname);
+            
+            // 🆕 KONTROLA: Je stránka prístupná pre neprihlásených podľa nastavení viditeľnosti?
             const isAccessible = await isPageAccessibleForGuest();
             
             console.log(`AuthManager: Neprihlásený používateľ na stránke "${currentFileName}". Je prístupná? ${isAccessible}`);
             
+            // Ak stránka nie je prístupná pre neprihlásených, presmerujeme na index.html
             if (!isAccessible) {
                 console.log(`AuthManager: Neprihlásený používateľ na skrytej stránke "${currentFileName}". Presmerovávam na index.html.`);
                 const indexUrl = `${appBasePath}/index.html`;
@@ -689,11 +624,13 @@ const handleAuthState = async () => {
                 return;
             }
             
+            // Ak je stránka v zozname guestOnlyPages, necháme ho tam (to sú stránky ako login, register)
             if (isGuestOnlyPage()) {
                 console.log(`AuthManager: Neprihlásený používateľ na guest-only stránke "${currentFileName}". Žiadne presmerovanie.`);
                 return;
             }
             
+            // Ak je na verejnej a prístupnej stránke, necháme ho tam
             console.log(`AuthManager: Neprihlásený používateľ na verejnej stránke "${currentFileName}". Žiadne presmerovanie.`);
         }
 
