@@ -82,7 +82,8 @@ const publicPages = [
     'register.html',
     'volunteer-register.html',
     'teams-in-groups.html',
-    'matches.html'
+    'matches.html',
+    'map.html'
 ];
 
 // Definícia stránok dostupných LEN pre neprihlásených používateľov
