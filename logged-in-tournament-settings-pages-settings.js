@@ -15,8 +15,8 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
-    { id: 'matches', label: 'Zápasy', defaultVisible: false }, // Zmenené na false
-    { id: 'tables', label: 'Tabuľky', defaultVisible: false }, // Zmenené na false
+    { id: 'matches', label: 'Zápasy', defaultVisible: false },
+    { id: 'tables', label: 'Tabuľky', defaultVisible: false },
   ];
 
   // Načítanie nastavení stránok z Firestore
@@ -48,7 +48,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             pagesData.push({
               id: doc.id,
               label: data.label || doc.id,
-              visible: data.visible !== undefined ? data.visible : false, // Predvolene false, ak nie je definované
+              visible: data.visible !== undefined ? data.visible : false,
             });
           });
           
@@ -59,7 +59,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             .map(p => ({
               id: p.id,
               label: p.label,
-              visible: false, // Nové stránky budú skryté
+              visible: false,
             }));
           
           const allPages = [...pagesData, ...missingPages];
@@ -126,7 +126,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       // Aktualizujeme pôvodné dáta
       setOriginalPages(JSON.parse(JSON.stringify(pages)));
       setHasChanges(false);
-      setCollectionExists(true); // Po uložení už kolekcia existuje
+      setCollectionExists(true);
 
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
@@ -180,32 +180,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     React.createElement(
       'div',
       { className: 'flex justify-between items-center' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránok'),
-      React.createElement(
-        'div',
-        { className: 'flex gap-3' },
-        hasChanges && React.createElement(
-          'button',
-          {
-            onClick: handleReset,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors'
-          },
-          'Zahodiť zmeny'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: handleSave,
-            disabled: !hasChanges || saving,
-            className: `font-medium py-2 px-6 rounded-lg transition-colors ${
-              hasChanges && !saving
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`
-          },
-          saving ? 'Ukladám...' : 'Uložiť zmeny'
-        )
-      )
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránok')
     ),
     React.createElement(
       'p',
@@ -272,6 +247,32 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             )
           )
         )
+      )
+    ),
+    // Tlačidlá presunuté pod zoznam stránok
+    React.createElement(
+      'div',
+      { className: 'flex justify-end gap-3 pt-4 border-t border-gray-200' },
+      hasChanges && React.createElement(
+        'button',
+        {
+          onClick: handleReset,
+          className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors'
+        },
+        'Zahodiť zmeny'
+      ),
+      React.createElement(
+        'button',
+        {
+          onClick: handleSave,
+          disabled: !hasChanges || saving,
+          className: `font-medium py-2 px-6 rounded-lg transition-colors ${
+            hasChanges && !saving
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`
+        },
+        saving ? 'Ukladám...' : 'Uložiť zmeny'
       )
     )
   );
