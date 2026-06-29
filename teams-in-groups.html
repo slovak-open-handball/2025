@@ -10,8 +10,8 @@
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- React a ReactDOM -->
-    <script defer crossorigin crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script defer crossorigin crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script defer crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script defer crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -21,7 +21,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            overflow-x: auto; /* Povolenie horizontálneho scrollu pri zmenšení */
+            overflow-x: auto;
         }
         
         #main-content-area {
@@ -36,18 +36,17 @@
         }
         
         .notification {
-          position: fixed;
-          top: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 1000;
-          padding: 12px 24px;
-          border-radius: 8px;
-          color: white;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
-        /* Plynulé rozširovanie pri zmenšení */
         @media screen and (max-width: 1200px) {
             .content-wrapper {
                 padding: 0 1rem;
@@ -63,33 +62,29 @@
             }
         }
         
-        /* Štýly pre zoom */
         .zoom-80 {
             transform: scale(0.8);
             transform-origin: top left;
-            width: 125%; /* Kompenzácia pre 80% zoom */
+            width: 125%;
         }
         
         .zoom-67 {
             transform: scale(0.67);
             transform-origin: top left;
-            width: 150%; /* Kompenzácia pre 67% zoom */
+            width: 150%;
         }
         
         .zoom-50 {
             transform: scale(0.5);
             transform-origin: top left;
-            width: 200%; /* Kompenzácia pre 50% zoom */
+            width: 200%;
         }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
-    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
-    <div id="menu-placeholder"></div>
-    <main id="main-content-area" class="flex-grow flex">
-        <!-- Sem sme pridali triedu pre plynulú animáciu -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+    
+    <main id="main-content-area" class="flex-grow flex justify-center">
         <div id="root" class="content-wrapper flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
