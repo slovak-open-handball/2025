@@ -1,94 +1,3 @@
-// ============================================================
-// WORKER SERVICE - MUSÍ BYŤ NA ZAČIATKU SÚBORU
-// ============================================================
-class TeamNameWorkerService {
-  constructor() {
-    this.workerUrl = 'https://teams-name.turnaj-slovak-open-handball.workers.dev';
-    this.cache = new Map();
-    this.pendingRequests = new Map();
-    this.allTeamsCache = null;
-    this.allTeamsCacheTime = null;
-    this.CACHE_TTL = 60000;
-  }
-
-  async getAllTeams() {
-    if (this.allTeamsCache && this.allTeamsCacheTime) {
-      if (Date.now() - this.allTeamsCacheTime < this.CACHE_TTL) {
-        console.log('📦 Using cached teams:', this.allTeamsCache.length);
-        return this.allTeamsCache;
-      }
-    }
-
-    const requestKey = 'allTeams';
-    if (this.pendingRequests.has(requestKey)) {
-      return this.pendingRequests.get(requestKey);
-    }
-
-    try {
-      console.log('🌐 Fetching all teams from worker...');
-      const response = await fetch(`${this.workerUrl}/api/all-teams`, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.teams) {
-        console.log('✅ Got', data.teams.length, 'teams from worker');
-        this.allTeamsCache = data.teams;
-        this.allTeamsCacheTime = Date.now();
-        return data.teams;
-      }
-      
-      return [];
-
-    } catch (error) {
-      console.error('❌ Worker error:', error);
-      return [];
-    }
-  }
-
-  async getTeamName(userId) {
-    if (!userId) return null;
-    if (this.cache.has(userId)) return this.cache.get(userId);
-
-    try {
-      const response = await fetch(`${this.workerUrl}/api/team-name?userId=${encodeURIComponent(userId)}`);
-      if (!response.ok) return null;
-      const data = await response.json();
-      if (data.teamName) this.cache.set(userId, data.teamName);
-      return data.teamName || null;
-    } catch (error) {
-      console.error('❌ Error:', error);
-      return null;
-    }
-  }
-
-  clearCache() {
-    this.cache.clear();
-    this.allTeamsCache = null;
-    this.allTeamsCacheTime = null;
-    this.pendingRequests.clear();
-  }
-
-  async testWorker() {
-    try {
-      const response = await fetch(`${this.workerUrl}/api/test`);
-      return await response.json();
-    } catch (error) {
-      console.error('Worker test failed:', error);
-      throw error;
-    }
-  }
-}
-
-// 🔥 INICIALIZÁCIA OKAMŽITE - PRED VŠETKÝM OSTATNÝM
-window.teamNameWorkerService = new TeamNameWorkerService();
-console.log('✅ TeamNameWorkerService initialized with getAllTeams()');
-
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, Timestamp, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -963,49 +872,6 @@ const AddTeamsGroupApp = (props) => {
         }
     };
 
-    useEffect(() => {
-      const loadAllTeamsForGuest = async () => {
-        // Ak je používateľ prihlásený, nepotrebujeme worker
-        if (window.auth?.currentUser) {
-          console.log('User is logged in, skipping worker');
-          return;
-        }
-
-        try {
-          console.log('🌐 Loading all teams for guest user...');
-      
-          // Získame všetky tímy z workera
-          const allTeams = await window.teamNameWorkerService.getAllTeams();
-      
-          if (allTeams && allTeams.length > 0) {
-            console.log('✅ Loaded teams from worker:', allTeams.length);
-        
-            // Uložíme do globálneho objektu
-            window.guestAllTeams = allTeams;
-        
-            // Vyvoláme event pre ostatné časti aplikácie
-            window.dispatchEvent(new CustomEvent('guestTeamsLoaded', {
-              detail: { teams: allTeams, count: allTeams.length }
-            }));
-        
-            // Aktualizujeme UI
-            setAllTeams(prev => {
-              // Pridáme tímy z workera k existujúcim
-              const existingIds = new Set(prev.map(t => t.id));
-              const newTeams = allTeams.filter(t => !existingIds.has(t.id));
-              return [...prev, ...newTeams];
-            });
-          } else {
-            console.log('No teams found for guest user');
-          }
-        } catch (error) {
-          console.error('Error loading all teams:', error);
-        }
-      };
-    
-      loadAllTeamsForGuest();
-    }, []); // Spustí sa raz pri mounte
-
     useEffect(() => {    
       if (allTeams.length > 0) {
           setTimeout(() => {
@@ -1057,24 +923,11 @@ const AddTeamsGroupApp = (props) => {
     
         if (checkAndApplyMapping()) return;
         
-        // 🆕 Poslúchač pre event matchTrackerReady
-        const handleMatchTrackerReady = () => {
-            forceRerender();
-        };
-        
-        window.addEventListener('matchTrackerReady', handleMatchTrackerReady);
-        
-        // Pôvodný poslúchač
         const handleTeamNameMappingReady = () => {
             forceRerender();
         };
         
         window.addEventListener('teamNameMappingReady', handleTeamNameMappingReady);
-    
-        // Kontrola, či už je matchTracker pripravený (pre prípad, že by sme nestihli zachytiť event)
-        if (window.matchTracker && window.matchTracker.isDataReady) {
-            forceRerender();
-        }
     
         const interval = setInterval(() => {
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
@@ -1082,14 +935,14 @@ const AddTeamsGroupApp = (props) => {
                 forceRerender();
             }
         }, 2000);
-      
+        
         return () => {
             isMounted = false;
-            window.removeEventListener('matchTrackerReady', handleMatchTrackerReady);
             window.removeEventListener('teamNameMappingReady', handleTeamNameMappingReady);
             clearInterval(interval);
         };
-    }, []);  
+    }, []);
+  
 
     // Efekt pre manažovanie notifikácií
     useEffect(() => {
@@ -4080,6 +3933,29 @@ return React.createElement(
             availableGroupsForSelect.map((group, index) =>
                 React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
             )
+        ),
+        
+        React.createElement(
+            'div',
+            { className: 'mt-4 flex items-center justify-center' },
+            React.createElement(
+                'label',
+                { 
+                    className: 'flex items-center space-x-2 cursor-pointer',
+                    title: 'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                },
+                React.createElement('input', {
+                    type: 'checkbox',
+                    checked: showCategoryPrefix,
+                    onChange: (e) => setShowCategoryPrefix(e.target.checked),
+                    className: 'w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                }),
+                React.createElement(
+                    'span',
+                    { className: 'text-sm font-medium text-gray-700' },
+                    'Zobrazovať názov kategórie pred názvom tímu v nadstavbových skupinách'
+                )
+            )
         )
     ),
         selectedCategoryId
@@ -4109,52 +3985,49 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
-        // VŽDY VYKRESLÍME KOMPONENT, aj keď nie je prihlásený používateľ
-        // Komponent si sám zistí, či má dáta alebo nie
-        root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
-        
-        // Synchronizácia e-mailu (iba ak je používateľ prihlásený)
-        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                await updateDoc(userProfileRef, { email: user.email });
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });
+        if (userProfileData) {
+            root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
+            if (window.auth && window.db && !isEmailSyncListenerSetup) {
+                onAuthStateChanged(window.auth, async (user) => {
+                    if (user) {
+                        try {
+                            const userProfileRef = doc(window.db, 'users', user.uid);
+                            const docSnap = await getDoc(userProfileRef);
+                            if (docSnap.exists()) {
+                                const firestoreEmail = docSnap.data().email;
+                                if (user.email !== firestoreEmail) {
+                                    await updateDoc(userProfileRef, { email: user.email });
+                                    const notificationsCollectionRef = collection(window.db, 'notifications');
+                                    await addDoc(notificationsCollectionRef, {
+                                        userEmail: user.email,
+                                        changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                        timestamp: new Date(),
+                                    });
+                                }
                             }
+                        } catch (error) {
+                            console.error("Chyba pri synchronizácii e-mailu:", error);
                         }
-                    } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
-                }
-            });
-            isEmailSyncListenerSetup = true;
+                });
+                isEmailSyncListenerSetup = true;
+            }
+        } else {
+            root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            ));
         }
     }
 };
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-// 🔥 DÔLEŽITÉ: VŽDY VYKRESLÍME KOMPONENT, aj keď nemáme userProfileData
-const rootElement = document.getElementById('root');
-if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(AddTeamsGroupApp, { userProfileData: window.globalUserProfileData || null }));
+if (window.globalUserProfileData) {
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+} else {
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        ));
+    }
 }
-
-
-
-
-
-
-
-
-
