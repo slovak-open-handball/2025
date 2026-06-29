@@ -52,7 +52,7 @@ const firebaseConfig = {
 
 // 🔒 KONTROLA DOMÉNY - Povolené domény pre prístup
 const ALLOWED_DOMAINS = [
-    'slovak-open-handball.github.io/2025/',  // GitHub Pages doména
+    'slovak-open-handball.github.io',  // GitHub Pages doména
 ];
 
 // Funkcia na kontrolu, či je aktuálna doména povolená
