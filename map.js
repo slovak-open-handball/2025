@@ -2246,20 +2246,6 @@ const MapApp = ({ userProfileData }) => {
                       ),
                       selectedPlace.capacity
                     ),
-
-                    // Farby pre ubytovanie
-                    selectedPlace.type === 'ubytovanie' && (
-                      React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
-                        React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
-                        React.createElement('div', { 
-                          className: 'px-4 py-2 rounded-lg text-sm font-medium shadow-sm',
-                          style: { 
-                            backgroundColor: selectedPlace.headerColor || '#1e40af',
-                            color: selectedPlace.headerTextColor || '#000000'
-                          }
-                        }, '')
-                      )
-                    ),
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
@@ -2514,49 +2500,6 @@ const MapApp = ({ userProfileData }) => {
                 React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
               ),
               priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
-            ),
-
-            // Farba pozadia pre ubytovanie
-            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
-              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
-              React.createElement('div', { className: 'flex gap-3 items-center' },
-                React.createElement('input', {
-                  type: 'color',
-                  value: editHeaderColor,
-                  onChange: e => setEditHeaderColor(e.target.value),
-                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
-                }),
-                React.createElement('input', {
-                  type: 'text',
-                  value: editHeaderColor,
-                  onChange: e => setEditHeaderColor(e.target.value),
-                  placeholder: '#1e40af',
-                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
-                })
-              )
-            ),
-
-            // Farba textu pre ubytovanie
-            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
-              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
-              React.createElement('div', { className: 'flex gap-3 items-center' },
-                React.createElement('input', {
-                  type: 'color',
-                  value: editHeaderTextColor,
-                  onChange: e => setEditHeaderTextColor(e.target.value),
-                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
-                }),
-                React.createElement('input', {
-                  type: 'text',
-                  value: editHeaderTextColor,
-                  onChange: e => setEditHeaderTextColor(e.target.value),
-                  placeholder: '#000000',
-                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
-                })
-              ),
-              React.createElement('div', { className: 'mt-3 p-3 rounded-lg', style: { backgroundColor: editHeaderColor, color: editHeaderTextColor } },
-                React.createElement('span', { className: 'text-sm font-medium' }, 'Ukážka: ', editName || '(názov miesta)')
-              )
             ),
 
             // NOVÉ: Náklady
