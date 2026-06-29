@@ -252,7 +252,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           className: `font-medium py-2 px-6 rounded-lg transition-colors ${
             hasChanges && !saving
               ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-white text-green-500 border-2 border-green-500'
+              : 'bg-white text-green-500 border-2 border-green-500 cursor-not-allowed'
           }`
         },
         saving ? 'Ukladám...' : 'Uložiť zmeny'
