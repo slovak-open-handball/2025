@@ -371,16 +371,18 @@ const updateNavigationLinks = () => {
         const pageConfig = pagesVisibility[pageId];
         const isVisible = pageConfig && pageConfig.visible === true;
         
-        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}, element:`, link);
+        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}`);
         
-        // Aktualizujeme viditeľnosť odkazu - POUŽIJEME PRIAMO STYLE
+        // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
-            link.style.display = ''; // Odstránime inline style
+            link.style.display = '';
+            link.dataset.visible = 'true';
             console.log(`header.js: ZOBRAZUJEM odkaz '${pageId}'`);
         } else {
             link.classList.add('hidden');
-            link.style.display = 'none'; // PRIAMO NASTAVÍME display:none
+            link.style.display = 'none';
+            link.dataset.visible = 'false';
             console.log(`header.js: SKRÝVAM odkaz '${pageId}'`);
         }
     });
@@ -460,9 +462,19 @@ const updateHeaderLinks = (userProfileData) => {
     }
 
     // NAJPRV AKTUALIZUJEME NAVIGAČNÉ ODKAZY (NEZÁVISLE OD PRIHLÁSENIA)
-    // Toto je kľúčová zmena - viditeľnosť stránok platí pre všetkých
     updateNavigationLinks();
     checkCurrentPageAccess();
+
+    // DODATOČNÁ KONTROLA: Uistíme sa, že teams-in-groups je skrytý ak nie je viditeľný
+    const teamsLink = document.getElementById('teams-in-groups-link');
+    if (teamsLink) {
+        const pageConfig = pagesVisibility['teams-in-groups'];
+        const isVisible = pageConfig && pageConfig.visible === true;
+        if (!isVisible) {
+            teamsLink.classList.add('hidden');
+            teamsLink.style.display = 'none';
+        }
+    }
 
     if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
