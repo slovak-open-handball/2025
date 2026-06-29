@@ -52,7 +52,7 @@ const firebaseConfig = {
 
 // 🔒 KONTROLA DOMÉNY - Povolené domény pre prístup
 const ALLOWED_DOMAINS = [
-    'soh2025-2s0o2h5.github.io',  // GitHub Pages doména
+    'slovak-open-handball.github.io',  // GitHub Pages doména
     'localhost',                   // Lokálny vývoj
     '127.0.0.1'                   // Lokálny vývoj
 ];
