@@ -74,8 +74,6 @@ const MapApp = ({ userProfileData }) => {
     const [hashProcessed, setHashProcessed] = useState(false);
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
-    const [newCapacity, setNewCapacity] = useState('');
-    const [editCapacity, setEditCapacity] = useState('');
     const [nameTypeError, setNameTypeError] = useState(null);
     const [accommodationTypes, setAccommodationTypes] = useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = useState('');
@@ -87,77 +85,11 @@ const MapApp = ({ userProfileData }) => {
     const [newPlaceNote, setNewPlaceNote] = useState('');
     const [editNote, setEditNote] = useState('');
     // Premenné pre cenu ubytovania
-    const [newPricePerNight, setNewPricePerNight] = useState('');
-    const [editPricePerNight, setEditPricePerNight] = useState('');
-    const [newCostPerNight, setNewCostPerNight] = useState(''); 
-    const [editCostPerNight, setEditCostPerNight] = useState('');
-    const [priceError, setPriceError] = useState(null);
   
-    const [newBreakfastPrice, setNewBreakfastPrice] = useState('');
-    const [newLunchPrice, setNewLunchPrice] = useState('');
-    const [newDinnerPrice, setNewDinnerPrice] = useState('');
-    const [editBreakfastPrice, setEditBreakfastPrice] = useState('');
-    const [editLunchPrice, setEditLunchPrice] = useState('');
-    const [editDinnerPrice, setEditDinnerPrice] = useState('');
-    const [mealPriceError, setMealPriceError] = useState(null);
-
-    const [hallRentalPrices, setHallRentalPrices] = useState({});
-    const [editHallRentalPrices, setEditHallRentalPrices] = useState({});
     const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
-
-    const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
-
-    const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
-    const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
-    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
-    const [editHeaderTextColor, setEditHeaderTextColor] = useState('#000000');
-  
-    const accommodationAvailabilityEdit = useMemo(() => {
-      if (!accommodationTypes.length || !selectedPlace) return {};
- 
-      const result = {};
-      accommodationTypes.forEach((accType) => {
-        const total = accType.capacity || 0;
-        let occupied = places
-          .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
-          .reduce((sum, p) => sum + (p.capacity || 0), 0);
- 
-        if (
-          selectedPlace?.type === 'ubytovanie' &&
-          selectedPlace?.accommodationType === accType.type
-        ) {
-          occupied -= selectedPlace?.capacity || 0;
-        }
-        const free = total - occupied;
-        result[accType.type] = {
-          free,
-          isFull: free <= 0,
-          total,
-        };
-      });
-      return result;
-    }, [accommodationTypes, places, selectedPlace]);
-    
-    const accommodationAvailabilityAdd = useMemo(() => {
-        if (!accommodationTypes.length) return {};
-        const result = {};
-        accommodationTypes.forEach((accType) => {
-          const total = accType.capacity || 0;
-          const occupied = places
-            .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
-            .reduce((sum, p) => sum + (p.capacity || 0), 0);
-          const free = total - occupied;
-          result[accType.type] = {
-            free,
-            isFull: free <= 0,
-            total,
-          };
-        });
-        return result;
-      }, [accommodationTypes, places]);
     
     // Ref pre kontajner zoznamu miest
     const placesListRef = useRef(null);
@@ -314,77 +246,6 @@ const MapApp = ({ userProfileData }) => {
         window.history.replaceState(null, '', window.location.pathname);
       }
     };
-
-    useEffect(() => {
-        if (newPlaceType !== 'ubytovanie') {
-            setPriceError(null);
-            return;
-        }
-    
-        const price = parseFloat(newPricePerNight);
-        const cost = parseFloat(newCostPerNight);
-        
-        if (!newPricePerNight || !newCostPerNight) {
-            setPriceError(null);
-            return;
-        }
-      
-        if (isNaN(price) || price <= 0) {
-            setPriceError('Cena pre kluby musí byť kladné číslo');
-        } else if (isNaN(cost) || cost <= 0) {
-            setPriceError('Náklady musia byť kladné číslo');
-        } else {
-            setPriceError(null);
-        }
-    }, [newPricePerNight, newCostPerNight, newPlaceType]);
-
-    // Validácia ceny a nákladov pre ubytovanie (editácia)
-    useEffect(() => {
-        if (!isEditingNameAndType || editType !== 'ubytovanie') {
-            setPriceError(null);
-            return;
-        }
-
-        const price = parseFloat(editPricePerNight);
-        const cost = parseFloat(editCostPerNight);
-    
-        if (!editPricePerNight || !editCostPerNight) {
-            setPriceError(null);
-            return;
-        }
-    
-        if (isNaN(price) || price <= 0) {
-            setPriceError('Cena pre kluby musí byť kladné číslo');
-        } else if (isNaN(cost) || cost <= 0) {
-            setPriceError('Náklady musia byť kladné číslo');
-        } else {
-            setPriceError(null);
-        }
-    }, [editPricePerNight, editCostPerNight, editType, isEditingNameAndType]);
-    
-    // NOVÉ: Validácia cien pre stravovanie (editácia)
-    useEffect(() => {
-        if (!isEditingNameAndType || editType !== 'stravovanie') {
-            setMealPriceError(null);
-            return;
-        }
- 
-        const breakfastPrice = editBreakfastPrice ? parseFloat(editBreakfastPrice) : null;
-        const lunchPrice = editLunchPrice ? parseFloat(editLunchPrice) : null;
-        const dinnerPrice = editDinnerPrice ? parseFloat(editDinnerPrice) : null;
-        
-        let error = null;
-        
-        if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
-            error = 'Cena za raňajky musí byť kladné číslo';
-        } else if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
-            error = 'Cena za obed musí byť kladné číslo';
-        } else if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
-            error = 'Cena za večeru musí byť kladné číslo';
-        }
-        
-        setMealPriceError(error);
-    }, [editBreakfastPrice, editLunchPrice, editDinnerPrice, editType, isEditingNameAndType]);
     
     useEffect(() => {
       if (!window.db) return;
@@ -461,17 +322,9 @@ const MapApp = ({ userProfileData }) => {
         setIsEditingNameAndType(false);
         setEditCapacity('');
         setEditNote('');
-        setEditPricePerNight('');
-        setEditCostPerNight('');
-        setEditBreakfastPrice('');
-        setEditLunchPrice('');
-        setEditDinnerPrice('');
-        setMealPriceError(null);
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
-        setHallRentalPrices({});
-        setEditHallRentalPrices({});
         
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
@@ -750,15 +603,7 @@ const MapApp = ({ userProfileData }) => {
               createdAt: data.createdAt,
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
-              pricePerNight: data.pricePerNight || null,
-              costPerNight: data.costPerNight || null,
-              breakfastPrice: data.breakfastPrice || null,
-              lunchPrice: data.lunchPrice || null,
-              dinnerPrice: data.dinnerPrice || null,
               note: data.note || null,
-              hallRentalPrices: data.hallRentalPrices || null,
-              headerColor: data.headerColor || '#1e40af',
-              headerTextColor: data.headerTextColor || '#000000' 
             });
           });
           
@@ -1149,13 +994,6 @@ const MapApp = ({ userProfileData }) => {
                     React.createElement('strong', null, 'Typ: '),
                     selectedPlace.type === 'ubytovanie' && selectedPlace.accommodationType ? `${typeLabels[selectedPlace.type]} (${selectedPlace.accommodationType})` : typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                   ),
-                  (selectedPlace.capacity && (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
-                    React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
-                      React.createElement('strong', null,
-                        selectedPlace.type === 'ubytovanie' ? 'Počet lôžok:' : 'Kapacita:'
-                      ),
-                      selectedPlace.capacity
-                    ),
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
