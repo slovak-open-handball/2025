@@ -872,6 +872,50 @@ const AddTeamsGroupApp = (props) => {
         }
     };
 
+    useEffect(() => {
+        const loadTeamNameForGuest = async () => {
+            // Ak je používateľ prihlásený, nepotrebujeme worker
+            if (window.auth?.currentUser) {
+                console.log('User is logged in, skipping worker');
+                return;
+            }
+    
+            try {
+                // Získame alebo vytvoríme guest userId
+                let guestUserId = localStorage.getItem('guestUserId');
+                if (!guestUserId) {
+                    guestUserId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('guestUserId', guestUserId);
+                    console.log('Created new guest userId:', guestUserId);
+                }
+
+                // Získame názov tímu z workera
+                if (window.teamNameWorkerService) {
+                    const teamName = await window.teamNameWorkerService.getTeamName(guestUserId);
+                    if (teamName) {
+                        console.log('🎯 Team name loaded for guest:', teamName);
+                        
+                        // Uložíme do globálneho objektu pre ostatné časti aplikácie
+                        window.guestTeamName = teamName;
+                        
+                        // Vyvoláme event pre ostatné komponenty
+                        window.dispatchEvent(new CustomEvent('guestTeamNameLoaded', {
+                            detail: { teamName, userId: guestUserId }
+                        }));
+                    } else {
+                        console.log('No team name found for guest user');
+                    }
+                } else {
+                    console.warn('TeamNameWorkerService not available');
+                }
+            } catch (error) {
+                console.error('Error loading team name for guest:', error);
+            }
+        };
+
+        loadTeamNameForGuest();
+    }, []); // Spustí sa raz pri mounte
+
     useEffect(() => {    
       if (allTeams.length > 0) {
           setTimeout(() => {
@@ -4015,3 +4059,200 @@ if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefine
     const root = ReactDOM.createRoot(rootElement);
     root.render(React.createElement(AddTeamsGroupApp, { userProfileData: window.globalUserProfileData || null }));
 }
+
+
+
+
+
+
+
+
+
+// worker-service.js
+class TeamNameWorkerService {
+  constructor() {
+    this.workerUrl = 'https://teams-name.turnaj-slovak-open-handball.workers.dev';
+    this.cache = new Map();
+    this.pendingRequests = new Map();
+  }
+
+  async getTeamName(userId) {
+    if (!userId) {
+      console.log('No userId provided');
+      return null;
+    }
+
+    // Skontroluj cache
+    if (this.cache.has(userId)) {
+      console.log('Returning cached team name for:', userId);
+      return this.cache.get(userId);
+    }
+
+    // Ak už prebieha request pre toto userId, vrátime pending promise
+    if (this.pendingRequests.has(userId)) {
+      return this.pendingRequests.get(userId);
+    }
+
+    // Vytvoríme nový request
+    const requestPromise = this.fetchTeamName(userId);
+    this.pendingRequests.set(userId, requestPromise);
+
+    try {
+      const teamName = await requestPromise;
+      // Uložíme do cache
+      if (teamName) {
+        this.cache.set(userId, teamName);
+      }
+      return teamName;
+    } finally {
+      // Odstránime z pending requests
+      this.pendingRequests.delete(userId);
+    }
+  }
+
+  async fetchTeamName(userId) {
+    try {
+      const url = `${this.workerUrl}?userId=${encodeURIComponent(userId)}`;
+      console.log('Fetching team name from worker:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Worker response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Worker error:', errorData);
+        throw new Error(errorData.error || 'Failed to get team name');
+      }
+
+      const data = await response.json();
+      console.log('Worker response data:', data);
+
+      return data.teamName || null;
+
+    } catch (error) {
+      console.error('Error fetching team name from worker:', error);
+      return null;
+    }
+  }
+
+  // Vyčistenie cache
+  clearCache(userId) {
+    if (userId) {
+      this.cache.delete(userId);
+    } else {
+      this.cache.clear();
+    }
+  }
+
+  // Testovanie workeru
+  async testWorker() {
+    try {
+      const response = await fetch(`${this.workerUrl}?userId=test`);
+      const data = await response.json();
+      console.log('Worker test response:', data);
+      return data;
+    } catch (error) {
+      console.error('Worker test failed:', error);
+      throw error;
+    }
+  }
+}
+
+// Vytvoríme singleton inštanciu
+const teamNameWorkerService = new TeamNameWorkerService();
+
+// Export pre použitie v iných častiach
+window.teamNameWorkerService = teamNameWorkerService;
+
+
+// Upravená inicializácia na konci súboru
+
+// Najprv načítame worker service
+const loadWorkerService = async () => {
+    try {
+        // Skontrolujeme, či už je načítaná
+        if (window.teamNameWorkerService) {
+            console.log('Worker service already loaded');
+            return;
+        }
+
+        // Dynamicky načítame worker service
+        const script = document.createElement('script');
+        script.src = './worker-service.js'; // Alebo inline kód
+        script.async = true;
+        
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+
+        console.log('Worker service loaded successfully');
+    } catch (error) {
+        console.error('Failed to load worker service:', error);
+    }
+};
+
+// Inicializácia aplikácie s workerom
+const initializeApp = async () => {
+    // Načítame worker service
+    await loadWorkerService();
+
+    // Pôvodná inicializácia
+    const handleDataUpdateAndRender = (event) => {
+        const userProfileData = event.detail;
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
+            
+            // Synchronizácia e-mailu (iba ak je používateľ prihlásený)
+            if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
+                onAuthStateChanged(window.auth, async (user) => {
+                    if (user) {
+                        try {
+                            const userProfileRef = doc(window.db, 'users', user.uid);
+                            const docSnap = await getDoc(userProfileRef);
+                            if (docSnap.exists()) {
+                                const firestoreEmail = docSnap.data().email;
+                                if (user.email !== firestoreEmail) {
+                                    await updateDoc(userProfileRef, { email: user.email });
+                                    const notificationsCollectionRef = collection(window.db, 'notifications');
+                                    await addDoc(notificationsCollectionRef, {
+                                        userEmail: user.email,
+                                        changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                        timestamp: new Date(),
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Chyba pri synchronizácii e-mailu:", error);
+                        }
+                    }
+                });
+                isEmailSyncListenerSetup = true;
+            }
+        }
+    };
+
+    window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+    // Vždy vykreslíme komponent
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(AddTeamsGroupApp, { userProfileData: window.globalUserProfileData || null }));
+    }
+};
+
+// Spustíme inicializáciu
+initializeApp();
+
+
+
