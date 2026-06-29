@@ -2317,22 +2317,7 @@ const MapApp = ({ userProfileData }) => {
                       (selectedPlace.breakfastPrice == null && selectedPlace.lunchPrice == null && selectedPlace.dinnerPrice == null) &&
                         React.createElement('p', { className: 'text-gray-500 italic' }, 'Ceny nie sú nastavené')
                     )
-                  ),
-
-                  selectedPlace.type === 'sportova_hala' && selectedPlace.hallRentalPrices && Object.keys(selectedPlace.hallRentalPrices).length > 0 && (
-                      React.createElement('div', { className: 'mb-3' },
-                          React.createElement('strong', { className: 'block text-gray-700 mb-2' }, 'Ceny prenájmu haly (€/hodinu):'),
-                          React.createElement('div', { className: 'space-y-1 pl-2' },
-                              Object.entries(selectedPlace.hallRentalPrices)
-                                  .sort(([a], [b]) => a.localeCompare(b))
-                                  .map(([date, price]) => 
-                                      React.createElement('p', { key: date, className: 'text-gray-600 text-sm' },
-                                          `${formatDateForDisplay(date)}: ${formatPrice(price)} €/hodinu`
-                                      )
-                                  )
-                          )
-                      )
-                  ),
+                  )
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
