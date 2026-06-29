@@ -183,11 +183,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti webových stránok')
     ),
     React.createElement(
-      'p',
-      { className: 'text-gray-600 text-sm' },
-      'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre verejnosť.'
-    ),
-    React.createElement(
       'div',
       { className: 'bg-gray-50 rounded-lg overflow-hidden border border-gray-200' },
       React.createElement(
