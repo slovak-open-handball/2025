@@ -144,7 +144,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       }
 
       if (showNotification) {
-        showNotification('Nastavenia stránok boli úspešne uložené!', 'success');
+        showNotification('Nastavenia stránok boli uložené!', 'success');
       }
     } catch (error) {
       if (showNotification) {
