@@ -193,7 +193,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             }
             
             if (page.visible !== undefined) {
-              newStatus = page.visible ? 'verejná' : 'skrytá';
+              newStatus = page.visible ? 'skrytá' : 'verejná';
             }
             
             changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
