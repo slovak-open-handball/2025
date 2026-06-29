@@ -270,6 +270,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
   );
 }
 
-window.PagesSettings = PagesSettings;
-
 export { PagesSettings };
+
+window.PagesSettings = PagesSettings;
