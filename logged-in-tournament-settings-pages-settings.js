@@ -241,12 +241,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           )
         )
       )
-    ),
-    // Informačná správa o automatickom ukladaní
-    React.createElement(
-      'div',
-      { className: 'text-sm text-gray-500 text-right pt-2' },
-      'Zmeny sa ukladajú automaticky pri každom prepnutí'
     )
   );
 }
