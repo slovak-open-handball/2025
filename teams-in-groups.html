@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Tímy do skupín</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- GitHub Pages - development only -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script defer crossorigin crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script defer crossorigin crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: auto; /* Povolenie horizontálneho scrollu pri zmenšení */
+        }
+        
+        #main-content-area {
+            overflow-x: auto;
+            width: 100%;
+        }
+        
+        .content-wrapper {
+            min-width: fit-content;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .notification {
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 1000;
+          padding: 12px 24px;
+          border-radius: 8px;
+          color: white;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Plynulé rozširovanie pri zmenšení */
+        @media screen and (max-width: 1200px) {
+            .content-wrapper {
+                padding: 0 1rem;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
+            body {
+                overflow-x: auto;
+            }
+            #main-content-area {
+                min-width: 100%;
+            }
+        }
+        
+        /* Štýly pre zoom */
+        .zoom-80 {
+            transform: scale(0.8);
+            transform-origin: top left;
+            width: 125%; /* Kompenzácia pre 80% zoom */
+        }
+        
+        .zoom-67 {
+            transform: scale(0.67);
+            transform-origin: top left;
+            width: 150%; /* Kompenzácia pre 67% zoom */
+        }
+        
+        .zoom-50 {
+            transform: scale(0.5);
+            transform-origin: top left;
+            width: 200%; /* Kompenzácia pre 50% zoom */
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex">
+        <!-- Sem sme pridali triedu pre plynulú animáciu -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
+        <div id="root" class="content-wrapper flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Obsah aplikácie bude vykreslený tu -->
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Načítanie súborov pre autentifikáciu, hlavičku a React komponent -->
+    <script src="clear-console.js"></script>
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="teams-in-groups.js"></script>
+    <script type="module" src="func-load-groups.js"></script>
+    <script type="module" src="func-tables.js"></script>
+</body>
+</html>
