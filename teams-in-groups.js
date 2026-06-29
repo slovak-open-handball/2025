@@ -873,47 +873,46 @@ const AddTeamsGroupApp = (props) => {
     };
 
     useEffect(() => {
-        const loadTeamNameForGuest = async () => {
-            // Ak je používateľ prihlásený, nepotrebujeme worker
-            if (window.auth?.currentUser) {
-                console.log('User is logged in, skipping worker');
-                return;
-            }
+      const loadAllTeamsForGuest = async () => {
+        // Ak je používateľ prihlásený, nepotrebujeme worker
+        if (window.auth?.currentUser) {
+          console.log('User is logged in, skipping worker');
+          return;
+        }
+
+        try {
+          console.log('🌐 Loading all teams for guest user...');
+      
+          // Získame všetky tímy z workera
+          const allTeams = await window.teamNameWorkerService.getAllTeams();
+      
+          if (allTeams && allTeams.length > 0) {
+            console.log('✅ Loaded teams from worker:', allTeams.length);
+        
+            // Uložíme do globálneho objektu
+            window.guestAllTeams = allTeams;
+        
+            // Vyvoláme event pre ostatné časti aplikácie
+            window.dispatchEvent(new CustomEvent('guestTeamsLoaded', {
+              detail: { teams: allTeams, count: allTeams.length }
+            }));
+        
+            // Aktualizujeme UI
+            setAllTeams(prev => {
+              // Pridáme tímy z workera k existujúcim
+              const existingIds = new Set(prev.map(t => t.id));
+              const newTeams = allTeams.filter(t => !existingIds.has(t.id));
+              return [...prev, ...newTeams];
+            });
+          } else {
+            console.log('No teams found for guest user');
+          }
+        } catch (error) {
+          console.error('Error loading all teams:', error);
+        }
+      };
     
-            try {
-                // Získame alebo vytvoríme guest userId
-                let guestUserId = localStorage.getItem('guestUserId');
-                if (!guestUserId) {
-                    guestUserId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem('guestUserId', guestUserId);
-                    console.log('Created new guest userId:', guestUserId);
-                }
-
-                // Získame názov tímu z workera
-                if (window.teamNameWorkerService) {
-                    const teamName = await window.teamNameWorkerService.getTeamName(guestUserId);
-                    if (teamName) {
-                        console.log('🎯 Team name loaded for guest:', teamName);
-                        
-                        // Uložíme do globálneho objektu pre ostatné časti aplikácie
-                        window.guestTeamName = teamName;
-                        
-                        // Vyvoláme event pre ostatné komponenty
-                        window.dispatchEvent(new CustomEvent('guestTeamNameLoaded', {
-                            detail: { teamName, userId: guestUserId }
-                        }));
-                    } else {
-                        console.log('No team name found for guest user');
-                    }
-                } else {
-                    console.warn('TeamNameWorkerService not available');
-                }
-            } catch (error) {
-                console.error('Error loading team name for guest:', error);
-            }
-        };
-
-        loadTeamNameForGuest();
+      loadAllTeamsForGuest();
     }, []); // Spustí sa raz pri mounte
 
     useEffect(() => {    
