@@ -21,7 +21,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     const matchesLink = document.getElementById('matches-link');
     const matchesHallLink = document.getElementById('matches-hall-link');
-    const cateringLink = document.getElementById('catering-link'); // NOVÉ: odkaz na catering
+    const cateringLink = document.getElementById('catering-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         return;
@@ -235,29 +235,36 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     
     const showRoleBasedLinks = () => {
         if (userProfileData.role === 'admin') {
-            addCategoriesLink.classList.remove('hidden');
-            addGroupsLink.classList.remove('hidden');
-            tournamentSettingsLink.classList.remove('hidden');    
-            allRegistrationsLink.classList.remove('hidden');
-            allUsersLink.classList.remove('hidden');
-            notificationsLink.classList.remove('hidden');
-            teamRostersLink.classList.add('hidden');
-            teamsInGroupsLink.classList.remove('hidden');
-            mapLink?.classList.remove('hidden');
+            // Admin odkazy - vždy viditeľné
+            addCategoriesLink?.classList.remove('hidden');
+            addGroupsLink?.classList.remove('hidden');
+            tournamentSettingsLink?.classList.remove('hidden');    
+            allRegistrationsLink?.classList.remove('hidden');
+            allUsersLink?.classList.remove('hidden');
+            notificationsLink?.classList.remove('hidden');
+            teamRostersLink?.classList.add('hidden');
+            
+            // 🔥 TEAMS-IN-GROUPS - pre admina VŽDY viditeľné
+            if (teamsInGroupsLink) {
+                teamsInGroupsLink.classList.remove('hidden');
+                teamsInGroupsLink.style.display = '';
+            }
+            
+            // 🔥 MAPA - pre admina VŽDY viditeľná
+            if (mapLink) {
+                mapLink.classList.remove('hidden');
+                mapLink.style.display = '';
+            }
+            
             teamsAccommodationLink?.classList.remove('hidden');
-            matchesLink.classList.remove('hidden');
-            matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.remove('hidden');
+            matchesLink?.classList.remove('hidden');
+            matchesHallLink?.classList.add('hidden');
+            if (cateringLink) cateringLink?.classList.remove('hidden');
     
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
-                if (unreadCount > 0) {
-                    notificationsTextWithCount.textContent = `Upozornenia (${unreadCount})`;
-                } else {
-                    notificationsTextWithCount.textContent = 'Upozornenia';
-                }
+                notificationsTextWithCount.textContent = unreadCount > 0 ? `Upozornenia (${unreadCount})` : 'Upozornenia';
             }
-    
             if (notificationBadgeCount) {
                 if (unreadCount > 0) {
                     notificationBadgeCount.textContent = unreadCount.toString();
@@ -268,19 +275,19 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             }
     
         } else if (userProfileData.role === 'club') {
-            addCategoriesLink.classList.add('hidden');
-            addGroupsLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden');
-            allRegistrationsLink.classList.add('hidden');
-            allUsersLink.classList.add('hidden');
-            notificationsLink.classList.add('hidden');
-            teamRostersLink.classList.remove('hidden');
-            teamsInGroupsLink.classList.add('hidden'); 
+            addCategoriesLink?.classList.add('hidden');
+            addGroupsLink?.classList.add('hidden');
+            tournamentSettingsLink?.classList.add('hidden');
+            allRegistrationsLink?.classList.add('hidden');
+            allUsersLink?.classList.add('hidden');
+            notificationsLink?.classList.add('hidden');
+            teamRostersLink?.classList.remove('hidden');
+            teamsInGroupsLink?.classList.add('hidden'); 
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
-            matchesLink.classList.add('hidden');
-            matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden');
+            matchesLink?.classList.add('hidden');
+            matchesHallLink?.classList.add('hidden');
+            if (cateringLink) cateringLink?.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -289,22 +296,42 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else if (userProfileData.role === 'hall') {
-            matchesHallLink.classList.remove('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden');
-        } else {
-            addCategoriesLink.classList.add('hidden');
-            addGroupsLink.classList.add('hidden');
-            tournamentSettingsLink.classList.add('hidden');
-            allRegistrationsLink.classList.add('hidden');
-            allUsersLink.classList.add('hidden');
-            notificationsLink.classList.add('hidden');
-            teamRostersLink.classList.add('hidden');
-            teamsInGroupsLink.classList.add('hidden');
+            // Pre hall - skryjeme všetky admin odkazy
+            addCategoriesLink?.classList.add('hidden');
+            addGroupsLink?.classList.add('hidden');
+            tournamentSettingsLink?.classList.add('hidden');
+            allRegistrationsLink?.classList.add('hidden');
+            allUsersLink?.classList.add('hidden');
+            notificationsLink?.classList.add('hidden');
+            teamRostersLink?.classList.add('hidden');
+            teamsInGroupsLink?.classList.add('hidden');
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
-            matchesLink.classList.add('hidden');
-            matchesHallLink.classList.add('hidden');
-            if (cateringLink) cateringLink.classList.add('hidden'); 
+            matchesLink?.classList.add('hidden');
+            matchesHallLink?.classList.remove('hidden');
+            if (cateringLink) cateringLink?.classList.add('hidden');
+            
+            if (notificationsTextWithCount) {
+                notificationsTextWithCount.textContent = 'Upozornenia';
+            }
+            if (notificationBadgeCount) {
+                notificationBadgeCount.classList.add('hidden');
+            }
+        } else {
+            // Ostatné roly - skryjeme všetky admin odkazy
+            addCategoriesLink?.classList.add('hidden');
+            addGroupsLink?.classList.add('hidden');
+            tournamentSettingsLink?.classList.add('hidden');
+            allRegistrationsLink?.classList.add('hidden');
+            allUsersLink?.classList.add('hidden');
+            notificationsLink?.classList.add('hidden');
+            teamRostersLink?.classList.add('hidden');
+            teamsInGroupsLink?.classList.add('hidden');
+            mapLink?.classList.add('hidden');
+            teamsAccommodationLink?.classList.add('hidden');
+            matchesLink?.classList.add('hidden');
+            matchesHallLink?.classList.add('hidden');
+            if (cateringLink) cateringLink?.classList.add('hidden'); 
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
