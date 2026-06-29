@@ -189,6 +189,29 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     }
   };
 
+  // Komponent prepínača (ToggleSwitch) - zelená farba rovnako ako v AccommodationSettings
+  const ToggleSwitch = ({ isOn, onToggle, disabled }) => {
+    return React.createElement(
+      'button',
+      {
+        type: 'button',
+        onClick: onToggle,
+        disabled: disabled,
+        className: `
+          relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          ${isOn ? 'bg-green-500' : 'bg-gray-300'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `,
+      },
+      React.createElement('span', {
+        className: `
+          inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200
+          ${isOn ? 'translate-x-6' : 'translate-x-1'}
+        `,
+      })
+    );
+  };
+
   if (loading) {
     return React.createElement(
       'div',
@@ -231,20 +254,11 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
                 { className: `text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}` },
                 page.visible ? 'Verejná' : 'Skrytá'
               ),
-              React.createElement(
-                'button',
-                {
-                  onClick: () => handleToggleVisibility(page.id),
-                  className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    page.visible ? 'bg-blue-600' : 'bg-gray-300'
-                  }`
-                },
-                React.createElement('span', {
-                  className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    page.visible ? 'translate-x-6' : 'translate-x-1'
-                  }`
-                })
-              )
+              React.createElement(ToggleSwitch, {
+                isOn: page.visible,
+                onToggle: () => handleToggleVisibility(page.id),
+                disabled: false
+              })
             )
           )
         )
