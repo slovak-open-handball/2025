@@ -177,6 +177,19 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         changesContent = changes; // Toto je teraz pole, nie string
       } else if (notificationData.type === 'deletePackage') {
         changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
+      } else if (notificationData.type === 'updatePagesSettings') {
+        // Spracovanie notifikácie pre zmenu viditeľnosti stránok
+        const changedPages = notificationData.data.changedPages || [];
+        if (changedPages.length > 0) {
+          const changes = [`Zmena viditeľnosti stránok:`];
+          changedPages.forEach(page => {
+            const status = page.visible ? 'verejná' : 'skrytá';
+            changes.push(`- ${page.label}: ${status}`);
+          });
+          changesContent = changes;
+        } else {
+          changesContent = ['Zmena viditeľnosti stránok bola vykonaná.'];
+        }
       }
 
       await addDoc(notificationsCollectionRef, {
