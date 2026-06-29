@@ -8,6 +8,8 @@ const originalConsoleInfo = console.info;
 const originalConsoleWarn = console.warn;
 const originalConsoleError = console.error;
 
+let isDataReady = false;
+
 // Vytvoríme LOKÁLNE aliasy, ktoré budeme používať v tomto súbore
 let localLog = originalConsoleLog;
 let localDebug = originalConsoleDebug;
@@ -42,38 +44,26 @@ function error(...args) {
     if (localError) localError(...args); 
 }
 
-// ============================================================
-// OD TOHTO MIESTA POKRAČUJE PÔVODNÝ KÓD, ALE VŠETKY log
-// TREBA NAHRADIŤ ZA log(), warn ZA warn(), atď.
-// ============================================================
-
-// Teraz v celom kóde používame tieto funkcie namiesto priamo log ---------------- všetko pred týmto riadkom vymaž
-
-// Premenné pre nahrádzanie
 let hasReplacedAnyTeams = false;
 let mappingCompleted = false;
 let initialMappingDone = false;
 const replacementCallbacks = [];
 
-// Cache pre skupiny
 let groupCheckCache = new Set();
 let processedCarryOverGroups = new Set();
 let isInitialDataLoaded = false;
 let processedGroupsInitial = new Set();
 
-// Premenné pre periodické úlohy
 let periodicReplaceInterval = null;
 let periodicReplaceActive = true;
 let groupMonitorInterval = null;
 let isReplacingInProgress = false;
 
-// Cache pre mapovanie
 let processedGroups = new Map();
 let pendingReplaceTimeout = null;
 let replacedIdentifiers = new Set();
 let checkedGroupsCache = new Set();
 
-// Snapshot pre sledovanie
 let groupCompletionSnapshot = new Map();
 
 let isMappingNotificationSent = false;
@@ -2232,6 +2222,12 @@ let isTeamNameReplacerInitialized = false;
         // Potom načítame nastavenia poradia
         await loadTableSettings();
         await loadCategorySettings();
+
+        isDataReady = true;
+
+        window.dispatchEvent(new CustomEvent('matchTrackerReady', {
+            detail: { ready: true }
+        }));
         
         const { collection, query, where, onSnapshot, getDocs } = window.firebaseModules || 
             await importFirebaseModules();
@@ -2933,6 +2929,11 @@ function getTeamNameFromDatabase(displayId) {
 // ============================================================
 
 function getTeamNameByDisplayId(displayId) {
+    if (!isDataReady) {
+        log('⏳ Dáta ešte nie sú pripravené, vracam null');
+        return null;
+    }
+    
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
         return null;
