@@ -365,7 +365,16 @@ const updateNavigationLinks = () => {
     navLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;        
+        
+        // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU A TEAMS-IN-GROUPS
+        // Ak je používateľ prihlásený, vždy zobrazíme tieto odkazy
+        const isLoggedIn = isReallyLoggedIn();
+        let isVisible = pageConfig && pageConfig.visible === true;
+        
+        // Pre mapu a teams-in-groups - prihlásený používateľ vidí vždy
+        if (isLoggedIn && (pageId === 'map' || pageId === 'teams-in-groups')) {
+            isVisible = true;
+        }
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
@@ -398,7 +407,7 @@ const initializeNavigationVisibility = () => {
     const navLinks = document.querySelectorAll('[data-page]');
     navLinks.forEach(link => {
         link.classList.add('hidden');
-        link.style.display = 'none'; // PRIAMO NASTAVÍME display:none
+        link.style.display = 'none';
     });
     
     const homeLink = document.getElementById('home-link');
@@ -422,6 +431,13 @@ const checkCurrentPageAccess = () => {
     // Povolené stránky bez kontroly
     const allowedPages = ['', 'index', 'login', 'admin-register'];
     if (allowedPages.includes(currentPage)) {
+        return true;
+    }
+    
+    // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU A TEAMS-IN-GROUPS
+    // Prihlásený používateľ má prístup vždy
+    const isLoggedIn = isReallyLoggedIn();
+    if (isLoggedIn && (currentPage === 'map' || currentPage === 'teams-in-groups')) {
         return true;
     }
     
@@ -455,17 +471,8 @@ const updateHeaderLinks = (userProfileData) => {
     updateNavigationLinks();
     checkCurrentPageAccess();
 
-    // DODATOČNÁ KONTROLA: Uistíme sa, že teams-in-groups je skrytý ak nie je viditeľný
-    const teamsLink = document.getElementById('teams-in-groups-link');
-    if (teamsLink) {
-        const pageConfig = pagesVisibility['teams-in-groups'];
-        const isVisible = pageConfig && pageConfig.visible === true;
-        if (!isVisible) {
-            teamsLink.classList.add('hidden');
-            teamsLink.style.display = 'none';
-        }
-    }
-
+    // 🔥 ODSTRÁNENÁ DODATOČNÁ KONTROLA - už je v updateNavigationLinks
+    
     if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
         headerElement.classList.remove('invisible'); 
