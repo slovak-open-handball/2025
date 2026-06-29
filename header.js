@@ -5,6 +5,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null;
 let unsubscribeFromUserSettings = null;
+let unsubscribeFromPagesVisibility = null; // Nový listener pre viditeľnosť stránok
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
@@ -228,6 +229,11 @@ const handleLogout = async () => {
             unsubscribeFromUserSettings = null;
         }
         
+        if (unsubscribeFromPagesVisibility) {
+            unsubscribeFromPagesVisibility();
+            unsubscribeFromPagesVisibility = null;
+        }
+        
         shownNotificationIds.clear();
         
         currentUserId = null;
@@ -254,7 +260,7 @@ const getHeaderColorByRole = (role) => {
       return '#FFAC1C';
     default:
       return '#1D4ED8';  // Predvolená modrá pre neprihlásených/anonymných
-    }
+  }
 }
 
 const setupUserSettingsListener = (userId) => {
@@ -356,9 +362,15 @@ const setupPagesVisibilityListener = () => {
         return;
     }
 
+    // Zrušíme starý listener ak existuje
+    if (unsubscribeFromPagesVisibility) {
+        unsubscribeFromPagesVisibility();
+        unsubscribeFromPagesVisibility = null;
+    }
+
     const pagesRef = collection(window.db, 'pages');
     
-    return onSnapshot(pagesRef, (snapshot) => {
+    unsubscribeFromPagesVisibility = onSnapshot(pagesRef, (snapshot) => {
         pagesVisibility = {};
         
         snapshot.forEach(doc => {
@@ -378,18 +390,49 @@ const setupPagesVisibilityListener = () => {
 
 // NOVÁ FUNKCIA: Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
+    // Získame všetky navigačné odkazy, ktoré majú data-page atribút
+    const navLinks = document.querySelectorAll('[data-page]');
+    
+    navLinks.forEach(link => {
+        const pageId = link.getAttribute('data-page');
+        const pageConfig = pagesVisibility[pageId];
+        const isVisible = pageConfig && pageConfig.visible === true;
+        
+        // Aktualizujeme viditeľnosť odkazu
+        if (isVisible) {
+            link.classList.remove('hidden');
+            // Ak máme label v konfigurácii, aktualizujeme text odkazu
+            if (pageConfig.label && link.textContent.trim() !== pageConfig.label) {
+                link.textContent = pageConfig.label;
+            }
+        } else {
+            link.classList.add('hidden');
+        }
+    });
+
+    // Špeciálne spracovanie pre "teams-in-groups" - zachováme kompatibilitu
     const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
-    if (!teamsInGroupsLink) return;
+    if (teamsInGroupsLink) {
+        const pageConfig = pagesVisibility['teams-in-groups'];
+        const isVisible = pageConfig && pageConfig.visible === true;
+        
+        if (isVisible) {
+            teamsInGroupsLink.classList.remove('hidden');
+            teamsInGroupsLink.href = 'teams-in-groups.html';
+            if (pageConfig.label) {
+                teamsInGroupsLink.textContent = pageConfig.label;
+            }
+        } else {
+            teamsInGroupsLink.classList.add('hidden');
+        }
+    }
 
-    // Skontrolujeme, či je stránka "teams-in-groups" verejná
-    const pageConfig = pagesVisibility['teams-in-groups'];
-    const isVisible = pageConfig && pageConfig.visible === true;
-
-    if (isVisible) {
-        teamsInGroupsLink.classList.remove('hidden');
-        teamsInGroupsLink.href = 'teams-in-groups.html';
-    } else {
-        teamsInGroupsLink.classList.add('hidden');
+    // Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
+    const registerLink = document.getElementById('register-link');
+    if (registerLink) {
+        // Toto je už spracované v updateRegistrationLinkVisibility, ale pre istotu
+        // necháme pôvodnú logiku
+        updateRegistrationLinkVisibility(window.globalUserProfileData);
     }
 };
 
@@ -703,6 +746,9 @@ const setupFirestoreListeners = () => {
             }
             if (unsubscribeFromUserSettings) {
                 unsubscribeFromUserSettings();
+            }
+            if (unsubscribeFromPagesVisibility) {
+                unsubscribeFromPagesVisibility();
             }
         });
 
