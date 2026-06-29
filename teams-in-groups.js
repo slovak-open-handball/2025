@@ -2574,30 +2574,6 @@ const renderSingleCategoryView = () => {
         default: typeClasses = 'bg-gray-700';
     }
     const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transform focus:outline-none';
-    const fabButton = React.createElement(
-        'button',
-        {
-            className: `
-                fixed bottom-8 right-8
-                w-16 h-16
-                rounded-full
-                bg-green-600
-                hover:bg-green-700
-                text-white
-                text-4xl
-                font-bold
-                shadow-2xl
-                flex items-center justify-center
-                focus:outline-none
-                focus:ring-4 focus:ring-green-300
-                z-40
-            `,
-            onClick: openAddModal,
-            title: "Pridať nový tím",
-            'aria-label': "Pridať nový tím"
-        },
-        '+'
-    );
 
     useEffect(() => {
         const addGlobalStyles = () => {
@@ -2834,7 +2810,6 @@ return React.createElement(
                     className: `flex-grow min-w-0 ${teamsWithoutGroup.length === 0 ? 'w-full' : ''}` 
                 }, renderGroupedCategories())
             ),
-        fabButton
     );
 };
 
