@@ -122,7 +122,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
         const original = originalPages.find(p => p.id === page.id);
         return original && original.visible !== page.visible;
       });
-
+  
       if (changedPages.length === 0) {
         if (showNotification) {
           showNotification('Žiadne zmeny na uloženie.', 'info');
@@ -140,32 +140,50 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             updatedAt: Timestamp.fromDate(new Date()),
           }, { merge: true });
       }
-
+  
       // Aktualizujeme pôvodné dáta
       setOriginalPages(JSON.parse(JSON.stringify(pages)));
       setHasChanges(false);
       setCollectionExists(true);
-
+  
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
-        const changesDescription = changedPages
-          .map(p => {
-            const original = originalPages.find(op => op.id === p.id);
-            const originalStatus = original ? (original.visible ? 'verejná' : 'skrytá') : 'skrytá';
-            const newStatus = p.visible ? 'skrytá' : 'verejná';
-            return `${p.label}: z '${originalStatus}' na '${newStatus}'`;
-          })
-          .join('; ');
+          const changesDescription = changedPages
+            .map(p => {
+              // Nájdeme pôvodný stav - TERAZ SPRÁVNE
+              const original = originalPages.find(op => op.id === p.id);
+              // Ak nenájdeme pôvodný stav, použijeme predvolenú hodnotu
+              let originalStatus = 'skrytá';
+              let newStatus = 'verejná';
+              
+              if (original) {
+                originalStatus = original.visible ? 'verejná' : 'skrytá';
+              }
+              
+              // Nový stav určíme z aktuálnych dát
+              newStatus = p.visible ? 'verejná' : 'skrytá';
+              
+              // Vytvoríme popis zmeny - SPRÁVNY FORMÁT
+              return `${p.label}: z '${originalStatus}' na '${newStatus}'`;
+            })
+            .join('; ');
         
-        await sendAdminNotification({
-          type: 'updatePagesSettings',
-          data: {
-            changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
-            changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
-          }
-        });
+          await sendAdminNotification({
+            type: 'updatePagesSettings',
+            data: {
+              changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
+              changedPages: changedPages.map(p => ({ 
+                id: p.id, 
+                label: p.label, 
+                visible: p.visible,
+                // Pridáme aj pôvodný stav pre správne zobrazenie v notifikácii
+                originalVisible: originalPages.find(op => op.id === p.id)?.visible ?? false
+              })),
+              originalPages: originalPages.map(p => ({ id: p.id, label: p.label, visible: p.visible }))
+            }
+          });
       }
-
+  
       if (showNotification) {
         showNotification('Nastavenia stránok boli uložené!', 'success');
       }
