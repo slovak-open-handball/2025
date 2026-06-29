@@ -133,12 +133,12 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
       // Uložíme každú zmenenú stránku
       for (const page of changedPages) {
-        const pageRef = doc(db, 'pages', page.id);
-        await setDoc(pageRef, {
-          label: page.label,
-          visible: page.visible,
-          updatedAt: Timestamp.fromDate(new Date()),
-        }, { merge: true });
+          const pageRef = doc(db, 'pages', page.id);
+          await setDoc(pageRef, {
+            label: page.label,
+            visible: page.visible,
+            updatedAt: Timestamp.fromDate(new Date()),
+          }, { merge: true });
       }
 
       // Aktualizujeme pôvodné dáta
@@ -152,11 +152,22 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           .map(p => `${p.label}: ${p.visible ? 'verejná' : 'skrytá'}`)
           .join('; ');
         
+        // Nájdeme pôvodné dáta pre zmenené stránky
+        const originalChangedPages = changedPages.map(page => {
+          const original = originalPages.find(p => p.id === page.id);
+          return {
+            id: page.id,
+            label: page.label,
+            visible: original ? original.visible : false
+          };
+        });
+        
         await sendAdminNotification({
           type: 'updatePagesSettings',
           data: {
             changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
             changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
+            originalPages: originalChangedPages, // Pridanie pôvodných dát
           }
         });
       }
