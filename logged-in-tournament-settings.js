@@ -245,7 +245,8 @@ import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size
 import { AccommodationSettings } from './logged-in-tournament-settings-accommodation-settings.js';
 import { PackageSettings } from './logged-in-tournament-settings-package-settings.js';
 import { CategorySettings } from './logged-in-tournament-settings-category-settings.js';
-import { TableSettings } from './logged-in-tournament-settings-table-settings.js'; // NOVÝ IMPORT
+import { TableSettings } from './logged-in-tournament-settings-table-settings.js';
+import { PagesSettings } from './logged-in-tournament-settings-pages-settings.js';
 
 function TournamentSettingsApp() {
   const app = initializeApp(window.firebaseConfig);
@@ -282,6 +283,7 @@ function TournamentSettingsApp() {
     { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
     { id: 'categories', title: 'Nastavenia kategórií', component: CategorySettings },
     { id: 'table', title: 'Nastavenia tabuľky/zápasov', component: TableSettings }, 
+    { id: 'pages', title: 'Nastavenia webových stránok', component: PagesSettings },
   ];
 
   // Funkcia na aktualizáciu URL hashu - HIERARCHICKÝ FORMÁT
