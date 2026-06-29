@@ -359,22 +359,14 @@ const updateNavigationLinks = () => {
         return;
     }
     
-    // 1. Spracovanie všetkých odkazov s data-page atribútom
-    const navLinks = document.querySelectorAll('[data-page]');
+    // 🔥 1. Spracovanie VEREJNÝCH odkazov s data-page atribútom
+    // Tieto odkazy sa riadia viditeľnosťou v DB
+    const publicNavLinks = document.querySelectorAll('[data-page]');
     
-    navLinks.forEach(link => {
+    publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        
-        // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU A TEAMS-IN-GROUPS
-        // Ak je používateľ prihlásený, vždy zobrazíme tieto odkazy
-        const isLoggedIn = isReallyLoggedIn();
-        let isVisible = pageConfig && pageConfig.visible === true;
-        
-        // Pre mapu a teams-in-groups - prihlásený používateľ vidí vždy
-        if (isLoggedIn && (pageId === 'map' || pageId === 'teams-in-groups')) {
-            isVisible = true;
-        }
+        const isVisible = pageConfig && pageConfig.visible === true;
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
@@ -388,13 +380,34 @@ const updateNavigationLinks = () => {
         }
     });
 
-    // 2. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
+    // 🔥 2. ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH POUŽÍVATEĽOV
+    // Prihlásený používateľ vidí verejné odkazy vždy (aj keď sú v DB skryté)
+    const isLoggedIn = isReallyLoggedIn();
+    if (isLoggedIn) {
+        // Verejný odkaz na mapu - prihlásený vidí vždy
+        const publicMapLink = document.getElementById('public-map-link');
+        if (publicMapLink) {
+            publicMapLink.classList.remove('hidden');
+            publicMapLink.style.display = '';
+            publicMapLink.dataset.visible = 'true';
+        }
+        
+        // Verejný odkaz na teams-in-groups - prihlásený vidí vždy
+        const publicTeamsLink = document.getElementById('public-teams-in-groups-link');
+        if (publicTeamsLink) {
+            publicTeamsLink.classList.remove('hidden');
+            publicTeamsLink.style.display = '';
+            publicTeamsLink.dataset.visible = 'true';
+        }
+    }
+
+    // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         updateRegistrationLinkVisibility(window.globalUserProfileData);
     }
 
-    // 3. Home link - vždy viditeľný
+    // 4. Home link - vždy viditeľný
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
@@ -404,8 +417,9 @@ const updateNavigationLinks = () => {
 
 // Inicializácia viditeľnosti - najprv všetko skryjeme
 const initializeNavigationVisibility = () => {
-    const navLinks = document.querySelectorAll('[data-page]');
-    navLinks.forEach(link => {
+    // Skryjeme všetky verejné odkazy
+    const publicNavLinks = document.querySelectorAll('[data-page]');
+    publicNavLinks.forEach(link => {
         link.classList.add('hidden');
         link.style.display = 'none';
     });
@@ -471,8 +485,6 @@ const updateHeaderLinks = (userProfileData) => {
     updateNavigationLinks();
     checkCurrentPageAccess();
 
-    // 🔥 ODSTRÁNENÁ DODATOČNÁ KONTROLA - už je v updateNavigationLinks
-    
     if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
         headerElement.classList.remove('invisible'); 
