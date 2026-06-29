@@ -152,7 +152,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           .map(p => {
             const original = originalPages.find(op => op.id === p.id);
             const originalStatus = original ? (original.visible ? 'verejná' : 'skrytá') : 'skrytá';
-            const newStatus = p.visible ? 'verejná' : 'skrytá';
+            const newStatus = p.visible ? 'skrytá' : 'verejná';
             return `${p.label}: z '${originalStatus}' na '${newStatus}'`;
           })
           .join('; ');
