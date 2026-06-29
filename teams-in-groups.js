@@ -6,64 +6,6 @@ const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const listeners = new Set();
 
-const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
-  if (!isOpen) return null;
-  return React.createElement(
-    'div',
-      {
-      className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
-      onClick: onClose
-      },
-    React.createElement(
-      'div',
-      {
-        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
-        onClick: e => e.stopPropagation()
-      },
-      React.createElement(
-        'h2',
-        { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-          'Odstrániť voľné miesto v poradí'
-        ),
-        React.createElement(
-          'p',
-          { className: 'text-gray-700 mb-4 text-center' },
-            `Naozaj chcete odstrániť voľné miesto na pozícii ${position} v skupine ${groupName} (${categoryName})?`
-        ),
-          React.createElement(
-            'p',
-            { className: 'text-sm text-amber-700 mb-8 text-center font-medium' },
-            'Všetky tímy s vyšším poradím sa posunú o 1 nižšie.'
-          ),
-            React.createElement(
-              'div',
-              { className: 'flex justify-end space-x-4' },
-              React.createElement(
-                'button',
-                {
-                  onClick: onClose,
-                  className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
-                },
-                'Zrušiť'
-              ),
-              React.createElement(
-                'button',
-                {
-                  onClick: () => {
-                    onConfirm();
-                    onClose();
-                  },
-                  disabled: isConfirming,
-                  className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
-                    isConfirming ? 'bg-gray-400 cursor-wait opacity-60' : 'bg-amber-600 hover:bg-amber-700'
-                  }`
-                },
-                isConfirming ? 'Spracúvam...' : 'Áno, odstrániť miesto'
-        )
-      )
-    )
-  );
-};
 // Nový komponent – stabilná notifikácia
 // Stabilná notifikácia cez portál
 const NotificationPortal = () => {
@@ -109,64 +51,6 @@ export const subscribe = (cb) => {
   listeners.add(cb);
   return () => listeners.delete(cb);
 };
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) => {
-  if (!isOpen || !team) return null;
-  const isGlobal = team.isSuperstructureTeam;
-  const actionText = isGlobal ? "úplne odstrániť" : "presunúť medzi tímy bez skupiny";
-  const title = isGlobal ? "Odstrániť tím" : "Zrušiť zaradenie tímu do skupiny";
-  return React.createElement(
-    'div',
-    {
-      className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
-      onClick: onClose
-    },
-    React.createElement(
-      'div',
-      {
-        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
-        onClick: e => e.stopPropagation()
-      },
-      React.createElement(
-        'h2',
-        { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-        title
-      ),
-      React.createElement(
-        'p',
-        { className: 'text-gray-700 mb-8 text-center' },
-        isGlobal
-          ? `Naozaj chcete natrvalo odstrániť tím "${team.teamName}"?`
-          : `Naozaj chcete presunúť tím "${team.teamName}" medzi tímy bez skupiny?`
-      ),
-      React.createElement(
-        'div',
-        { className: 'flex justify-end space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onClose,
-            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: () => {
-              onConfirm();
-              onClose();
-            },
-            disabled: isConfirming,
-            className: `px-6 py-2.5 rounded-lg text-white transition-colors ${
-              isGlobal ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
-            } ${isConfirming ? 'opacity-50 cursor-wait' : ''}`
-          },
-          isConfirming ? 'Spracúvam...' : isGlobal ? 'Áno, odstrániť' : 'Áno, presunúť'
-        )
-      )
-    )
-  );
-};
 const AddTeamsGroupApp = (props) => {
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
@@ -177,17 +61,13 @@ const AddTeamsGroupApp = (props) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [uiNotification, setUiNotification] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
-    const [confirmModal, setConfirmModal] = useState(null);
     const currentUserEmail = window.globalUserProfileData?.email || null;
-    const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');
     const [hasNotifiedMapping, setHasNotifiedMapping] = useState(false);
     const prevAllTeamsLengthRef = useRef(0);
-    const [swapModal, setSwapModal] = useState(null);
     const [isSwapping, setIsSwapping] = useState(false);
     
     // NOVÝ STAV: Sledovanie zápasov
@@ -601,9 +481,6 @@ const AddTeamsGroupApp = (props) => {
                     window.matchTracker.refreshTeamNameMappings();
                 }
             }, 100);
-            
-            setSwapModal(null);
-            
         } catch (err) {
             console.error("Chyba pri výmene tímov:", err);
             notify("Nepodarilo sa vymeniť tímy: " + err.message, "error");
@@ -1063,34 +940,7 @@ const AddTeamsGroupApp = (props) => {
             notify("Nepodarilo sa presunúť tím medzi tímy bez skupiny.", "error");
         }
     };
-    const handleRemoveOrDeleteTeam = (team) => {
-      setConfirmModal({
-        team,
-        isDelete: team.isSuperstructureTeam,
-        open: true
-      });
-    };
     const [isConfirming, setIsConfirming] = useState(false);
- 
-    const handleConfirmRemove = async () => {
-      if (!confirmModal?.team) return;
-      setIsConfirming(true);
-   
-      try {
-        const team = confirmModal.team;
-        if (team.isSuperstructureTeam) {
-          await handleDeleteTeam(team);
-        } else {
-          await handleUnassignUserTeam(team);
-        }
-        setConfirmModal(null);
-      } catch (err) {
-        console.error(err);
-        notify("Funkcia zlyhala.", "error");
-      } finally {
-        setIsConfirming(false);
-      }
-    };
 
   const handleUpdateAnyTeam = async ({ categoryId, groupName, teamName, order, originalTeam }) => {
     if (!window.db || !originalTeam) return;
@@ -1391,24 +1241,6 @@ const AddTeamsGroupApp = (props) => {
             console.error("Chyba pri aktualizácii tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
         }
-    };
-
-    // Zjednotený handler pre uloženie
-    const unifiedSaveHandler = async (data) => {
-      if (data.isEdit) {
-        await handleUpdateAnyTeam(data);
-      } else {
-        await handleAddNewTeam(data);
-      }
-      closeModal();
-    };
-    const closeModal = () => {
-      setIsModalOpen(false);
-      setTeamToEdit(null);
-    };
-    const openAddModal = () => {
-        setTeamToEdit(null);
-        setIsModalOpen(true);
     };
     // ===================================================================
     // Zvyšok kódu – listenery, render funkcie, return
@@ -1781,7 +1613,6 @@ const AddTeamsGroupApp = (props) => {
                     display = `${team.category}: ${display}`;
                 }
     
-                const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
                 const categoryName = categoryIdToNameMap[targetCategoryId] || team.category || '';
     
                 return React.createElement(
@@ -1844,25 +1675,6 @@ const AddTeamsGroupApp = (props) => {
                           'span',
                           { className: 'text-center flex-grow' },
                           `V skupine chýba tím s poradovým číslom ${pos}.`
-                        )
-                      ),
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => {
-                            // otvoríme modálne okno na potvrdenie odstránenia diery
-                            setDeleteGapModal({
-                              categoryName: categoryIdToNameMap[targetCategoryId],
-                              groupName: targetGroupId,
-                              position: pos,
-                              open: true
-                            });
-                          },
-                          className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                          title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
-                        },
-                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
                         )
                       )
                     )
@@ -1997,49 +1809,6 @@ const AddTeamsGroupApp = (props) => {
                                     title: title
                                 },
                                 `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
-                            )
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center space-x-1' },
-                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
-                            showAccommodationCircle && React.createElement('div', {
-                                className: 'w-3 h-3 rounded-full flex-shrink-0',
-                                style: { 
-                                    backgroundColor: getTeamAccommodationColor(team, categoryName), 
-                                    boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
-                                },
-                                title: (() => {
-                                    const color = getTeamAccommodationColor(team, categoryName);
-                                    if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                    return 'Tím má priradenú ubytovňu';
-                                })()
-                            }),
-                            
-                            // 🔥 EDIT TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
-                            !groupHasMatches && React.createElement(
-                                'button',
-                                {
-                                    onClick: () => { setTeamToEdit(team); setIsModalOpen(true); },
-                                    className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-indigo-600 hover:bg-indigo-50',
-                                    title: 'Upraviť tím'
-                                },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                                )
-                            ),
-                            
-                            // 🔥 KÔŠ TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
-                            !groupHasMatches && React.createElement(
-                                'button',
-                                {
-                                    onClick: () => handleRemoveOrDeleteTeam(team),
-                                    className: 'p-1.5 rounded-full transition-colors text-gray-500 hover:text-red-600 hover:bg-red-50',
-                                    title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
-                                },
-                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
-                                )
                             )
                         )
                     )
