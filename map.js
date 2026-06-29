@@ -3466,7 +3466,6 @@ const renderMap = (userProfileData) => {
     ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData: userProfileData || null }));
 };
 
-// Listener pre zmeny v autentifikácii
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     renderMap(userProfileData);
@@ -3474,29 +3473,14 @@ const handleDataUpdateAndRender = (event) => {
 
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Okamžité vykreslenie mapy - mapa je verejná, takže sa zobrazí vždy
 if (document.getElementById('root')) {
-    // Počkáme na načítanie Leafletu
     const waitForLeaflet = () => {
         if (typeof L !== 'undefined') {
-            // Leaflet je načítaný, môžeme renderovať
             renderMap(window.globalUserProfileData || null);
         } else {
-            // Počkáme 100ms a skúsime znova
             setTimeout(waitForLeaflet, 100);
         }
     };
     
-    // Spustíme čakanie na Leaflet
     waitForLeaflet();
-}
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-} else if (document.getElementById('root')) {
-    ReactDOM.createRoot(document.getElementById('root')).render(
-        React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        )
-    );
 }
