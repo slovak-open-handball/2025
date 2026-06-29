@@ -131,7 +131,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
         const changesDescription = changedPages
-          .map(p => `${p.label}: ${p.visible ? 'viditeľná' : 'skrytá'}`)
+          .map(p => `${p.label}: ${p.visible ? 'verejná' : 'skrytá'}`)
           .join('; ');
         
         await sendAdminNotification({
@@ -211,7 +211,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
               React.createElement(
                 'span',
                 { className: `text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}` },
-                page.visible ? 'Viditeľná' : 'Skrytá'
+                page.visible ? 'verejná' : 'Skrytá'
               ),
               React.createElement(
                 'button',
