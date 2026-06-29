@@ -32,7 +32,9 @@ import {
     getFirestore,
     doc,
     getDoc,
-    onSnapshot
+    onSnapshot,
+    collection,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // 🆕 Import pre App Check
 import {
@@ -77,6 +79,8 @@ const publicPages = [
     'login.html',
     'register.html',
     'volunteer-register.html',
+    'teams-in-groups.html',
+    'matches.html'
 ];
 
 // Definícia stránok dostupných LEN pre neprihlásených používateľov
@@ -124,6 +128,11 @@ let app;
 let db;
 let auth;
 let appCheck;
+
+// Cache pre nastavenia viditeľnosti stránok
+let pageVisibilityCache = null;
+let pageVisibilityCacheTime = null;
+const PAGE_VISIBILITY_CACHE_TTL = 60000; // 1 minúta
 
 // 🆕 Pomocná funkcia na kontrolu, či je App Check podporovaný v prehliadači
 const isAppCheckSupported = () => {
@@ -190,6 +199,64 @@ const setupFirebase = () => {
     }
 };
 
+// 🆕 Funkcia na načítanie nastavení viditeľnosti stránok z Firestore
+const loadPageVisibilitySettings = async () => {
+    if (!db) return null;
+    
+    // Kontrola cache
+    const now = Date.now();
+    if (pageVisibilityCache && pageVisibilityCacheTime && (now - pageVisibilityCacheTime) < PAGE_VISIBILITY_CACHE_TTL) {
+        console.log("AuthManager: Používam cached nastavenia viditeľnosti stránok.");
+        return pageVisibilityCache;
+    }
+    
+    try {
+        const pagesRef = collection(db, 'pages');
+        const pagesSnapshot = await getDocs(pagesRef);
+        
+        const visibilitySettings = {};
+        pagesSnapshot.forEach(doc => {
+            const data = doc.data();
+            // Uložíme len stránky, ktoré majú visible = false (skryté)
+            if (data.visible === false) {
+                visibilitySettings[doc.id] = false;
+            } else if (data.visible === true) {
+                visibilitySettings[doc.id] = true;
+            }
+        });
+        
+        // Aktualizujeme cache
+        pageVisibilityCache = visibilitySettings;
+        pageVisibilityCacheTime = now;
+        
+        console.log("AuthManager: Načítané nastavenia viditeľnosti stránok:", visibilitySettings);
+        return visibilitySettings;
+    } catch (error) {
+        console.warn("AuthManager: Chyba pri načítaní nastavení viditeľnosti stránok:", error);
+        return null;
+    }
+};
+
+// 🆕 Funkcia na kontrolu, či je stránka verejná podľa nastavení v databáze
+const isPageVisibleInSettings = async (pageId) => {
+    const settings = await loadPageVisibilitySettings();
+    if (!settings) {
+        // Ak sa nepodarilo načítať nastavenia, predpokladáme že stránka je verejná (bezpečnostný predvolený stav)
+        console.log(`AuthManager: Nepodarilo sa načítať nastavenia, stránka "${pageId}" sa považuje za verejnú.`);
+        return true;
+    }
+    
+    // Ak stránka nie je v nastaveniach, predpokladáme že je verejná
+    if (settings[pageId] === undefined) {
+        console.log(`AuthManager: Stránka "${pageId}" nie je v nastaveniach, považuje sa za verejnú.`);
+        return true;
+    }
+    
+    const isVisible = settings[pageId];
+    console.log(`AuthManager: Stránka "${pageId}" je ${isVisible ? 'verejná' : 'skrytá'} podľa nastavení.`);
+    return isVisible;
+};
+
 // 🆕 Pomocná funkcia na kontrolu, či je stránka HTML stránka (obsahuje .html)
 const isHtmlPage = () => {
     const currentPath = window.location.pathname;
@@ -219,6 +286,42 @@ const isPublicPage = () => {
     const result = publicPages.includes(fileName);
     console.log(`AuthManager: isPublicPage() - currentPath: "${currentPath}", fileName: "${fileName}", result: ${result}`);
     return result;
+};
+
+// 🆕 UPRAVENÁ FUNKCIA: Kontrola, či je stránka prístupná pre neprihláseného používateľa
+// Berie do úvahy nastavenia viditeľnosti z databázy
+const isPageAccessibleForGuest = async () => {
+    // Ak to nie je HTML stránka, je vždy prístupná
+    if (!isHtmlPage()) {
+        return true;
+    }
+    
+    const currentPath = window.location.pathname;
+    const fileName = getFileNameFromPath(currentPath);
+    
+    // Ak stránka nie je v zozname publicPages, nie je prístupná
+    if (!publicPages.includes(fileName)) {
+        console.log(`AuthManager: Stránka "${fileName}" nie je v zozname verejných stránok.`);
+        return false;
+    }
+    
+    // Ak je to index.html, vždy je prístupná
+    if (fileName === 'index.html') {
+        return true;
+    }
+    
+    // Skontrolujeme nastavenia viditeľnosti z databázy
+    // Odstránime .html z názvu pre vyhľadávanie v databáze
+    const pageId = fileName.replace('.html', '');
+    const isVisible = await isPageVisibleInSettings(pageId);
+    
+    if (!isVisible) {
+        console.log(`AuthManager: Stránka "${fileName}" je skrytá v nastaveniach, NIE JE prístupná pre neprihlásených.`);
+        return false;
+    }
+    
+    console.log(`AuthManager: Stránka "${fileName}" je verejná a prístupná pre neprihlásených.`);
+    return true;
 };
 
 // Pomocná funkcia na kontrolu, či je stránka dostupná LEN pre neprihlásených používateľov
@@ -355,6 +458,7 @@ const checkRegistrationTimer = (userProfileData) => {
     }
 };
 
+// 🆕 UPRAVENÁ FUNKCIA: Spracovanie stavu autentifikácie
 const handleAuthState = async () => {
     onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
@@ -504,22 +608,30 @@ const handleAuthState = async () => {
                 return;
             }
             
-            const isCurrentPagePublic = isPublicPage();
             const currentFileName = getFileNameFromPath(window.location.pathname);
             
-            console.log(`AuthManager: Neprihlásený používateľ na stránke "${currentFileName}". Je verejná? ${isCurrentPagePublic}`);
+            // 🆕 KONTROLA: Je stránka prístupná pre neprihlásených podľa nastavení viditeľnosti?
+            const isAccessible = await isPageAccessibleForGuest();
             
-            // Ak stránka nie je verejná, presmerujeme na login
-            if (!isCurrentPagePublic) {
-                console.log("AuthManager: Neprihlásený používateľ na neverejnej stránke. Presmerovávam na login.");
-                const loginUrl = `${appBasePath}/login.html`;
-                console.log(`AuthManager: Presmerúvam na: ${loginUrl}`);
-                window.location.href = loginUrl;
+            console.log(`AuthManager: Neprihlásený používateľ na stránke "${currentFileName}". Je prístupná? ${isAccessible}`);
+            
+            // Ak stránka nie je prístupná pre neprihlásených, presmerujeme na index.html
+            if (!isAccessible) {
+                console.log(`AuthManager: Neprihlásený používateľ na skrytej stránke "${currentFileName}". Presmerovávam na index.html.`);
+                const indexUrl = `${appBasePath}/index.html`;
+                console.log(`AuthManager: Presmerúvam na: ${indexUrl}`);
+                window.location.href = indexUrl;
                 return;
             }
             
-            // Ak je na verejnej stránke, necháme ho tam
-            console.log("AuthManager: Neprihlásený používateľ na verejnej stránke. Žiadne presmerovanie.");
+            // Ak je stránka v zozname guestOnlyPages, necháme ho tam (to sú stránky ako login, register)
+            if (isGuestOnlyPage()) {
+                console.log(`AuthManager: Neprihlásený používateľ na guest-only stránke "${currentFileName}". Žiadne presmerovanie.`);
+                return;
+            }
+            
+            // Ak je na verejnej a prístupnej stránke, necháme ho tam
+            console.log(`AuthManager: Neprihlásený používateľ na verejnej stránke "${currentFileName}". Žiadne presmerovanie.`);
         }
 
         window.addEventListener('beforeunload', () => {
