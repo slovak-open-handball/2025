@@ -1734,23 +1734,6 @@ const AddTeamsGroupApp = (props) => {
                                     },
                                     `${pos}. ${mappedDisplayName}${hasDuplicate ? '' : ''}`
                                 )
-                            ),
-                            React.createElement(
-                                'div',
-                                { className: 'flex items-center space-x-1' },
-                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
-                                showAccommodationCircle && React.createElement('div', {
-                                    className: 'w-3 h-3 rounded-full flex-shrink-0',
-                                    style: { 
-                                        backgroundColor: getTeamAccommodationColor(team, categoryName), 
-                                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
-                                    },
-                                    title: (() => {
-                                        const color = getTeamAccommodationColor(team, categoryName);
-                                        if (color === '#ffff00') return 'Tím nemá priradenú ubytovňu';
-                                        return 'Tím má priradenú ubytovňu';
-                                    })()
-                                })
                             )
                         )
                     );
