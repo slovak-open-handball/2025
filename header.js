@@ -221,7 +221,6 @@ const handleLogout = async () => {
         
         window.location.href = 'login.html';
     } catch (error) {
-        console.error("header.js: Chyba pri odhlásení:", error);
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
     }
 };
@@ -245,7 +244,6 @@ const getHeaderColorByRole = (role) => {
 
 const setupUserSettingsListener = (userId) => {
     if (!window.db || !userId) {
-        console.warn("header.js: Chýba db alebo userId pre nastavenie listenera používateľa.");
         return null;
     }
     
@@ -269,11 +267,8 @@ const setupUserSettingsListener = (userId) => {
             if (window.globalUserProfileData) {
                 window.globalUserProfileData.displayNotifications = currentDisplayNotifications;
             }
-        } else {
-            console.warn("header.js: Dokument používateľa neexistuje!");
-        }
+        } 
     }, (error) => {
-        console.error("header.js: Chyba pri počúvaní nastavení používateľa:", error);
     });
 };
 
@@ -282,7 +277,6 @@ const loadInitialDisplayNotifications = async (userId) => {
         return currentDisplayNotifications;
     }    
     if (!window.db || !userId) {
-        console.warn("header.js: Chýba db alebo userId pre načítanie nastavení.");
         return false;
     }
     
@@ -294,11 +288,8 @@ const loadInitialDisplayNotifications = async (userId) => {
             const initialValue = userData.displayNotifications || false;            
             currentDisplayNotifications = initialValue;            
             return initialValue;
-        } else {
-            console.warn("header.js: Dokument používateľa neexistuje!");
-        }
+        } 
     } catch (e) {
-        console.error("header.js: Chyba pri načítaní počiatočnej hodnoty displayNotifications:", e);
     }
     return false;
 };
@@ -306,7 +297,6 @@ const loadInitialDisplayNotifications = async (userId) => {
 // Načítanie viditeľnosti stránok z Firestore
 const loadPagesVisibility = async () => {
     if (!window.db) {
-        console.warn("header.js: Chýba db pre načítanie viditeľnosti stránok.");
         return;
     }
 
@@ -324,21 +314,17 @@ const loadPagesVisibility = async () => {
                     label: data.label || doc.id
                 };
             });
-        }
-        
-        console.log("header.js: Načítaná viditeľnosť stránok:", pagesVisibility);
+        }       
         
         // Aktualizujeme navigáciu po načítaní viditeľnosti stránok
         updateNavigationLinks();
     } catch (error) {
-        console.error("header.js: Chyba pri načítaní viditeľnosti stránok:", error);
     }
 };
 
 // Nastavenie listenera pre zmeny viditeľnosti stránok
 const setupPagesVisibilityListener = () => {
     if (!window.db) {
-        console.warn("header.js: Chýba db pre nastavenie listenera viditeľnosti stránok.");
         return;
     }
 
@@ -358,20 +344,16 @@ const setupPagesVisibilityListener = () => {
                 visible: data.visible !== undefined ? data.visible : false,
                 label: data.label || doc.id
             };
-        });
-        
-        console.log("header.js: Zmena viditeľnosti stránok (listener):", pagesVisibility);
+        });       
         
         // Aktualizujeme navigáciu pri každej zmene
         updateNavigationLinks();
     }, (error) => {
-        console.error("header.js: Chyba pri počúvaní zmien viditeľnosti stránok:", error);
     });
 };
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
-    console.log("header.js: Aktualizujem navigačné odkazy, pagesVisibility:", pagesVisibility);
     
     // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
@@ -379,9 +361,7 @@ const updateNavigationLinks = () => {
     navLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;
-        
-        console.log(`header.js: Stránka '${pageId}' - viditeľná: ${isVisible}`);
+        const isVisible = pageConfig && pageConfig.visible === true;        
         
         // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
@@ -419,9 +399,7 @@ const initializeNavigationVisibility = () => {
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         registerLink.classList.add('hidden');
-    }
-    
-    console.log("header.js: Inicializovaná viditeľnosť - všetky odkazy skryté okrem home");
+    }    
 };
 
 // Kontrola prístupu k aktuálnej stránke
@@ -444,7 +422,6 @@ const checkCurrentPageAccess = () => {
     
     // Ak je stránka skrytá, presmerujeme na hlavnú stránku
     if (pageConfig.visible === false) {
-        console.warn(`header.js: Stránka '${currentPage}' je skrytá, presmerovanie na hlavnú stránku.`);
         window.location.href = 'index.html';
         return false;
     }
@@ -459,7 +436,6 @@ const updateHeaderLinks = (userProfileData) => {
     const headerElement = document.querySelector('header');
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
-        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
         return;
     }
 
@@ -511,7 +487,6 @@ const updateHeaderLinks = (userProfileData) => {
                         setupNotificationListenerForAdmin(userProfileData);
                     }
                 }).catch(error => {
-                    console.error("CHYBA pri loadInitialDisplayNotifications:", error);
                 });
             } 
         } else {            
@@ -567,18 +542,15 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     }
     
     if (!userProfileData || userProfileData.role !== 'admin') {
-        console.log("header.js: Notifikácie nastavené len pre adminov.");
         return;
     }
     
     if (window.isAnonymousUser === true) {
-        console.log("header.js: Anonymný používateľ nemôže mať notifikácie.");
         return;
     }
     
     notificationListenerSetupCount++;    
     if (!window.db) {
-        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
     }    
     const notificationsCollectionRef = collection(window.db, "notifications");    
@@ -662,19 +634,16 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                             seenBy: arrayUnion(userId)
                         });
                     } catch (e) {
-                        console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                     }
                 }
             }
         });
     }, (error) => {
-        console.error("", error);
     });
 };
 
 const setupFirestoreListeners = () => {    
     if (!window.db) {
-        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
         return; 
     }
     if (isFirestoreListenersSetup) {
@@ -688,12 +657,10 @@ const setupFirestoreListeners = () => {
                 window.registrationDates = docSnap.data();
             } else {
                 window.registrationDates = null;
-                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
             window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
             window.isRegistrationDataLoaded = true;
             updateHeaderLinks(window.globalUserProfileData);
         });
@@ -705,14 +672,12 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = Object.keys(categories).length > 0;
             } else {
                 window.hasCategories = false;
-                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
@@ -753,7 +718,6 @@ const setupFirestoreListeners = () => {
         isFirestoreListenersSetup = true;
 
     } catch (error) {
-        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
     }
 };
 
@@ -777,8 +741,6 @@ window.loadHeaderAndScripts = async () => {
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
-        } else {
-            console.warn("header.js: Tlačidlo logout-button nebolo nájdené!");
         }
         
         window.addEventListener('globalDataUpdated', (event) => {
@@ -792,7 +754,6 @@ window.loadHeaderAndScripts = async () => {
              updateHeaderLinks(window.globalUserProfileData);
         }
     } catch (error) {
-        console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
 
