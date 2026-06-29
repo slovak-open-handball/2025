@@ -390,7 +390,7 @@ const setupPagesVisibilityListener = () => {
 
 // NOVÁ FUNKCIA: Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {
-    // Získame všetky navigačné odkazy, ktoré majú data-page atribút
+    // 1. Spracovanie všetkých odkazov s data-page atribútom
     const navLinks = document.querySelectorAll('[data-page]');
     
     navLinks.forEach(link => {
@@ -410,7 +410,8 @@ const updateNavigationLinks = () => {
         }
     });
 
-    // Špeciálne spracovanie pre "teams-in-groups" - zachováme kompatibilitu
+    // 2. Špeciálne spracovanie pre "teams-in-groups" - už má data-page atribút
+    // Toto je už pokryté vyššie, ale necháme pre istotu
     const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
     if (teamsInGroupsLink) {
         const pageConfig = pagesVisibility['teams-in-groups'];
@@ -427,22 +428,27 @@ const updateNavigationLinks = () => {
         }
     }
 
-    // Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
+    // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
-        // Toto je už spracované v updateRegistrationLinkVisibility, ale pre istotu
-        // necháme pôvodnú logiku
         updateRegistrationLinkVisibility(window.globalUserProfileData);
+    }
+
+    // 4. Home link - vždy viditeľný
+    const homeLink = document.getElementById('home-link');
+    if (homeLink) {
+        homeLink.classList.remove('hidden');
     }
 };
 
 // NOVÁ FUNKCIA: Kontrola prístupu k aktuálnej stránke
 const checkCurrentPageAccess = () => {
     // Získame názov aktuálnej stránky z URL
-    const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+    const currentPath = window.location.pathname;
+    const currentPage = currentPath.split('/').pop().replace('.html', '');
     
     // Ak sme na hlavnej stránke alebo login/register, neblokujeme
-    if (currentPage === '' || currentPage === 'index' || currentPage === 'login' || currentPage === 'register') {
+    if (currentPage === '' || currentPage === 'index' || currentPage === 'login' || currentPage === 'register' || currentPage === 'logged-in-registration') {
         return true;
     }
     
