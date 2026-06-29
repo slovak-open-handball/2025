@@ -149,25 +149,19 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
         const changesDescription = changedPages
-          .map(p => `${p.label}: ${p.visible ? 'verejná' : 'skrytá'}`)
+          .map(p => {
+            const original = originalPages.find(op => op.id === p.id);
+            const originalStatus = original ? (original.visible ? 'verejná' : 'skrytá') : 'skrytá';
+            const newStatus = p.visible ? 'verejná' : 'skrytá';
+            return `${p.label}: z '${originalStatus}' na '${newStatus}'`;
+          })
           .join('; ');
-        
-        // Nájdeme pôvodné dáta pre zmenené stránky
-        const originalChangedPages = changedPages.map(page => {
-          const original = originalPages.find(p => p.id === page.id);
-          return {
-            id: page.id,
-            label: page.label,
-            visible: original ? original.visible : false
-          };
-        });
         
         await sendAdminNotification({
           type: 'updatePagesSettings',
           data: {
             changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
             changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
-            originalPages: originalChangedPages, // Pridanie pôvodných dát
           }
         });
       }
