@@ -1,9 +1,6 @@
-// Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
-// Leaflet + Font Awesome
 const leafletCSS = document.createElement('link');
 leafletCSS.rel = 'stylesheet';
 leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -15,7 +12,6 @@ const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
 document.head.appendChild(faCSS);
-// Globálne predvolené hodnoty (fallback)
 const DEFAULT_CENTER = [49.195340, 18.786106];
 const DEFAULT_ZOOM = 13;
 // Typy a ikony značiek
@@ -71,17 +67,9 @@ const MapApp = ({ userProfileData }) => {
     const [defaultZoom, setDefaultZoom] = useState(DEFAULT_ZOOM);
     const [activeFilter, setActiveFilter] = useState(null);
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
-    const [hashProcessed, setHashProcessed] = useState(false);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const markersRef = useRef({});
-    const currentSelectedIdRef = useRef(null);
     const [newCapacity, setNewCapacity] = useState('');
-    const [isAddingPlace, setIsAddingPlace] = useState(false);
-    const [tempAddPosition, setTempAddPosition] = useState(null);
     const tempMarkerRef = useRef(null);
-    const moveHandlerRef = useRef(null);
-    const addClickHandlerRef = useRef(null);
-    const [selectedAddPosition, setSelectedAddPosition] = useState(null);
     const [editCapacity, setEditCapacity] = useState('');
     const [nameTypeError, setNameTypeError] = useState(null);
     const [accommodationTypes, setAccommodationTypes] = useState([]);
@@ -91,7 +79,6 @@ const MapApp = ({ userProfileData }) => {
     const [allPlaces, setAllPlaces] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
-    const [newPlaceNote, setNewPlaceNote] = useState('');
     const [editNote, setEditNote] = useState('');
     // Premenné pre cenu ubytovania
     const [newPricePerNight, setNewPricePerNight] = useState('');
@@ -133,21 +120,6 @@ const MapApp = ({ userProfileData }) => {
     const formatPrice = (price) => {
         if (price == null) return '';
         return price.toFixed(2).replace('.', ',');
-    };
-
-    const waitForMarkerRender = () => {
-      return new Promise((resolve) => {
-        const check = () => {
-          if (tempMarkerRef.current && mapRef.current && leafletMap.current) {
-            requestAnimationFrame(() => {
-              resolve();
-            });
-          } else {
-            setTimeout(check, 50);
-          }
-        };
-        check();
-      });
     };
   
     const accommodationAvailabilityEdit = useMemo(() => {
@@ -1434,78 +1406,6 @@ const MapApp = ({ userProfileData }) => {
         }
     };
     
-    const handleSaveNewLocation = async () => {
-        if (!selectedPlace || !tempLocation || !window.db) return;
-  
-        try {
-            const placeRef = doc(window.db, 'places', selectedPlace.id);
-  
-            const originalLocation = {
-                lat: selectedPlace.lat,
-                lng: selectedPlace.lng,
-            };
-  
-            const newLocation = {
-                lat: tempLocation.lat,
-                lng: tempLocation.lng,
-            };
-  
-            await updateDoc(placeRef, {
-                location: new GeoPoint(tempLocation.lat, tempLocation.lng),
-                lat: tempLocation.lat,
-                lng: tempLocation.lng,
-                updatedAt: Timestamp.now(),
-            });
-  
-            // Notifikácia iba ak sa súradnice zmenili
-            if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
-                const changesList = [];
-                const placeTypeLabel = typeLabels[selectedPlace.type] || selectedPlace.type || 'neznámy typ';
-                changesList.push(`Úprava miesta: '''${selectedPlace.name || '(bez názvu)'} (${placeTypeLabel})'`);
-                changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
-          
-                await createPlaceChangeNotification('place_field_updated', changesList, {
-                    id: selectedPlace.id,
-                    name: selectedPlace.name,
-                    type: selectedPlace.type,
-                });
-            }
-  
-            setSelectedPlace(prev => prev ? {
-                ...prev,
-                lat: tempLocation.lat,
-                lng: tempLocation.lng
-            } : null);
-  
-            window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
-            setIsEditingLocation(false);
-            setTempLocation(null);
-  
-            if (editMarkerRef.current) {
-                if (editMarkerRef.current._clickHandler) {
-                    leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-                }
-                editMarkerRef.current.remove();
-                editMarkerRef.current = null;
-            }
-        } catch (err) {
-            console.error("Chyba pri ukladaní novej polohy:", err);
-            window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
-        }
-    };
-    
-    const handleCancelEditLocation = () => {
-        setIsEditingLocation(false);
-        setTempLocation(null);
-        if (editMarkerRef.current) {
-            if (editMarkerRef.current._clickHandler) {
-                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
-            }
-            editMarkerRef.current.remove();
-            editMarkerRef.current = null;
-        }
-    };
-    
     const confirmDeletePlace = async () => {
         if (!placeToDelete || !window.db) return;
         try {
@@ -1737,9 +1637,6 @@ const MapApp = ({ userProfileData }) => {
             
             setTimeout(() => leafletMap.current?.invalidateSize(), 400);
             console.log("Mapa inicializovaná na fallback súradniciach");
-            leafletMap.current.on('click', (e) => {
-                console.log("RAW MAP CLICK EVENT FIRED", e.latlng);
-            });
         };
         
         if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
