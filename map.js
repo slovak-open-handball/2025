@@ -1729,36 +1729,7 @@ const MapApp = ({ userProfileData }) => {
                 return new L.Control.ZoomHome(options);
             };
             L.control.zoomHome().addTo(leafletMap.current);
-            
-            // Tlačidlo ★
-            const setGlobalHome = L.control({ position: 'topright' });
-            setGlobalHome.onAdd = function (map) {
-                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
-                div.firstChild.onclick = async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const center = map.getCenter();
-                    const zoom = map.getZoom();
-                    try {
-                        await setDoc(globalViewRef, {
-                            center: { lat: center.lat, lng: center.lng },
-                            zoom: zoom,
-                            updatedAt: Timestamp.now()
-                        }, { merge: true });
-                        setDefaultCenter([center.lat, center.lng]);
-                        setDefaultZoom(zoom);
-                        map.setView([center.lat, center.lng], zoom, { animate: true });
-                        window.showGlobalNotification('Globálne východzie uložené a nastavené!', 'success');
-                    } catch (err) {
-                        console.error('Chyba pri ukladaní:', err);
-                        window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
-                    }
-                };
-                return div;
-            };
-            setGlobalHome.addTo(leafletMap.current);
-            
+                        
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
                 console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
