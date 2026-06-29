@@ -2416,38 +2416,7 @@ return React.createElement(
     'div',
     { className: 'flex flex-col w-full relative text-[87.5%]' },
     React.createElement(NotificationPortal, null),
-    React.createElement(
-        'div',
-        { className: 'w-full max-w-xs mx-auto mb-8' },
-        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2' }, 'Vyberte kategóriu:'),
-        React.createElement(
-            'select',
-            {
-                className: 'w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200',
-                value: selectedCategoryId,
-                onChange: handleCategorySelect
-            },
-            React.createElement('option', { value: '' }, 'Všetky kategórie'),
-            sortedCategoryEntries.map(([id, name]) => React.createElement('option', { key: id, value: id }, name))
-        ),
-        
-        // PÔVODNÝ SELECTBOX: Skupina - teraz filtrovaný podľa typu
-        React.createElement('label', { className: 'block text-center text-xl font-semibold mb-2 mt-4' }, 'Vyberte skupinu (voliteľné):'),
-        React.createElement(
-            'select',
-            {
-                className: `w-full px-4 py-2 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${!selectedCategoryId ? 'opacity-50' : ''}`,
-                value: selectedGroupName,
-                onChange: handleGroupSelect,
-                disabled: !selectedCategoryId,
-                style: { cursor: !selectedCategoryId ? 'not-allowed' : 'pointer' }
-            },
-            React.createElement('option', { value: '' }, 'Zobraziť všetky skupiny'),
-            availableGroupsForSelect.map((group, index) =>
-                React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type})`)
-            )
-        )
-    ),
+
         selectedCategoryId
             ? renderSingleCategoryView()
             : React.createElement(
