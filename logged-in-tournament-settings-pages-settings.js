@@ -6,83 +6,110 @@ import { collection, getDocs, doc, setDoc, Timestamp } from "https://www.gstatic
 const { useState, useEffect } = React;
 
 function PagesSettings({ db, showNotification, sendAdminNotification }) {
-  const [pageSettings, setPageSettings] = useState(null);
+  const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [originalSettings, setOriginalSettings] = useState(null);
+  const [originalPages, setOriginalPages] = useState([]);
 
-  // Definícia stránky pre rozlosovanie tímov do skupín
-  const PAGE_DEFINITION = {
-    id: 'teamDraw',
-    label: 'Rozlosovanie tímov do skupín',
-    defaultVisible: true
-  };
+  // Definícia všetkých dostupných stránok
+  const PAGE_DEFINITIONS = [
+    { id: 'home', label: 'Domovská stránka', defaultVisible: true },
+    { id: 'tournament', label: 'Turnaj', defaultVisible: true },
+    { id: 'matches', label: 'Zápasy', defaultVisible: true },
+    { id: 'tables', label: 'Tabuľky', defaultVisible: true },
+    { id: 'registration', label: 'Registrácia', defaultVisible: true },
+    { id: 'myData', label: 'Moje údaje', defaultVisible: true },
+    { id: 'hallPanel', label: 'Panel pre haly', defaultVisible: true },
+    { id: 'adminPanel', label: 'Administrátorský panel', defaultVisible: true },
+    // Pridajte ďalšie stránky podľa potreby
+  ];
 
-  // Načítanie nastavení stránky z Firestore
+  // Načítanie nastavení stránok z Firestore
   useEffect(() => {
     if (!db) return;
 
-    const fetchPageSettings = async () => {
+    const fetchPages = async () => {
       try {
         setLoading(true);
-        const pageRef = doc(db, 'pages', PAGE_DEFINITION.id);
-        const pageDoc = await getDoc(pageRef);
+        const pagesRef = collection(db, 'pages');
+        const pagesSnapshot = await getDocs(pagesRef);
         
-        if (pageDoc.exists()) {
-          // Načítame existujúce nastavenia
-          const data = pageDoc.data();
-          setPageSettings({
-            id: PAGE_DEFINITION.id,
-            label: data.label || PAGE_DEFINITION.label,
-            visible: data.visible !== undefined ? data.visible : PAGE_DEFINITION.defaultVisible,
-          });
+        if (pagesSnapshot.empty) {
+          // Ak kolekcia neexistuje, vytvoríme predvolené nastavenia
+          const defaultPages = PAGE_DEFINITIONS.map(page => ({
+            id: page.id,
+            label: page.label,
+            visible: page.defaultVisible,
+          }));
+          setPages(defaultPages);
+          setOriginalPages(JSON.parse(JSON.stringify(defaultPages)));
         } else {
-          // Ak dokument neexistuje, vytvoríme predvolené nastavenia
-          const defaultSettings = {
-            id: PAGE_DEFINITION.id,
-            label: PAGE_DEFINITION.label,
-            visible: PAGE_DEFINITION.defaultVisible,
-          };
-          setPageSettings(defaultSettings);
+          // Načítame existujúce nastavenia
+          const pagesData = [];
+          pagesSnapshot.forEach(doc => {
+            const data = doc.data();
+            pagesData.push({
+              id: doc.id,
+              label: data.label || doc.id,
+              visible: data.visible !== undefined ? data.visible : true,
+            });
+          });
+          
+          // Skontrolujeme, či máme všetky definované stránky
+          const existingIds = new Set(pagesData.map(p => p.id));
+          const missingPages = PAGE_DEFINITIONS
+            .filter(p => !existingIds.has(p.id))
+            .map(p => ({
+              id: p.id,
+              label: p.label,
+              visible: p.defaultVisible,
+            }));
+          
+          const allPages = [...pagesData, ...missingPages];
+          setPages(allPages);
+          setOriginalPages(JSON.parse(JSON.stringify(allPages)));
         }
-        
-        // Uložíme pôvodné nastavenia pre porovnanie
-        setOriginalSettings(JSON.parse(JSON.stringify(pageSettings || defaultSettings)));
       } catch (error) {
         if (showNotification) {
-          showNotification(`Chyba pri načítaní nastavení stránky: ${error.message}`, 'error');
+          showNotification(`Chyba pri načítaní nastavení stránok: ${error.message}`, 'error');
         } else {
-          console.error('Chyba pri načítaní nastavení stránky:', error);
+          console.error('Chyba pri načítaní nastavení stránok:', error);
         }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPageSettings();
+    fetchPages();
   }, [db, showNotification]);
 
   // Zmena viditeľnosti stránky
-  const handleToggleVisibility = () => {
-    if (pageSettings) {
-      setPageSettings({
-        ...pageSettings,
-        visible: !pageSettings.visible
-      });
-      setHasChanges(true);
-    }
+  const handleToggleVisibility = (pageId) => {
+    setPages(prevPages => 
+      prevPages.map(page => 
+        page.id === pageId 
+          ? { ...page, visible: !page.visible }
+          : page
+      )
+    );
+    setHasChanges(true);
   };
 
   // Uloženie zmien do Firestore
   const handleSave = async () => {
-    if (!db || !pageSettings) return;
+    if (!db) return;
     
     try {
       setSaving(true);
       
-      // Zistíme, či nastala zmena
-      if (originalSettings && originalSettings.visible === pageSettings.visible) {
+      // Zistíme, ktoré stránky sa zmenili
+      const changedPages = pages.filter(page => {
+        const original = originalPages.find(p => p.id === page.id);
+        return original && original.visible !== page.visible;
+      });
+
+      if (changedPages.length === 0) {
         if (showNotification) {
           showNotification('Žiadne zmeny na uloženie.', 'info');
         }
@@ -90,41 +117,43 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
         return;
       }
 
-      // Uložíme nastavenia stránky
-      const pageRef = doc(db, 'pages', pageSettings.id);
-      await setDoc(pageRef, {
-        label: pageSettings.label,
-        visible: pageSettings.visible,
-        updatedAt: Timestamp.fromDate(new Date()),
-      }, { merge: true });
+      // Uložíme každú zmenenú stránku
+      for (const page of changedPages) {
+        const pageRef = doc(db, 'pages', page.id);
+        await setDoc(pageRef, {
+          label: page.label,
+          visible: page.visible,
+          updatedAt: Timestamp.fromDate(new Date()),
+        }, { merge: true });
+      }
 
       // Aktualizujeme pôvodné dáta
-      setOriginalSettings(JSON.parse(JSON.stringify(pageSettings)));
+      setOriginalPages(JSON.parse(JSON.stringify(pages)));
       setHasChanges(false);
 
       // Odošleme notifikáciu administrátorom
       if (sendAdminNotification) {
+        const changesDescription = changedPages
+          .map(p => `${p.label}: ${p.visible ? 'viditeľná' : 'skrytá'}`)
+          .join('; ');
+        
         await sendAdminNotification({
           type: 'updatePagesSettings',
           data: {
-            changesMade: `Zmena viditeľnosti stránky "${pageSettings.label}": ${pageSettings.visible ? 'viditeľná' : 'skrytá'}`,
-            changedPages: [{
-              id: pageSettings.id,
-              label: pageSettings.label,
-              visible: pageSettings.visible
-            }],
+            changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
+            changedPages: changedPages.map(p => ({ id: p.id, label: p.label, visible: p.visible })),
           }
         });
       }
 
       if (showNotification) {
-        showNotification('Nastavenia stránky boli úspešne uložené!', 'success');
+        showNotification('Nastavenia stránok boli úspešne uložené!', 'success');
       }
     } catch (error) {
       if (showNotification) {
-        showNotification(`Chyba pri ukladaní nastavení stránky: ${error.message}`, 'error');
+        showNotification(`Chyba pri ukladaní nastavení stránok: ${error.message}`, 'error');
       } else {
-        console.error('Chyba pri ukladaní nastavení stránky:', error);
+        console.error('Chyba pri ukladaní nastavení stránok:', error);
       }
     } finally {
       setSaving(false);
@@ -133,12 +162,10 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Reset zmien
   const handleReset = () => {
-    if (originalSettings) {
-      setPageSettings(JSON.parse(JSON.stringify(originalSettings)));
-      setHasChanges(false);
-      if (showNotification) {
-        showNotification('Zmeny boli zahodené.', 'info');
-      }
+    setPages(JSON.parse(JSON.stringify(originalPages)));
+    setHasChanges(false);
+    if (showNotification) {
+      showNotification('Zmeny boli zahodené.', 'info');
     }
   };
 
@@ -150,21 +177,13 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     );
   }
 
-  if (!pageSettings) {
-    return React.createElement(
-      'div',
-      { className: 'text-center py-8 text-gray-500' },
-      'Nepodarilo sa načítať nastavenia stránky.'
-    );
-  }
-
   return React.createElement(
     'div',
     { className: 'space-y-6' },
     React.createElement(
       'div',
       { className: 'flex justify-between items-center' },
-      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránky'),
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Nastavenia viditeľnosti stránok'),
       React.createElement(
         'div',
         { className: 'flex gap-3' },
@@ -194,44 +213,49 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     React.createElement(
       'p',
       { className: 'text-gray-600 text-sm' },
-      'Tu môžete zapnúť alebo vypnúť viditeľnosť stránky "Rozlosovanie tímov do skupín" v aplikácii.'
+      'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre bežných používateľov.'
     ),
     React.createElement(
       'div',
       { className: 'bg-gray-50 rounded-lg overflow-hidden border border-gray-200' },
       React.createElement(
         'div',
-        { className: 'p-4' },
-        React.createElement(
-          'div',
-          { className: 'flex items-center justify-between' },
+        { className: 'grid grid-cols-1 divide-y divide-gray-200' },
+        pages.map((page) =>
           React.createElement(
             'div',
-            { className: 'flex items-center gap-4' },
-            React.createElement('span', { className: 'font-medium text-gray-800' }, pageSettings.label),
-            React.createElement('span', { className: 'text-sm text-gray-500' }, `(ID: ${pageSettings.id})`)
-          ),
-          React.createElement(
-            'div',
-            { className: 'flex items-center gap-3' },
+            {
+              key: page.id,
+              className: 'flex items-center justify-between p-4 hover:bg-gray-100 transition-colors'
+            },
             React.createElement(
-              'span',
-              { className: `text-sm ${pageSettings.visible ? 'text-green-600' : 'text-red-500'}` },
-              pageSettings.visible ? 'Viditeľná' : 'Skrytá'
+              'div',
+              { className: 'flex items-center gap-4' },
+              React.createElement('span', { className: 'font-medium text-gray-800' }, page.label),
+              React.createElement('span', { className: 'text-sm text-gray-500' }, `(ID: ${page.id})`)
             ),
             React.createElement(
-              'button',
-              {
-                onClick: handleToggleVisibility,
-                className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  pageSettings.visible ? 'bg-blue-600' : 'bg-gray-300'
-                }`
-              },
-              React.createElement('span', {
-                className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  pageSettings.visible ? 'translate-x-6' : 'translate-x-1'
-                }`
-              })
+              'div',
+              { className: 'flex items-center gap-3' },
+              React.createElement(
+                'span',
+                { className: `text-sm ${page.visible ? 'text-green-600' : 'text-red-500'}` },
+                page.visible ? 'Viditeľná' : 'Skrytá'
+              ),
+              React.createElement(
+                'button',
+                {
+                  onClick: () => handleToggleVisibility(page.id),
+                  className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    page.visible ? 'bg-blue-600' : 'bg-gray-300'
+                  }`
+                },
+                React.createElement('span', {
+                  className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    page.visible ? 'translate-x-6' : 'translate-x-1'
+                  }`
+                })
+              )
             )
           )
         )
