@@ -15,8 +15,8 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
+    { id: 'teams-in-groups', label: 'Rozlosovanie tímov do skupín', defaultVisible: false },
     { id: 'matches', label: 'Zápasy', defaultVisible: false },
-    { id: 'tables', label: 'Tabuľky', defaultVisible: false },
   ];
 
   // Načítanie nastavení stránok z Firestore
