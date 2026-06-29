@@ -152,42 +152,11 @@ const isAppCheckSupported = () => {
     }
 };
 
-// 🆕 Funkcia na nastavenie debug tokenu pre lokálny vývoj
-const setupAppCheckDebug = () => {
-    // Debug token sa nastavuje len pre lokálny vývoj (localhost)
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' ||
-                        window.location.hostname === '';
-    
-    if (isLocalhost) {
-        // Povolenie debug tokenu pre lokálny vývoj
-        // Po prvom načítaní sa v konzole zobrazí debug token, ktorý treba zaregistrovať vo Firebase Console
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-        console.log("AuthManager: 🔧 App Check debug mód aktivovaný pre localhost. Skontroluj konzolu pre debug token.");
-        
-        // Upozornenie pre vývojára
-        console.log("%c⚠️ App Check Debug Mód aktívny! Nezabudni zaregistrovať debug token vo Firebase Console → App Check → Debug tokens", "color: orange; font-size: 14px;");
-    }
-};
-
 const setupFirebase = () => {
     try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        
-        // 🆕 Dočasne vypnutý App Check - aktivuj neskôr
-        // if (isAppCheckSupported()) {
-        //     setupAppCheckDebug();
-        //     
-        //     appCheck = initializeAppCheck(app, {
-        //         provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
-        //         isTokenAutoRefreshEnabled: true
-        //     });
-        //     console.log("AuthManager: ✅ Firebase App Check inicializovaný s reCAPTCHA Enterprise.");
-        // } else {
-        //     console.warn("AuthManager: ⚠️ App Check nie je podporovaný, pokračujem bez neho.");
-        // }
         
         console.log("AuthManager: Firebase inicializovaný.");
 
