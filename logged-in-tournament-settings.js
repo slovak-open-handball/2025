@@ -186,7 +186,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             const originalPage = notificationData.data.originalPages?.find(p => p.id === page.id);
             // Bezpečné určenie pôvodného a nového stavu
             let originalStatus = 'skrytá';
-            let newStatus = 'skrytá';
+            let newStatus = 'verejná';
             
             if (originalPage && originalPage.visible !== undefined) {
               originalStatus = originalPage.visible ? 'verejná' : 'skrytá';
