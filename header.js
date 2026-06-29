@@ -412,13 +412,6 @@ const initializeNavigationVisibility = () => {
         registerLink.classList.add('hidden');
         registerLink.style.display = 'none';
     }
-
-    // Mapa je predvolene skrytá, ale bude sa kontrolovať v updateNavigationLinks
-    const mapLink = document.getElementById('map-link');
-    if (mapLink) {
-        mapLink.classList.add('hidden');
-        mapLink.style.display = 'none';
-    }
 };
 
 // Kontrola prístupu k aktuálnej stránke
