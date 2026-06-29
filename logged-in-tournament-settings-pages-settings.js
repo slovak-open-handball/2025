@@ -9,9 +9,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [originalPages, setOriginalPages] = useState([]);
-  const [collectionExists, setCollectionExists] = useState(false);
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
@@ -45,17 +42,14 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
         
         if (pagesSnapshot.empty) {
           // Ak kolekcia neexistuje, vytvoríme predvolené nastavenia (všetky skryté)
-          setCollectionExists(false);
           const defaultPages = PAGE_DEFINITIONS.map(page => ({
             id: page.id,
             label: page.label,
             visible: false, // Všetky stránky budú skryté
           }));
           setPages(defaultPages);
-          setOriginalPages(JSON.parse(JSON.stringify(defaultPages)));
         } else {
           // Načítame existujúce nastavenia
-          setCollectionExists(true);
           const pagesData = [];
           pagesSnapshot.forEach(doc => {
             const data = doc.data();
@@ -80,7 +74,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           // Zoradíme stránky podľa PAGE_DEFINITIONS
           const sortedPages = sortPagesByDefinition(allPages);
           setPages(sortedPages);
-          setOriginalPages(JSON.parse(JSON.stringify(sortedPages)));
         }
       } catch (error) {
         if (showNotification) {
@@ -96,114 +89,81 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     fetchPages();
   }, [db, showNotification]);
 
-  // Zmena viditeľnosti stránky
-  const handleToggleVisibility = (pageId) => {
+  // Zmena viditeľnosti stránky - okamžité uloženie
+  const handleToggleVisibility = async (pageId) => {
+    // Nájdeme stránku, ktorú meníme
+    const pageToUpdate = pages.find(p => p.id === pageId);
+    if (!pageToUpdate) return;
+
+    // Nový stav
+    const newVisible = !pageToUpdate.visible;
+    
+    // Aktualizujeme lokálny stav
     setPages(prevPages => {
       const updatedPages = prevPages.map(page => 
         page.id === pageId 
-          ? { ...page, visible: !page.visible }
+          ? { ...page, visible: newVisible }
           : page
       );
-      // Po zmene zachováme zoradenie
       return sortPagesByDefinition(updatedPages);
     });
-    setHasChanges(true);
-  };
 
-  // Uloženie zmien do Firestore
-  const handleSave = async () => {
-    if (!db) return;
-    
+    // Okamžite uložíme do Firestore
     try {
       setSaving(true);
       
-      // Zistíme, ktoré stránky sa zmenili
-      const changedPages = pages.filter(page => {
-        const original = originalPages.find(p => p.id === page.id);
-        return original && original.visible !== page.visible;
-      });
-  
-      if (changedPages.length === 0) {
-        if (showNotification) {
-          showNotification('Žiadne zmeny na uloženie.', 'info');
-        }
-        setSaving(false);
-        return;
+      const pageRef = doc(db, 'pages', pageId);
+      await setDoc(pageRef, {
+        label: pageToUpdate.label,
+        visible: newVisible,
+        updatedAt: Timestamp.fromDate(new Date()),
+      }, { merge: true });
+
+      // Odošleme notifikáciu administrátorom o zmene
+      if (sendAdminNotification) {
+        const statusText = newVisible ? 'verejná' : 'skrytá';
+        const changesDescription = `${pageToUpdate.label}: z '${pageToUpdate.visible ? 'verejná' : 'skrytá'}' na '${statusText}'`;
+        
+        await sendAdminNotification({
+          type: 'updatePagesSettings',
+          data: {
+            changesMade: `Zmena viditeľnosti stránky: ${changesDescription}`,
+            changedPages: [{
+              id: pageId,
+              label: pageToUpdate.label,
+              visible: newVisible,
+              originalVisible: pageToUpdate.visible
+            }],
+            originalPages: pages.map(p => ({ 
+              id: p.id, 
+              label: p.label, 
+              visible: p.id === pageId ? pageToUpdate.visible : p.visible 
+            }))
+          }
+        });
       }
 
-      // Uložíme každú zmenenú stránku
-      for (const page of changedPages) {
-          const pageRef = doc(db, 'pages', page.id);
-          await setDoc(pageRef, {
-            label: page.label,
-            visible: page.visible,
-            updatedAt: Timestamp.fromDate(new Date()),
-          }, { merge: true });
-      }
-  
-      // Aktualizujeme pôvodné dáta
-      setOriginalPages(JSON.parse(JSON.stringify(pages)));
-      setHasChanges(false);
-      setCollectionExists(true);
-  
-      // Odošleme notifikáciu administrátorom
-      if (sendAdminNotification) {
-          const changesDescription = changedPages
-            .map(p => {
-              // Nájdeme pôvodný stav - TERAZ SPRÁVNE
-              const original = originalPages.find(op => op.id === p.id);
-              // Ak nenájdeme pôvodný stav, použijeme predvolenú hodnotu
-              let originalStatus = 'skrytá';
-              let newStatus = 'verejná';
-              
-              if (original) {
-                originalStatus = original.visible ? 'verejná' : 'skrytá';
-              }
-              
-              // Nový stav určíme z aktuálnych dát
-              newStatus = p.visible ? 'verejná' : 'skrytá';
-              
-              // Vytvoríme popis zmeny - SPRÁVNY FORMÁT
-              return `${p.label}: z '${originalStatus}' na '${newStatus}'`;
-            })
-            .join('; ');
-        
-          await sendAdminNotification({
-            type: 'updatePagesSettings',
-            data: {
-              changesMade: `Zmena viditeľnosti stránok: ${changesDescription}`,
-              changedPages: changedPages.map(p => ({ 
-                id: p.id, 
-                label: p.label, 
-                visible: p.visible,
-                // Pridáme aj pôvodný stav pre správne zobrazenie v notifikácii
-                originalVisible: originalPages.find(op => op.id === p.id)?.visible ?? false
-              })),
-              originalPages: originalPages.map(p => ({ id: p.id, label: p.label, visible: p.visible }))
-            }
-          });
-      }
-  
       if (showNotification) {
-        showNotification('Nastavenia stránok boli uložené!', 'success');
+        showNotification(`Nastavenie stránky "${pageToUpdate.label}" bolo uložené!`, 'success');
       }
     } catch (error) {
+      // Ak sa uloženie nepodarí, vrátime pôvodný stav
+      setPages(prevPages => {
+        const revertedPages = prevPages.map(page => 
+          page.id === pageId 
+            ? { ...page, visible: pageToUpdate.visible }
+            : page
+        );
+        return sortPagesByDefinition(revertedPages);
+      });
+
       if (showNotification) {
-        showNotification(`Chyba pri ukladaní nastavení stránok: ${error.message}`, 'error');
+        showNotification(`Chyba pri ukladaní nastavenia stránky: ${error.message}`, 'error');
       } else {
-        console.error('Chyba pri ukladaní nastavení stránok:', error);
+        console.error('Chyba pri ukladaní nastavenia stránky:', error);
       }
     } finally {
       setSaving(false);
-    }
-  };
-
-  // Reset zmien
-  const handleReset = () => {
-    setPages(JSON.parse(JSON.stringify(originalPages)));
-    setHasChanges(false);
-    if (showNotification) {
-      showNotification('Zmeny boli zahodené.', 'info');
     }
   };
 
@@ -275,38 +235,18 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
               React.createElement(ToggleSwitch, {
                 isOn: page.visible,
                 onToggle: () => handleToggleVisibility(page.id),
-                disabled: false
+                disabled: saving
               })
             )
           )
         )
       )
     ),
-    // Tlačidlá presunuté pod zoznam stránok
+    // Informačná správa o automatickom ukladaní
     React.createElement(
       'div',
-      { className: 'flex justify-end gap-3 pt-4 border-t border-gray-200' },
-      hasChanges && React.createElement(
-        'button',
-        {
-          onClick: handleReset,
-          className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors'
-        },
-        'Zahodiť zmeny'
-      ),
-      React.createElement(
-        'button',
-        {
-          onClick: handleSave,
-          disabled: !hasChanges || saving,
-          className: `font-medium py-2 px-6 rounded-lg transition-colors ${
-            hasChanges && !saving
-              ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-white text-green-500 border-2 border-green-500 cursor-not-allowed'
-          }`
-        },
-        saving ? 'Ukladám...' : 'Uložiť zmeny'
-      )
+      { className: 'text-sm text-gray-500 text-right pt-2' },
+      'Zmeny sa ukladajú automaticky pri každom prepnutí'
     )
   );
 }
