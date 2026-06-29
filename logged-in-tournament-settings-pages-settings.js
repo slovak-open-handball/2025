@@ -206,7 +206,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
     React.createElement(
       'p',
       { className: 'text-gray-600 text-sm' },
-      'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre bežných používateľov.'
+      'Tu môžete zapnúť alebo vypnúť viditeľnosť jednotlivých stránok v aplikácii. Skryté stránky nebudú dostupné pre verejnosť.'
     ),
     React.createElement(
       'div',
@@ -225,7 +225,6 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
               'div',
               { className: 'flex items-center gap-4' },
               React.createElement('span', { className: 'font-medium text-gray-800' }, page.label),
-              React.createElement('span', { className: 'text-sm text-gray-500' }, `(ID: ${page.id})`)
             ),
             React.createElement(
               'div',
