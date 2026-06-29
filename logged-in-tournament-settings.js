@@ -180,22 +180,29 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'updatePagesSettings') {
         const changedPages = notificationData.data.changedPages || [];
         const originalPages = notificationData.data.originalPages || [];
-  
+        
         if (changedPages.length > 0) {
           const changes = [];
           changedPages.forEach(page => {
-            // Nájdeme pôvodný stav
-            const originalPage = originalPages.find(p => p.id === page.id);
-            
-            // Určíme pôvodný stav
+            // Nájdeme pôvodný stav - TERAZ SPRÁVNE
             let originalStatus = 'skrytá';
-            if (originalPage) {
-              originalStatus = originalPage.visible ? 'verejná' : 'skrytá';
+            let newStatus = 'verejná';
+            
+            // Použijeme priamo odoslaný pôvodný stav
+            if (page.originalVisible !== undefined) {
+              originalStatus = page.originalVisible ? 'verejná' : 'skrytá';
+            } else {
+              // Ak nemáme originalVisible, skúsime nájsť v originalPages
+              const originalPage = originalPages.find(p => p.id === page.id);
+              if (originalPage) {
+                originalStatus = originalPage.visible ? 'verejná' : 'skrytá';
+              }
             }
             
-            // Určíme nový stav - PRIAMO z page.visible
-            let newStatus = page.visible ? 'verejná' : 'skrytá';
+            // Nový stav určíme z aktuálnych dát
+            newStatus = page.visible ? 'verejná' : 'skrytá';
             
+            // Vytvoríme správny formát notifikácie
             changes.push(`Zmena viditeľnosti stránky ${page.label}: z '${originalStatus}' na '${newStatus}'`);
           });
           changesContent = changes;
