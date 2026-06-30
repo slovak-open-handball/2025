@@ -2499,6 +2499,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 React.createElement('span', { className: 'text-gray-600' }, 
                     loadingHall ? 'Načítavam...' : (hallName || 'Športová hala')
                 )
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-400 mt-1' },
+                `Zápas ${currentMatchIndex + 1} z ${allMatches.length}`
             )
         ),
         
@@ -2731,6 +2736,9 @@ const MatchesHallApp = () => {
     const [selectedHall, setSelectedHall] = useState(null); // null = všetky haly
     const [filteredMatches, setFilteredMatches] = useState([]);
 
+    // --- STAV PRE SPRACOVANIE URL HASH PRI NAČÍTANÍ ---
+    const [initialHashProcessed, setInitialHashProcessed] = useState(false);
+
     // --- FUNKCIE PRE PRÁCU S URL FILTRAMI ---
     const updateUrlFilters = (day, category, hall) => {
         const params = new URLSearchParams(window.location.search);
@@ -2848,7 +2856,9 @@ const MatchesHallApp = () => {
     const updateUrlForMatch = (match) => {
         if (match && match.homeTeamIdentifier && match.awayTeamIdentifier) {
             const newHash = createMatchHash(match.homeTeamIdentifier, match.awayTeamIdentifier);
-            window.history.replaceState(null, '', newHash);
+            // Zachováme query parametre pri aktualizácii hashu
+            const searchParams = window.location.search;
+            window.history.replaceState(null, '', window.location.pathname + searchParams + newHash);
         }
     };
     
@@ -2868,8 +2878,6 @@ const MatchesHallApp = () => {
                 return true;
             }
         }
-        setShowingDetail(false);
-        setSelectedMatch(null);
         return false;
     };
     
@@ -3365,8 +3373,10 @@ const MatchesHallApp = () => {
             
             setFilteredMatches(result);
             
-            // --- DÔLEŽITÉ: Najprv skúsime zobraziť match z URL (hash), ale zachováme query parametre ---
+            // --- SPRACOVANIE URL HASH - TERAZ PO NAČÍTANÍ VŠETKÝCH DÁT ---
             const matchShown = showMatchFromUrl(hallMatches);
+            setInitialHashProcessed(true);
+            
             if (!matchShown) {
                 setLoading(false);
             }
@@ -3557,6 +3567,11 @@ const MatchesHallApp = () => {
 
     // --- FILTROVANIE ZÁPASOV s aktualizáciou URL ---
     useEffect(() => {
+        // Ak ešte nebol spracovaný initial hash, nespúšťame filtráciu
+        if (!initialHashProcessed && allMatchesList.length > 0) {
+            return;
+        }
+        
         let result = [...allMatchesList];
         
         // Filtrovanie podľa dňa
@@ -3599,13 +3614,15 @@ const MatchesHallApp = () => {
             updateUrlFilters(selectedDay, selectedCategory, selectedHall);
         }
         
-    }, [selectedDay, selectedCategory, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail]);
+    }, [selectedDay, selectedCategory, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, initialHashProcessed]);
 
     // --- POČÚVANIE ZMIEN URL PRE FILTRE (popri hash change) ---
     useEffect(() => {
         const handleUrlChange = () => {
             // Ak sme v detaile, neriešime filtre
             if (showingDetail) return;
+            // Ak ešte nebol spracovaný initial hash, neriešime
+            if (!initialHashProcessed) return;
             
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
@@ -3650,7 +3667,7 @@ const MatchesHallApp = () => {
         
         window.addEventListener('popstate', handleUrlChange);
         return () => window.removeEventListener('popstate', handleUrlChange);
-    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedHall]);
+    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedHall, initialHashProcessed]);
 
     useEffect(() => {
         const init = async () => {
