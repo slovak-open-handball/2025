@@ -2485,38 +2485,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 },
                 React.createElement('i', { className: 'fa-solid fa-arrow-left' }),
                 React.createElement('span', {}, 'Späť na zoznam zápasov')
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex gap-3' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: () => hasPrevious && onNavigate('prev'),
-                        disabled: !hasPrevious,
-                        className: `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            hasPrevious 
-                                ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer' 
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-chevron-left' }),
-                    React.createElement('span', {}, 'Predchádzajúci')
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: () => hasNext && onNavigate('next'),
-                        disabled: !hasNext,
-                        className: `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            hasNext 
-                                ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer' 
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('span', {}, 'Nasledujúci'),
-                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
-                )
             )
         ),
         
