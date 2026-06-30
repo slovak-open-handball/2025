@@ -3241,7 +3241,6 @@ const MatchesHallApp = () => {
             const allStatuses = {};
             const allScores = {};
             
-            // NAJPRV NAČÍTAME VŠETKY ZÁPASY
             querySnapshot.forEach((doc) => {
                 const match = {
                     id: doc.id,
@@ -3262,7 +3261,6 @@ const MatchesHallApp = () => {
                 }
             });
             
-            // ZORADÍME ZÁPASY
             hallMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -3283,7 +3281,6 @@ const MatchesHallApp = () => {
             await loadHallNames(hallMatches);
             await processTeamNames(hallMatches);
             
-            // TERAZ SPRACUJEME URL FILTRE
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
@@ -3312,7 +3309,7 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
-            // KONTROLA EXISTENCIE SKUPINY - TERAZ SPRÁVNE POUŽÍVAME hallMatches
+            // KONTROLA EXISTENCIE SKUPINY - OPRAVENÉ
             if (groupFilter) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
@@ -3322,8 +3319,46 @@ const MatchesHallApp = () => {
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
+                        const basicGroupNames = [];
+                        if (categoryFilter) {
+                            const categoryGroups = groupsData[categoryFilter] || [];
+                            categoryGroups.forEach(group => {
+                                if (group.type === 'základná skupina') {
+                                    basicGroupNames.push(group.name);
+                                }
+                            });
+                        }
+                        if (basicGroupNames.length === 0) {
+                            Object.keys(groupsData).forEach(catId => {
+                                const catGroups = groupsData[catId] || [];
+                                catGroups.forEach(group => {
+                                    if (group.type === 'základná skupina') {
+                                        basicGroupNames.push(group.name);
+                                    }
+                                });
+                            });
+                        }
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
+                        const advancedGroupNames = [];
+                        if (categoryFilter) {
+                            const categoryGroups = groupsData[categoryFilter] || [];
+                            categoryGroups.forEach(group => {
+                                if (group.type === 'nadstavbová skupina') {
+                                    advancedGroupNames.push(group.name);
+                                }
+                            });
+                        }
+                        if (advancedGroupNames.length === 0) {
+                            Object.keys(groupsData).forEach(catId => {
+                                const catGroups = groupsData[catId] || [];
+                                catGroups.forEach(group => {
+                                    if (group.type === 'nadstavbová skupina') {
+                                        advancedGroupNames.push(group.name);
+                                    }
+                                });
+                            });
+                        }
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
@@ -3386,7 +3421,6 @@ const MatchesHallApp = () => {
                             }
                         });
                     }
-                    // Ak nie je vybraná kategória, berieme všetky základné skupiny zo všetkých kategórií
                     if (basicGroupNames.length === 0) {
                         Object.keys(groupsData).forEach(catId => {
                             const catGroups = groupsData[catId] || [];
@@ -3410,7 +3444,6 @@ const MatchesHallApp = () => {
                             }
                         });
                     }
-                    // Ak nie je vybraná kategória, berieme všetky nadstavbové skupiny zo všetkých kategórií
                     if (advancedGroupNames.length === 0) {
                         Object.keys(groupsData).forEach(catId => {
                             const catGroups = groupsData[catId] || [];
@@ -3445,7 +3478,6 @@ const MatchesHallApp = () => {
             
             setFilteredMatches(result);
             
-            // SPRACOVANIE HASH PRE DETAIL ZÁPASU
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
             
             if (hasHash) {
@@ -3463,7 +3495,6 @@ const MatchesHallApp = () => {
                 setLoading(false);
             }
             
-            // NASTAVENIE REALTIME LISTENERA
             if (hallId) {
                 const unsubscribe = setupMatchesRealTimeListener(hallId);
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
