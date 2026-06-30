@@ -3585,6 +3585,7 @@ const MatchesHallApp = () => {
                             React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
                         )
@@ -3652,18 +3653,20 @@ const MatchesHallApp = () => {
                                     displayAwayScore = dbScore.away;
                                     showScore = true;
                                 }
-                                
-                                // --- POUŽITIE teamNames PRE ZOBRAZENIE NÁZVOV TÍMOV ---
+                            
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
-                                
+                            
+                                // -------- NAČÍTANIE NÁZOV HALY PRE ZÁPAS (POUŽIJEME HALL INFO) --------
+                                const matchHallName = match.hallName || hallInfo?.name || 'Športová hala';
+                            
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
-                                
+                            
                                 const matchColors = getMatchColors(match, groupsData);
-                                
+                            
                                 const infoTags = [];
-                                
+                            
                                 if (match.matchType && !match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -3678,7 +3681,7 @@ const MatchesHallApp = () => {
                                         match.matchType
                                     ));
                                 }
-                                
+                            
                                 if (match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -3693,7 +3696,7 @@ const MatchesHallApp = () => {
                                         `o ${match.placementRank}. miesto`
                                     ));
                                 }
-                                
+                            
                                 if (match.groupName && !match.isPlacementMatch) {
                                     let groupColors;
                                     if (isEliminationMatch(match)) {
@@ -3701,7 +3704,7 @@ const MatchesHallApp = () => {
                                     } else {
                                         groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
                                     }
-                                    
+                            
                                     infoTags.push(
                                         React.createElement('span', { 
                                             key: 'group',
@@ -3715,12 +3718,12 @@ const MatchesHallApp = () => {
                                         match.groupName
                                     ));
                                 }
-                                
+                            
                                 let categoryDisplayTag = match.categoryName;
                                 if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
                                     categoryDisplayTag = categoriesData[match.categoryId];
                                 }
-                                
+                            
                                 if (categoryDisplayTag) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -3735,12 +3738,12 @@ const MatchesHallApp = () => {
                                         categoryDisplayTag
                                     ));
                                 }
-                                
+                            
                                 dayRows.push(
                                     React.createElement(
                                         'tr',
                                         { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
-                                        
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap' },
@@ -3751,13 +3754,13 @@ const MatchesHallApp = () => {
                                                 React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
                                             )
                                         ),
-                                        
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-right' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                         ),
-                                        
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
@@ -3771,13 +3774,25 @@ const MatchesHallApp = () => {
                                                 ) :
                                                 React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
                                         ),
-                                        
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-left' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
-                                        
+                            
+                                        // -------- NOVÝ STĹPEC: MIESTO ZÁPASU --------
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
+                                                React.createElement('span', { className: 'text-gray-600 text-sm truncate max-w-24' }, matchHallName)
+                                            )
+                                        ),
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3' },
@@ -3787,7 +3802,7 @@ const MatchesHallApp = () => {
                                                 infoTags
                                             )
                                         ),
-                                        
+                            
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
