@@ -2728,7 +2728,10 @@ const MatchesHallApp = () => {
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
     
     const [matchStatuses, setMatchStatuses] = useState({});
-    const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});    
+    const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
+    
+    // --- PRIDANÉ: Stav pre sledovanie, či sú názvy tímov načítané ---
+    const [teamNamesLoaded, setTeamNamesLoaded] = useState(false);
 
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0;
@@ -3030,6 +3033,7 @@ const MatchesHallApp = () => {
         }
     };
 
+    // --- UPRAVENÉ: processTeamNames teraz vracia Promise a nastavuje flag ---
     const processTeamNames = async (matches) => {
         const names = { ...teamNames };
         let needsUpdate = false;
@@ -3090,6 +3094,9 @@ const MatchesHallApp = () => {
         } else {
             setTeamNames(names);
         }
+        
+        // Nastavíme flag, že názvy tímov sú načítané
+        setTeamNamesLoaded(true);
     };
 
     const loadMatches = async (hallId) => {
@@ -3117,7 +3124,6 @@ const MatchesHallApp = () => {
                 
                 allStatuses[doc.id] = match.status || 'scheduled';
                 
-                // Ak je zadané hallId, filtrujeme podľa neho, inak berieme všetky zápasy
                 if (!hallId || match.hallId === hallId) {
                     hallMatches.push(match);
                 }
@@ -3136,19 +3142,20 @@ const MatchesHallApp = () => {
             });            
             setMatches(hallMatches);
             setAllMatchesList(hallMatches);            
-            setMatchStatuses(allStatuses);            
-            await processTeamNames(hallMatches);            
+            setMatchStatuses(allStatuses);
+            
+            // --- UPRAVENÉ: Najprv načítame názvy tímov, potom zobrazíme ---
+            await processTeamNames(hallMatches);
+            
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
                 setLoading(false);
             }
             
-            // Real-time listener nastavíme len ak máme hallId
             if (hallId) {
                 const unsubscribe = setupMatchesRealTimeListener(hallId);
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
             } else {
-                // Pre neprihlásených používateľov len načítame zápasy raz
                 setLoading(false);
             }
             
@@ -3160,9 +3167,10 @@ const MatchesHallApp = () => {
     
     const globalUpdateTeamNames = async () => {
         if (allMatchesList.length > 0) {
-            await updateTeamNamesInMatches(allMatchesList, setTeamNames, teamNames);
+            await processTeamNames(allMatchesList);
         }
     };
+    
     useEffect(() => {
         window.updateTeamNamesGlobally = globalUpdateTeamNames;
         
@@ -3319,11 +3327,9 @@ const MatchesHallApp = () => {
 
     useEffect(() => {
         const init = async () => {
-            // Načítame farby a skupiny vždy
             await loadCategoryColors();
             await loadGroupsData();
             
-            // Skontrolujeme, či máme prihláseného používateľa
             if (window.globalUserProfileData) {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
@@ -3331,21 +3337,17 @@ const MatchesHallApp = () => {
                     await loadHallInfo(hallId);
                     await loadMatches(hallId);
                 } else {
-                    // Používateľ je prihlásený, ale nemá halu - načítame všetky zápasy
                     await loadMatches(null);
                 }
             } else {
-                // Neprihlásený používateľ - načítame všetky zápasy
                 await loadMatches(null);
             }
         };
 
-        // Spustíme inicializáciu
         init();
     }, []);
 
     const renderDetailButton = (match, dayIndex, matchIndex) => {
-        // Použijeme aktuálny stav z matchStatuses, ktorý sa aktualizuje v reálnom čase
         const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
         const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
 
