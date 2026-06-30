@@ -4272,7 +4272,26 @@ const MatchesHallApp = () => {
     const groupMap = {};
     
     if (selectedCategory) {
-        const categoryGroups = groupsData[selectedCategory] || [];
+        // Skúsime nájsť kategóriu v groupsData podľa ID
+        let categoryId = selectedCategory;
+    
+        // Ak selectedCategory nie je v groupsData, skúsime ho nájsť podľa názvu
+        if (!groupsData[selectedCategory]) {
+            // Skúsime nájsť kategóriu podľa názvu v categoriesData
+            let foundId = null;
+            for (const [id, name] of Object.entries(categoriesData)) {
+                if (name === selectedCategory) {
+                    foundId = id;
+                    break;
+                }
+            }
+            if (foundId && groupsData[foundId]) {
+                categoryId = foundId;
+            }
+        }
+    
+        const categoryGroups = groupsData[categoryId] || [];
+    
         categoryGroups.forEach(group => {
             if (!groupMap[group.name]) {
                 groupMap[group.name] = group;
@@ -4281,7 +4300,7 @@ const MatchesHallApp = () => {
         });
         
         uniqueGroups.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
-    }
+    }    
 
     return React.createElement(
         'div',
