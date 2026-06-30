@@ -2665,7 +2665,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             )
         ),
         
-        !loadingSettings && React.createElement(MatchTimer, {
+        !loadingSettings && currentMatchStatus !== 'completed' && React.createElement(MatchTimer, {
             ref: matchTimerRef,
             match: { ...match, status: currentMatchStatus, homeScore: currentHomeScore, awayScore: currentAwayScore },
             matchId: match.id,
