@@ -3338,6 +3338,7 @@ const MatchesHallApp = () => {
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
+                        // --- OPRAVA: Definujeme basicGroupNames ---
                         const basicGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
@@ -3359,6 +3360,7 @@ const MatchesHallApp = () => {
                         }
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
+                        // --- OPRAVA: Definujeme advancedGroupNames ---
                         const advancedGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
