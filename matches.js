@@ -2741,6 +2741,7 @@ const MatchesHallApp = () => {
             params.delete('category');
         }
         
+        // OPRAVA: Uložíme aj špeciálne hodnoty skupín do URL
         if (group) {
             params.set('group', group);
         } else {
@@ -3330,7 +3331,6 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        // Ak nie je vybraná kategória, berieme všetky základné skupiny zo všetkých kategórií
                         if (basicGroupNames.length === 0) {
                             Object.keys(groupsData).forEach(catId => {
                                 const catGroups = groupsData[catId] || [];
@@ -3352,7 +3352,6 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        // Ak nie je vybraná kategória, berieme všetky nadstavbové skupiny zo všetkých kategórií
                         if (advancedGroupNames.length === 0) {
                             Object.keys(groupsData).forEach(catId => {
                                 const catGroups = groupsData[catId] || [];
@@ -3366,11 +3365,11 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
-                    // AK NEEXISTUJE ŽIADNY ZÁPAS PRE TENTO ŠPECIÁLNY FILTER, NASTAVÍME groupFilter NA NULL
+                    // OPRAVA: Ak existujú zápasy, PONECHÁME groupFilter, inak ho nastavíme na null
                     if (!hasMatches) {
                         groupFilter = null;
                     }
-                    // AK EXISTUJE, PONECHÁME groupFilter
+                    // Ak existujú zápasy, groupFilter zostáva zachovaný
                 } else {
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
@@ -3804,9 +3803,11 @@ const MatchesHallApp = () => {
                         hasMatches = allMatchesList.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
+                    // OPRAVA: Ak existujú zápasy, PONECHÁME groupFilter, inak ho nastavíme na null
                     if (!hasMatches) {
                         groupFilter = null;
                     }
+                    // Ak existujú zápasy, groupFilter zostáva zachovaný
                 } else {
                     const groupExists = allMatchesList.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
