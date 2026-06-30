@@ -2733,6 +2733,9 @@ const MatchesHallApp = () => {
     // --- NOVÉ: Stav pre sledovanie, či už boli názvy tímov načítané ---
     const [teamNamesLoaded, setTeamNamesLoaded] = useState(false);
 
+    // --- NOVÉ: Stav pre uchovávanie skóre z databázy pre každý zápas ---
+    const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
+
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0;
         let awayGoals = 0;
@@ -2809,9 +2812,15 @@ const MatchesHallApp = () => {
         const matchesRef = collection(window.db, 'matches');
         
         let localMatchStatuses = {};
+        let localMatchScores = {};
         
         setMatchStatuses(prev => {
             localMatchStatuses = { ...prev };
+            return prev;
+        });
+        
+        setMatchScoresFromDb(prev => {
+            localMatchScores = { ...prev };
             return prev;
         });
         
@@ -2819,6 +2828,7 @@ const MatchesHallApp = () => {
         
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
+            const updatedScores = {};
             const updatedMatches = [];
             let hasMatchCompletedAnywhere = false;
             let completedMatchesList = [];
@@ -2832,6 +2842,7 @@ const MatchesHallApp = () => {
                 const oldStatus = localMatchStatuses[match.id];
                 const newStatus = match.status || 'scheduled';
                 
+                // Aktualizácia stavu
                 if (change.type === 'modified' && oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
                     hasMatchCompletedAnywhere = true;
                     completedMatchesList.push({
@@ -2846,6 +2857,16 @@ const MatchesHallApp = () => {
                 
                 localMatchStatuses[match.id] = newStatus;
                 updatedStatuses[match.id] = newStatus;
+                
+                // Aktualizácia skóre z databázy
+                if (match.homeScore !== undefined || match.awayScore !== undefined) {
+                    const score = {
+                        home: match.homeScore,
+                        away: match.awayScore
+                    };
+                    localMatchScores[match.id] = score;
+                    updatedScores[match.id] = score;
+                }
                 
                 if (match.hallId === hallId) {
                     updatedMatches.push(match);
@@ -2876,6 +2897,10 @@ const MatchesHallApp = () => {
             
             if (Object.keys(updatedStatuses).length > 0) {
                 setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
+            
+            if (Object.keys(updatedScores).length > 0) {
+                setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
             }
             
             if (hasMatchCompletedAnywhere) {                
@@ -2946,6 +2971,7 @@ const MatchesHallApp = () => {
         
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
+            const updatedScores = {};
             
             snapshot.docChanges().forEach(change => {
                 const match = {
@@ -2955,10 +2981,21 @@ const MatchesHallApp = () => {
                 
                 const newStatus = match.status || 'scheduled';
                 updatedStatuses[match.id] = newStatus;
+                
+                if (match.homeScore !== undefined || match.awayScore !== undefined) {
+                    updatedScores[match.id] = {
+                        home: match.homeScore,
+                        away: match.awayScore
+                    };
+                }
             });
             
             if (Object.keys(updatedStatuses).length > 0) {
                 setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
+            
+            if (Object.keys(updatedScores).length > 0) {
+                setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
             }
         }, (error) => {
             console.error('Chyba pri real-time počúvaní stavov zápasov:', error);
@@ -3161,6 +3198,7 @@ const MatchesHallApp = () => {
             
             const hallMatches = [];
             const allStatuses = {};
+            const allScores = {};
             
             querySnapshot.forEach((doc) => {
                 const match = {
@@ -3169,6 +3207,13 @@ const MatchesHallApp = () => {
                 };
                 
                 allStatuses[doc.id] = match.status || 'scheduled';
+                
+                if (match.homeScore !== undefined || match.awayScore !== undefined) {
+                    allScores[doc.id] = {
+                        home: match.homeScore,
+                        away: match.awayScore
+                    };
+                }
                 
                 // Ak je zadané hallId, filtrujeme podľa neho, inak berieme všetky zápasy
                 if (!hallId || match.hallId === hallId) {
@@ -3190,6 +3235,7 @@ const MatchesHallApp = () => {
             setMatches(hallMatches);
             setAllMatchesList(hallMatches);            
             setMatchStatuses(allStatuses);
+            setMatchScoresFromDb(allScores);
             
             // --- DÔLEŽITÉ: Najprv načítame názvy tímov, potom zobrazíme ---
             await processTeamNames(hallMatches);
@@ -3573,15 +3619,24 @@ const MatchesHallApp = () => {
                             dayMatches.forEach((match, matchIndex) => {
                                 const dateTime = formatMatchDateTime(match.scheduledTime);
                                 const eventsScore = matchScoresFromEvents[match.id];
+                                const dbScore = matchScoresFromDb[match.id];
                                 const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
                                 const isMatchInProgress = matchStatus === 'in-progress' || matchStatus === 'paused';
-                                const hasDbScore = match.homeScore !== undefined && match.homeScore !== null && match.awayScore !== undefined && match.awayScore !== null;
+                                const isMatchCompleted = matchStatus === 'completed';
+                                const hasDbScore = dbScore && (dbScore.home !== undefined && dbScore.home !== null && dbScore.away !== undefined && dbScore.away !== null);
                             
                                 let displayHomeScore = null;
                                 let displayAwayScore = null;
                                 let showScore = false;
                             
-                                if (isMatchInProgress) {
+                                // Pre ukončený zápas vždy zobrazíme skóre z databázy
+                                if (isMatchCompleted && hasDbScore) {
+                                    displayHomeScore = dbScore.home;
+                                    displayAwayScore = dbScore.away;
+                                    showScore = true;
+                                }
+                                // Pre prebiehajúci zápas zobrazíme skóre z udalostí alebo 0:0
+                                else if (isMatchInProgress) {
                                     if (eventsScore && (eventsScore.home > 0 || eventsScore.away > 0)) {
                                         displayHomeScore = eventsScore.home;
                                         displayAwayScore = eventsScore.away;
@@ -3590,9 +3645,11 @@ const MatchesHallApp = () => {
                                         displayAwayScore = 0;
                                     }
                                     showScore = true;
-                                } else if (hasDbScore) {
-                                    displayHomeScore = match.homeScore;
-                                    displayAwayScore = match.awayScore;
+                                }
+                                // Pre naplánovaný zápas s existujúcim skóre v DB (napr. po návrate z completed)
+                                else if (hasDbScore) {
+                                    displayHomeScore = dbScore.home;
+                                    displayAwayScore = dbScore.away;
                                     showScore = true;
                                 }
                                 
