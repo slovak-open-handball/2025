@@ -3802,11 +3802,18 @@ const MatchesHallApp = () => {
 
     useEffect(() => {
         const handleUrlChange = () => {
+            console.log('=== handleUrlChange ===');
+            console.log('showingDetail:', showingDetail);
+            console.log('isInitialLoad:', isInitialLoad);
+            console.log('initialHashProcessed:', initialHashProcessed);
+            
             if (showingDetail) return;
             if (isInitialLoad) return;
             if (!initialHashProcessed) return;
             
             const urlFilters = parseUrlFilters();
+            console.log('URL filtre v handleUrlChange:', urlFilters);
+            
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
             let groupFilter = urlFilters.group;
@@ -3909,11 +3916,18 @@ const MatchesHallApp = () => {
                 if (!hallExists) hallFilter = null;
             }
             
+            console.log('Nastavujem filtre v handleUrlChange:');
+            console.log('  dayFilter:', dayFilter);
+            console.log('  categoryFilter:', categoryFilter);
+            console.log('  groupFilter:', groupFilter);
+            console.log('  hallFilter:', hallFilter);
+            
             // NASTAVENIE FILTROV IBA AK SA ZMENILI
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
             if (selectedGroup !== groupFilter) {
-                setSelectedGroup(groupFilter);  // Tu môže byť '__ALL_BASIC__', '__ALL_ADVANCED__' alebo '__PLAYOFF__'
+                console.log('Zmena selectedGroup z', selectedGroup, 'na', groupFilter);
+                setSelectedGroup(groupFilter);
             }
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
         };
@@ -3969,15 +3983,28 @@ const MatchesHallApp = () => {
     }, []);
 
     useEffect(() => {
+        console.log('=== useEffect pre selectedCategory ===');
+        console.log('selectedCategory:', selectedCategory);
+    
         if (selectedCategory) {
             const categoryId = selectedCategory;
             const categoryGroups = groupsData[categoryId] || [];
             setGroupsForSelectedCategory(categoryGroups);
-            
+        
+            // TOTO MÔŽE BYŤ PROBLÉM - resetuje selectedGroup na null
             if (selectedGroup) {
                 const groupExists = categoryGroups.some(g => g.name === selectedGroup);
-                if (!groupExists) {
+                // Skontrolujeme aj špeciálne hodnoty
+                const isSpecialGroup = selectedGroup === '__ALL_BASIC__' || 
+                                      selectedGroup === '__ALL_ADVANCED__' || 
+                                      selectedGroup === '__PLAYOFF__';
+                
+                // Ak skupina neexistuje a nie je špeciálna, resetujeme
+                if (!groupExists && !isSpecialGroup) {
+                    console.log('Skupina neexistuje, resetujem na null');
                     setSelectedGroup(null);
+                } else {
+                    console.log('Skupina existuje alebo je špeciálna, ponechávam:', selectedGroup);
                 }
             }
         } else {
