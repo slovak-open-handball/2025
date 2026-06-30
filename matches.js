@@ -3730,16 +3730,17 @@ const MatchesHallApp = () => {
         ),
 
         // --- NOVÉ FILTRAČNÉ TLAČIDLÁ PRE MIESTA (HALY) ---
+                // --- NOVÉ FILTRAČNÉ TLAČIDLÁ PRE MIESTA (HALY) - ROVNAKÝ ŠTÝL AKO DNI ---
         uniqueHalls.length > 1 && React.createElement(
             'div',
-            { className: 'mb-4 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
             React.createElement(
                 'button',
                 {
                     onClick: () => setSelectedHall(null),
                     className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                         selectedHall === null 
-                            ? 'bg-purple-600 text-white shadow-md scale-105' 
+                            ? 'bg-blue-600 text-white shadow-md scale-105' 
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`
                 },
@@ -3747,10 +3748,7 @@ const MatchesHallApp = () => {
             ),
             uniqueHalls.map((hall, index) => {
                 const isSelected = selectedHall === hall.id || selectedHall === hall.name;
-                // Farba pre každú halu - generujeme podľa indexu
-                const colors = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4'];
-                const color = colors[index % colors.length];
-                const lighterColor = getLighterColor(color);
+                const dateKey = hall.id; // použijeme id ako kľúč
                 
                 return React.createElement(
                     'button',
@@ -3759,10 +3757,9 @@ const MatchesHallApp = () => {
                         onClick: () => setSelectedHall(isSelected ? null : (hall.id || hall.name)),
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                             isSelected 
-                                ? 'text-white shadow-md scale-105' 
-                                : 'text-gray-700 hover:bg-gray-300'
-                        }`,
-                        style: isSelected ? { backgroundColor: color } : { backgroundColor: lighterColor }
+                                ? 'bg-blue-600 text-white shadow-md scale-105' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
                     },
                     React.createElement('i', { className: 'fa-solid fa-location-dot mr-1', style: { fontSize: '12px' } }),
                     hall.name
