@@ -3991,7 +3991,7 @@ const MatchesHallApp = () => {
                 await loadMatches(null);
             }
         };
-
+    
         init();
     }, []);
 
