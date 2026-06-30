@@ -2499,11 +2499,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 React.createElement('span', { className: 'text-gray-600' }, 
                     loadingHall ? 'Načítavam...' : (hallName || 'Športová hala')
                 )
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-xs text-gray-400 mt-1' },
-                `Zápas ${currentMatchIndex + 1} z ${allMatches.length}`
             )
         ),
         
