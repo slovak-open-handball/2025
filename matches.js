@@ -3686,7 +3686,7 @@ const MatchesHallApp = () => {
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`
                     },
-                    `${formatDateHeader(dayGroup.date)} (${dayGroup.matches.length})`
+                    `${formatDateHeader(dayGroup.date)}`
                 );
             })
         ),
