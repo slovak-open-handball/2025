@@ -3949,6 +3949,8 @@ const MatchesHallApp = () => {
         }
     });
 
+    uniqueCategories.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+
     const uniqueHalls = [];
     const hallMap = {};
     
