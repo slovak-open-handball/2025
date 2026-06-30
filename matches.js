@@ -3370,6 +3370,7 @@ const MatchesHallApp = () => {
             
             setFilteredMatches(result);
             
+            // --- DÔLEŽITÉ: Najprv skúsime zobraziť match z URL (hash), ale zachováme query parametre ---
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
                 setLoading(false);
@@ -3473,8 +3474,10 @@ const MatchesHallApp = () => {
         setSelectedMatch(null);
         setShowingDetail(false);
         setCurrentMatchIndex(0);
-        // Odstránime hash z URL, ale ponecháme query parametre (filtre)
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        
+        // Odstránime hash z URL, ale PONECHÁME query parametre (filtre)
+        const searchParams = window.location.search;
+        window.history.replaceState(null, '', window.location.pathname + searchParams);
         
         if (!teamNamesLoaded && allMatchesList.length > 0) {
             processTeamNames(allMatchesList);
