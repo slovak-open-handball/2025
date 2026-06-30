@@ -3384,12 +3384,6 @@ const MatchesHallApp = () => {
                         }
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
-
-                    console.log({
-                        groupFilter,
-                        groupsDataKeys: Object.keys(groupsData).length,
-                        advancedGroupNames
-                    });
                     
                     // AK NEEXISTUJÚ ŽIADNE ZÁPASY, NASTAVÍME groupFilter NA null
                     if (!hasMatches) {
@@ -3826,12 +3820,6 @@ const MatchesHallApp = () => {
                         }
                         hasMatches = allMatchesList.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
-
-                    console.log({
-                        groupFilter,
-                        groupsDataKeys: Object.keys(groupsData).length,
-                        advancedGroupNames
-                    });
                     
                     if (!hasMatches) {
                         groupFilter = null;
