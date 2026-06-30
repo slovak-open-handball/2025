@@ -4294,7 +4294,7 @@ const MatchesHallApp = () => {
             // --- PRIDANÉ TLAČIDLO PRE PLAYOFF A ZÁPASY O UMIESTNENIE ---
             React.createElement(
                 'div',
-                { className: 'flex flex-wrap gap-2 justify-center border-t pt-2 mt-1' },
+                { className: 'flex flex-wrap gap-2 justify-center pt-2 mt-1' },
                 React.createElement(
                     'span',
                     { className: 'text-xs text-gray-500 font-medium mr-1 self-center' },
