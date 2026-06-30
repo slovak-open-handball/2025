@@ -3846,9 +3846,8 @@ const MatchesHallApp = () => {
             // NASTAVENIE FILTROV IBA AK SA ZMENILI
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
-            // DÔLEŽITÉ: Zachováme špeciálne hodnoty
             if (selectedGroup !== groupFilter) {
-                setSelectedGroup(groupFilter);
+                setSelectedGroup(groupFilter);  // Tu môže byť '__ALL_BASIC__', '__ALL_ADVANCED__' alebo '__PLAYOFF__'
             }
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
         };
@@ -3923,18 +3922,11 @@ const MatchesHallApp = () => {
 
     // FILTROVANIE ZÁPASOV S AKTUALIZÁCIOU URL
     useEffect(() => {
-        // PRESKOČÍME, AK JEŠTE NEBOLI SPRACOVANÉ URL FILTRE
-        if (!initialHashProcessed) {
+        if (isInitialLoad && allMatchesList.length > 0) {
             return;
         }
         
-        // PRESKOČÍME, AK SME V DETAILE ZÁPASU
         if (showingDetail) {
-            return;
-        }
-        
-        // PRESKOČÍME, AK JEŠTE NIE SÚ NAČÍTANÉ VŠETKY ZÁPASY
-        if (allMatchesList.length === 0) {
             return;
         }
         
@@ -4030,26 +4022,27 @@ const MatchesHallApp = () => {
         
         setFilteredMatches(result);
         
-        // AKTUÁLNE FILTRE POROVNÁME S URL A AK SA ZMENILI, AKTUALIZUJEME URL
-        // ALE IBA AK NIE SME V PROCESE INICIALIZÁCIE
-        if (!isInitialLoad && !showingDetail) {
+        // --- OPRAVA: Aktualizujeme URL IBA AK SA FILTER ZMENIL POUŽÍVATEĽOM ---
+        if (!showingDetail && !isInitialLoad) {
             const urlFilters = parseUrlFilters();
             const currentGroup = urlFilters.group;
             const currentCategory = urlFilters.category;
             const currentDay = urlFilters.day;
             const currentHall = urlFilters.hall;
             
+            // Skontrolujeme, či sa niektorý filter zmenil oproti URL
             const groupChanged = selectedGroup !== currentGroup;
             const categoryChanged = selectedCategory !== currentCategory;
             const dayChanged = selectedDay !== currentDay;
             const hallChanged = selectedHall !== currentHall;
             
+            // Aktualizujeme URL IBA ak sa filter naozaj zmenil
             if (groupChanged || categoryChanged || dayChanged || hallChanged) {
                 updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
             }
         }
         
-    }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad, initialHashProcessed]);
+    }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
 
     useEffect(() => {
         const init = async () => {
