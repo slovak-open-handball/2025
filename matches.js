@@ -3240,7 +3240,6 @@ const MatchesHallApp = () => {
             const allStatuses = {};
             const allScores = {};
             
-            // NAJPRV NAČÍTAME VŠETKY ZÁPASY
             querySnapshot.forEach((doc) => {
                 const match = {
                     id: doc.id,
@@ -3261,7 +3260,6 @@ const MatchesHallApp = () => {
                 }
             });
             
-            // ZORADÍME ZÁPASY
             hallMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -3282,7 +3280,7 @@ const MatchesHallApp = () => {
             await loadHallNames(hallMatches);
             await processTeamNames(hallMatches);
             
-            // TERAZ SPRACUJEME URL FILTRE - hallMatches už obsahuje všetky zápasy
+            // SPRACOVANIE URL FILTROV - používáme hallMatches ktoré už máme
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
@@ -3309,19 +3307,20 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
-            // SPRACOVANIE groupFilter - teraz už máme všetky zápasy v hallMatches
+            // KONTROLA ŠPECIÁLNYCH FILTROV
             if (groupFilter) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
                 if (isSpecialGroup) {
                     let hasMatches = false;
+                    const effectiveCategory = categoryFilter;
                     
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
                         const basicGroupNames = [];
-                        if (categoryFilter) {
-                            const categoryGroups = groupsData[categoryFilter] || [];
+                        if (effectiveCategory) {
+                            const categoryGroups = groupsData[effectiveCategory] || [];
                             categoryGroups.forEach(group => {
                                 if (group.type === 'základná skupina') {
                                     basicGroupNames.push(group.name);
@@ -3331,8 +3330,8 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
                         const advancedGroupNames = [];
-                        if (categoryFilter) {
-                            const categoryGroups = groupsData[categoryFilter] || [];
+                        if (effectiveCategory) {
+                            const categoryGroups = groupsData[effectiveCategory] || [];
                             categoryGroups.forEach(group => {
                                 if (group.type === 'nadstavbová skupina') {
                                     advancedGroupNames.push(group.name);
@@ -3362,12 +3361,13 @@ const MatchesHallApp = () => {
                 if (!hallExists) hallFilter = null;
             }
             
+            // NASTAVENIE FILTROV
             setSelectedDay(dayFilter);
             setSelectedCategory(categoryFilter);
             setSelectedGroup(groupFilter);
             setSelectedHall(hallFilter);
             
-            // APLIKUJEME FILTRE NA VÝSLEDKY
+            // APLIKOVANIE FILTROV NA VÝSLEDKY
             let result = [...hallMatches];
             
             if (dayFilter) {
@@ -3436,7 +3436,6 @@ const MatchesHallApp = () => {
             
             setFilteredMatches(result);
             
-            // ZVYŠOK KÓDU zostáva rovnaký...
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
             
             if (hasHash) {
@@ -3699,15 +3698,13 @@ const MatchesHallApp = () => {
             }
             
             if (groupFilter) {
-                // Kontrola či ide o špeciálny filter
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
                 if (isSpecialGroup) {
-                    // Pre špeciálne filtre kontrolujeme či existujú zápasy
                     let hasMatches = false;
                     
                     if (groupFilter === '__PLAYOFF__') {
-                        hasMatches = hallMatches.some(match => isEliminationMatch(match));
+                        hasMatches = allMatchesList.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
                         const basicGroupNames = [];
                         if (categoryFilter) {
@@ -3718,7 +3715,7 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
+                        hasMatches = allMatchesList.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
                         const advancedGroupNames = [];
                         if (categoryFilter) {
@@ -3729,15 +3726,14 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
+                        hasMatches = allMatchesList.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
                     if (!hasMatches) {
                         groupFilter = null;
                     }
                 } else {
-                    // Pre bežné skupiny kontrolujeme existenciu
-                    const groupExists = hallMatches.some(match => match.groupName === groupFilter);
+                    const groupExists = allMatchesList.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
                         groupFilter = null;
                     }
