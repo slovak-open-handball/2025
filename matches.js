@@ -2713,8 +2713,12 @@ const MatchesHallApp = () => {
     // --- STAVY PRE FILTROVANIE ---
     const [selectedDay, setSelectedDay] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedGroup, setSelectedGroup] = useState(null); // NOVÝ STAV PRE SKUPINY
     const [selectedHall, setSelectedHall] = useState(null);
     const [filteredMatches, setFilteredMatches] = useState([]);
+    
+    // --- STAV PRE ZOBRAZENIE SKUPÍN PRE VYBRANÚ KATEGÓRIU ---
+    const [groupsForSelectedCategory, setGroupsForSelectedCategory] = useState([]);
 
     // --- STAV PRE SPRACOVANIE URL HASH PRI NAČÍTANÍ ---
     const [initialHashProcessed, setInitialHashProcessed] = useState(false);
@@ -2722,7 +2726,7 @@ const MatchesHallApp = () => {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     // --- FUNKCIE PRE PRÁCU S URL FILTAMI ---
-    const updateUrlFilters = (day, category, hall) => {
+    const updateUrlFilters = (day, category, group, hall) => {
         const params = new URLSearchParams(window.location.search);
         
         if (day) {
@@ -2735,6 +2739,12 @@ const MatchesHallApp = () => {
             params.set('category', category);
         } else {
             params.delete('category');
+        }
+        
+        if (group) {
+            params.set('group', group);
+        } else {
+            params.delete('group');
         }
         
         if (hall) {
@@ -2752,6 +2762,7 @@ const MatchesHallApp = () => {
         return {
             day: params.get('day') || null,
             category: params.get('category') || null,
+            group: params.get('group') || null,
             hall: params.get('hall') || null
         };
     };
@@ -3273,6 +3284,7 @@ const MatchesHallApp = () => {
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
+            let groupFilter = urlFilters.group;
             let hallFilter = urlFilters.hall;
             
             // Overíme, či filtre existujú v dátach
@@ -3296,6 +3308,13 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
+            if (groupFilter) {
+                const groupExists = hallMatches.some(match => {
+                    return match.groupName === groupFilter;
+                });
+                if (!groupExists) groupFilter = null;
+            }
+            
             if (hallFilter) {
                 const hallExists = hallMatches.some(match => {
                     if (match.hallId === hallFilter) return true;
@@ -3308,6 +3327,7 @@ const MatchesHallApp = () => {
             // Nastavíme filtre
             setSelectedDay(dayFilter);
             setSelectedCategory(categoryFilter);
+            setSelectedGroup(groupFilter);
             setSelectedHall(hallFilter);
             
             // Filtrujeme zápasy
@@ -3328,6 +3348,12 @@ const MatchesHallApp = () => {
                     if (match.categoryName === categoryFilter) return true;
                     if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
                     return false;
+                });
+            }
+            
+            if (groupFilter) {
+                result = result.filter(match => {
+                    return match.groupName === groupFilter;
                 });
             }
             
@@ -3588,6 +3614,7 @@ const MatchesHallApp = () => {
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
+            let groupFilter = urlFilters.group;
             let hallFilter = urlFilters.hall;
             
             if (dayFilter) {
@@ -3610,6 +3637,13 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
+            if (groupFilter) {
+                const groupExists = allMatchesList.some(match => {
+                    return match.groupName === groupFilter;
+                });
+                if (!groupExists) groupFilter = null;
+            }
+            
             if (hallFilter) {
                 const hallExists = allMatchesList.some(match => {
                     if (match.hallId === hallFilter) return true;
@@ -3621,12 +3655,13 @@ const MatchesHallApp = () => {
             
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
+            if (selectedGroup !== groupFilter) setSelectedGroup(groupFilter);
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
         };
         
         window.addEventListener('popstate', handleUrlChange);
         return () => window.removeEventListener('popstate', handleUrlChange);
-    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedHall, initialHashProcessed, isInitialLoad]);
+    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedGroup, selectedHall, initialHashProcessed, isInitialLoad]);
 
     useEffect(() => {
         if (!window.db) return;        
@@ -3674,6 +3709,26 @@ const MatchesHallApp = () => {
         };
     }, []);
 
+    // --- AKTUALIZÁCIA SKUPÍN PRE VYBRANÚ KATEGÓRIU ---
+    useEffect(() => {
+        if (selectedCategory) {
+            const categoryId = selectedCategory;
+            const categoryGroups = groupsData[categoryId] || [];
+            setGroupsForSelectedCategory(categoryGroups);
+            
+            // Ak je vybraná skupina, ktorá nepatrí do vybranej kategórie, zrušíme ju
+            if (selectedGroup) {
+                const groupExists = categoryGroups.some(g => g.name === selectedGroup);
+                if (!groupExists) {
+                    setSelectedGroup(null);
+                }
+            }
+        } else {
+            setGroupsForSelectedCategory([]);
+            setSelectedGroup(null);
+        }
+    }, [selectedCategory, groupsData]);
+
     // --- FILTROVANIE ZÁPASOV s aktualizáciou URL ---
     useEffect(() => {
         if (isInitialLoad && allMatchesList.length > 0) {
@@ -3708,6 +3763,12 @@ const MatchesHallApp = () => {
             });
         }
         
+        if (selectedGroup !== null) {
+            result = result.filter(match => {
+                return match.groupName === selectedGroup;
+            });
+        }
+        
         if (selectedHall !== null) {
             result = result.filter(match => {
                 if (match.hallId === selectedHall) return true;
@@ -3719,10 +3780,10 @@ const MatchesHallApp = () => {
         setFilteredMatches(result);
         
         if (!showingDetail && !isInitialLoad) {
-            updateUrlFilters(selectedDay, selectedCategory, selectedHall);
+            updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
         }
         
-    }, [selectedDay, selectedCategory, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
+    }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
 
     useEffect(() => {
         const init = async () => {
@@ -3874,6 +3935,21 @@ const MatchesHallApp = () => {
         }
     });
 
+    // Získanie unikátnych skupín z vybranej kategórie
+    const uniqueGroups = [];
+    const groupMap = {};
+    
+    if (selectedCategory) {
+        // Získame skupiny priamo z groupsData pre vybranú kategóriu
+        const categoryGroups = groupsData[selectedCategory] || [];
+        categoryGroups.forEach(group => {
+            if (!groupMap[group.name]) {
+                groupMap[group.name] = group;
+                uniqueGroups.push(group);
+            }
+        });
+    }
+
     return React.createElement(
         'div',
         { className: 'max-w-7xl mx-auto px-4 py-6' },
@@ -3929,7 +4005,10 @@ const MatchesHallApp = () => {
             React.createElement(
                 'button',
                 {
-                    onClick: () => setSelectedCategory(null),
+                    onClick: () => {
+                        setSelectedCategory(null);
+                        setSelectedGroup(null);
+                    },
                     className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                         selectedCategory === null 
                             ? 'bg-green-600 text-white shadow-md scale-105' 
@@ -3947,7 +4026,15 @@ const MatchesHallApp = () => {
                     'button',
                     {
                         key: `category-filter-${index}`,
-                        onClick: () => setSelectedCategory(isSelected ? null : (cat.id || cat.name)),
+                        onClick: () => {
+                            if (isSelected) {
+                                setSelectedCategory(null);
+                                setSelectedGroup(null);
+                            } else {
+                                setSelectedCategory(cat.id || cat.name);
+                                setSelectedGroup(null);
+                            }
+                        },
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                             isSelected 
                                 ? 'text-white shadow-md scale-105' 
@@ -3956,6 +4043,48 @@ const MatchesHallApp = () => {
                         style: isSelected ? { backgroundColor: color } : { backgroundColor: lighterColor }
                     },
                     cat.name
+                );
+            })
+        ),
+
+        // --- TLAČIDLÁ PRE SKUPINY (ZOBRAZIA SA LEN AK JE VYBRANÁ KATEGÓRIA) ---
+        selectedCategory && uniqueGroups.length > 0 && React.createElement(
+            'div',
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setSelectedGroup(null),
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        selectedGroup === null 
+                            ? 'bg-purple-600 text-white shadow-md scale-105' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky skupiny'
+            ),
+            uniqueGroups.map((group, index) => {
+                const isSelected = selectedGroup === group.name;
+                const groupColors = getGroupTypeColors(group.name, selectedCategory, groupsData);
+                const bgColor = isSelected ? groupColors.textColor : groupColors.backgroundColor;
+                const textColor = isSelected ? '#FFFFFF' : groupColors.textColor;
+                
+                return React.createElement(
+                    'button',
+                    {
+                        key: `group-filter-${index}`,
+                        onClick: () => setSelectedGroup(isSelected ? null : group.name),
+                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            isSelected 
+                                ? 'text-white shadow-md scale-105' 
+                                : 'hover:opacity-80'
+                        }`,
+                        style: {
+                            backgroundColor: bgColor,
+                            color: textColor
+                        }
+                    },
+                    group.name
                 );
             })
         ),
