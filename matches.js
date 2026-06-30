@@ -3136,6 +3136,7 @@ const MatchesHallApp = () => {
                 
                 allStatuses[doc.id] = match.status || 'scheduled';
                 
+                // Ak je zadané hallId, filtrujeme podľa neho, inak berieme všetky zápasy
                 if (!hallId || match.hallId === hallId) {
                     hallMatches.push(match);
                 }
@@ -3164,10 +3165,12 @@ const MatchesHallApp = () => {
                 setLoading(false);
             }
             
+            // Real-time listener nastavíme len ak máme hallId
             if (hallId) {
                 const unsubscribe = setupMatchesRealTimeListener(hallId);
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
             } else {
+                // Pre neprihlásených používateľov len načítame zápasy raz
                 setLoading(false);
             }
             
