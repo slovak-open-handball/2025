@@ -2729,9 +2729,6 @@ const MatchesHallApp = () => {
     
     const [matchStatuses, setMatchStatuses] = useState({});
     const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
-    
-    // --- PRIDANÉ: Stav pre sledovanie, či sú názvy tímov načítané ---
-    const [teamNamesLoaded, setTeamNamesLoaded] = useState(false);
 
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0;
@@ -3033,10 +3030,32 @@ const MatchesHallApp = () => {
         }
     };
 
-    // --- UPRAVENÉ: processTeamNames teraz vracia Promise a nastavuje flag ---
+    // --- UPRAVENÁ: processTeamNames - teraz vracia Promise a čaká na dokončenie ---
     const processTeamNames = async (matches) => {
         const names = { ...teamNames };
         let needsUpdate = false;
+        
+        // Počkáme na inicializáciu matchTracker
+        let attempts = 0;
+        while (!window.matchTracker && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+        }
+        
+        if (!window.matchTracker) {
+            console.warn('matchTracker nie je dostupný, používam identifikátory');
+            // Nastavíme aspoň základné názvy
+            for (const match of matches) {
+                if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
+                    names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
+                }
+                if (match.awayTeamIdentifier && !names[match.awayTeamIdentifier]) {
+                    names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
+                }
+            }
+            setTeamNames(names);
+            return;
+        }
         
         for (const match of matches) {
             let categoryName = match.categoryName;
@@ -3052,16 +3071,14 @@ const MatchesHallApp = () => {
                 const currentDisplayName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                 
                 if (currentDisplayName && currentDisplayName.includes(categoryName)) {
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
-                            if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
-                                names[match.homeTeamIdentifier] = newName;
-                                needsUpdate = true;
-                            }
-                        } catch (err) {
-                            console.error(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
+                            names[match.homeTeamIdentifier] = newName;
+                            needsUpdate = true;
                         }
+                    } catch (err) {
+                        console.error(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.homeTeamIdentifier]) {
                     names[match.homeTeamIdentifier] = currentDisplayName;
@@ -3072,16 +3089,14 @@ const MatchesHallApp = () => {
                 const currentDisplayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                 
                 if (currentDisplayName && currentDisplayName.includes(categoryName)) {
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
-                            if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
-                                names[match.awayTeamIdentifier] = newName;
-                                needsUpdate = true;
-                            }
-                        } catch (err) {
-                            console.error(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
+                            names[match.awayTeamIdentifier] = newName;
+                            needsUpdate = true;
                         }
+                    } catch (err) {
+                        console.error(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.awayTeamIdentifier]) {
                     names[match.awayTeamIdentifier] = currentDisplayName;
@@ -3094,9 +3109,6 @@ const MatchesHallApp = () => {
         } else {
             setTeamNames(names);
         }
-        
-        // Nastavíme flag, že názvy tímov sú načítané
-        setTeamNamesLoaded(true);
     };
 
     const loadMatches = async (hallId) => {
@@ -3144,7 +3156,7 @@ const MatchesHallApp = () => {
             setAllMatchesList(hallMatches);            
             setMatchStatuses(allStatuses);
             
-            // --- UPRAVENÉ: Najprv načítame názvy tímov, potom zobrazíme ---
+            // --- DÔLEŽITÉ: Najprv načítame názvy tímov, potom zobrazíme ---
             await processTeamNames(hallMatches);
             
             const matchShown = showMatchFromUrl(hallMatches);
@@ -3327,9 +3339,11 @@ const MatchesHallApp = () => {
 
     useEffect(() => {
         const init = async () => {
+            // Načítame farby a skupiny vždy
             await loadCategoryColors();
             await loadGroupsData();
             
+            // Skontrolujeme, či máme prihláseného používateľa
             if (window.globalUserProfileData) {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
@@ -3337,13 +3351,16 @@ const MatchesHallApp = () => {
                     await loadHallInfo(hallId);
                     await loadMatches(hallId);
                 } else {
+                    // Používateľ je prihlásený, ale nemá halu - načítame všetky zápasy
                     await loadMatches(null);
                 }
             } else {
+                // Neprihlásený používateľ - načítame všetky zápasy
                 await loadMatches(null);
             }
         };
 
+        // Spustíme inicializáciu
         init();
     }, []);
 
