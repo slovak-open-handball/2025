@@ -153,7 +153,6 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
                         needsUpdate = true;
                     }
                 } catch (err) {
-                    console.error(`Chyba pri získavaní názvu pre domáci tím ${currentDisplayName}:`, err);
                 }
             }
         }
@@ -169,7 +168,6 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
                         needsUpdate = true;
                     } 
                 } catch (err) {
-                    console.error(`Chyba pri získavaní názvu pre hosťujúci tím ${currentDisplayName}:`, err);
                 }
             }
         }
@@ -644,7 +642,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     }
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení vylúčenia:', err);
             }
         };
         
@@ -1365,7 +1362,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 }
             }
         }, (error) => {
-            console.error('Chyba pri počúvaní zápasu:', error);
         });
         
         return () => unsubscribe();
@@ -1488,7 +1484,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     setHallName('Športová hala');
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní názvu haly:', err);
                 setHallName('Športová hala');
             } finally {
                 setLoadingHall(false);
@@ -1511,7 +1506,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 setSuspensionMatchesCount(matches);
             }
         } catch (err) {
-            console.error('Chyba pri načítaní nastavení vylúčenia za modrú kartu:', err);
         }
     };
 
@@ -1542,7 +1536,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             });            
             return teamMatches;
         } catch (err) {
-            console.error('Chyba pri načítaní zápasov tímu:', err);
             return [];
         }
     };    
@@ -1556,7 +1549,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
             await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
         } catch (err) {
-            console.error('Chyba pri výpočte vylúčení:', err);
         }
     };
 
@@ -1775,7 +1767,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             setBlueCardSuspensions(suspensions);
             
         } catch (err) {
-            console.error('Chyba pri real-time výpočte vylúčení:', err);
         }
     };
 
@@ -1821,7 +1812,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
             }
         }, (error) => {
-            console.error('[BlueCard] Chyba pri real-time počúvaní modrých kariet:', error);
         });
         
         return () => {
@@ -1880,7 +1870,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             });
             setMatchEvents(events);
         } catch (err) {
-            console.error('Chyba pri načítaní udalostí:', err);
         } finally {
             setEventsLoading(false);
         }
@@ -2000,7 +1989,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní člena:', err);
             }
             
             return { name: 'Neznámy hráč', jerseyNumber: '' };
@@ -2357,7 +2345,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 }
             }
         }, (error) => {
-            console.error(`[MatchDetailView] Chyba pri počúvaní zápasu ${match.id}:`, error);
         });
         
         return () => {
@@ -2412,7 +2399,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     });
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení kategórie:', err);
                 setCategorySettings({
                     periods: 2,
                     periodDuration: 20,
@@ -2795,7 +2781,6 @@ const MatchesHallApp = () => {
                         needsUpdate = true;
                     }
                 } catch (err) {
-                    console.error(`Chyba pri načítaní haly ${hallId}:`, err);
                     names[hallId] = 'Športová hala';
                     needsUpdate = true;
                 }
@@ -2978,7 +2963,6 @@ const MatchesHallApp = () => {
                 
                 pendingUpdateTimeout = setTimeout(async () => {
                     if (allMatchesList.length > 0) {
-                        console.log('🔄 Aktualizujem názvy tímov po dokončení zápasu...');
                         await globalUpdateTeamNames();
                     }
                     pendingUpdateTimeout = null;
@@ -3014,7 +2998,6 @@ const MatchesHallApp = () => {
             });
             
         }, (error) => {
-            console.error('Chyba pri real-time načítaní zápasov:', error);
         });
         
         const cleanup = () => {
@@ -3064,7 +3047,6 @@ const MatchesHallApp = () => {
                 setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
             }
         }, (error) => {
-            console.error('Chyba pri real-time počúvaní stavov zápasov:', error);
         });
         
         return () => unsubscribe();
@@ -3101,7 +3083,6 @@ const MatchesHallApp = () => {
                 window.categoriesList = list;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní farieb kategórií:', err);
         }
     };
 
@@ -3118,7 +3099,6 @@ const MatchesHallApp = () => {
                 window.groupsData = data;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní skupín:', err);
         }
     };
 
@@ -3132,7 +3112,6 @@ const MatchesHallApp = () => {
                 setHallInfo({ id: hallSnap.id, ...hallSnap.data() });
             }
         } catch (err) {
-            console.error('Chyba pri načítaní haly:', err);
         }
     };
 
@@ -3147,7 +3126,6 @@ const MatchesHallApp = () => {
         }
         
         if (!window.matchTracker) {
-            console.warn('matchTracker nie je dostupný, používam identifikátory');
             for (const match of matches) {
                 if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
                     names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
@@ -3182,7 +3160,6 @@ const MatchesHallApp = () => {
                             }
                         }
                     } catch (err) {
-                        console.error(`Chyba pri načítaní kategórie ${match.categoryId}:`, err);
                     }
                 }
                 
@@ -3202,7 +3179,6 @@ const MatchesHallApp = () => {
                             needsUpdate = true;
                         }
                     } catch (err) {
-                        console.error(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.homeTeamIdentifier]) {
                     names[match.homeTeamIdentifier] = currentDisplayName;
@@ -3220,7 +3196,6 @@ const MatchesHallApp = () => {
                             needsUpdate = true;
                         }
                     } catch (err) {
-                        console.error(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.awayTeamIdentifier]) {
                     names[match.awayTeamIdentifier] = currentDisplayName;
@@ -3430,7 +3405,6 @@ const MatchesHallApp = () => {
                             needsUpdate = true;
                         }
                     } catch (err) {
-                        console.warn(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.homeTeamIdentifier]) {
                     names[match.homeTeamIdentifier] = currentDisplayName;
@@ -3449,7 +3423,6 @@ const MatchesHallApp = () => {
                             needsUpdate = true;
                         }
                     } catch (err) {
-                        console.warn(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
                     }
                 } else if (!names[match.awayTeamIdentifier]) {
                     names[match.awayTeamIdentifier] = currentDisplayName;
@@ -3686,7 +3659,6 @@ const MatchesHallApp = () => {
             });
             
         }, (error) => {
-            console.error('Chyba pri real-time počúvaní udalostí:', error);
         });
         
         return () => {
