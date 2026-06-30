@@ -2735,36 +2735,89 @@ const MatchesHallApp = () => {
             params.delete('day');
         }
         
+        // ULOŽÍME NÁZOV KATEGÓRIE (nie ID)
         if (category) {
-            params.set('category', category);
+            // Získame názov kategórie podľa ID
+            let categoryName = category;
+            if (categoriesData[category]) {
+                categoryName = categoriesData[category];
+            } else {
+                // Skúsime nájsť podľa ID v zozname kategórií
+                const found = categoriesList.find(c => c.id === category);
+                if (found) {
+                    categoryName = found.name;
+                }
+            }
+            params.set('category', categoryName);
         } else {
             params.delete('category');
         }
         
-        // OPRAVA: Uložíme aj špeciálne hodnoty skupín do URL
+        // ULOŽÍME NÁZOV HALY (nie ID)
+        if (hall) {
+            let hallName = hall;
+            if (hallNames[hall]) {
+                hallName = hallNames[hall];
+            }
+            params.set('hall', hallName);
+        } else {
+            params.delete('hall');
+        }
+        
         if (group) {
             params.set('group', group);
         } else {
             params.delete('group');
         }
         
-        if (hall) {
-            params.set('hall', hall);
-        } else {
-            params.delete('hall');
-        }
-        
         const newUrl = window.location.pathname + '?' + params.toString();
         window.history.replaceState(null, '', newUrl);
     };
-
+    
     const parseUrlFilters = () => {
         const params = new URLSearchParams(window.location.search);
+        const day = params.get('day') || null;
+        let category = params.get('category') || null;
+        let hall = params.get('hall') || null;
+        const group = params.get('group') || null;
+        
+        // PREVEDIEME NÁZOV KATEGÓRIE NA ID
+        if (category) {
+            // Skúsime nájsť kategóriu podľa názvu v categoriesData
+            let foundId = null;
+            for (const [id, name] of Object.entries(categoriesData)) {
+                if (name === category) {
+                    foundId = id;
+                    break;
+                }
+            }
+            // Ak sme nenašli, skúsime v categoriesList
+            if (!foundId && categoriesList.length > 0) {
+                const found = categoriesList.find(c => c.name === category);
+                if (found) {
+                    foundId = found.id;
+                }
+            }
+            category = foundId || category; // Ak nenájdené, necháme pôvodnú hodnotu
+        }
+        
+        // PREVEDIEME NÁZOV HALY NA ID
+        if (hall) {
+            let foundId = null;
+            for (const [id, name] of Object.entries(hallNames)) {
+                if (name === hall) {
+                    foundId = id;
+                    break;
+                }
+            }
+            hall = foundId || hall; // Ak nenájdené, necháme pôvodnú hodnotu
+        }
+        
         return {
-            day: params.get('day') || null,
-            category: params.get('category') || null,
-            group: params.get('group') || null,
-            hall: params.get('hall') || null
+            day: day,
+            category: category,
+            group: group,
+            hall: hall
         };
     };
 
