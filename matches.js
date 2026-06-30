@@ -1077,15 +1077,12 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         let rowClassName = 'hover:bg-gray-50 transition-colors cursor-default';
                         
-                        // Pridanie farby pozadia pre odstránených zo súpisky - bledo oranžová
                         if (isRemovedFromRoster) {
                             rowClassName = 'hover:bg-orange-100 transition-colors cursor-default bg-orange-100';
                         } 
-                        // Pridanie farby pozadia pre vylúčených za modrú kartu - bledo modrá
                         else if (isSuspendedByBlue) {
                             rowClassName = 'hover:bg-blue-100 transition-colors cursor-default bg-blue-100';
                         }
-                        // Pridanie farby pozadia pre normálne vylúčených - bledo sivá
                         else if (isExcludedNormally) {
                             rowClassName = 'hover:bg-gray-100 transition-colors cursor-default bg-gray-100';
                         }
@@ -1438,11 +1435,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
 
-    // --- PRIDANÉ: Stav pre názov haly ---
     const [hallName, setHallName] = React.useState(null);
     const [loadingHall, setLoadingHall] = React.useState(true);
 
-    // --- PRIDANÉ: Načítanie názvu haly podľa hallId zo zápasu ---
     React.useEffect(() => {
         const loadHallName = async () => {
             if (!window.db || !match.hallId) {
@@ -2177,7 +2172,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     
                                     const formattedTime = formatMatchTime(event);
                                     
-                                    // Odstránené tlačidlá pre editáciu a mazanie - len zobrazenie
                                     const rowClass = 'hover:bg-gray-50 transition-colors';
                                     
                                     return React.createElement(
@@ -2738,6 +2732,7 @@ const MatchesHallApp = () => {
     // --- STAVY PRE FILTROVANIE ---
     const [selectedDay, setSelectedDay] = useState(null); // null = všetky dni
     const [selectedCategory, setSelectedCategory] = useState(null); // null = všetky kategórie
+    const [selectedHall, setSelectedHall] = useState(null); // null = všetky haly
     const [filteredMatches, setFilteredMatches] = useState([]);
 
     const loadHallNames = async (matches) => {
@@ -2883,7 +2878,6 @@ const MatchesHallApp = () => {
                 const oldStatus = localMatchStatuses[match.id];
                 const newStatus = match.status || 'scheduled';
                 
-                // Aktualizácia stavu
                 if (change.type === 'modified' && oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
                     hasMatchCompletedAnywhere = true;
                     completedMatchesList.push({
@@ -2899,7 +2893,6 @@ const MatchesHallApp = () => {
                 localMatchStatuses[match.id] = newStatus;
                 updatedStatuses[match.id] = newStatus;
                 
-                // Aktualizácia skóre z databázy
                 if (match.homeScore !== undefined || match.awayScore !== undefined) {
                     const score = {
                         home: match.homeScore,
@@ -3004,7 +2997,6 @@ const MatchesHallApp = () => {
         };
     };
 
-    // --- PRIDANÉ: Listener na zmeny stavu zápasu pre všetky zápasy ---
     useEffect(() => {
         if (!window.db) return;
         
@@ -3111,12 +3103,10 @@ const MatchesHallApp = () => {
         }
     };
 
-    // --- UPRAVENÁ: processTeamNames - teraz vracia Promise a čaká na dokončenie ---
     const processTeamNames = async (matches) => {
         const names = { ...teamNames };
         let needsUpdate = false;
         
-        // Počkáme na inicializáciu matchTracker
         let attempts = 0;
         while (!window.matchTracker && attempts < 10) {
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -3125,7 +3115,6 @@ const MatchesHallApp = () => {
         
         if (!window.matchTracker) {
             console.warn('matchTracker nie je dostupný, používam identifikátory');
-            // Nastavíme aspoň základné názvy
             for (const match of matches) {
                 if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
                     names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
@@ -3139,7 +3128,6 @@ const MatchesHallApp = () => {
             return;
         }
         
-        // Pre každý zápas spracujeme názvy tímov
         for (const match of matches) {
             let categoryName = match.categoryName;
             if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
@@ -3147,9 +3135,7 @@ const MatchesHallApp = () => {
             }
             
             if (!categoryName) {
-                // Ak nemáme názov kategórie, skúsime ho získať z iných zdrojov
                 if (match.categoryId) {
-                    // Skúsime načítať z databázy priamo
                     try {
                         const settingsRef = doc(window.db, 'settings', 'categories');
                         const settingsSnap = await getDoc(settingsRef);
@@ -3157,10 +3143,8 @@ const MatchesHallApp = () => {
                             const catData = settingsSnap.data()[match.categoryId];
                             if (catData && catData.name) {
                                 categoryName = catData.name;
-                                // Uložíme do window.categoriesData pre budúce použitie
                                 if (!window.categoriesData) window.categoriesData = {};
                                 window.categoriesData[match.categoryId] = categoryName;
-                                // Aktualizujeme aj stav
                                 setCategoriesData(prev => ({ ...prev, [match.categoryId]: categoryName }));
                             }
                         }
@@ -3174,11 +3158,9 @@ const MatchesHallApp = () => {
                 }
             }
             
-            // Spracovanie domáceho tímu
             if (match.homeTeamIdentifier) {
                 const currentDisplayName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                 
-                // Ak aktuálny názov obsahuje názov kategórie, skúsime ho nahradiť
                 if (currentDisplayName && (currentDisplayName.includes(categoryName) || currentDisplayName === match.homeTeamIdentifier)) {
                     try {
                         const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
@@ -3194,7 +3176,6 @@ const MatchesHallApp = () => {
                 }
             }
             
-            // Spracovanie hosťujúceho tímu
             if (match.awayTeamIdentifier) {
                 const currentDisplayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                 
@@ -3256,7 +3237,6 @@ const MatchesHallApp = () => {
                     };
                 }
                 
-                // Ak je zadané hallId, filtrujeme podľa neho, inak berieme všetky zápasy
                 if (!hallId || match.hallId === hallId) {
                     hallMatches.push(match);
                 }
@@ -3280,10 +3260,8 @@ const MatchesHallApp = () => {
 
             await loadHallNames(hallMatches);
             
-            // --- DÔLEŽITÉ: Najprv načítame názvy tímov, potom zobrazíme ---
             await processTeamNames(hallMatches);
             
-            // Inicializujeme filteredMatches so všetkými zápasmi
             setFilteredMatches(hallMatches);
             
             const matchShown = showMatchFromUrl(hallMatches);
@@ -3291,12 +3269,10 @@ const MatchesHallApp = () => {
                 setLoading(false);
             }
             
-            // Real-time listener nastavíme len ak máme hallId
             if (hallId) {
                 const unsubscribe = setupMatchesRealTimeListener(hallId);
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
             } else {
-                // Pre neprihlásených používateľov len načítame zápasy raz
                 setLoading(false);
             }
             
@@ -3366,7 +3342,6 @@ const MatchesHallApp = () => {
             prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
         );
     
-        // Aktualizujeme aj filteredMatches
         setFilteredMatches(prevList => 
             prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
         );
@@ -3394,7 +3369,6 @@ const MatchesHallApp = () => {
         setCurrentMatchIndex(0);
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         
-        // Po návrate zo detailu aktualizujeme názvy tímov, ak ešte nie sú načítané
         if (!teamNamesLoaded && allMatchesList.length > 0) {
             processTeamNames(allMatchesList);
         }
@@ -3476,7 +3450,7 @@ const MatchesHallApp = () => {
         };
     }, []);
 
-    // --- NOVÝ EFFECT: Automatická aktualizácia filteredMatches pri zmene matches, selectedDay alebo selectedCategory ---
+    // --- FILTROVANIE ZÁPASOV (pridanie filtra podľa haly) ---
     useEffect(() => {
         let result = [...allMatchesList];
         
@@ -3497,27 +3471,31 @@ const MatchesHallApp = () => {
         // Filtrovanie podľa kategórie
         if (selectedCategory !== null) {
             result = result.filter(match => {
-                // Porovnáme categoryId alebo categoryName
                 if (match.categoryId === selectedCategory) return true;
                 if (match.categoryName === selectedCategory) return true;
-                
-                // Skúsime nájsť názov kategórie podľa ID
                 if (match.categoryId && categoriesData[match.categoryId] === selectedCategory) return true;
-                
                 return false;
             });
         }
         
+        // --- NOVÝ FILTER: Filtrovanie podľa haly ---
+        if (selectedHall !== null) {
+            result = result.filter(match => {
+                if (match.hallId === selectedHall) return true;
+                // Skúsime porovnať názov haly
+                const hallName = hallNames[match.hallId] || match.hallId;
+                return hallName === selectedHall || hallNames[match.hallId] === selectedHall;
+            });
+        }
+        
         setFilteredMatches(result);
-    }, [selectedDay, selectedCategory, allMatchesList, categoriesData]);
+    }, [selectedDay, selectedCategory, selectedHall, allMatchesList, categoriesData, hallNames]);
 
     useEffect(() => {
         const init = async () => {
-            // Načítame farby a skupiny vždy
             await loadCategoryColors();
             await loadGroupsData();
             
-            // Skontrolujeme, či máme prihláseného používateľa
             if (window.globalUserProfileData) {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
@@ -3525,23 +3503,18 @@ const MatchesHallApp = () => {
                     await loadHallInfo(hallId);
                     await loadMatches(hallId);
                 } else {
-                    // Používateľ je prihlásený, ale nemá halu - načítame všetky zápasy
                     await loadMatches(null);
                 }
             } else {
-                // Neprihlásený používateľ - načítame všetky zápasy
                 await loadMatches(null);
             }
         };
 
-        // Spustíme inicializáciu
         init();
     }, []);
 
-    // --- NOVÝ EFFECT: Po načítaní teamNames aktualizujeme zobrazenie ---
     useEffect(() => {
         if (teamNamesLoaded && matches.length > 0) {
-            // Toto zabezpečí, že sa zoznam zápasov prekreslí s novými názvami
             setMatches(prevMatches => [...prevMatches]);
             setAllMatchesList(prevList => [...prevList]);
             setFilteredMatches(prevList => [...prevList]);
@@ -3628,12 +3601,10 @@ const MatchesHallApp = () => {
         );
     }
 
-    // Získame zoznam dní pre filtračné tlačidlá
     const allDays = getMatchesByDay(allMatchesList);
     const filteredDays = getMatchesByDay(filteredMatches);
     const totalMatches = filteredMatches.length;
 
-    // Získame unikátne kategórie pre filtračné tlačidlá
     const uniqueCategories = [];
     const categoryMap = {};
     
@@ -3651,6 +3622,22 @@ const MatchesHallApp = () => {
                 name: categoryName
             };
             uniqueCategories.push(categoryMap[categoryKey]);
+        }
+    });
+
+    // --- ZÍSKANIE UNIKÁTNYCH MIEST (hál) PRE FILTROVANIE ---
+    const uniqueHalls = [];
+    const hallMap = {};
+    
+    allMatchesList.forEach(match => {
+        if (!match.hallId) return;
+        const hallName = hallNames[match.hallId] || 'Športová hala';
+        if (!hallMap[match.hallId]) {
+            hallMap[match.hallId] = {
+                id: match.hallId,
+                name: hallName
+            };
+            uniqueHalls.push(hallMap[match.hallId]);
         }
     });
 
@@ -3673,7 +3660,6 @@ const MatchesHallApp = () => {
         allDays.length > 0 && React.createElement(
             'div',
             { className: 'mb-3 flex flex-wrap gap-2 justify-center' },
-            // Tlačidlo "Všetky dni"
             React.createElement(
                 'button',
                 {
@@ -3686,7 +3672,6 @@ const MatchesHallApp = () => {
                 },
                 'Všetky dni'
             ),
-            // Tlačidlá pre jednotlivé dni
             allDays.map((dayGroup, index) => {
                 const dateKey = dayGroup.date.toDateString();
                 const isSelected = selectedDay === dateKey;
@@ -3706,11 +3691,10 @@ const MatchesHallApp = () => {
             })
         ),
 
-        // --- NOVÉ FILTRAČNÉ TLAČIDLÁ PRE KATEGÓRIE ---
+        // --- FILTRAČNÉ TLAČIDLÁ PRE KATEGÓRIE ---
         uniqueCategories.length > 0 && React.createElement(
             'div',
-            { className: 'mb-4 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
-            // Tlačidlo "Všetky kategórie"
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
             React.createElement(
                 'button',
                 {
@@ -3723,10 +3707,8 @@ const MatchesHallApp = () => {
                 },
                 'Všetky kategórie'
             ),
-            // Tlačidlá pre jednotlivé kategórie
             uniqueCategories.map((cat, index) => {
                 const isSelected = selectedCategory === cat.id || selectedCategory === cat.name;
-                // Získame farbu kategórie pre lepší vizuál
                 const color = categoryDrawColors[cat.id] || '#3B82F6';
                 const lighterColor = getLighterColor(color);
                 
@@ -3743,6 +3725,47 @@ const MatchesHallApp = () => {
                         style: isSelected ? { backgroundColor: color } : { backgroundColor: lighterColor }
                     },
                     cat.name
+                );
+            })
+        ),
+
+        // --- NOVÉ FILTRAČNÉ TLAČIDLÁ PRE MIESTA (HALY) ---
+        uniqueHalls.length > 1 && React.createElement(
+            'div',
+            { className: 'mb-4 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setSelectedHall(null),
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        selectedHall === null 
+                            ? 'bg-purple-600 text-white shadow-md scale-105' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky miesta'
+            ),
+            uniqueHalls.map((hall, index) => {
+                const isSelected = selectedHall === hall.id || selectedHall === hall.name;
+                // Farba pre každú halu - generujeme podľa indexu
+                const colors = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4'];
+                const color = colors[index % colors.length];
+                const lighterColor = getLighterColor(color);
+                
+                return React.createElement(
+                    'button',
+                    {
+                        key: `hall-filter-${index}`,
+                        onClick: () => setSelectedHall(isSelected ? null : (hall.id || hall.name)),
+                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            isSelected 
+                                ? 'text-white shadow-md scale-105' 
+                                : 'text-gray-700 hover:bg-gray-300'
+                        }`,
+                        style: isSelected ? { backgroundColor: color } : { backgroundColor: lighterColor }
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-location-dot mr-1', style: { fontSize: '12px' } }),
+                    hall.name
                 );
             })
         ),
@@ -3817,13 +3840,11 @@ const MatchesHallApp = () => {
                                 let displayAwayScore = null;
                                 let showScore = false;
                             
-                                // Pre ukončený zápas vždy zobrazíme skóre z databázy
                                 if (isMatchCompleted && hasDbScore) {
                                     displayHomeScore = dbScore.home;
                                     displayAwayScore = dbScore.away;
                                     showScore = true;
                                 }
-                                // Pre prebiehajúci zápas zobrazíme skóre z udalostí alebo 0:0
                                 else if (isMatchInProgress) {
                                     if (eventsScore && (eventsScore.home > 0 || eventsScore.away > 0)) {
                                         displayHomeScore = eventsScore.home;
@@ -3834,7 +3855,6 @@ const MatchesHallApp = () => {
                                     }
                                     showScore = true;
                                 }
-                                // Pre naplánovaný zápas s existujúcim skóre v DB (napr. po návrate z completed)
                                 else if (hasDbScore) {
                                     displayHomeScore = dbScore.home;
                                     displayAwayScore = dbScore.away;
@@ -4013,5 +4033,4 @@ const renderApp = () => {
     }
 };
 
-// Spustíme aplikáciu ihneď, bez čakania na prihlásenie
 renderApp();
