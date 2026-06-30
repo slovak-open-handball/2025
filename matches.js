@@ -2726,15 +2726,51 @@ const MatchesHallApp = () => {
     const [showingDetail, setShowingDetail] = useState(false);
     const [allMatchesList, setAllMatchesList] = useState([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    const [hallNames, setHallNames] = useState({});    
     
     const [matchStatuses, setMatchStatuses] = useState({});
     const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
     
-    // --- NOVÉ: Stav pre sledovanie, či už boli názvy tímov načítané ---
     const [teamNamesLoaded, setTeamNamesLoaded] = useState(false);
 
-    // --- NOVÉ: Stav pre uchovávanie skóre z databázy pre každý zápas ---
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
+
+    const loadHallNames = async (matches) => {
+        const hallIds = new Set();
+        matches.forEach(match => {
+            if (match.hallId) {
+                hallIds.add(match.hallId);
+            }
+        });
+    
+        const names = { ...hallNames };
+        let needsUpdate = false;
+        
+        for (const hallId of hallIds) {
+            if (!names[hallId]) {
+                try {
+                    const hallRef = doc(window.db, 'places', hallId);
+                    const hallSnap = await getDoc(hallRef);
+                    if (hallSnap.exists()) {
+                        const hallData = hallSnap.data();
+                        names[hallId] = hallData.name || 'Športová hala';
+                        needsUpdate = true;
+                    } else {
+                        names[hallId] = 'Športová hala';
+                        needsUpdate = true;
+                    }
+                } catch (err) {
+                    console.error(`Chyba pri načítaní haly ${hallId}:`, err);
+                    names[hallId] = 'Športová hala';
+                    needsUpdate = true;
+                }
+            }
+        }
+        
+        if (needsUpdate) {
+            setHallNames(names);
+        }
+    };
 
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0;
@@ -3236,6 +3272,8 @@ const MatchesHallApp = () => {
             setAllMatchesList(hallMatches);            
             setMatchStatuses(allStatuses);
             setMatchScoresFromDb(allScores);
+
+            await loadHallNames(hallMatches);
             
             // --- DÔLEŽITÉ: Najprv načítame názvy tímov, potom zobrazíme ---
             await processTeamNames(hallMatches);
@@ -3656,7 +3694,7 @@ const MatchesHallApp = () => {
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                             
                                 // -------- NAČÍTANIE NÁZOV HALY PRE ZÁPAS (POUŽIJEME HALL INFO) --------
-                                const matchHallName = match.hallName || hallInfo?.name || 'Športová hala';
+                                const matchHallName = hallNames[match.hallId] || hallInfo?.name || 'Športová hala';
                             
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
