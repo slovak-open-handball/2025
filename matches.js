@@ -1096,7 +1096,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `removal-${idx}`, className: 'bg-orange-100' },
-                                React.createElement('td', { colspan: 10, className: 'px-2 py-1 text-center' },
+                                React.createElement('td', { colspan: 9, className: 'px-2 py-1 text-center' },
                                     React.createElement(
                                         'div',
                                         { className: 'text-xs text-orange-700 font-medium flex items-center justify-center gap-1' },
@@ -1114,7 +1114,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `exclusion-${idx}`, className: 'bg-orange-100' },
-                                React.createElement('td', { colspan: 10, className: 'px-2 py-1 text-center' },
+                                React.createElement('td', { colspan: 9, className: 'px-2 py-1 text-center' },
                                     React.createElement(
                                         'div',
                                         { className: 'text-xs text-orange-700 font-medium flex items-center justify-center gap-1' },
@@ -1131,7 +1131,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             exclusionDisplayRow = React.createElement(
                                 'tr',
                                 { key: `blue-suspension-${idx}`, className: 'bg-blue-100' },
-                                React.createElement('td', { colspan: 10, className: 'px-2 py-1 text-center' },
+                                React.createElement('td', { colspan: 9, className: 'px-2 py-1 text-center' },
                                     React.createElement(
                                         'div',
                                         { className: 'text-xs text-blue-700 font-medium flex items-center justify-center gap-1' },
@@ -3641,7 +3641,7 @@ const MatchesHallApp = () => {
                                     { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                     React.createElement(
                                         'td',
-                                        { colSpan: 6, className: 'px-4 py-4 text-left' },
+                                        { colspan: 7, className: 'px-4 py-4 text-left' },
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-2' },
