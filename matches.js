@@ -3322,6 +3322,7 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
                         const basicGroupNames = [];
+                        // Ak je vybraná kategória, berieme len jej základné skupiny
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
                             categoryGroups.forEach(group => {
@@ -3344,6 +3345,7 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
                         const advancedGroupNames = [];
+                        // Ak je vybraná kategória, berieme len jej nadstavbové skupiny
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
                             categoryGroups.forEach(group => {
