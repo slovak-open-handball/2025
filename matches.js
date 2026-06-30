@@ -3591,17 +3591,6 @@ const MatchesHallApp = () => {
             } else {
                 setLoading(false);
             }
-
-            console.log('Konečný stav po loadMatches:');
-            console.log('  selectedGroup:', selectedGroup);
-            console.log('  filteredMatches.length:', result.length);
-            console.log('  filteredMatches (prvých 5):', result.slice(0, 5).map(m => ({ 
-                id: m.id, 
-                group: m.groupName, 
-                matchType: m.matchType,
-                home: m.homeTeamIdentifier,
-                away: m.awayTeamIdentifier
-            })));
             
             console.log('=== loadMatches KONIEC ===');
             
@@ -3999,22 +3988,15 @@ const MatchesHallApp = () => {
 
     // FILTROVANIE ZÁPASOV S AKTUALIZÁCIOU URL
     useEffect(() => {
-        console.log('=== useEffect pre filtrovanie ===');
-        console.log('selectedGroup:', selectedGroup);
-        console.log('allMatchesList.length:', allMatchesList.length);
-        
         if (allMatchesList.length === 0) {
-            console.log('allMatchesList je prázdne, return');
             return;
         }
         
         if (showingDetail) {
-            console.log('showingDetail je true, return');
             return;
         }
         
         let result = [...allMatchesList];
-        console.log('result počiatočný:', result.length);
         
         if (selectedDay !== null) {
             result = result.filter(match => {
@@ -4125,9 +4107,6 @@ const MatchesHallApp = () => {
                 updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
             }
         }
-
-        console.log('result konečný:', result.length);
-        setFilteredMatches(result);
         
     }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
 
