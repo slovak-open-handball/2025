@@ -2935,6 +2935,35 @@ const MatchesHallApp = () => {
         };
     };
 
+    // --- PRIDANÉ: Listener na zmeny stavu zápasu pre všetky zápasy ---
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const updatedStatuses = {};
+            
+            snapshot.docChanges().forEach(change => {
+                const match = {
+                    id: change.doc.id,
+                    ...change.doc.data()
+                };
+                
+                const newStatus = match.status || 'scheduled';
+                updatedStatuses[match.id] = newStatus;
+            });
+            
+            if (Object.keys(updatedStatuses).length > 0) {
+                setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
+        }, (error) => {
+            console.error('Chyba pri real-time počúvaní stavov zápasov:', error);
+        });
+        
+        return () => unsubscribe();
+    }, [window.db]);
+
     const loadCategoryColors = async () => {
         if (!window.db) return;
         
@@ -3316,6 +3345,7 @@ const MatchesHallApp = () => {
     }, []);
 
     const renderDetailButton = (match, dayIndex, matchIndex) => {
+        // Použijeme aktuálny stav z matchStatuses, ktorý sa aktualizuje v reálnom čase
         const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
         const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
 
