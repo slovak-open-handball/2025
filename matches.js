@@ -1079,15 +1079,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         
                         // Pridanie farby pozadia pre odstránených zo súpisky - bledo oranžová
                         if (isRemovedFromRoster) {
-                            rowClassName = 'hover:bg-orange-50 transition-colors cursor-default bg-orange-100';
+                            rowClassName = 'hover:bg-orange-100 transition-colors cursor-default bg-orange-100';
                         } 
                         // Pridanie farby pozadia pre vylúčených za modrú kartu - bledo modrá
                         else if (isSuspendedByBlue) {
-                            rowClassName = 'hover:bg-blue-50 transition-colors cursor-default bg-blue-100';
+                            rowClassName = 'hover:bg-blue-100 transition-colors cursor-default bg-blue-100';
                         }
                         // Pridanie farby pozadia pre normálne vylúčených - bledo sivá
                         else if (isExcludedNormally) {
-                            rowClassName = 'hover:bg-gray-50 transition-colors cursor-default bg-gray-100';
+                            rowClassName = 'hover:bg-gray-100 transition-colors cursor-default bg-gray-100';
                         }
                         
                         let exclusionDisplayRow = null;
@@ -1113,11 +1113,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             
                             exclusionDisplayRow = React.createElement(
                                 'tr',
-                                { key: `exclusion-${idx}`, className: 'bg-orange-50' },
+                                { key: `exclusion-${idx}`, className: 'bg-orange-100' },
                                 React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'text-xs text-orange-600 font-medium flex items-center justify-center gap-1' },
+                                        { className: 'text-xs text-orange-700 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-hourglass-half' }),
                                         React.createElement('span', {}, `Zostáva: ${timeDisplay}`)
                                     )
@@ -1130,11 +1130,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             
                             exclusionDisplayRow = React.createElement(
                                 'tr',
-                                { key: `blue-suspension-${idx}`, className: 'bg-blue-50' },
+                                { key: `blue-suspension-${idx}`, className: 'bg-blue-100' },
                                 React.createElement('td', { colSpan: 9, className: 'px-2 py-1 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'text-xs text-blue-600 font-medium flex items-center justify-center gap-1' },
+                                        { className: 'text-xs text-blue-700 font-medium flex items-center justify-center gap-1' },
                                         React.createElement('i', { className: 'fa-solid fa-ban' }),
                                         React.createElement('span', {}, `Vylúčenie za modrú kartu v predchádzajúcom zápase.`)
                                     )
