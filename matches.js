@@ -3398,16 +3398,13 @@ const MatchesHallApp = () => {
     };
     
     const globalUpdateTeamNames = async () => {
-        if (allMatchesList.length === 0) return;
-        
-        console.log('🔄 Spúšťam globálnu aktualizáciu názvov tímov...');
+        if (allMatchesList.length === 0) return;        
         
         const names = { ...teamNames };
         let needsUpdate = false;
         
         // Kontrola dostupnosti matchTracker
         if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
-            console.warn('⚠️ matchTracker nie je dostupný, používam identifikátory');
             return;
         }
         
@@ -3463,19 +3460,14 @@ const MatchesHallApp = () => {
         // Ak máme nové názvy, aktualizujeme ich
         if (needsUpdate) {
             setTeamNames(prev => ({ ...prev, ...names }));
-            console.log('✅ Názvy tímov boli aktualizované, počet:', Object.keys(names).length);
-        } else {
-            console.log('ℹ️ Žiadne nové názvy tímov na aktualizáciu');
         }
     };
     
     useEffect(() => {
         window.updateTeamNamesGlobally = globalUpdateTeamNames;
         
-        // Spustíme periodickú kontrolu každých 30 sekúnd
         const interval = setInterval(() => {
             if (allMatchesList.length > 0) {
-                // Skontrolujeme, či niektorý zápas zmenil stav na completed
                 let hasCompleted = false;
                 for (const match of allMatchesList) {
                     const status = matchStatuses[match.id] || match.status || 'scheduled';
@@ -3489,7 +3481,7 @@ const MatchesHallApp = () => {
                     globalUpdateTeamNames();
                 }
             }
-        }, 30000);
+        }, 5000);
         
         return () => {
             delete window.updateTeamNamesGlobally;
