@@ -4238,11 +4238,6 @@ const MatchesHallApp = () => {
             'div',
             { className: 'mb-8 text-center' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy'),
-            React.createElement(
-                'div',
-                { className: 'flex items-center justify-center gap-2 mt-1' },
-                React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `${totalMatches} zápasov`)
-            )
         ),
 
         allDays.length > 0 && React.createElement(
@@ -4635,7 +4630,6 @@ const MatchesHallApp = () => {
                                             { className: 'flex items-center gap-2' },
                                             React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
                                             React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, formatDateHeader(dayDate)),
-                                            React.createElement('span', { className: 'text-sm text-gray-500 ml-2' }, `(${dayMatches.length} zápasov)`)
                                         )
                                     )
                                 )
