@@ -2735,8 +2735,9 @@ const MatchesHallApp = () => {
 
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
 
-    // --- NOVÝ STAV: Filter podľa dňa ---
+    // --- STAVY PRE FILTROVANIE ---
     const [selectedDay, setSelectedDay] = useState(null); // null = všetky dni
+    const [selectedCategory, setSelectedCategory] = useState(null); // null = všetky kategórie
     const [filteredMatches, setFilteredMatches] = useState([]);
 
     const loadHallNames = async (matches) => {
@@ -3475,12 +3476,13 @@ const MatchesHallApp = () => {
         };
     }, []);
 
-    // --- NOVÝ EFFECT: Automatická aktualizácia filteredMatches pri zmene matches alebo selectedDay ---
+    // --- NOVÝ EFFECT: Automatická aktualizácia filteredMatches pri zmene matches, selectedDay alebo selectedCategory ---
     useEffect(() => {
-        if (selectedDay === null) {
-            setFilteredMatches(allMatchesList);
-        } else {
-            const filtered = allMatchesList.filter(match => {
+        let result = [...allMatchesList];
+        
+        // Filtrovanie podľa dňa
+        if (selectedDay !== null) {
+            result = result.filter(match => {
                 if (!match.scheduledTime) return false;
                 try {
                     const date = match.scheduledTime.toDate();
@@ -3490,9 +3492,24 @@ const MatchesHallApp = () => {
                     return false;
                 }
             });
-            setFilteredMatches(filtered);
         }
-    }, [selectedDay, allMatchesList]);
+        
+        // Filtrovanie podľa kategórie
+        if (selectedCategory !== null) {
+            result = result.filter(match => {
+                // Porovnáme categoryId alebo categoryName
+                if (match.categoryId === selectedCategory) return true;
+                if (match.categoryName === selectedCategory) return true;
+                
+                // Skúsime nájsť názov kategórie podľa ID
+                if (match.categoryId && categoriesData[match.categoryId] === selectedCategory) return true;
+                
+                return false;
+            });
+        }
+        
+        setFilteredMatches(result);
+    }, [selectedDay, selectedCategory, allMatchesList, categoriesData]);
 
     useEffect(() => {
         const init = async () => {
@@ -3616,6 +3633,27 @@ const MatchesHallApp = () => {
     const filteredDays = getMatchesByDay(filteredMatches);
     const totalMatches = filteredMatches.length;
 
+    // Získame unikátne kategórie pre filtračné tlačidlá
+    const uniqueCategories = [];
+    const categoryMap = {};
+    
+    allMatchesList.forEach(match => {
+        let categoryName = match.categoryName;
+        if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
+            categoryName = categoriesData[match.categoryId];
+        }
+        if (!categoryName) return;
+        
+        const categoryKey = match.categoryId || categoryName;
+        if (!categoryMap[categoryKey]) {
+            categoryMap[categoryKey] = {
+                id: match.categoryId || categoryName,
+                name: categoryName
+            };
+            uniqueCategories.push(categoryMap[categoryKey]);
+        }
+    });
+
     return React.createElement(
         'div',
         { className: 'max-w-7xl mx-auto px-4 py-6' },
@@ -3631,10 +3669,10 @@ const MatchesHallApp = () => {
             )
         ),
 
-        // --- NOVÉ FILTRAČNÉ TLAČIDLÁ NAD TABUĽKOU ---
+        // --- FILTRAČNÉ TLAČIDLÁ PRE DNI ---
         allDays.length > 0 && React.createElement(
             'div',
-            { className: 'mb-4 flex flex-wrap gap-2 justify-center' },
+            { className: 'mb-3 flex flex-wrap gap-2 justify-center' },
             // Tlačidlo "Všetky dni"
             React.createElement(
                 'button',
@@ -3663,18 +3701,59 @@ const MatchesHallApp = () => {
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`
                     },
-                    `${formatDateHeader(dayGroup.date)}`
+                    `${formatDateHeader(dayGroup.date)} (${dayGroup.matches.length})`
                 );
             })
         ),
-        
+
+        // --- NOVÉ FILTRAČNÉ TLAČIDLÁ PRE KATEGÓRIE ---
+        uniqueCategories.length > 0 && React.createElement(
+            'div',
+            { className: 'mb-4 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+            // Tlačidlo "Všetky kategórie"
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setSelectedCategory(null),
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        selectedCategory === null 
+                            ? 'bg-green-600 text-white shadow-md scale-105' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky kategórie'
+            ),
+            // Tlačidlá pre jednotlivé kategórie
+            uniqueCategories.map((cat, index) => {
+                const isSelected = selectedCategory === cat.id || selectedCategory === cat.name;
+                // Získame farbu kategórie pre lepší vizuál
+                const color = categoryDrawColors[cat.id] || '#3B82F6';
+                const lighterColor = getLighterColor(color);
+                
+                return React.createElement(
+                    'button',
+                    {
+                        key: `category-filter-${index}`,
+                        onClick: () => setSelectedCategory(isSelected ? null : (cat.id || cat.name)),
+                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            isSelected 
+                                ? 'text-white shadow-md scale-105' 
+                                : 'text-gray-700 hover:bg-gray-300'
+                        }`,
+                        style: isSelected ? { backgroundColor: color } : { backgroundColor: lighterColor }
+                    },
+                    cat.name
+                );
+            })
+        ),
+
         // TABUĽKA ZÁPASOV - používame filteredMatches
         filteredDays.length === 0 ? 
             React.createElement(
                 'div',
                 { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
-                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy pre vybraný deň')
+                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy pre vybrané filtre')
             ) :
             React.createElement(
                 'div',
