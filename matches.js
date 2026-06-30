@@ -2735,6 +2735,10 @@ const MatchesHallApp = () => {
 
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
 
+    // --- NOVÝ STAV: Filter podľa dňa ---
+    const [selectedDay, setSelectedDay] = useState(null); // null = všetky dni
+    const [filteredMatches, setFilteredMatches] = useState([]);
+
     const loadHallNames = async (matches) => {
         const hallIds = new Set();
         matches.forEach(match => {
@@ -3278,6 +3282,9 @@ const MatchesHallApp = () => {
             // --- DÔLEŽITÉ: Najprv načítame názvy tímov, potom zobrazíme ---
             await processTeamNames(hallMatches);
             
+            // Inicializujeme filteredMatches so všetkými zápasmi
+            setFilteredMatches(hallMatches);
+            
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
                 setLoading(false);
@@ -3355,6 +3362,11 @@ const MatchesHallApp = () => {
         );
     
         setAllMatchesList(prevList => 
+            prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    
+        // Aktualizujeme aj filteredMatches
+        setFilteredMatches(prevList => 
             prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
         );
     
@@ -3463,6 +3475,25 @@ const MatchesHallApp = () => {
         };
     }, []);
 
+    // --- NOVÝ EFFECT: Automatická aktualizácia filteredMatches pri zmene matches alebo selectedDay ---
+    useEffect(() => {
+        if (selectedDay === null) {
+            setFilteredMatches(allMatchesList);
+        } else {
+            const filtered = allMatchesList.filter(match => {
+                if (!match.scheduledTime) return false;
+                try {
+                    const date = match.scheduledTime.toDate();
+                    const dateKey = date.toDateString();
+                    return dateKey === selectedDay;
+                } catch (e) {
+                    return false;
+                }
+            });
+            setFilteredMatches(filtered);
+        }
+    }, [selectedDay, allMatchesList]);
+
     useEffect(() => {
         const init = async () => {
             // Načítame farby a skupiny vždy
@@ -3496,6 +3527,7 @@ const MatchesHallApp = () => {
             // Toto zabezpečí, že sa zoznam zápasov prekreslí s novými názvami
             setMatches(prevMatches => [...prevMatches]);
             setAllMatchesList(prevList => [...prevList]);
+            setFilteredMatches(prevList => [...prevList]);
         }
     }, [teamNamesLoaded, teamNames]);
 
@@ -3525,10 +3557,10 @@ const MatchesHallApp = () => {
         );
     };
 
-    const getMatchesByDay = () => {
+    const getMatchesByDay = (matchesList) => {
         const groups = {};
         
-        matches.forEach(match => {
+        matchesList.forEach(match => {
             if (match.scheduledTime) {
                 try {
                     const date = match.scheduledTime.toDate();
@@ -3579,8 +3611,10 @@ const MatchesHallApp = () => {
         );
     }
 
-    const matchesByDay = getMatchesByDay();
-    const totalMatches = matches.length;
+    // Získame zoznam dní pre filtračné tlačidlá
+    const allDays = getMatchesByDay(allMatchesList);
+    const filteredDays = getMatchesByDay(filteredMatches);
+    const totalMatches = filteredMatches.length;
 
     return React.createElement(
         'div',
@@ -3596,13 +3630,58 @@ const MatchesHallApp = () => {
                 React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `${totalMatches} zápasov`)
             )
         ),
+
+        // --- NOVÉ FILTRAČNÉ TLAČIDLÁ NAD TABUĽKOU ---
+        allDays.length > 0 && React.createElement(
+            'div',
+            { className: 'mb-4 flex flex-wrap gap-2 justify-center' },
+            // Tlačidlo "Všetky dni"
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setSelectedDay(null),
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        selectedDay === null 
+                            ? 'bg-blue-600 text-white shadow-md scale-105' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky dni'
+            ),
+            // Tlačidlá pre jednotlivé dni
+            allDays.map((dayGroup, index) => {
+                const dateKey = dayGroup.date.toDateString();
+                const isSelected = selectedDay === dateKey;
+                return React.createElement(
+                    'button',
+                    {
+                        key: `day-filter-${index}`,
+                        onClick: () => setSelectedDay(isSelected ? null : dateKey),
+                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            isSelected 
+                                ? 'bg-blue-600 text-white shadow-md scale-105' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                    },
+                    `${formatDateHeader(dayGroup.date)} (${dayGroup.matches.length})`
+                );
+            })
+        ),
         
-        matchesByDay.length === 0 ? 
+        // Zobrazenie počtu filtrovaných zápasov
+        selectedDay !== null && React.createElement(
+            'div',
+            { className: 'text-center text-sm text-gray-500 mb-4' },
+            `Zobrazené zápasy pre ${formatDateHeader(new Date(selectedDay))} (${filteredMatches.length} zápasov)`
+        ),
+        
+        // TABUĽKA ZÁPASOV - používame filteredMatches
+        filteredDays.length === 0 ? 
             React.createElement(
                 'div',
                 { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
-                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy')
+                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy pre vybraný deň')
             ) :
             React.createElement(
                 'div',
@@ -3630,7 +3709,7 @@ const MatchesHallApp = () => {
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
-                        matchesByDay.map((dayGroup, dayIndex) => {
+                        filteredDays.map((dayGroup, dayIndex) => {
                             const dayMatches = dayGroup.matches;
                             const dayDate = dayGroup.date;
                             const dayRows = [];
@@ -3693,7 +3772,6 @@ const MatchesHallApp = () => {
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                             
-                                // -------- NAČÍTANIE NÁZOV HALY PRE ZÁPAS (POUŽIJEME HALL INFO) --------
                                 const matchHallName = hallNames[match.hallId] || hallInfo?.name || 'Športová hala';
                             
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
@@ -3817,7 +3895,6 @@ const MatchesHallApp = () => {
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
                             
-                                        // -------- NOVÝ STĹPEC: MIESTO ZÁPASU --------
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-left' },
