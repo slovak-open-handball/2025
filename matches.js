@@ -1,3 +1,5 @@
+// Nahraďte celý obsah súboru matches.js nasledujúcim kódom:
+
 import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef } = React;
@@ -4865,13 +4867,7 @@ const MatchesHallApp = () => {
             setLoading(false);
             return;
         }
-    
-        if (!hallId) {
-            setError('Používateľ nemá priradenú žiadnu halu');
-            setLoading(false);
-            return;
-        }
-    
+        
         setLoading(true);
         setError(null);
     
@@ -4890,7 +4886,8 @@ const MatchesHallApp = () => {
                 
                 allStatuses[doc.id] = match.status || 'scheduled';
                 
-                if (match.hallId === hallId) {
+                // Ak je zadané hallId, filtrujeme podľa neho, inak berieme všetky zápasy
+                if (!hallId || match.hallId === hallId) {
                     hallMatches.push(match);
                 }
             });
@@ -4913,15 +4910,23 @@ const MatchesHallApp = () => {
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
                 setLoading(false);
-            }            
-            const unsubscribe = setupMatchesRealTimeListener(hallId);            
-            window.__matchesRealTimeUnsubscribe = unsubscribe;
+            }
+            
+            // Real-time listener nastavíme len ak máme hallId
+            if (hallId) {
+                const unsubscribe = setupMatchesRealTimeListener(hallId);
+                window.__matchesRealTimeUnsubscribe = unsubscribe;
+            } else {
+                // Pre neprihlásených používateľov len načítame zápasy raz
+                setLoading(false);
+            }
             
         } catch (err) {
             setError('Nepodarilo sa načítať zápasy: ' + err.message);
             setLoading(false);
         }
     };
+    
     const globalUpdateTeamNames = async () => {
         if (allMatchesList.length > 0) {
             await updateTeamNamesInMatches(allMatchesList, setTeamNames, teamNames);
@@ -5083,27 +5088,29 @@ const MatchesHallApp = () => {
 
     useEffect(() => {
         const init = async () => {
+            // Načítame farby a skupiny vždy
+            await loadCategoryColors();
+            await loadGroupsData();
+            
+            // Skontrolujeme, či máme prihláseného používateľa
             if (window.globalUserProfileData) {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
                 if (hallId) {
-                    await loadCategoryColors();
-                    await loadGroupsData();
                     await loadHallInfo(hallId);
                     await loadMatches(hallId);
                 } else {
-                    setError('Používateľ nemá priradenú žiadnu halu');
-                    setLoading(false);
+                    // Používateľ je prihlásený, ale nemá halu - načítame všetky zápasy
+                    await loadMatches(null);
                 }
+            } else {
+                // Neprihlásený používateľ - načítame všetky zápasy
+                await loadMatches(null);
             }
         };
 
-        if (window.globalUserProfileData) {
-            init();
-        } else {
-            window.addEventListener('globalDataUpdated', init);
-            return () => window.removeEventListener('globalDataUpdated', init);
-        }
+        // Spustíme inicializáciu
+        init();
     }, []);
 
     const renderDetailButton = (match, dayIndex, matchIndex) => {
@@ -5201,7 +5208,7 @@ const MatchesHallApp = () => {
                 'div',
                 { className: 'flex items-center justify-center gap-2 mt-1' },
                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
-                React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Športová hala'),
+                React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Všetky zápasy'),
                 React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `(${totalMatches} zápasov)`)
             )
         ),
@@ -5211,7 +5218,7 @@ const MatchesHallApp = () => {
                 'div',
                 { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
-                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy pre túto halu')
+                React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy')
             ) :
             React.createElement(
                 'div',
@@ -5446,17 +5453,5 @@ const renderApp = () => {
     }
 };
 
-if (window.db && window.globalUserProfileData) {
-    renderApp();
-} else {
-    window.addEventListener('globalDataUpdated', () => {
-        if (window.db && window.globalUserProfileData) {
-            renderApp();
-        }
-    });
-    setTimeout(() => {
-        if (window.db && window.globalUserProfileData) {
-            renderApp();
-        }
-    }, 3000);
-}
+// Spustíme aplikáciu ihneď, bez čakania na prihlásenie
+renderApp();
