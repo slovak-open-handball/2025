@@ -3825,7 +3825,7 @@ const MatchesHallApp = () => {
                                                 'div',
                                                 { className: 'flex items-center gap-1' },
                                                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
-                                                React.createElement('span', { className: 'text-gray-600 text-sm truncate max-w-24' }, matchHallName)
+                                                React.createElement('span', { className: 'text-gray-600 text-sm max-w-32' }, matchHallName)
                                             )
                                         ),
                             
