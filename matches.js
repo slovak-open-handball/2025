@@ -1261,7 +1261,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         startTimeRef.current = null;
     };
 
-    // V MatchTimer komponente, v useEffect pre onSnapshot
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -1287,21 +1286,17 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 serverSeconds = Math.min(serverSeconds + elapsed, periodLength);
             }
             
-            // AK SA ZÁPAS VRÁTIL DO STAVU SCHEDULED - RESET ČASOVAČA
             if (serverStatus === 'scheduled') {
-                // Zastavíme všetky bežiace intervaly
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                     intervalRef.current = null;
                 }
                 
-                // Resetujeme všetky stavy
                 setIsRunning(false);
                 isRunningRef.current = false;
                 startTimeRef.current = null;
                 localStartOffsetRef.current = 0;
                 
-                // Resetujeme zobrazenie
                 setDisplaySeconds(0);
                 displaySecondsRef.current = 0;
                 setPeriod(1);
@@ -1316,7 +1311,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     });
                 }
                 
-                return; // Ukončíme spracovanie, aby sme neprepísali reset
+                return;
             }
             
             const currentDisplayValue = displaySecondsRef.current;
@@ -2735,21 +2730,37 @@ const MatchesHallApp = () => {
             params.delete('day');
         }
         
+        // Ukladáme názov kategórie namiesto ID
         if (category) {
-            params.set('category', category);
+            // Nájdeme názov kategórie podľa ID
+            let categoryName = category;
+            if (categoriesData[category]) {
+                categoryName = categoriesData[category];
+            } else {
+                // Skúsime nájsť podľa ID v zozname kategórií
+                const found = categoriesList.find(cat => cat.id === category);
+                if (found) {
+                    categoryName = found.name;
+                }
+            }
+            params.set('category', categoryName);
         } else {
             params.delete('category');
         }
         
-        // OPRAVA: Uložíme aj špeciálne hodnoty skupín do URL
         if (group) {
             params.set('group', group);
         } else {
             params.delete('group');
         }
         
+        // Ukladáme názov haly namiesto ID
         if (hall) {
-            params.set('hall', hall);
+            let hallName = hall;
+            if (hallNames[hall]) {
+                hallName = hallNames[hall];
+            }
+            params.set('hall', hallName);
         } else {
             params.delete('hall');
         }
@@ -2760,11 +2771,77 @@ const MatchesHallApp = () => {
 
     const parseUrlFilters = () => {
         const params = new URLSearchParams(window.location.search);
+        const categoryName = params.get('category') || null;
+        const hallName = params.get('hall') || null;
+        
+        // Prevedieme názov kategórie na ID
+        let categoryId = categoryName;
+        if (categoryName) {
+            // Skúsime nájsť podľa názvu v window.categoriesData (globálne)
+            let found = false;
+            if (window.categoriesData) {
+                for (const [id, name] of Object.entries(window.categoriesData)) {
+                    if (name === categoryName) {
+                        categoryId = id;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            // Ak sme nenašli, skúsime v window.categoriesList
+            if (!found && window.categoriesList) {
+                const foundCat = window.categoriesList.find(cat => cat.name === categoryName);
+                if (foundCat) {
+                    categoryId = foundCat.id;
+                    found = true;
+                }
+            }
+            // Ak stále nemáme ID, použijeme názov ako ID (pre prípad, že by to bolo priamo ID)
+            if (!found) {
+                // Skúsime, či je to priamo ID v categoriesData
+                if (window.categoriesData && window.categoriesData[categoryName]) {
+                    categoryId = categoryName;
+                } else {
+                    // Necháme ako názov, ale bude to fungovať len ak existuje zápas s categoryName
+                    categoryId = categoryName;
+                }
+            }
+        }
+        
+        // Prevedieme názov haly na ID
+        let hallId = hallName;
+        if (hallName) {
+            let found = false;
+            // Skúsime nájsť v hallNames (lokálny stav) alebo window.hallNames
+            const hallNamesObj = window.hallNames || {};
+            for (const [id, name] of Object.entries(hallNamesObj)) {
+                if (name === hallName) {
+                    hallId = id;
+                    found = true;
+                    break;
+                }
+            }
+            // Ak sme nenašli, skúsime v lokálnom stave hallNames
+            if (!found) {
+                for (const [id, name] of Object.entries(hallNames)) {
+                    if (name === hallName) {
+                        hallId = id;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            // Ak stále nemáme ID, použijeme názov ako ID
+            if (!found) {
+                hallId = hallName;
+            }
+        }
+        
         return {
             day: params.get('day') || null,
-            category: params.get('category') || null,
+            category: categoryId,
             group: params.get('group') || null,
-            hall: params.get('hall') || null
+            hall: hallId
         };
     };
 
@@ -2775,10 +2852,10 @@ const MatchesHallApp = () => {
                 hallIds.add(match.hallId);
             }
         });
-    
+
         const names = { ...hallNames };
         let needsUpdate = false;
-        
+    
         for (const hallId of hallIds) {
             if (!names[hallId]) {
                 try {
@@ -2801,6 +2878,7 @@ const MatchesHallApp = () => {
         
         if (needsUpdate) {
             setHallNames(names);
+            window.hallNames = names; // Nastavíme globálne pre parseUrlFilters
         }
     };
 
@@ -3065,7 +3143,7 @@ const MatchesHallApp = () => {
 
     const loadCategoryColors = async () => {
         if (!window.db) return;
-        
+    
         try {
             const settingsRef = doc(window.db, 'settings', 'categories');
             const settingsSnap = await getDoc(settingsRef);
@@ -3085,7 +3163,7 @@ const MatchesHallApp = () => {
                         list.push({ id: catId, name: catData.name });
                     }
                 });
-                
+            
                 setCategoryDrawColors(colors);
                 setCategoriesData(categories);
                 setCategoriesList(list);
@@ -3224,7 +3302,6 @@ const MatchesHallApp = () => {
     };
 
     const loadMatches = async (hallId) => {
-    
         if (!window.db) {
             setError('Databáza nie je inicializovaná');
             setLoading(false);
@@ -3234,7 +3311,7 @@ const MatchesHallApp = () => {
         setLoading(true);
         setError(null);
     
-        try {            
+        try {
             const matchesRef = collection(window.db, 'matches');
             const querySnapshot = await getDocs(matchesRef);
             
@@ -3260,7 +3337,7 @@ const MatchesHallApp = () => {
                 if (!hallId || match.hallId === hallId) {
                     hallMatches.push(match);
                 }
-            });            
+            });
             
             hallMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
@@ -3279,13 +3356,25 @@ const MatchesHallApp = () => {
             setMatchStatuses(allStatuses);
             setMatchScoresFromDb(allScores);
     
+            // Najprv načítame názvy hál
             await loadHallNames(hallMatches);
+            
+            // Nastavíme window.hallNames pre parseUrlFilters
+            window.hallNames = hallNames;
+            
+            // Načítame kategórie ak ešte nie sú
+            if (Object.keys(categoriesData).length === 0) {
+                await loadCategoryColors();
+            }
+            
+            // Nastavíme window.categoriesData pre parseUrlFilters
+            window.categoriesData = categoriesData;
+            window.categoriesList = categoriesList;
+            
             await processTeamNames(hallMatches);
             
-            // --- DÔLEŽITÉ: NAČÍTAME groupsData PRED SPRACOVANÍM URL FILTROV ---
-            // Kontrola, či máme groupsData načítané
+            // Načítame groupsData ak ešte nie sú
             let groupsLoaded = Object.keys(groupsData).length > 0;
-            
             if (!groupsLoaded) {
                 try {
                     const groupsRef = doc(window.db, 'settings', 'groups');
@@ -3294,7 +3383,6 @@ const MatchesHallApp = () => {
                         const data = groupsSnap.data();
                         setGroupsData(data);
                         window.groupsData = data;
-                        // Aktualizujeme lokálnu premennú pre tento scope
                         Object.assign(groupsData, data);
                         groupsLoaded = true;
                     }
@@ -3326,12 +3414,13 @@ const MatchesHallApp = () => {
                 const categoryExists = hallMatches.some(match => {
                     if (match.categoryId === categoryFilter) return true;
                     if (match.categoryName === categoryFilter) return true;
-                    if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
+                    if (match.categoryId && categoriesData[match.categoryId] === categoriesData[categoryFilter]) return true;
                     return false;
                 });
                 if (!categoryExists) categoryFilter = null;
             }
             
+            // KONTROLA EXISTENCIE SKUPINY
             if (groupFilter && groupsLoaded) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
@@ -3393,6 +3482,8 @@ const MatchesHallApp = () => {
                         groupFilter = null;
                     }
                 }
+            } else if (groupFilter && !groupsLoaded) {
+                groupFilter = null;
             }
             
             // KONTROLA EXISTENCIE HALY
@@ -3427,12 +3518,11 @@ const MatchesHallApp = () => {
                 result = result.filter(match => {
                     if (match.categoryId === categoryFilter) return true;
                     if (match.categoryName === categoryFilter) return true;
-                    if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
+                    if (match.categoryId && categoriesData[match.categoryId] === categoriesData[categoryFilter]) return true;
                     return false;
                 });
             }
             
-            // APLIKÁCIA FILTRA SKUPINY - S KONTROLOU, ČI MÁME groupsData
             if (groupFilter && groupsLoaded) {
                 if (groupFilter === '__ALL_BASIC__') {
                     const basicGroupNames = [];
@@ -3491,7 +3581,6 @@ const MatchesHallApp = () => {
                 }
             }
             
-            // APLIKÁCIA FILTRA HALY
             if (hallFilter) {
                 result = result.filter(match => {
                     if (match.hallId === hallFilter) return true;
@@ -3503,7 +3592,6 @@ const MatchesHallApp = () => {
             setFilteredMatches(result);
             
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
-            
             if (hasHash) {
                 const matchShown = showMatchFromUrl(hallMatches);
                 if (!matchShown) {
@@ -3524,7 +3612,7 @@ const MatchesHallApp = () => {
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
             } else {
                 setLoading(false);
-            }            
+            }
             
         } catch (err) {
             setError('Nepodarilo sa načítať zápasy: ' + err.message);
@@ -3732,7 +3820,7 @@ const MatchesHallApp = () => {
     }, [allMatchesList, showingDetail, selectedMatch, isHashChangeFromNavigation]);
 
     useEffect(() => {
-        const handleUrlChange = () => {            
+        const handleUrlChange = () => {
             if (showingDetail) return;
             if (isInitialLoad) return;
             if (!initialHashProcessed) return;
@@ -3759,14 +3847,13 @@ const MatchesHallApp = () => {
             if (categoryFilter) {
                 const categoryExists = allMatchesList.some(match => {
                     if (match.categoryId === categoryFilter) return true;
-                    if (match.categoryName === categoryFilter) return true;
-                    if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
+                    if (match.categoryName === categoriesData[categoryFilter]) return true;
                     return false;
                 });
                 if (!categoryExists) categoryFilter = null;
             }
             
-            // KONTROLA EXISTENCIE SKUPINY - PONECHAŤ ŠPECIÁLNE HODNOTY
+            // KONTROLA EXISTENCIE SKUPINY
             if (groupFilter) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
@@ -3822,7 +3909,6 @@ const MatchesHallApp = () => {
                     if (!hasMatches) {
                         groupFilter = null;
                     }
-                    // Ak existujú zápasy, PONECHÁME groupFilter (napr. '__ALL_BASIC__')
                 } else {
                     const groupExists = allMatchesList.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
@@ -3835,12 +3921,10 @@ const MatchesHallApp = () => {
             if (hallFilter) {
                 const hallExists = allMatchesList.some(match => {
                     if (match.hallId === hallFilter) return true;
-                    const hallName = hallNames[match.hallId] || match.hallId;
-                    return hallName === hallFilter || hallNames[match.hallId] === hallFilter;
+                    return false;
                 });
                 if (!hallExists) hallFilter = null;
             }
-            
             
             // NASTAVENIE FILTROV IBA AK SA ZMENILI
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
@@ -3901,21 +3985,18 @@ const MatchesHallApp = () => {
         };
     }, []);
 
-    useEffect(() => {    
+    useEffect(() => {
         if (selectedCategory) {
             const categoryId = selectedCategory;
             const categoryGroups = groupsData[categoryId] || [];
             setGroupsForSelectedCategory(categoryGroups);
         
-            // TOTO MÔŽE BYŤ PROBLÉM - resetuje selectedGroup na null
             if (selectedGroup) {
                 const groupExists = categoryGroups.some(g => g.name === selectedGroup);
-                // Skontrolujeme aj špeciálne hodnoty
                 const isSpecialGroup = selectedGroup === '__ALL_BASIC__' || 
                                       selectedGroup === '__ALL_ADVANCED__' || 
                                       selectedGroup === '__PLAYOFF__';
                 
-                // Ak skupina neexistuje a nie je špeciálna, resetujeme
                 if (!groupExists && !isSpecialGroup) {
                     setSelectedGroup(null);
                 }
@@ -3926,8 +4007,7 @@ const MatchesHallApp = () => {
         }
     }, [selectedCategory, groupsData]);
 
-    useEffect(() => {   
-        // SKIPNUTIE POČAS INICIALIZÁCIE - ak ešte nebol initialHashProcessed, preskočíme
+    useEffect(() => {
         if (!initialHashProcessed) {
             return;
         }
@@ -3959,7 +4039,7 @@ const MatchesHallApp = () => {
             result = result.filter(match => {
                 if (match.categoryId === selectedCategory) return true;
                 if (match.categoryName === selectedCategory) return true;
-                if (match.categoryId && categoriesData[match.categoryId] === selectedCategory) return true;
+                if (match.categoryId && categoriesData[match.categoryId] === categoriesData[selectedCategory]) return true;
                 return false;
             });
         }
@@ -4032,7 +4112,6 @@ const MatchesHallApp = () => {
         
         setFilteredMatches(result);
         
-        // --- OPRAVA: Aktualizujeme URL IBA AK SA FILTER ZMENIL POUŽÍVATEĽOM ---
         if (!showingDetail && !isInitialLoad) {
             const urlFilters = parseUrlFilters();
             const currentGroup = urlFilters.group;
@@ -4040,13 +4119,11 @@ const MatchesHallApp = () => {
             const currentDay = urlFilters.day;
             const currentHall = urlFilters.hall;
             
-            // Skontrolujeme, či sa niektorý filter zmenil oproti URL
             const groupChanged = selectedGroup !== currentGroup;
             const categoryChanged = selectedCategory !== currentCategory;
             const dayChanged = selectedDay !== currentDay;
             const hallChanged = selectedHall !== currentHall;
             
-            // Aktualizujeme URL IBA ak sa filter naozaj zmenil
             if (groupChanged || categoryChanged || dayChanged || hallChanged) {
                 updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
             }
@@ -4164,21 +4241,17 @@ const MatchesHallApp = () => {
         );
     }
 
-    // Zistíme, či sú aktívne nejaké filtre
     const hasFilters = selectedDay !== null || selectedCategory !== null || selectedGroup !== null || selectedHall !== null;
     
-    // Rozhodneme, ktoré zápasy zobraziť
     let displayMatches;
     let displayDays;
     let totalMatches;
     
     if (hasFilters) {
-        // Ak máme filtre, použijeme filteredMatches
         displayMatches = filteredMatches;
         displayDays = getMatchesByDay(filteredMatches);
         totalMatches = filteredMatches.length;
     } else {
-        // Ak nemáme filtre, zobrazíme všetky zápasy
         displayMatches = allMatchesList;
         displayDays = getMatchesByDay(allMatchesList);
         totalMatches = allMatchesList.length;
@@ -4466,7 +4539,6 @@ const MatchesHallApp = () => {
                 );
             })(),
             
-            // --- PRIDANÉ TLAČIDLO PRE PLAYOFF A ZÁPASY O UMIESTNENIE ---
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap gap-2 justify-center' },
@@ -4495,7 +4567,6 @@ const MatchesHallApp = () => {
                             ? { backgroundColor: '#DC2626' } 
                             : {}
                     },
-//                    React.createElement('i', { className: 'fa-solid fa-trophy mr-1', style: { fontSize: '12px' } }),
                     'Playoff'
                 )
             )
