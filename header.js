@@ -441,11 +441,29 @@ const checkCurrentPageAccess = () => {
     return true;
 };
 
+const getHoverColorByRole = (role) => {
+  switch (role) {
+    case 'admin':
+      return '#e3f2fd'; // bledá modrá pre admina
+    case 'hall':
+      return '#fef3e2'; // bledá oranžová pre hall
+    case 'club':
+      return '#f3e5f5'; // bledá fialová pre club
+    case 'referee':
+      return '#e8f5e9'; // bledá zelená pre referee
+    case 'volunteer':
+      return '#fff3e0'; // bledá oranžová pre volunteer
+    default:
+      return '#e3f2fd'; // bledá modrá pre neprihláseného
+  }
+};
+
 const updateHeaderLinks = (userProfileData) => {    
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const headerElement = document.querySelector('header');
+    const navLinks = document.querySelectorAll('nav a'); // Všetky navigačné odkazy
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
         return;
@@ -465,6 +483,19 @@ const updateHeaderLinks = (userProfileData) => {
         if (registerLink) {
             registerLink.classList.add('hidden');
         }
+        
+        // Nastavenie hover farby pre registračné stránky
+        const hoverColor = '#e3f2fd'; // bledomodrá
+        navLinks.forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = hoverColor;
+                this.style.color = '#1a1a1a';
+            });
+            link.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'transparent';
+                this.style.color = '';
+            });
+        });
         return;
     }
 
@@ -476,6 +507,27 @@ const updateHeaderLinks = (userProfileData) => {
             profileLink.classList.remove('hidden');
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+            
+            // NASTAVENIE HOVER FARBY PRE NAVIGAČNÉ ODKAZY PODĽA ROLY
+            const hoverColor = getHoverColorByRole(userProfileData.role);
+            navLinks.forEach(link => {
+                // Odstránime predchádzajúce event listenery (ak existujú)
+                link.removeEventListener('mouseenter', link._mouseEnterHandler);
+                link.removeEventListener('mouseleave', link._mouseLeaveHandler);
+                
+                // Pridáme nové event listenery
+                link._mouseEnterHandler = function() {
+                    this.style.backgroundColor = hoverColor;
+                    this.style.color = '#1a1a1a';
+                };
+                link._mouseLeaveHandler = function() {
+                    this.style.backgroundColor = 'transparent';
+                    this.style.color = '';
+                };
+                
+                link.addEventListener('mouseenter', link._mouseEnterHandler);
+                link.addEventListener('mouseleave', link._mouseLeaveHandler);
+            });
             
             if (userProfileData.id && currentUserId !== userProfileData.id) {                
                 currentUserId = userProfileData.id;                
@@ -506,6 +558,25 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.add('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(null);
             
+            // NASTAVENIE HOVER FARBY PRE NEPRIHLÁSENÉHO POUŽÍVATEĽA
+            const hoverColor = '#e3f2fd'; // bledomodrá
+            navLinks.forEach(link => {
+                link.removeEventListener('mouseenter', link._mouseEnterHandler);
+                link.removeEventListener('mouseleave', link._mouseLeaveHandler);
+                
+                link._mouseEnterHandler = function() {
+                    this.style.backgroundColor = hoverColor;
+                    this.style.color = '#1a1a1a';
+                };
+                link._mouseLeaveHandler = function() {
+                    this.style.backgroundColor = 'transparent';
+                    this.style.color = '';
+                };
+                
+                link.addEventListener('mouseenter', link._mouseEnterHandler);
+                link.addEventListener('mouseleave', link._mouseLeaveHandler);
+            });
+            
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
@@ -525,6 +596,25 @@ const updateHeaderLinks = (userProfileData) => {
         
         headerElement.classList.remove('invisible');
     }
+};
+
+const initializeNavHoverStyles = () => {
+    const navLinks = document.querySelectorAll('nav a');
+    const defaultHoverColor = '#e3f2fd'; // bledomodrá
+    
+    navLinks.forEach(link => {
+        link._mouseEnterHandler = function() {
+            this.style.backgroundColor = defaultHoverColor;
+            this.style.color = '#1a1a1a';
+        };
+        link._mouseLeaveHandler = function() {
+            this.style.backgroundColor = 'transparent';
+            this.style.color = '';
+        };
+        
+        link.addEventListener('mouseenter', link._mouseEnterHandler);
+        link.addEventListener('mouseleave', link._mouseLeaveHandler);
+    });
 };
 
 // Anonymný používateľ by mal vidieť tlačidlo registrácie, keď je registrácia otvorená
@@ -731,7 +821,6 @@ const setupFirestoreListeners = () => {
     } catch (error) {
     }
 };
-
 window.loadHeaderAndScripts = async () => {
     
     try {
@@ -748,6 +837,9 @@ window.loadHeaderAndScripts = async () => {
 
         // INICIALIZÁCIA: Najprv všetky odkazy skryjeme
         initializeNavigationVisibility();
+        
+        // INICIALIZÁCIA: Nastavíme základné hover štýly
+        initializeNavHoverStyles();
 
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
