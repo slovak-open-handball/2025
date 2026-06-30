@@ -1264,6 +1264,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
         startTimeRef.current = null;
     };
 
+    // V MatchTimer komponente, v useEffect pre onSnapshot
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -1287,6 +1288,38 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 const elapsed = Math.floor((now - data.startedAt.toDate().getTime()) / 1000);
                 const periodLength = periodDurationRef.current * 60;
                 serverSeconds = Math.min(serverSeconds + elapsed, periodLength);
+            }
+            
+            // AK SA ZÁPAS VRÁTIL DO STAVU SCHEDULED - RESET ČASOVAČA
+            if (serverStatus === 'scheduled') {
+                // Zastavíme všetky bežiace intervaly
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+                
+                // Resetujeme všetky stavy
+                setIsRunning(false);
+                isRunningRef.current = false;
+                startTimeRef.current = null;
+                localStartOffsetRef.current = 0;
+                
+                // Resetujeme zobrazenie
+                setDisplaySeconds(0);
+                displaySecondsRef.current = 0;
+                setPeriod(1);
+                periodRef.current = 1;
+                
+                if (onTimeUpdate) {
+                    onTimeUpdate({ 
+                        totalSeconds: 0, 
+                        period: 1, 
+                        isRunning: false,
+                        resetComplete: true
+                    });
+                }
+                
+                return; // Ukončíme spracovanie, aby sme neprepísali reset
             }
             
             const currentDisplayValue = displaySecondsRef.current;
