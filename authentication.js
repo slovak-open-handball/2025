@@ -82,8 +82,8 @@ const publicPages = [
     'register.html',
     'volunteer-register.html',
     'teams-in-groups.html',  // Verejná verzia - prístupná neprihláseným keď je povolená
-    'matches.html',
-    'map.html'  // Mapa je v publicPages - umožňuje prístup neprihláseným keď je povolená
+    'matches.html',         // Verejná verzia - prístupná neprihláseným keď je povolená
+    'map.html'              // Mapa je v publicPages - umožňuje prístup neprihláseným keď je povolená
 ];
 
 // Definícia stránok dostupných LEN pre neprihlásených používateľov
@@ -294,6 +294,16 @@ const checkCurrentPageVisibility = async () => {
         // Ak nie je prihlásený, pokračujeme v kontrole nastavení
     }
     
+    // 🆕 ŠPECIÁLNE PRAVIDLO PRE MATCHES: Ak je používateľ prihlásený, má prístup vždy
+    if (fileName === 'matches.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            console.log("AuthManager: Prihlásený používateľ má prístup na matches vždy.");
+            return;
+        }
+        // Ak nie je prihlásený, pokračujeme v kontrole nastavení
+    }
+    
     // 🆕 ŠPECIÁLNE PRAVIDLO PRE TEAMS-IN-GROUPS: Ak je používateľ prihlásený, má prístup vždy
     if (fileName === 'teams-in-groups.html') {
         const isLoggedIn = isReallyLoggedIn();
@@ -339,6 +349,12 @@ const checkCurrentPageVisibility = async () => {
             // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Ak je prihlásený, má prístup aj keď je skrytá
             if (fileName === 'map.html') {
                 console.log(`AuthManager: Prihlásený používateľ má prístup na mapu aj keď je skrytá v nastaveniach.`);
+                return;
+            }
+            
+            // 🆕 ŠPECIÁLNE PRAVIDLO PRE MATCHES: Ak je prihlásený, má prístup aj keď je skrytá
+            if (fileName === 'matches.html') {
+                console.log(`AuthManager: Prihlásený používateľ má prístup na matches aj keď je skrytá v nastaveniach.`);
                 return;
             }
             
@@ -423,6 +439,16 @@ const isPageAccessibleForGuest = async () => {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             console.log("AuthManager: Prihlásený používateľ má prístup na mapu vždy.");
+            return true;
+        }
+        // Ak nie je prihlásený, pokračujeme v kontrole nastavení
+    }
+    
+    // 🆕 ŠPECIÁLNE PRAVIDLO PRE MATCHES: Matches je vždy prístupná pre prihlásených
+    if (fileName === 'matches.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            console.log("AuthManager: Prihlásený používateľ má prístup na matches vždy.");
             return true;
         }
         // Ak nie je prihlásený, pokračujeme v kontrole nastavení
@@ -683,6 +709,14 @@ const handleAuthState = async () => {
                                 // 🆕 ŠPECIÁLNE PRAVIDLO PRE MAPU: Prihlásený používateľ má vždy prístup na mapu
                                 if (currentPage === 'map.html') {
                                     console.log("AuthManager: Prihlásený používateľ má prístup na mapu.");
+                                    window.globalUserProfileData = userProfileData;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                    return;
+                                }
+                                
+                                // 🆕 ŠPECIÁLNE PRAVIDLO PRE MATCHES: Prihlásený používateľ má vždy prístup na matches
+                                if (currentPage === 'matches.html') {
+                                    console.log("AuthManager: Prihlásený používateľ má prístup na matches.");
                                     window.globalUserProfileData = userProfileData;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                                     return;
