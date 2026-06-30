@@ -3948,6 +3948,8 @@ const MatchesHallApp = () => {
                 uniqueGroups.push(group);
             }
         });
+        
+        uniqueGroups.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
     }
 
     return React.createElement(
