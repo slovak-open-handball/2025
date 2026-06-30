@@ -3958,7 +3958,6 @@ const MatchesHallApp = () => {
                         }
                     });
                 }
-                // AK NIE JE VYBRANÁ KATEGÓRIA, BERIEME VŠETKY ZÁKLADNÉ SKUPINY ZO VŠETKÝCH KATEGÓRIÍ
                 if (basicGroupNames.length === 0) {
                     Object.keys(groupsData).forEach(catId => {
                         const catGroups = groupsData[catId] || [];
@@ -3982,7 +3981,6 @@ const MatchesHallApp = () => {
                         }
                     });
                 }
-                // AK NIE JE VYBRANÁ KATEGÓRIA, BERIEME VŠETKY NADSTAVBOVÉ SKUPINY ZO VŠETKÝCH KATEGÓRIÍ
                 if (advancedGroupNames.length === 0) {
                     Object.keys(groupsData).forEach(catId => {
                         const catGroups = groupsData[catId] || [];
@@ -4017,8 +4015,24 @@ const MatchesHallApp = () => {
         
         setFilteredMatches(result);
         
+        // --- OPRAVA: Aktualizujeme URL IBA AK SA FILTER ZMENIL POUŽÍVATEĽOM ---
         if (!showingDetail && !isInitialLoad) {
-            updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
+            const urlFilters = parseUrlFilters();
+            const currentGroup = urlFilters.group;
+            const currentCategory = urlFilters.category;
+            const currentDay = urlFilters.day;
+            const currentHall = urlFilters.hall;
+            
+            // Skontrolujeme, či sa niektorý filter zmenil oproti URL
+            const groupChanged = selectedGroup !== currentGroup;
+            const categoryChanged = selectedCategory !== currentCategory;
+            const dayChanged = selectedDay !== currentDay;
+            const hallChanged = selectedHall !== currentHall;
+            
+            // Aktualizujeme URL IBA ak sa filter naozaj zmenil
+            if (groupChanged || categoryChanged || dayChanged || hallChanged) {
+                updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
+            }
         }
         
     }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
