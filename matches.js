@@ -3774,6 +3774,11 @@ const MatchesHallApp = () => {
                 result = result.filter(match => {
                     return match.groupName && advancedGroupNames.includes(match.groupName);
                 });
+            } else if (selectedGroup === '__PLAYOFF__') {
+                // Filtrujeme zápasy z pavúka (Playoff, Semifinále, Finále, Štvrťfinále, Osemfinále) a zápasy o umiestnenie
+                result = result.filter(match => {
+                    return isEliminationMatch(match);
+                });
             } else {
                 result = result.filter(match => {
                     return match.groupName === selectedGroup;
@@ -4212,7 +4217,41 @@ const MatchesHallApp = () => {
                         );
                     })
                 );
-            })()
+            })(),
+            
+            // --- PRIDANÉ TLAČIDLO PRE PLAYOFF A ZÁPASY O UMIESTNENIE ---
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-2 mt-1' },
+                React.createElement(
+                    'span',
+                    { className: 'text-xs text-gray-500 font-medium mr-1 self-center' },
+                    'Vyraďovacie:'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            const isSelected = selectedGroup === '__PLAYOFF__';
+                            if (isSelected) {
+                                setSelectedGroup(null);
+                            } else {
+                                setSelectedGroup('__PLAYOFF__');
+                            }
+                        },
+                        className: `px-4 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                            selectedGroup === '__PLAYOFF__'
+                                ? 'bg-red-600 text-white shadow-md scale-105' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`,
+                        style: selectedGroup === '__PLAYOFF__' 
+                            ? { backgroundColor: '#DC2626' } 
+                            : {}
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-trophy mr-1', style: { fontSize: '12px' } }),
+                    'Playoff'
+                )
+            )
         ),
 
         uniqueHalls.length > 1 && React.createElement(
