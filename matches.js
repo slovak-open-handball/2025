@@ -2737,8 +2737,8 @@ const MatchesHallApp = () => {
 
     // --- STAV PRE SPRACOVANIE URL HASH PRI NAČÍTANÍ ---
     const [initialHashProcessed, setInitialHashProcessed] = useState(false);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [isHashChangeFromNavigation, setIsHashChangeFromNavigation] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     // --- FUNKCIE PRE PRÁCU S URL FILTAMI ---
     const updateUrlFilters = (day, category, hall) => {
@@ -2763,7 +2763,6 @@ const MatchesHallApp = () => {
         }
         
         const newUrl = window.location.pathname + '?' + params.toString();
-        // Použijeme replaceState aby sme nepridávali do histórie pri každej zmene
         window.history.replaceState(null, '', newUrl);
     };
 
@@ -3378,7 +3377,6 @@ const MatchesHallApp = () => {
             if (hasHash) {
                 const matchShown = showMatchFromUrl(hallMatches);
                 if (!matchShown) {
-                    // Ak sa nepodarilo nájsť zápas, odstránime hash
                     const searchParams = window.location.search;
                     window.history.replaceState(null, '', window.location.pathname + searchParams);
                 }
@@ -3387,20 +3385,15 @@ const MatchesHallApp = () => {
             setInitialHashProcessed(true);
             setIsInitialLoad(false);
             
-            // Ak nemáme hash, nastavíme loading na false
             if (!hasHash) {
                 setLoading(false);
-            } else {
-                // Ak máme hash, loading sa vypne v showMatchFromUrl cez setLoading(false)
-                // Ale ak sa nepodarilo zobraziť, už sme ho vypnuli vyššie
-                if (!showMatchFromUrl(hallMatches)) {
-                    setLoading(false);
-                }
             }
             
             if (hallId) {
                 const unsubscribe = setupMatchesRealTimeListener(hallId);
                 window.__matchesRealTimeUnsubscribe = unsubscribe;
+            } else {
+                setLoading(false);
             }
             
         } catch (err) {
@@ -3498,7 +3491,6 @@ const MatchesHallApp = () => {
         setCurrentMatchIndex(0);
         setIsHashChangeFromNavigation(true);
         
-        // Odstránime hash z URL, ale PONECHÁME query parametre (filtre)
         const searchParams = window.location.search;
         window.history.replaceState(null, '', window.location.pathname + searchParams);
         
@@ -3543,17 +3535,15 @@ const MatchesHallApp = () => {
     // --- POČÚVANIE ZMIEN URL PRE FILTRE ---
     useEffect(() => {
         const handleUrlChange = () => {
-            // Ak sme v detaile, neriešime filtre
             if (showingDetail) return;
-            // Ak ešte nebol spracovaný initial load, neriešime
             if (isInitialLoad) return;
+            if (!initialHashProcessed) return;
             
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
             let hallFilter = urlFilters.hall;
             
-            // Overíme, či filtre existujú v dátach
             if (dayFilter) {
                 const dayExists = allMatchesList.some(match => {
                     if (!match.scheduledTime) return false;
@@ -3583,7 +3573,6 @@ const MatchesHallApp = () => {
                 if (!hallExists) hallFilter = null;
             }
             
-            // Nastavíme filtre len ak sa zmenili
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
@@ -3591,7 +3580,7 @@ const MatchesHallApp = () => {
         
         window.addEventListener('popstate', handleUrlChange);
         return () => window.removeEventListener('popstate', handleUrlChange);
-    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedHall, isInitialLoad]);
+    }, [allMatchesList, categoriesData, hallNames, showingDetail, selectedDay, selectedCategory, selectedHall, initialHashProcessed, isInitialLoad]);
 
     useEffect(() => {
         if (!window.db) return;        
@@ -3642,19 +3631,16 @@ const MatchesHallApp = () => {
 
     // --- FILTROVANIE ZÁPASOV s aktualizáciou URL ---
     useEffect(() => {
-        // Ak ešte nebol spracovaný initial load, nespúšťame filtráciu
         if (isInitialLoad && allMatchesList.length > 0) {
             return;
         }
         
-        // Ak sme v detaile, neaplikujeme filtre
         if (showingDetail) {
             return;
         }
         
         let result = [...allMatchesList];
         
-        // Filtrovanie podľa dňa
         if (selectedDay !== null) {
             result = result.filter(match => {
                 if (!match.scheduledTime) return false;
@@ -3668,7 +3654,6 @@ const MatchesHallApp = () => {
             });
         }
         
-        // Filtrovanie podľa kategórie
         if (selectedCategory !== null) {
             result = result.filter(match => {
                 if (match.categoryId === selectedCategory) return true;
@@ -3678,7 +3663,6 @@ const MatchesHallApp = () => {
             });
         }
         
-        // Filtrovanie podľa haly
         if (selectedHall !== null) {
             result = result.filter(match => {
                 if (match.hallId === selectedHall) return true;
@@ -3689,7 +3673,6 @@ const MatchesHallApp = () => {
         
         setFilteredMatches(result);
         
-        // Aktualizácia URL s filtrami (ak nie sme v detaile zápasu a nie je to initial load)
         if (!showingDetail && !isInitialLoad) {
             updateUrlFilters(selectedDay, selectedCategory, selectedHall);
         }
