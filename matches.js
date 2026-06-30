@@ -3668,13 +3668,6 @@ const MatchesHallApp = () => {
             })
         ),
         
-        // Zobrazenie počtu filtrovaných zápasov
-        selectedDay !== null && React.createElement(
-            'div',
-            { className: 'text-center text-sm text-gray-500 mb-4' },
-            `Zobrazené zápasy pre ${formatDateHeader(new Date(selectedDay))} (${filteredMatches.length} zápasov)`
-        ),
-        
         // TABUĽKA ZÁPASOV - používame filteredMatches
         filteredDays.length === 0 ? 
             React.createElement(
