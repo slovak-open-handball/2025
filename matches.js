@@ -2984,6 +2984,38 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
 
+    // --- PRIDANÉ: Stav pre názov haly ---
+    const [hallName, setHallName] = React.useState(null);
+    const [loadingHall, setLoadingHall] = React.useState(true);
+
+    // --- PRIDANÉ: Načítanie názvu haly podľa hallId zo zápasu ---
+    React.useEffect(() => {
+        const loadHallName = async () => {
+            if (!window.db || !match.hallId) {
+                setLoadingHall(false);
+                return;
+            }
+
+            try {
+                const hallRef = doc(window.db, 'places', match.hallId);
+                const hallSnap = await getDoc(hallRef);
+                if (hallSnap.exists()) {
+                    const hallData = hallSnap.data();
+                    setHallName(hallData.name || 'Športová hala');
+                } else {
+                    setHallName('Športová hala');
+                }
+            } catch (err) {
+                console.error('Chyba pri načítaní názvu haly:', err);
+                setHallName('Športová hala');
+            } finally {
+                setLoadingHall(false);
+            }
+        };
+
+        loadHallName();
+    }, [match.hallId]);
+
     const loadSuspensionSettings = async () => {
         if (!window.db) return;
         
@@ -4300,7 +4332,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 'div',
                 { className: 'flex items-center justify-center gap-2 mt-1' },
                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
-                React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Športová hala')
+                React.createElement('span', { className: 'text-gray-600' }, 
+                    loadingHall ? 'Načítavam...' : (hallName || 'Športová hala')
+                )
             ),
             React.createElement(
                 'p',
