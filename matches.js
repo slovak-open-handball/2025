@@ -4226,7 +4226,7 @@ const MatchesHallApp = () => {
                 React.createElement(
                     'span',
                     { className: 'text-xs text-gray-500 font-medium mr-1 self-center' },
-                    'Vyraďovacie:'
+                    'Playoff:'
                 ),
                 React.createElement(
                     'button',
@@ -4248,7 +4248,7 @@ const MatchesHallApp = () => {
                             ? { backgroundColor: '#DC2626' } 
                             : {}
                     },
-                    React.createElement('i', { className: 'fa-solid fa-trophy mr-1', style: { fontSize: '12px' } }),
+//                    React.createElement('i', { className: 'fa-solid fa-trophy mr-1', style: { fontSize: '12px' } }),
                     'Playoff'
                 )
             )
