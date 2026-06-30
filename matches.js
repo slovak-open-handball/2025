@@ -3366,9 +3366,11 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
+                    // AK NEEXISTUJE ŽIADNY ZÁPAS PRE TENTO ŠPECIÁLNY FILTER, NASTAVÍME groupFilter NA NULL
                     if (!hasMatches) {
                         groupFilter = null;
                     }
+                    // AK EXISTUJE, PONECHÁME groupFilter
                 } else {
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
@@ -3425,6 +3427,7 @@ const MatchesHallApp = () => {
                             }
                         });
                     }
+                    // Ak nie je vybraná kategória, berieme všetky základné skupiny zo všetkých kategórií
                     if (basicGroupNames.length === 0) {
                         Object.keys(groupsData).forEach(catId => {
                             const catGroups = groupsData[catId] || [];
@@ -3448,6 +3451,7 @@ const MatchesHallApp = () => {
                             }
                         });
                     }
+                    // Ak nie je vybraná kategória, berieme všetky nadstavbové skupiny zo všetkých kategórií
                     if (advancedGroupNames.length === 0) {
                         Object.keys(groupsData).forEach(catId => {
                             const catGroups = groupsData[catId] || [];
@@ -3824,7 +3828,9 @@ const MatchesHallApp = () => {
             // NASTAVENIE FILTROV IBA AK SA ZMENILI
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
-            if (selectedGroup !== groupFilter) setSelectedGroup(groupFilter);
+            if (selectedGroup !== groupFilter) {
+                setSelectedGroup(groupFilter);
+            }
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
         };
         
@@ -3896,7 +3902,7 @@ const MatchesHallApp = () => {
         }
     }, [selectedCategory, groupsData]);
 
-    // --- FILTROVANIE ZÁPASOV s aktualizáciou URL ---
+    // FILTROVANIE ZÁPASOV S AKTUALIZÁCIOU URL
     useEffect(() => {
         if (isInitialLoad && allMatchesList.length > 0) {
             return;
@@ -3941,6 +3947,17 @@ const MatchesHallApp = () => {
                         }
                     });
                 }
+                // AK NIE JE VYBRANÁ KATEGÓRIA, BERIEME VŠETKY ZÁKLADNÉ SKUPINY ZO VŠETKÝCH KATEGÓRIÍ
+                if (basicGroupNames.length === 0) {
+                    Object.keys(groupsData).forEach(catId => {
+                        const catGroups = groupsData[catId] || [];
+                        catGroups.forEach(group => {
+                            if (group.type === 'základná skupina') {
+                                basicGroupNames.push(group.name);
+                            }
+                        });
+                    });
+                }
                 result = result.filter(match => {
                     return match.groupName && basicGroupNames.includes(match.groupName);
                 });
@@ -3954,11 +3971,21 @@ const MatchesHallApp = () => {
                         }
                     });
                 }
+                // AK NIE JE VYBRANÁ KATEGÓRIA, BERIEME VŠETKY NADSTAVBOVÉ SKUPINY ZO VŠETKÝCH KATEGÓRIÍ
+                if (advancedGroupNames.length === 0) {
+                    Object.keys(groupsData).forEach(catId => {
+                        const catGroups = groupsData[catId] || [];
+                        catGroups.forEach(group => {
+                            if (group.type === 'nadstavbová skupina') {
+                                advancedGroupNames.push(group.name);
+                            }
+                        });
+                    });
+                }
                 result = result.filter(match => {
                     return match.groupName && advancedGroupNames.includes(match.groupName);
                 });
             } else if (selectedGroup === '__PLAYOFF__') {
-                // Filtrujeme zápasy z pavúka (Playoff, Semifinále, Finále, Štvrťfinále, Osemfinále) a zápasy o umiestnenie
                 result = result.filter(match => {
                     return isEliminationMatch(match);
                 });
