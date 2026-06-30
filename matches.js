@@ -3497,6 +3497,12 @@ const MatchesHallApp = () => {
             
             setFilteredMatches(result);
             
+            const currentUrlFilters = parseUrlFilters();
+            if (currentUrlFilters.group && !selectedGroup) {
+                // Ak je v URL filter a v state nie je, nastavíme ho
+                setSelectedGroup(currentUrlFilters.group);
+            }
+            
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
             
             if (hasHash) {
@@ -4018,7 +4024,14 @@ const MatchesHallApp = () => {
         setFilteredMatches(result);
         
         if (!showingDetail && !isInitialLoad) {
-            updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
+            // Skontrolujeme, či sa filtre zmenili oproti URL
+            const urlFilters = parseUrlFilters();
+            const currentGroup = urlFilters.group;
+        
+            // Ak je selectedGroup rovnaký ako v URL, neaktualizujeme URL
+            if (selectedGroup !== currentGroup) {
+                updateUrlFilters(selectedDay, selectedCategory, selectedGroup, selectedHall);
+            }
         }
         
     }, [selectedDay, selectedCategory, selectedGroup, selectedHall, allMatchesList, categoriesData, hallNames, showingDetail, isInitialLoad]);
