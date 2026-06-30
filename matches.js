@@ -1422,11 +1422,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [calculatedAwayScore, setCalculatedAwayScore] = React.useState(0);
     const [useCalculatedScore, setUseCalculatedScore] = React.useState(false);
 
-    const [editingEventId, setEditingEventId] = React.useState(null);
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = React.useState(false);
-    const [eventToDelete, setEventToDelete] = React.useState(null);
-    const [deleteLoading, setDeleteLoading] = React.useState(false); 
-
     const [blueCardSuspensions, setBlueCardSuspensions] = React.useState({});
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
@@ -1744,183 +1739,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    const handleDeleteEvent = async () => {
-        if (!eventToDelete || !window.db) return;
-    
-        setDeleteLoading(true);
-        try {
-            const eventRef = doc(window.db, 'matchEvents', eventToDelete.id);
-            await deleteDoc(eventRef);
-            setShowDeleteConfirmModal(false);
-            setEventToDelete(null);
-        } catch (err) {
-            console.error('Chyba pri mazaní udalosti:', err);
-        } finally {
-            setDeleteLoading(false);
-        }
-    };
-    
-    const openDeleteConfirmModal = (event, e) => {
-        e.stopPropagation();
-        setEventToDelete(event);
-        setShowDeleteConfirmModal(true);
-    };
-    
-    const startEditingEvent = (event, e) => {
-        e.stopPropagation();
-        setEditingEventId(event.id);
-        
-        if (matchTimerRef.current && typeof matchTimerRef.current.setEditingMode === 'function') {
-            matchTimerRef.current.setEditingMode(true, event);
-        }
-        
-        if (matchTimerRef.current && typeof matchTimerRef.current.setSelectedActions === 'function') {
-            let actions = new Set();
-            if (event.eventType === 'goal') {
-                if (event.eventSubtype === 'converted_penalty') {
-                    actions.add('7m');
-                    actions.add('goal');
-                } else {
-                    actions.add('goal');
-                }
-            } else if (event.eventType === 'penalty') {
-                actions.add('7m');
-            } else if (event.eventType === 'card') {
-                if (event.eventSubtype === 'yellow') actions.add('yellow');
-                else if (event.eventSubtype === 'red') actions.add('red');
-                else if (event.eventSubtype === 'blue') actions.add('blue');
-            } else if (event.eventType === 'exclusion') {
-                actions.add('exclusion');
-            }
-            matchTimerRef.current.setSelectedActions(actions);
-        }
-    };
-    
-    const saveEditedEvent = async (teamType, member, eventId) => {
-        if (!window.db || !eventId) return false;
-        
-        try {
-            const selectedActionsSet = matchTimerRef.current?.getSelectedActions() || new Set();
-            if (selectedActionsSet.size === 0) return false;
-            
-            let newEventType = '';
-            let newEventSubtype = null;
-            
-            if (selectedActionsSet.has('7m') && selectedActionsSet.has('goal')) {
-                newEventType = 'goal';
-                newEventSubtype = 'converted_penalty';
-            } else if (selectedActionsSet.has('goal')) {
-                newEventType = 'goal';
-            } else if (selectedActionsSet.has('7m')) {
-                newEventType = 'penalty';
-                newEventSubtype = '7m';
-            } else if (selectedActionsSet.has('yellow')) {
-                newEventType = 'card';
-                newEventSubtype = 'yellow';
-            } else if (selectedActionsSet.has('red')) {
-                newEventType = 'card';
-                newEventSubtype = 'red';
-            } else if (selectedActionsSet.has('blue')) {
-                newEventType = 'card';
-                newEventSubtype = 'blue';
-            } else if (selectedActionsSet.has('exclusion')) {
-                newEventType = 'exclusion';
-            } else {
-                return false;
-            }
-            
-            let userId = null;
-            let categoryNameForMatch = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
-            let teamNameForSearch = null;
-            
-            if (teamType === 'home') {
-                teamNameForSearch = teamNames?.[match.homeTeamIdentifier] || match.homeTeamIdentifier;
-            } else {
-                teamNameForSearch = teamNames?.[match.awayTeamIdentifier] || match.awayTeamIdentifier;
-            }
-            
-            if (window.db && teamNameForSearch && categoryNameForMatch) {
-                try {
-                    const usersRef = collection(window.db, 'users');
-                    const usersSnapshot = await getDocs(usersRef);
-                    
-                    for (const userDoc of usersSnapshot.docs) {
-                        const userData = userDoc.data();
-                        const teams = userData.teams || {};
-                        
-                        for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                            if (categoryKey !== categoryNameForMatch) continue;
-                            
-                            const foundTeam = (teamsArray || []).find(t => t.teamName === teamNameForSearch);
-                            
-                            if (foundTeam) {
-                                let memberExists = false;
-                                
-                                if (member.typeKey === 'playerDetails') {
-                                    if (foundTeam.playerDetails && foundTeam.playerDetails[member.index]) {
-                                        memberExists = true;
-                                    }
-                                } else if (member.typeKey === 'menTeamMemberDetails') {
-                                    if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails[member.index]) {
-                                        memberExists = true;
-                                    }
-                                } else if (member.typeKey === 'womenTeamMemberDetails') {
-                                    if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails[member.index]) {
-                                        memberExists = true;
-                                    }
-                                }
-                                
-                                if (memberExists) {
-                                    userId = userDoc.id;
-                                    break;
-                                }
-                            }
-                        }
-                        if (userId) break;
-                    }
-                } catch (err) {
-                    console.error('Chyba pri vyhľadávaní userId:', err);
-                }
-            }
-            
-            const eventRef = doc(window.db, 'matchEvents', eventId);
-            await updateDoc(eventRef, {
-                eventType: newEventType,
-                eventSubtype: newEventSubtype,
-                team: teamType,
-                memberType: member.type,
-                memberTypeKey: member.typeKey,
-                memberIndex: member.index,
-                userId: userId,
-                categoryName: categoryNameForMatch,
-                updatedAt: Timestamp.now()
-            });
-            
-            setEditingEventId(null);
-            if (matchTimerRef.current && typeof matchTimerRef.current.clearEditingMode === 'function') {
-                matchTimerRef.current.clearEditingMode();
-            }
-            if (matchTimerRef.current && typeof matchTimerRef.current.clearSelectedActions === 'function') {
-                matchTimerRef.current.clearSelectedActions();
-            }
-            
-            return true;
-        } catch (err) {
-            console.error('Chyba pri editácii udalosti:', err);
-            return false;
-        }
-    };
-    
-    const cancelEditing = () => {
-        setEditingEventId(null);
-        if (matchTimerRef.current && typeof matchTimerRef.current.clearEditingMode === 'function') {
-            matchTimerRef.current.clearEditingMode();
-        }
-        if (matchTimerRef.current && typeof matchTimerRef.current.clearSelectedActions === 'function') {
-            matchTimerRef.current.clearSelectedActions();
-        }
-    };
-    
     const getCategoryDisplayName = () => {
         if (match.categoryName) return match.categoryName;
         if (match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
@@ -1987,16 +1805,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             delete window.blueCardSuspensions;
         };
     }, [blueCardSuspensions]);
-
-    React.useEffect(() => {
-        window.onEventEdited = async (teamType, member, eventId) => {
-            return await saveEditedEvent(teamType, member, eventId);
-        };
-        
-        return () => {
-            delete window.onEventEdited;
-        };
-    }, []);
 
     React.useEffect(() => {
         if (match.resetComplete || match.resetEvents) {
@@ -2102,58 +1910,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             default:
                 return 'text-gray-500 bg-gray-50';
         }
-    };
-
-    const renderDeleteConfirmModal = () => {
-        if (!showDeleteConfirmModal) return null;
-        
-        return React.createElement(
-            'div',
-            { 
-                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
-                onClick: () => !deleteLoading && setShowDeleteConfirmModal(false)
-            },
-            React.createElement(
-                'div',
-                { 
-                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
-                    onClick: (e) => e.stopPropagation()
-                },
-                React.createElement(
-                    'h3',
-                    { className: 'text-xl font-bold text-gray-800 mb-4' },
-                    'Vymazať udalosť'
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-600 mb-6' },
-                    'Naozaj chcete vymazať túto udalosť? Táto akcia je nevratná.'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex gap-3 justify-end' },
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setShowDeleteConfirmModal(false),
-                            disabled: deleteLoading,
-                            className: 'px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer disabled:opacity-50'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: handleDeleteEvent,
-                            disabled: deleteLoading,
-                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2'
-                        },
-                        deleteLoading && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
-                        deleteLoading ? 'Mažem...' : 'Potvrdiť vymazanie'
-                    )
-                )
-            )
-        );
     };
 
     const renderMatchEvents = () => {
@@ -2408,10 +2164,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     };
                                     
                                     const formattedTime = formatMatchTime(event);
-                                    const isEditing = editingEventId === event.id;
                                     
-                                    const rowHoverClass = isMatchCompleted ? '' : "group hover:bg-blue-50 transition-colors cursor-pointer";
-                                    const rowClass = `${rowHoverClass} ${isEditing ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`;
+                                    // Odstránené tlačidlá pre editáciu a mazanie - len zobrazenie
+                                    const rowClass = 'hover:bg-gray-50 transition-colors';
                                     
                                     return React.createElement(
                                         'tr',
@@ -2449,53 +2204,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         
                                         React.createElement(
                                             'td',
-                                            { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600 relative' },
-                                            !isEditing ? React.createElement(
-                                                'div',
-                                                { className: 'relative flex justify-center items-center min-w-[60px]' },
-                                                React.createElement('span', { className: 'group-hover:hidden' }, formattedTime),
-                                                !isMatchCompleted && React.createElement(
-                                                    'div',
-                                                    { 
-                                                        className: 'hidden group-hover:flex items-center justify-center gap-3 absolute inset-0 bg-white rounded',
-                                                        style: { backgroundColor: 'inherit' }
-                                                    },
-                                                    React.createElement(
-                                                        'button',
-                                                        {
-                                                            onClick: (e) => startEditingEvent(event, e),
-                                                            className: 'text-blue-500 hover:text-blue-700 p-1 rounded transition-colors cursor-pointer',
-                                                            title: 'Upraviť udalosť'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-pen text-base' })
-                                                    ),
-                                                    React.createElement(
-                                                        'button',
-                                                        {
-                                                            onClick: (e) => openDeleteConfirmModal(event, e),
-                                                            className: 'text-red-500 hover:text-red-700 p-1 rounded transition-colors cursor-pointer',
-                                                            title: 'Vymazať udalosť'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-base' })
-                                                    )
-                                                )
-                                            ) : React.createElement(
-                                                'div',
-                                                { 
-                                                    className: 'flex items-center justify-center gap-2',
-                                                    style: { backgroundColor: '#FEF3C7', padding: '4px 8px', borderRadius: '8px' }
-                                                },
-                                                React.createElement('span', { className: 'text-yellow-700 font-semibold text-xs' }, 'EDIT'),
-                                                React.createElement(
-                                                    'button',
-                                                    {
-                                                        onClick: () => cancelEditing(),
-                                                        className: 'text-gray-500 hover:text-gray-700 cursor-pointer',
-                                                        title: 'Zrušiť editáciu'
-                                                    },
-                                                    React.createElement('i', { className: 'fa-solid fa-times text-sm' })
-                                                )
-                                            )
+                                            { className: 'px-4 py-2 text-center font-mono text-sm font-medium text-gray-600' },
+                                            React.createElement('span', {}, formattedTime)
                                         ),
                                         
                                         React.createElement(
@@ -2984,8 +2694,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             })
         ),
         
-        renderMatchEvents(),
-        renderDeleteConfirmModal()
+        renderMatchEvents()
     );
 };
 
