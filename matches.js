@@ -3704,7 +3704,7 @@ const MatchesHallApp = () => {
         }
     }, [teamNamesLoaded, teamNames]);
 
-    const renderDetailButton = (match, dayIndex, matchIndex) => {
+    const renderDetailButton = (match, dayIndex, matchIndex, matchesByDay) => {
         const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
         const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
 
@@ -3717,11 +3717,14 @@ const MatchesHallApp = () => {
             {
                 onClick: () => {
                     let globalIndex = 0;
-                    for (let i = 0; i < dayIndex; i++) {
-                        globalIndex += matchesByDay[i].matches.length;
+                    // Nájdeme index zápasu v allMatchesList
+                    const matchIndexInAll = allMatchesList.findIndex(m => m.id === match.id);
+                    if (matchIndexInAll !== -1) {
+                        handleDetailClick(match, matchIndexInAll);
+                    } else {
+                        // Fallback - ak sa nepodarí nájsť, použijeme currentMatchIndex
+                        handleDetailClick(match, currentMatchIndex);
                     }
-                    globalIndex += matchIndex;
-                    handleDetailClick(match, globalIndex);
                 },
                 className: buttonClass,
                 style: { fontWeight: '500' }
@@ -3784,9 +3787,11 @@ const MatchesHallApp = () => {
         );
     }
 
+    // Používame filteredMatches pre zobrazenie (ak existujú filtre) alebo allMatchesList
+    const displayMatches = filteredMatches.length > 0 ? filteredMatches : allMatchesList;
     const allDays = getMatchesByDay(allMatchesList);
-    const filteredDays = getMatchesByDay(filteredMatches);
-    const totalMatches = filteredMatches.length;
+    const displayDays = getMatchesByDay(displayMatches);
+    const totalMatches = displayMatches.length;
 
     const uniqueCategories = [];
     const categoryMap = {};
@@ -3944,7 +3949,7 @@ const MatchesHallApp = () => {
             })
         ),
 
-        filteredDays.length === 0 ? 
+        displayDays.length === 0 ? 
             React.createElement(
                 'div',
                 { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
@@ -3977,7 +3982,7 @@ const MatchesHallApp = () => {
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
-                        filteredDays.map((dayGroup, dayIndex) => {
+                        displayDays.map((dayGroup, dayIndex) => {
                             const dayMatches = dayGroup.matches;
                             const dayDate = dayGroup.date;
                             const dayRows = [];
@@ -3988,7 +3993,7 @@ const MatchesHallApp = () => {
                                     { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                     React.createElement(
                                         'td',
-                                        { colspan: 7, className: 'px-4 py-4 text-left' },
+                                        { colSpan: 7, className: 'px-4 py-4 text-left' },
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-2' },
@@ -4184,7 +4189,7 @@ const MatchesHallApp = () => {
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                            renderDetailButton(match, dayIndex, matchIndex)
+                                            renderDetailButton(match, dayIndex, matchIndex, displayDays)
                                         )
                                     )
                                 );
