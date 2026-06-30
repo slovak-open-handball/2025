@@ -3347,9 +3347,42 @@ const MatchesHallApp = () => {
             }
             
             if (groupFilter) {
-                result = result.filter(match => {
-                    return match.groupName === groupFilter;
-                });
+                if (groupFilter === '__ALL_BASIC__') {
+                    const basicGroupNames = [];
+                    if (categoryFilter) {
+                        const categoryGroups = groupsData[categoryFilter] || [];
+                        categoryGroups.forEach(group => {
+                            if (group.type === 'základná skupina') {
+                                basicGroupNames.push(group.name);
+                            }
+                        });
+                    }
+                    result = result.filter(match => {
+                        return match.groupName && basicGroupNames.includes(match.groupName);
+                    });
+                } else if (groupFilter === '__ALL_ADVANCED__') {
+                    const advancedGroupNames = [];
+                    if (categoryFilter) {
+                        const categoryGroups = groupsData[categoryFilter] || [];
+                        categoryGroups.forEach(group => {
+                            if (group.type === 'nadstavbová skupina') {
+                                advancedGroupNames.push(group.name);
+                            }
+                        });
+                    }
+                    result = result.filter(match => {
+                        return match.groupName && advancedGroupNames.includes(match.groupName);
+                    });
+                } else if (groupFilter === '__PLAYOFF__') {
+                    // Filtrujeme zápasy z pavúka a o umiestnenie
+                    result = result.filter(match => {
+                        return isEliminationMatch(match);
+                    });
+                } else {
+                    result = result.filter(match => {
+                        return match.groupName === groupFilter;
+                    });
+                }
             }
             
             if (hallFilter) {
@@ -3624,10 +3657,49 @@ const MatchesHallApp = () => {
             }
             
             if (groupFilter) {
-                const groupExists = allMatchesList.some(match => {
-                    return match.groupName === groupFilter;
-                });
-                if (!groupExists) groupFilter = null;
+                // Kontrola či ide o špeciálny filter
+                const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
+                
+                if (isSpecialGroup) {
+                    // Pre špeciálne filtre kontrolujeme či existujú zápasy
+                    let hasMatches = false;
+                    
+                    if (groupFilter === '__PLAYOFF__') {
+                        hasMatches = hallMatches.some(match => isEliminationMatch(match));
+                    } else if (groupFilter === '__ALL_BASIC__') {
+                        const basicGroupNames = [];
+                        if (categoryFilter) {
+                            const categoryGroups = groupsData[categoryFilter] || [];
+                            categoryGroups.forEach(group => {
+                                if (group.type === 'základná skupina') {
+                                    basicGroupNames.push(group.name);
+                                }
+                            });
+                        }
+                        hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
+                    } else if (groupFilter === '__ALL_ADVANCED__') {
+                        const advancedGroupNames = [];
+                        if (categoryFilter) {
+                            const categoryGroups = groupsData[categoryFilter] || [];
+                            categoryGroups.forEach(group => {
+                                if (group.type === 'nadstavbová skupina') {
+                                    advancedGroupNames.push(group.name);
+                                }
+                            });
+                        }
+                        hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
+                    }
+                    
+                    if (!hasMatches) {
+                        groupFilter = null;
+                    }
+                } else {
+                    // Pre bežné skupiny kontrolujeme existenciu
+                    const groupExists = hallMatches.some(match => match.groupName === groupFilter);
+                    if (!groupExists) {
+                        groupFilter = null;
+                    }
+                }
             }
             
             if (hallFilter) {
