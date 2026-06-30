@@ -3322,54 +3322,14 @@ const MatchesHallApp = () => {
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
-                        const basicGroupNames = [];
-                        if (categoryFilter) {
-                            const categoryGroups = groupsData[categoryFilter] || [];
-                            categoryGroups.forEach(group => {
-                                if (group.type === 'základná skupina') {
-                                    basicGroupNames.push(group.name);
-                                }
-                            });
-                        }
-                        if (basicGroupNames.length === 0) {
-                            Object.keys(groupsData).forEach(catId => {
-                                const catGroups = groupsData[catId] || [];
-                                catGroups.forEach(group => {
-                                    if (group.type === 'základná skupina') {
-                                        basicGroupNames.push(group.name);
-                                    }
-                                });
-                            });
-                        }
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
-                        const advancedGroupNames = [];
-                        if (categoryFilter) {
-                            const categoryGroups = groupsData[categoryFilter] || [];
-                            categoryGroups.forEach(group => {
-                                if (group.type === 'nadstavbová skupina') {
-                                    advancedGroupNames.push(group.name);
-                                }
-                            });
-                        }
-                        if (advancedGroupNames.length === 0) {
-                            Object.keys(groupsData).forEach(catId => {
-                                const catGroups = groupsData[catId] || [];
-                                catGroups.forEach(group => {
-                                    if (group.type === 'nadstavbová skupina') {
-                                        advancedGroupNames.push(group.name);
-                                    }
-                                });
-                            });
-                        }
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
-                    // OPRAVA: Ak existujú zápasy, PONECHÁME groupFilter, inak ho nastavíme na null
                     if (!hasMatches) {
                         groupFilter = null;
                     }
-                    // Ak existujú zápasy, groupFilter zostáva zachovaný
                 } else {
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
