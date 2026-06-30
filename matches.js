@@ -3986,17 +3986,29 @@ const MatchesHallApp = () => {
         }
     }, [selectedCategory, groupsData]);
 
-    // FILTROVANIE ZÁPASOV S AKTUALIZÁCIOU URL
     useEffect(() => {
+        console.log('=== useEffect pre filtrovanie ===');
+        console.log('selectedGroup:', selectedGroup);
+        console.log('allMatchesList.length:', allMatchesList.length);
+    
+        // SKIPNUTIE POČAS INICIALIZÁCIE - ak ešte nebol initialHashProcessed, preskočíme
+        if (!initialHashProcessed) {
+            console.log('initialHashProcessed je false, preskakujem');
+            return;
+        }
+        
         if (allMatchesList.length === 0) {
+            console.log('allMatchesList je prázdne, return');
             return;
         }
         
         if (showingDetail) {
+            console.log('showingDetail je true, return');
             return;
         }
         
         let result = [...allMatchesList];
+        console.log('result počiatočný:', result.length);
         
         if (selectedDay !== null) {
             result = result.filter(match => {
