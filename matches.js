@@ -3281,6 +3281,25 @@ const MatchesHallApp = () => {
             await loadHallNames(hallMatches);
             await processTeamNames(hallMatches);
             
+            // KONTROLA, ČI MÁME groupsData NAČÍTANÉ
+            // Ak nie, načítame ich znova (pre prípad, že by sa nepodarilo načítať v init)
+            if (Object.keys(groupsData).length === 0) {
+                try {
+                    const groupsRef = doc(window.db, 'settings', 'groups');
+                    const groupsSnap = await getDoc(groupsRef);
+                    if (groupsSnap.exists()) {
+                        const data = groupsSnap.data();
+                        setGroupsData(data);
+                        window.groupsData = data;
+                        // Aktualizujeme lokálnu premennú pre tento scope
+                        Object.assign(groupsData, data);
+                    }
+                } catch (err) {
+                    console.warn('Nepodarilo sa načítať groupsData v loadMatches:', err);
+                }
+            }
+            
+            // TERAZ SPRACUJEME URL FILTRE
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
