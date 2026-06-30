@@ -1074,11 +1074,23 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const isRemovedFromRoster = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
                         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
                         const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
-                        const isExcluded = isRemovedFromRoster || isExcludedNormally || isSuspendedByBlue;
+                        
+                        let rowClassName = 'hover:bg-gray-50 transition-colors cursor-default';
+                        
+                        // Pridanie farby pozadia pre odstránených zo súpisky - bledo oranžová
+                        if (isRemovedFromRoster) {
+                            rowClassName = 'hover:bg-orange-50 transition-colors cursor-default bg-orange-100';
+                        } 
+                        // Pridanie farby pozadia pre vylúčených za modrú kartu - bledo modrá
+                        else if (isSuspendedByBlue) {
+                            rowClassName = 'hover:bg-blue-50 transition-colors cursor-default bg-blue-100';
+                        }
+                        // Pridanie farby pozadia pre normálne vylúčených - bledo sivá
+                        else if (isExcludedNormally) {
+                            rowClassName = 'hover:bg-gray-50 transition-colors cursor-default bg-gray-100';
+                        }
                         
                         let exclusionDisplayRow = null;
-                        
-                        const rowClassName = `hover:bg-gray-50 transition-colors cursor-default`;
                         
                         if (isRemovedFromRoster) {
                             exclusionDisplayRow = React.createElement(
