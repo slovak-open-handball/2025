@@ -3223,8 +3223,14 @@ const MatchesHallApp = () => {
         setTeamNamesLoaded(true);
     };
 
+    console.log('=== matches.js sa načítava ===');
+
     const loadMatches = async (hallId) => {
+        console.log('=== loadMatches bola zavolaná ===');
+        console.log('hallId:', hallId);
+    
         if (!window.db) {
+            console.error('window.db nie je definované');
             setError('Databáza nie je inicializovaná');
             setLoading(false);
             return;
