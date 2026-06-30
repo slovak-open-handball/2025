@@ -3333,7 +3333,6 @@ const MatchesHallApp = () => {
             
             // KONTROLA EXISTENCIE SKUPINY - OPRAVENÉ
             if (groupFilter) {
-                // Najprv skontrolujeme, či ide o špeciálnu skupinu
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
                 if (isSpecialGroup) {
@@ -3343,7 +3342,6 @@ const MatchesHallApp = () => {
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
                     } else if (groupFilter === '__ALL_BASIC__') {
-                        // Získame názvy základných skupín pre vybranú kategóriu (alebo pre všetky)
                         const basicGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
@@ -3353,7 +3351,6 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        // Ak nie je vybraná kategória, vezmeme všetky základné skupiny
                         if (basicGroupNames.length === 0) {
                             Object.keys(groupsData).forEach(catId => {
                                 const catGroups = groupsData[catId] || [];
@@ -3366,7 +3363,6 @@ const MatchesHallApp = () => {
                         }
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
                     } else if (groupFilter === '__ALL_ADVANCED__') {
-                        // Získame názvy nadstavbových skupín pre vybranú kategóriu (alebo pre všetky)
                         const advancedGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
@@ -3376,7 +3372,6 @@ const MatchesHallApp = () => {
                                 }
                             });
                         }
-                        // Ak nie je vybraná kategória, vezmeme všetky nadstavbové skupiny
                         if (advancedGroupNames.length === 0) {
                             Object.keys(groupsData).forEach(catId => {
                                 const catGroups = groupsData[catId] || [];
@@ -3394,7 +3389,7 @@ const MatchesHallApp = () => {
                     if (!hasMatches) {
                         groupFilter = null;
                     }
-                    // Ak existujú zápasy, groupFilter zostáva zachovaný
+                    // Ak existujú zápasy, groupFilter zostáva zachovaný (napr. '__ALL_BASIC__')
                 } else {
                     // Pre normálne skupiny overíme, či existuje skupina s týmto názvom
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
@@ -3444,7 +3439,6 @@ const MatchesHallApp = () => {
             // APLIKÁCIA FILTRA SKUPINY - DÔLEŽITÉ
             if (groupFilter) {
                 if (groupFilter === '__ALL_BASIC__') {
-                    // Získame názvy základných skupín
                     const basicGroupNames = [];
                     if (categoryFilter) {
                         const categoryGroups = groupsData[categoryFilter] || [];
@@ -3468,7 +3462,6 @@ const MatchesHallApp = () => {
                         return match.groupName && basicGroupNames.includes(match.groupName);
                     });
                 } else if (groupFilter === '__ALL_ADVANCED__') {
-                    // Získame názvy nadstavbových skupín
                     const advancedGroupNames = [];
                     if (categoryFilter) {
                         const categoryGroups = groupsData[categoryFilter] || [];
@@ -3496,7 +3489,6 @@ const MatchesHallApp = () => {
                         return isEliminationMatch(match);
                     });
                 } else {
-                    // Normálna skupina
                     result = result.filter(match => {
                         return match.groupName === groupFilter;
                     });
@@ -3776,7 +3768,7 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
-            // KONTROLA EXISTENCIE SKUPINY - OPRAVENÉ
+            // KONTROLA EXISTENCIE SKUPINY - PONECHAŤ ŠPECIÁLNE HODNOTY
             if (groupFilter) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
@@ -3832,6 +3824,7 @@ const MatchesHallApp = () => {
                     if (!hasMatches) {
                         groupFilter = null;
                     }
+                    // Ak existujú zápasy, PONECHÁME groupFilter (napr. '__ALL_BASIC__')
                 } else {
                     const groupExists = allMatchesList.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
@@ -3854,7 +3847,7 @@ const MatchesHallApp = () => {
             if (selectedDay !== dayFilter) setSelectedDay(dayFilter);
             if (selectedCategory !== categoryFilter) setSelectedCategory(categoryFilter);
             if (selectedGroup !== groupFilter) {
-                setSelectedGroup(groupFilter);
+                setSelectedGroup(groupFilter);  // Tu môže byť '__ALL_BASIC__', '__ALL_ADVANCED__' alebo '__PLAYOFF__'
             }
             if (selectedHall !== hallFilter) setSelectedHall(hallFilter);
         };
