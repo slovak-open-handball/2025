@@ -4284,7 +4284,6 @@ const MatchesHallApp = () => {
                     { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
                     React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
                     React.createElement('p', { className: 'text-lg font-medium text-gray-700 mb-2' }, 'Pre zvolený filter neexistujú žiadne zápasy'),
-                    React.createElement('p', { className: 'text-sm text-gray-500' }, `Filtre: ${filterText}`),
                     React.createElement(
                         'button',
                         {
