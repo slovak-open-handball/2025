@@ -3922,7 +3922,7 @@ const MatchesHallApp = () => {
 
     // FILTROVANIE ZÁPASOV S AKTUALIZÁCIOU URL
     useEffect(() => {
-        if (isInitialLoad && allMatchesList.length > 0) {
+        if (allMatchesList.length === 0) {
             return;
         }
         
