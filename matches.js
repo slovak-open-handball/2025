@@ -4049,46 +4049,149 @@ const MatchesHallApp = () => {
             })
         ),
 
-        // --- TLAČIDLÁ PRE SKUPINY (ZOBRAZIA SA LEN AK JE VYBRANÁ KATEGÓRIA) ---
+                // --- TLAČIDLÁ PRE SKUPINY (ZOBRAZIA SA LEN AK JE VYBRANÁ KATEGÓRIA) ---
         selectedCategory && uniqueGroups.length > 0 && React.createElement(
             'div',
-            { className: 'mb-3 flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
-            React.createElement(
-                'button',
-                {
-                    onClick: () => setSelectedGroup(null),
-                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                        selectedGroup === null 
-                            ? 'bg-purple-600 text-white shadow-md scale-105' 
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`
-                },
-                'Všetky skupiny'
-            ),
-            uniqueGroups.map((group, index) => {
-                const isSelected = selectedGroup === group.name;
-                const groupColors = getGroupTypeColors(group.name, selectedCategory, groupsData);
-                const bgColor = isSelected ? groupColors.textColor : groupColors.backgroundColor;
-                const textColor = isSelected ? '#FFFFFF' : groupColors.textColor;
+            { className: 'mb-3 flex flex-col gap-2 border-t border-gray-200 pt-3' },
+            
+            // Základné skupiny - prvý riadok
+            (() => {
+                const basicGroups = uniqueGroups.filter(g => g.type === 'základná skupina');
+                if (basicGroups.length === 0) return null;
                 
                 return React.createElement(
-                    'button',
-                    {
-                        key: `group-filter-${index}`,
-                        onClick: () => setSelectedGroup(isSelected ? null : group.name),
-                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                            isSelected 
-                                ? 'text-white shadow-md scale-105' 
-                                : 'hover:opacity-80'
-                        }`,
-                        style: {
-                            backgroundColor: bgColor,
-                            color: textColor
-                        }
-                    },
-                    group.name
+                    'div',
+                    { className: 'flex flex-wrap gap-2 justify-center' },
+                    React.createElement(
+                        'span',
+                        { className: 'text-xs text-gray-500 font-medium mr-1 self-center' },
+                        'Základné:'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                const hasBasicSelected = basicGroups.some(g => g.name === selectedGroup);
+                                if (hasBasicSelected) {
+                                    setSelectedGroup(null);
+                                } else {
+                                    // Ak je vybraná nadstavbová skupina, zrušíme ju a vyberieme prvú základnú
+                                    if (selectedGroup && !basicGroups.some(g => g.name === selectedGroup)) {
+                                        setSelectedGroup(null);
+                                    }
+                                    // Vyberieme prvú základnú skupinu
+                                    setSelectedGroup(basicGroups[0].name);
+                                }
+                            },
+                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                basicGroups.some(g => g.name === selectedGroup)
+                                    ? 'bg-purple-600 text-white shadow-md scale-105' 
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`
+                        },
+                        'Všetky základné'
+                    ),
+                    basicGroups.map((group, index) => {
+                        const isSelected = selectedGroup === group.name;
+                        const groupColors = getGroupTypeColors(group.name, selectedCategory, groupsData);
+                        const bgColor = isSelected ? groupColors.textColor : groupColors.backgroundColor;
+                        const textColor = isSelected ? '#FFFFFF' : groupColors.textColor;
+                        
+                        return React.createElement(
+                            'button',
+                            {
+                                key: `basic-group-${index}`,
+                                onClick: () => {
+                                    if (isSelected) {
+                                        setSelectedGroup(null);
+                                    } else {
+                                        setSelectedGroup(group.name);
+                                    }
+                                },
+                                className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                    isSelected 
+                                        ? 'text-white shadow-md scale-105' 
+                                        : 'hover:opacity-80'
+                                }`,
+                                style: {
+                                    backgroundColor: bgColor,
+                                    color: textColor
+                                }
+                            },
+                            group.name
+                        );
+                    })
                 );
-            })
+            })(),
+            
+            // Nadstavbové skupiny - druhý riadok
+            (() => {
+                const advancedGroups = uniqueGroups.filter(g => g.type === 'nadstavbová skupina');
+                if (advancedGroups.length === 0) return null;
+                
+                return React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap gap-2 justify-center' },
+                    React.createElement(
+                        'span',
+                        { className: 'text-xs text-gray-500 font-medium mr-1 self-center' },
+                        'Nadstavbové:'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                const hasAdvancedSelected = advancedGroups.some(g => g.name === selectedGroup);
+                                if (hasAdvancedSelected) {
+                                    setSelectedGroup(null);
+                                } else {
+                                    // Ak je vybraná základná skupina, zrušíme ju a vyberieme prvú nadstavbovú
+                                    if (selectedGroup && !advancedGroups.some(g => g.name === selectedGroup)) {
+                                        setSelectedGroup(null);
+                                    }
+                                    setSelectedGroup(advancedGroups[0].name);
+                                }
+                            },
+                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                advancedGroups.some(g => g.name === selectedGroup)
+                                    ? 'bg-purple-600 text-white shadow-md scale-105' 
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`
+                        },
+                        'Všetky nadstavbové'
+                    ),
+                    advancedGroups.map((group, index) => {
+                        const isSelected = selectedGroup === group.name;
+                        const groupColors = getGroupTypeColors(group.name, selectedCategory, groupsData);
+                        const bgColor = isSelected ? groupColors.textColor : groupColors.backgroundColor;
+                        const textColor = isSelected ? '#FFFFFF' : groupColors.textColor;
+                        
+                        return React.createElement(
+                            'button',
+                            {
+                                key: `advanced-group-${index}`,
+                                onClick: () => {
+                                    if (isSelected) {
+                                        setSelectedGroup(null);
+                                    } else {
+                                        setSelectedGroup(group.name);
+                                    }
+                                },
+                                className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                    isSelected 
+                                        ? 'text-white shadow-md scale-105' 
+                                        : 'hover:opacity-80'
+                                }`,
+                                style: {
+                                    backgroundColor: bgColor,
+                                    color: textColor
+                                }
+                            },
+                            group.name
+                        );
+                    })
+                );
+            })()
         ),
 
         uniqueHalls.length > 1 && React.createElement(
