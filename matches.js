@@ -954,121 +954,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         return stats;
     };
     
-    const handleMemberClick = async (member) => {
-        if (!timerRef) {
-            return;
-        }
-        
-        const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
-        if (isSuspendedByBlue) {
-            return;
-        }
-        
-        const timerCurrent = timerRef.current;
-        let selectedActionsSet = new Set();
-        
-        if (timerCurrent && typeof timerCurrent.getSelectedActions === 'function') {
-            const actions = timerCurrent.getSelectedActions();
-            if (actions && actions.size > 0) {
-                selectedActionsSet = actions;
-            }
-        } 
-        else if (timerCurrent && typeof timerCurrent.getSelectedAction === 'function') {
-            const action = timerCurrent.getSelectedAction();
-            if (action) {
-                selectedActionsSet.add(action);
-            }
-        } else if (typeof timerRef.getSelectedAction === 'function') {
-            const action = timerRef.getSelectedAction();
-            if (action) {
-                selectedActionsSet.add(action);
-            }
-        }
-        
-        if (selectedActionsSet.size === 0 && matchStatus === 'scheduled') {
-            const isRemoved = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
-            
-            if (isRemoved) {
-                const memberKey = `${member.userId}_${member.dbArrayName}_${member.originalIndex}`;
-                const removalEvent = rosterRemovals[memberKey];
-                
-                if (removalEvent && removalEvent.eventId && window.db) {
-                    try {
-                        const eventRef = doc(window.db, 'matchEvents', removalEvent.eventId);
-                        await deleteDoc(eventRef);
-                    } catch (err) {
-                        console.error('Chyba pri rušení odstránenia:', err);
-                    }
-                }
-            } else {
-                if (window.db && matchId) {
-                    try {
-                        const eventData = {
-                            matchId: matchId,
-                            totalTime: 0,
-                            periodTime: 0,
-                            period: 1,
-                            eventType: 'roster_removal',
-                            eventSubtype: null,
-                            team: teamType,
-                            memberType: member.type,
-                            memberTypeKey: member.dbArrayName,
-                            memberIndex: member.originalIndex,
-                            userId: member.userId,
-                            categoryName: categoryName,
-                            createdAt: Timestamp.now(),
-                            timestamp: Timestamp.now()
-                        };
-                        
-                        const eventsRef = collection(window.db, 'matchEvents');
-                        await addDoc(eventsRef, eventData);
-                    } catch (err) {
-                        console.error('Chyba pri ukladaní odstránenia člena:', err);
-                    }
-                }
-            }
-            return;
-        }        
-        
-        if (selectedActionsSet.has('goal') && member.type !== 'Hráč') {
-            return;
-        }
-        
-        if (selectedActionsSet.has('7m') && member.type !== 'Hráč') {
-            return;
-        }
-        
-        const uniqueKey = `${member.type}_${member.originalIndex}`;
-        const exclusionInfo = excludedMembers[uniqueKey];
-        if (exclusionInfo && exclusionInfo.isExcluded) {
-            if (selectedActionsSet.has('goal')) {
-                return;
-            }
-            if (selectedActionsSet.has('7m')) {
-                return;
-            }
-        }
-        
-        if (selectedActionsSet.size === 0) {
-            return;
-        }
-        
-        const memberForSave = {
-            type: member.type,
-            name: `${member.firstName} ${member.lastName}`.trim(),
-            index: member.originalIndex,
-            typeKey: member.dbArrayName
-        };
-        
-        let success = false;
-        
-        if (timerCurrent && typeof timerCurrent.saveMatchEvent === 'function') {
-            success = await timerCurrent.saveMatchEvent(teamType, memberForSave);
-        } else if (typeof timerRef.saveMatchEvent === 'function') {
-            success = await timerRef.saveMatchEvent(teamType, memberForSave);
-        }        
-    };
-    
     if (loading) {
         return React.createElement(
             'div',
@@ -1192,23 +1077,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const isExcluded = isRemovedFromRoster || isExcludedNormally || isSuspendedByBlue;
                         
                         let exclusionDisplayRow = null;
-
-                        let isClickable = !isSuspendedByBlue;
-                        if (isRemovedFromRoster) {
-                            isClickable = matchStatus === 'scheduled';
-                        } else {
-                            isClickable = matchStatus !== 'completed';
-                        }
                         
-                        const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
-                        let rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
-                        if (isExcluded) {
-                            if (isRemovedFromRoster) {
-                                rowClassName = `hover:bg-orange-50 transition-colors ${cursorClass} opacity-80 bg-orange-100`;
-                            } else {
-                                rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`;
-                            }
-                        }
+                        const rowClassName = `hover:bg-gray-50 transition-colors cursor-default`;
                         
                         if (isRemovedFromRoster) {
                             exclusionDisplayRow = React.createElement(
@@ -1264,14 +1134,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             'tr',
                             { 
                                 key: `member-${idx}`,
-                                className: rowClassName,
-                                onClick: () => {
-                                    if (isRemovedFromRoster && matchStatus === 'scheduled') {
-                                        handleMemberClick(member);
-                                    } else if (isClickable && !isRemovedFromRoster) {
-                                        handleMemberClick(member);
-                                    }
-                                }
+                                className: rowClassName
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
                             React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, jerseyDisplay || ''),
