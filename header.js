@@ -354,35 +354,19 @@ const setupPagesVisibilityListener = () => {
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
 const updateNavigationLinks = () => {    
-    // Ak ešte nemáme načítané dáta, nič nerobíme (odkazy zostanú skryté)
     if (Object.keys(pagesVisibility).length === 0) {
         return;
     }
     
-    // 🔥 1. Spracovanie VEREJNÝCH odkazov s data-page atribútom
-    // Tieto odkazy sa riadia VÝHRADNE viditeľnosťou v DB
     const publicNavLinks = document.querySelectorAll('[data-page]');
     
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
         
-        // 🔥 ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH POUŽÍVATEĽOV
-        // Pre map, matches a teams-in-groups: prihlásený používateľ vidí odkaz VŽDY
-        const isLoggedIn = isReallyLoggedIn();
-        const isProtectedPage = ['map', 'matches', 'teams-in-groups'].includes(pageId);
+        // 🔥 ODSTRÁŇTE ŠPECIÁLNE PRAVIDLO - RIADTE SA LEN DB
+        const isVisible = pageConfig && pageConfig.visible === true;
         
-        let isVisible = false;
-        
-        if (isLoggedIn && isProtectedPage) {
-            // Prihlásený používateľ vidí tieto stránky vždy
-            isVisible = true;
-        } else {
-            // Inak sa riadi nastaveniami v DB
-            isVisible = pageConfig && pageConfig.visible === true;
-        }
-        
-        // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
@@ -438,13 +422,6 @@ const checkCurrentPageAccess = () => {
     // Povolené stránky bez kontroly
     const allowedPages = ['', 'index', 'login', 'admin-register'];
     if (allowedPages.includes(currentPage)) {
-        return true;
-    }
-    
-    // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU, MATCHES A TEAMS-IN-GROUPS
-    // Prihlásený používateľ má prístup na tieto stránky vždy
-    const isLoggedIn = isReallyLoggedIn();
-    if (isLoggedIn && ['map', 'matches', 'teams-in-groups'].includes(currentPage)) {
         return true;
     }
     
