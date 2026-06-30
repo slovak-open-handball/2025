@@ -366,9 +366,23 @@ const updateNavigationLinks = () => {
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
-        const isVisible = pageConfig && pageConfig.visible === true;
         
-        // Aktualizujeme viditeľnosť odkazu - LEN podľa DB
+        // 🔥 ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH POUŽÍVATEĽOV
+        // Pre map, matches a teams-in-groups: prihlásený používateľ vidí odkaz VŽDY
+        const isLoggedIn = isReallyLoggedIn();
+        const isProtectedPage = ['map', 'matches', 'teams-in-groups'].includes(pageId);
+        
+        let isVisible = false;
+        
+        if (isLoggedIn && isProtectedPage) {
+            // Prihlásený používateľ vidí tieto stránky vždy
+            isVisible = true;
+        } else {
+            // Inak sa riadi nastaveniami v DB
+            isVisible = pageConfig && pageConfig.visible === true;
+        }
+        
+        // Aktualizujeme viditeľnosť odkazu
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
@@ -379,9 +393,6 @@ const updateNavigationLinks = () => {
             link.dataset.visible = 'false';
         }
     });
-
-    // 🔥 2. ŽIADNE ŠPECIÁLNE PRAVIDLO PRE PRIHLÁSENÝCH
-    // public-map-link a public-teams-in-groups-link sa riadia VÝHRADNE DB
 
     // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
@@ -430,10 +441,10 @@ const checkCurrentPageAccess = () => {
         return true;
     }
     
-    // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU A TEAMS-IN-GROUPS
-    // Prihlásený používateľ má prístup na verejné stránky vždy
+    // 🔥 ŠPECIÁLNE PRAVIDLO PRE MAPU, MATCHES A TEAMS-IN-GROUPS
+    // Prihlásený používateľ má prístup na tieto stránky vždy
     const isLoggedIn = isReallyLoggedIn();
-    if (isLoggedIn && (currentPage === 'map' || currentPage === 'teams-in-groups')) {
+    if (isLoggedIn && ['map', 'matches', 'teams-in-groups'].includes(currentPage)) {
         return true;
     }
     
