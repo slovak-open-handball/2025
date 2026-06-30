@@ -3281,9 +3281,11 @@ const MatchesHallApp = () => {
             await loadHallNames(hallMatches);
             await processTeamNames(hallMatches);
             
-            // KONTROLA, ČI MÁME groupsData NAČÍTANÉ
-            // Ak nie, načítame ich znova (pre prípad, že by sa nepodarilo načítať v init)
-            if (Object.keys(groupsData).length === 0) {
+            // --- DÔLEŽITÉ: NAČÍTAME groupsData PRED SPRACOVANÍM URL FILTROV ---
+            // Kontrola, či máme groupsData načítané
+            let groupsLoaded = Object.keys(groupsData).length > 0;
+            
+            if (!groupsLoaded) {
                 try {
                     const groupsRef = doc(window.db, 'settings', 'groups');
                     const groupsSnap = await getDoc(groupsRef);
@@ -3293,16 +3295,14 @@ const MatchesHallApp = () => {
                         window.groupsData = data;
                         // Aktualizujeme lokálnu premennú pre tento scope
                         Object.assign(groupsData, data);
+                        groupsLoaded = true;
                     }
                 } catch (err) {
                     console.warn('Nepodarilo sa načítať groupsData v loadMatches:', err);
                 }
             }
             
-            // TERAZ SPRACUJEME URL FILTRE
-            // Nahraďte celú časť spracovania URL filtrov v loadMatches funkcii (cca riadok 1240-1370)
-
-            // TERAZ SPRACUJEME URL FILTRE
+            // --- SPRACOVANIE URL FILTROV ---
             const urlFilters = parseUrlFilters();
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
@@ -3331,12 +3331,11 @@ const MatchesHallApp = () => {
                 if (!categoryExists) categoryFilter = null;
             }
             
-            // KONTROLA EXISTENCIE SKUPINY - OPRAVENÉ
-            if (groupFilter) {
+            // KONTROLA EXISTENCIE SKUPINY - TERAZ S SPRÁVNYMI DATAMI
+            if (groupFilter && groupsLoaded) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
                 
                 if (isSpecialGroup) {
-                    // Pre špeciálne skupiny overíme, či existujú aspoň nejaké zápasy
                     let hasMatches = false;
                     
                     if (groupFilter === '__PLAYOFF__') {
@@ -3385,18 +3384,19 @@ const MatchesHallApp = () => {
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
                     }
                     
-                    // AK NEEXISTUJÚ ŽIADNE ZÁPASY, NASTAVÍME groupFilter NA null
                     if (!hasMatches) {
                         groupFilter = null;
                     }
-                    // Ak existujú zápasy, groupFilter zostáva zachovaný (napr. '__ALL_BASIC__')
                 } else {
-                    // Pre normálne skupiny overíme, či existuje skupina s týmto názvom
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
                     if (!groupExists) {
                         groupFilter = null;
                     }
                 }
+            } else if (groupFilter && !groupsLoaded) {
+                // Ak groupsData nie sú načítané, necháme groupFilter tak, ako je
+                // (pri prvotnom načítaní to môže byť problém, ale groupsData by mali byť načítané)
+                console.warn('groupsData not loaded, keeping group filter:', groupFilter);
             }
             
             // KONTROLA EXISTENCIE HALY
@@ -3436,8 +3436,8 @@ const MatchesHallApp = () => {
                 });
             }
             
-            // APLIKÁCIA FILTRA SKUPINY - DÔLEŽITÉ
-            if (groupFilter) {
+            // APLIKÁCIA FILTRA SKUPINY - S KONTROLOU, ČI MÁME groupsData
+            if (groupFilter && groupsLoaded) {
                 if (groupFilter === '__ALL_BASIC__') {
                     const basicGroupNames = [];
                     if (categoryFilter) {
@@ -3504,7 +3504,8 @@ const MatchesHallApp = () => {
                 });
             }
             
-            setFilteredMatches(result);            
+            setFilteredMatches(result);
+            
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
             
             if (hasHash) {
