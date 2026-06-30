@@ -3964,6 +3964,8 @@ const MatchesHallApp = () => {
         }
     });
 
+    uniqueHalls.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+
     const uniqueGroups = [];
     const groupMap = {};
     
@@ -4246,9 +4248,7 @@ const MatchesHallApp = () => {
             })
         ),
 
-        // --- ZOBRAZENIE ZÁPASOV ALEBO SPRÁVY ---
         (() => {
-            // Ak máme filtre a žiadne výsledky
             if (hasFilters && displayDays.length === 0) {
                 const filterDescriptions = [];
                 
@@ -4300,7 +4300,6 @@ const MatchesHallApp = () => {
                 );
             }
             
-            // Ak nemáme filtre a nemáme žiadne zápasy
             if (!hasFilters && displayDays.length === 0) {
                 return React.createElement(
                     'div',
@@ -4310,7 +4309,6 @@ const MatchesHallApp = () => {
                 );
             }
             
-            // Ak máme zápasy (s filtrami alebo bez)
             return React.createElement(
                 'div',
                 { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white' },
