@@ -3234,6 +3234,9 @@ const MatchesHallApp = () => {
         setError(null);
     
         try {
+            console.log('=== loadMatches ZAČIATOK ===');
+            console.log('hallId:', hallId);
+            
             const matchesRef = collection(window.db, 'matches');
             const querySnapshot = await getDocs(matchesRef);
             
@@ -3261,6 +3264,8 @@ const MatchesHallApp = () => {
                 }
             });
             
+            console.log('Počet načítaných zápasov:', hallMatches.length);
+            
             hallMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -3284,18 +3289,24 @@ const MatchesHallApp = () => {
             // --- DÔLEŽITÉ: NAČÍTAME groupsData PRED SPRACOVANÍM URL FILTROV ---
             // Kontrola, či máme groupsData načítané
             let groupsLoaded = Object.keys(groupsData).length > 0;
+            console.log('groupsData načítané pred kontrolou:', groupsLoaded);
+            console.log('groupsData obsah:', Object.keys(groupsData));
             
             if (!groupsLoaded) {
                 try {
+                    console.log('Načítavam groupsData zo servera...');
                     const groupsRef = doc(window.db, 'settings', 'groups');
                     const groupsSnap = await getDoc(groupsRef);
                     if (groupsSnap.exists()) {
                         const data = groupsSnap.data();
+                        console.log('Načítané groupsData:', data);
                         setGroupsData(data);
                         window.groupsData = data;
                         // Aktualizujeme lokálnu premennú pre tento scope
                         Object.assign(groupsData, data);
                         groupsLoaded = true;
+                    } else {
+                        console.warn('groupsRef neexistuje v databáze');
                     }
                 } catch (err) {
                     console.warn('Nepodarilo sa načítať groupsData v loadMatches:', err);
@@ -3304,10 +3315,18 @@ const MatchesHallApp = () => {
             
             // --- SPRACOVANIE URL FILTROV ---
             const urlFilters = parseUrlFilters();
+            console.log('URL filtre:', urlFilters);
+            
             let dayFilter = urlFilters.day;
             let categoryFilter = urlFilters.category;
             let groupFilter = urlFilters.group;
             let hallFilter = urlFilters.hall;
+            
+            console.log('Pôvodné filtre po parsovaní:');
+            console.log('  dayFilter:', dayFilter);
+            console.log('  categoryFilter:', categoryFilter);
+            console.log('  groupFilter:', groupFilter);
+            console.log('  hallFilter:', hallFilter);
             
             // KONTROLA EXISTENCIE DNA
             if (dayFilter) {
@@ -3317,6 +3336,7 @@ const MatchesHallApp = () => {
                         return match.scheduledTime.toDate().toDateString() === dayFilter;
                     } catch (e) { return false; }
                 });
+                console.log(`Deň "${dayFilter}" existuje:`, dayExists);
                 if (!dayExists) dayFilter = null;
             }
             
@@ -3328,22 +3348,30 @@ const MatchesHallApp = () => {
                     if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
                     return false;
                 });
+                console.log(`Kategória "${categoryFilter}" existuje:`, categoryExists);
                 if (!categoryExists) categoryFilter = null;
             }
             
             // KONTROLA EXISTENCIE SKUPINY - TERAZ S SPRÁVNYMI DATAMI
+            console.log('Spracúvam groupFilter:', groupFilter);
+            console.log('groupsLoaded:', groupsLoaded);
+            console.log('groupsData (aktuálne):', groupsData);
+            
             if (groupFilter && groupsLoaded) {
                 const isSpecialGroup = groupFilter === '__ALL_BASIC__' || groupFilter === '__ALL_ADVANCED__' || groupFilter === '__PLAYOFF__';
+                console.log(`Group filter "${groupFilter}" je špeciálny:`, isSpecialGroup);
                 
                 if (isSpecialGroup) {
                     let hasMatches = false;
                     
                     if (groupFilter === '__PLAYOFF__') {
                         hasMatches = hallMatches.some(match => isEliminationMatch(match));
+                        console.log(`  PLAYOFF - nájdené zápasy:`, hasMatches);
                     } else if (groupFilter === '__ALL_BASIC__') {
                         const basicGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
+                            console.log(`  Kategória "${categoryFilter}" - skupiny:`, categoryGroups);
                             categoryGroups.forEach(group => {
                                 if (group.type === 'základná skupina') {
                                     basicGroupNames.push(group.name);
@@ -3360,11 +3388,14 @@ const MatchesHallApp = () => {
                                 });
                             });
                         }
+                        console.log(`  Všetky základné skupiny:`, basicGroupNames);
                         hasMatches = hallMatches.some(match => match.groupName && basicGroupNames.includes(match.groupName));
+                        console.log(`  ALL_BASIC - nájdené zápasy:`, hasMatches);
                     } else if (groupFilter === '__ALL_ADVANCED__') {
                         const advancedGroupNames = [];
                         if (categoryFilter) {
                             const categoryGroups = groupsData[categoryFilter] || [];
+                            console.log(`  Kategória "${categoryFilter}" - skupiny:`, categoryGroups);
                             categoryGroups.forEach(group => {
                                 if (group.type === 'nadstavbová skupina') {
                                     advancedGroupNames.push(group.name);
@@ -3381,22 +3412,26 @@ const MatchesHallApp = () => {
                                 });
                             });
                         }
+                        console.log(`  Všetky nadstavbové skupiny:`, advancedGroupNames);
                         hasMatches = hallMatches.some(match => match.groupName && advancedGroupNames.includes(match.groupName));
+                        console.log(`  ALL_ADVANCED - nájdené zápasy:`, hasMatches);
                     }
                     
                     if (!hasMatches) {
+                        console.log(`  Žiadne zápasy pre filter "${groupFilter}", nastavujem na null`);
                         groupFilter = null;
+                    } else {
+                        console.log(`  Zachovávam filter "${groupFilter}"`);
                     }
                 } else {
                     const groupExists = hallMatches.some(match => match.groupName === groupFilter);
+                    console.log(`  Skupina "${groupFilter}" existuje:`, groupExists);
                     if (!groupExists) {
                         groupFilter = null;
                     }
                 }
             } else if (groupFilter && !groupsLoaded) {
-                // Ak groupsData nie sú načítané, necháme groupFilter tak, ako je
-                // (pri prvotnom načítaní to môže byť problém, ale groupsData by mali byť načítané)
-                console.warn('groupsData not loaded, keeping group filter:', groupFilter);
+                console.warn('groupsData nie sú načítané, nechávam groupFilter:', groupFilter);
             }
             
             // KONTROLA EXISTENCIE HALY
@@ -3406,8 +3441,15 @@ const MatchesHallApp = () => {
                     const hallName = hallNames[match.hallId] || match.hallId;
                     return hallName === hallFilter || hallNames[match.hallId] === hallFilter;
                 });
+                console.log(`Hala "${hallFilter}" existuje:`, hallExists);
                 if (!hallExists) hallFilter = null;
             }
+            
+            console.log('Konečné filtre po overení:');
+            console.log('  dayFilter:', dayFilter);
+            console.log('  categoryFilter:', categoryFilter);
+            console.log('  groupFilter:', groupFilter);
+            console.log('  hallFilter:', hallFilter);
             
             // NASTAVENIE FILTROV
             setSelectedDay(dayFilter);
@@ -3417,6 +3459,7 @@ const MatchesHallApp = () => {
             
             // APLIKUJEME FILTRE NA VÝSLEDKY
             let result = [...hallMatches];
+            console.log('Aplikujem filtre na výsledky, počet pred filtrovaním:', result.length);
             
             if (dayFilter) {
                 result = result.filter(match => {
@@ -3425,6 +3468,7 @@ const MatchesHallApp = () => {
                         return match.scheduledTime.toDate().toDateString() === dayFilter;
                     } catch (e) { return false; }
                 });
+                console.log(`Po filtri dňa "${dayFilter}":`, result.length);
             }
             
             if (categoryFilter) {
@@ -3434,10 +3478,12 @@ const MatchesHallApp = () => {
                     if (match.categoryId && categoriesData[match.categoryId] === categoryFilter) return true;
                     return false;
                 });
+                console.log(`Po filtri kategórie "${categoryFilter}":`, result.length);
             }
             
             // APLIKÁCIA FILTRA SKUPINY - S KONTROLOU, ČI MÁME groupsData
             if (groupFilter && groupsLoaded) {
+                console.log(`Aplikujem filter skupiny "${groupFilter}"`);
                 if (groupFilter === '__ALL_BASIC__') {
                     const basicGroupNames = [];
                     if (categoryFilter) {
@@ -3458,6 +3504,7 @@ const MatchesHallApp = () => {
                             });
                         });
                     }
+                    console.log('  ZÁKLADNÉ skupiny:', basicGroupNames);
                     result = result.filter(match => {
                         return match.groupName && basicGroupNames.includes(match.groupName);
                     });
@@ -3481,18 +3528,22 @@ const MatchesHallApp = () => {
                             });
                         });
                     }
+                    console.log('  NADSTAVBOVÉ skupiny:', advancedGroupNames);
                     result = result.filter(match => {
                         return match.groupName && advancedGroupNames.includes(match.groupName);
                     });
                 } else if (groupFilter === '__PLAYOFF__') {
+                    console.log('  FILTER PLAYOFF');
                     result = result.filter(match => {
                         return isEliminationMatch(match);
                     });
                 } else {
+                    console.log(`  FILTER skupina "${groupFilter}"`);
                     result = result.filter(match => {
                         return match.groupName === groupFilter;
                     });
                 }
+                console.log(`Po filtri skupiny "${groupFilter}":`, result.length);
             }
             
             // APLIKÁCIA FILTRA HALY
@@ -3502,17 +3553,22 @@ const MatchesHallApp = () => {
                     const hallName = hallNames[match.hallId] || match.hallId;
                     return hallName === hallFilter || hallNames[match.hallId] === hallFilter;
                 });
+                console.log(`Po filtri haly "${hallFilter}":`, result.length);
             }
             
+            console.log('Konečný počet výsledkov:', result.length);
             setFilteredMatches(result);
             
             const hasHash = window.location.hash && window.location.hash.startsWith('#match/');
+            console.log('Má hash #match/:', hasHash);
             
             if (hasHash) {
                 const matchShown = showMatchFromUrl(hallMatches);
+                console.log('Zápas z hash nájdený:', matchShown);
                 if (!matchShown) {
                     const searchParams = window.location.search;
                     window.history.replaceState(null, '', window.location.pathname + searchParams);
+                    console.log('Hash nebol nájdený, odstránený');
                 }
             }
             
@@ -3530,7 +3586,10 @@ const MatchesHallApp = () => {
                 setLoading(false);
             }
             
+            console.log('=== loadMatches KONIEC ===');
+            
         } catch (err) {
+            console.error('Chyba v loadMatches:', err);
             setError('Nepodarilo sa načítať zápasy: ' + err.message);
             setLoading(false);
         }
