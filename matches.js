@@ -3764,9 +3764,40 @@ const MatchesHallApp = () => {
         }
         
         if (selectedGroup !== null) {
-            result = result.filter(match => {
-                return match.groupName === selectedGroup;
-            });
+            if (selectedGroup === '__ALL_BASIC__') {
+                // Vyberieme všetky základné skupiny
+                const basicGroupNames = [];
+                if (selectedCategory) {
+                    const categoryGroups = groupsData[selectedCategory] || [];
+                    categoryGroups.forEach(group => {
+                        if (group.type === 'základná skupina') {
+                            basicGroupNames.push(group.name);
+                        }
+                    });
+                }
+                result = result.filter(match => {
+                    return match.groupName && basicGroupNames.includes(match.groupName);
+                });
+            } else if (selectedGroup === '__ALL_ADVANCED__') {
+                // Vyberieme všetky nadstavbové skupiny
+                const advancedGroupNames = [];
+                if (selectedCategory) {
+                    const categoryGroups = groupsData[selectedCategory] || [];
+                    categoryGroups.forEach(group => {
+                        if (group.type === 'nadstavbová skupina') {
+                            advancedGroupNames.push(group.name);
+                        }
+                    });
+                }
+                result = result.filter(match => {
+                    return match.groupName && advancedGroupNames.includes(match.groupName);
+                });
+            } else {
+                // Vyberieme konkrétnu skupinu
+                result = result.filter(match => {
+                    return match.groupName === selectedGroup;
+                });
+            }
         }
         
         if (selectedHall !== null) {
@@ -4049,7 +4080,7 @@ const MatchesHallApp = () => {
             })
         ),
 
-                // --- TLAČIDLÁ PRE SKUPINY (ZOBRAZIA SA LEN AK JE VYBRANÁ KATEGÓRIA) ---
+        // --- TLAČIDLÁ PRE SKUPINY (ZOBRAZIA SA LEN AK JE VYBRANÁ KATEGÓRIA) ---
         selectedCategory && uniqueGroups.length > 0 && React.createElement(
             'div',
             { className: 'mb-3 flex flex-col gap-2 border-t border-gray-200 pt-3' },
@@ -4058,6 +4089,13 @@ const MatchesHallApp = () => {
             (() => {
                 const basicGroups = uniqueGroups.filter(g => g.type === 'základná skupina');
                 if (basicGroups.length === 0) return null;
+                
+                // Získame názvy všetkých základných skupín
+                const basicGroupNames = basicGroups.map(g => g.name);
+                // Zistíme, či je vybraná niektorá zo základných skupín
+                const hasBasicSelected = basicGroups.some(g => g.name === selectedGroup);
+                // Zistíme, či sú vybrané VŠETKY základné skupiny (t.j. selectedGroup je špeciálna hodnota)
+                const isAllBasicSelected = selectedGroup === '__ALL_BASIC__';
                 
                 return React.createElement(
                     'div',
@@ -4071,20 +4109,16 @@ const MatchesHallApp = () => {
                         'button',
                         {
                             onClick: () => {
-                                const hasBasicSelected = basicGroups.some(g => g.name === selectedGroup);
-                                if (hasBasicSelected) {
+                                if (isAllBasicSelected) {
+                                    // Ak sú už vybrané všetky základné, zrušíme výber
                                     setSelectedGroup(null);
                                 } else {
-                                    // Ak je vybraná nadstavbová skupina, zrušíme ju a vyberieme prvú základnú
-                                    if (selectedGroup && !basicGroups.some(g => g.name === selectedGroup)) {
-                                        setSelectedGroup(null);
-                                    }
-                                    // Vyberieme prvú základnú skupinu
-                                    setSelectedGroup(basicGroups[0].name);
+                                    // Inak vyberieme špeciálnu hodnotu pre "všetky základné"
+                                    setSelectedGroup('__ALL_BASIC__');
                                 }
                             },
                             className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                basicGroups.some(g => g.name === selectedGroup)
+                                isAllBasicSelected
                                     ? 'bg-purple-600 text-white shadow-md scale-105' 
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`
@@ -4129,6 +4163,13 @@ const MatchesHallApp = () => {
                 const advancedGroups = uniqueGroups.filter(g => g.type === 'nadstavbová skupina');
                 if (advancedGroups.length === 0) return null;
                 
+                // Získame názvy všetkých nadstavbových skupín
+                const advancedGroupNames = advancedGroups.map(g => g.name);
+                // Zistíme, či je vybraná niektorá z nadstavbových skupín
+                const hasAdvancedSelected = advancedGroups.some(g => g.name === selectedGroup);
+                // Zistíme, či sú vybrané VŠETKY nadstavbové skupiny
+                const isAllAdvancedSelected = selectedGroup === '__ALL_ADVANCED__';
+                
                 return React.createElement(
                     'div',
                     { className: 'flex flex-wrap gap-2 justify-center' },
@@ -4141,19 +4182,14 @@ const MatchesHallApp = () => {
                         'button',
                         {
                             onClick: () => {
-                                const hasAdvancedSelected = advancedGroups.some(g => g.name === selectedGroup);
-                                if (hasAdvancedSelected) {
+                                if (isAllAdvancedSelected) {
                                     setSelectedGroup(null);
                                 } else {
-                                    // Ak je vybraná základná skupina, zrušíme ju a vyberieme prvú nadstavbovú
-                                    if (selectedGroup && !advancedGroups.some(g => g.name === selectedGroup)) {
-                                        setSelectedGroup(null);
-                                    }
-                                    setSelectedGroup(advancedGroups[0].name);
+                                    setSelectedGroup('__ALL_ADVANCED__');
                                 }
                             },
                             className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                advancedGroups.some(g => g.name === selectedGroup)
+                                isAllAdvancedSelected
                                     ? 'bg-purple-600 text-white shadow-md scale-105' 
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`
