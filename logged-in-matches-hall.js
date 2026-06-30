@@ -1347,16 +1347,21 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
     const handleResetConfirm = async () => {
         setResetLoading(true);
         try {
+            // Zastavíme lokálny interval
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            
+            // Zastavíme časovač a uložíme stav
             if (isRunningRef.current) {
-                stopLocalInterval();
                 setIsRunning(false);
                 isRunningRef.current = false;
+                startTimeRef.current = null;
+                localStartOffsetRef.current = 0;
             }
-
-            if (isRunningRef.current) {
-                await stopTimerAndSave();
-            }
-    
+            
+            // Resetujeme čas
             await resetTime();
             
             setShowResetModal(false);
@@ -2562,7 +2567,20 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
 
     const resetTime = async () => {
         if (!canReset()) return;
+
+        // Zastavíme všetky bežiace intervaly
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        
+        // Resetujeme lokálne premenné
+        setIsRunning(false);
+        isRunningRef.current = false;
+        startTimeRef.current = null;
+        localStartOffsetRef.current = 0;
     
+        // Resetujeme zobrazenie
         setDisplaySeconds(0);
         displaySecondsRef.current = 0;
         setPeriod(1);
@@ -2615,7 +2633,7 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                         updateData[field] = currentMatchData[field];
                     }
                 });
-                
+            
                 await updateDoc(matchRef, updateData);
                 
                 if (onTimeUpdate) onTimeUpdate({ 
