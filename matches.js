@@ -3555,9 +3555,7 @@ const MatchesHallApp = () => {
             React.createElement(
                 'div',
                 { className: 'flex items-center justify-center gap-2 mt-1' },
-                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
-                React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Všetky zápasy'),
-                React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `(${totalMatches} zápasov)`)
+                React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `${totalMatches} zápasov`)
             )
         ),
         
