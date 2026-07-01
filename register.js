@@ -1137,6 +1137,8 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       // ZÁPIS DO KOLEKCIE 'users'
       await setDoc(userDocRef, userData);
       console.log("register.js: Zápis do 'users' dokončený.");
+
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // ZÁPIS DO KOLEKCIE 'usersprivate'
       await setDoc(userPrivateDocRef, privateData);
