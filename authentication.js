@@ -635,19 +635,36 @@ const handleAuthState = async () => {
             const userDocRef = doc(db, `users/${user.uid}`);
             
             const loadUserProfileData = async (retries = 0) => {
-                const MAX_RETRIES = 2;
-                const RETRY_DELAY = 100;
+                const MAX_RETRIES = 3;
+                const RETRY_DELAY = 200;
 
                 try {
                     const docSnap = await getDoc(userDocRef);
-
+            
                     if (!docSnap.exists()) {
+                        // 🔥 POČKÁME DLHŠIE, pretože setDoc v register.js môže trvať
                         if (retries < MAX_RETRIES) {
+                            console.log(`AuthManager: Dokument ešte neexistuje, skúšam znova o ${RETRY_DELAY}ms (pokus ${retries + 1}/${MAX_RETRIES})`);
                             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                             return loadUserProfileData(retries + 1);
                         } else {
-                            window.globalUserProfileData = null;
-                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                            // 🔥 Ak ani po opakovaných pokusoch dokument neexistuje, necháme používateľa na registračnej stránke
+                            console.warn("AuthManager: Dokument používateľa nebol nájdený ani po opakovaných pokusoch.");
+                            // Nastavíme prázdny profil, aby sme neblokovali používateľa
+                            window.globalUserProfileData = { 
+                                id: user.uid, 
+                                email: user.email,
+                                role: 'pending',
+                                approved: false,
+                                registrationDate: new Date()
+                            };
+                            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+                            
+                            // Ak sme na registračnej stránke, necháme ho tam
+                            if (isOnRegistrationPage()) {
+                                console.log("AuthManager: Používateľ na registračnej stránke, nechávam ho pokračovať v registrácii.");
+                                return;
+                            }
                             return;
                         }
                     }
