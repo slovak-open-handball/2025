@@ -729,7 +729,6 @@ function App() {
   };
 
 
-// ZMENA: confirmFinalRegistration teraz prijíma globalNote
 const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote) => {
   setLoading(true);
   dispatchAppNotification('', 'info');
@@ -745,6 +744,8 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
     if (!authInstance || !firestoreDb) {
       dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
+      setLoading(false);
+      isRegisteringRef.current = false;
       return;
     }
 
@@ -753,10 +754,14 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
+        setLoading(false);
+        isRegisteringRef.current = false;
         return;
       }
     } catch (recaptchaError) {
         dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
+        setLoading(false);
+        isRegisteringRef.current = false;
         return;
     }
 
@@ -765,46 +770,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       user = userCredential.user;
 
-      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
-      const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
-
-      try {
-          await setDoc(userDocRef, {
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              contactPhoneNumber: fullPhoneNumber,
-              billing: {
-                  clubName: formData.billing.clubName || '',
-                  ico: formData.billing.ico || '',
-                  dic: formData.billing.dic || '',
-                  icDph: formData.billing.icDph || ''
-              },
-              role: userRole,
-              approved: true,
-              registrationDate: serverTimestamp(),
-              passwordLastChanged: serverTimestamp(),
-              dataEditDeadline: dataEditDeadline,
-              rosterEditDeadline: rosterEditDeadline,
-              categories: formData.categories,
-              teams: teamsDataToSaveFinal,
-              note: finalGlobalNote || ''
-          });
-      
-          await setDoc(userPrivateDocRef, privateData);
-          
-          console.log("AuthManager: Dokumenty používateľa boli úspešne vytvorené.");
-          
-      } catch (firestoreError) {
-          // Ak zlyhá vytvorenie dokumentov, musíme zmazať aj používateľa
-          if (user && authInstance.currentUser) {
-              await authInstance.currentUser.delete();
-          }
-          throw firestoreError;
-      }
-
       if (!user || !user.uid) {
         dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
+        setLoading(false);
+        isRegisteringRef.current = false;
         return;
       }
 
@@ -818,6 +787,8 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
                     setTimeout(() => {
                         setPage(1);
                     }, 3000);
+                    setLoading(false);
+                    isRegisteringRef.current = false;
                     return;
                 case 'auth/invalid-email':
                     authErrorMessage = 'Neplatný formát e-mailovej adresy.';
@@ -833,9 +804,12 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
             authErrorMessage = authError.message || authErrorMessage;
         }
         dispatchAppNotification(authErrorMessage, 'error');
+        setLoading(false);
+        isRegisteringRef.current = false;
         return;
     }
 
+    // VYTVORÍME REFERENCIE NA DOKUMENTY
     const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
     const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
     
@@ -879,39 +853,30 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
                   jerseyNumber: p.jerseyNumber || '',
                   firstName: p.firstName || '',
                   lastName: p.lastName || ''
-                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
-              // Odstránime dátumy narodenia a adresy z womenTeamMemberDetails pre kolekciu users
               updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
                   ...m,
                   firstName: m.firstName || '',
                   lastName: m.lastName || ''
-                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
-              // Odstránime dátumy narodenia a adresy z menTeamMemberDetails pre kolekciu users
               updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
                   ...m,
                   firstName: m.firstName || '',
                   lastName: m.lastName || ''
-                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
-              // Odstránime dátumy narodenia a adresy z driverDetailsMale pre kolekciu users
               updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
                   ...d,
                   firstName: d.firstName || '',
                   lastName: d.lastName || ''
-                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
-              // Odstránime dátumy narodenia a adresy z driverDetailsFemale pre kolekciu users
               updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale?.map(d => ({
                   ...d,
                   firstName: d.firstName || '',
                   lastName: d.lastName || ''
-                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
               if (team.jerseyColors) {
@@ -925,35 +890,30 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           });
       }
 
-      // PRVÝ ZÁPIS: do kolekcie 'users' (všetky údaje okrem dátumov narodenia a adries)
-      await setDoc(userDocRef, {
+      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users'
+      const userData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         contactPhoneNumber: fullPhoneNumber,
-        // ODSTRÁNENÉ: country, city, postalCode, street, houseNumber (adresy)
         billing: {
           clubName: formData.billing.clubName || '',
           ico: formData.billing.ico || '',
           dic: formData.billing.dic || '',
           icDph: formData.billing.icDph || ''
-          // ODSTRÁNENÉ: address z billing
         },
         role: userRole,
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
-        
         dataEditDeadline: dataEditDeadline,
         rosterEditDeadline: rosterEditDeadline,
-        
         categories: formData.categories,
-        teams: teamsDataToSaveFinal, // Tu už nie sú dátumy narodenia ani adresy
+        teams: teamsDataToSaveFinal,
         note: finalGlobalNote || ''
-      });
+      };
 
-      // DRUHÝ ZÁPIS: do kolekcie 'usersprivate' (LEN adresy a dátumy narodenia)
-      // Bez mien, priezvisk, emailu, telefónu a iných osobných údajov
+      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate'
       const privateData = {
         address: {
           country: formData.country || '',
@@ -961,8 +921,8 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           postalCode: formData.postalCode || '',
           street: formData.street || '',
           houseNumber: formData.houseNumber || ''
-      },
-          billingAddress: {
+        },
+        billingAddress: {
           street: formData.street || '',
           houseNumber: formData.houseNumber || '',
           city: formData.city || '',
@@ -972,6 +932,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         persons: {}
       };
 
+      // SPRACOVANIE PERSONS PRE usersprivate
       Object.keys(teamsDataToSaveFinal).forEach(categoryName => {
         const teams = teamsDataToSaveFinal[categoryName];
         if (!Array.isArray(teams)) return;
@@ -980,24 +941,18 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           const teamKey = `${categoryName}_team${teamIndex + 1}`;
           privateData.persons[teamKey] = {};
       
-          // Hráči (playerDetails) - použijeme NORMALIZOVANÉ dáta z teamsDataToSaveFinal
-          // Zachovávame ROVNAKÉ PORADIE ako v users
+          // Hráči (playerDetails)
           if (team.playerDetails && Array.isArray(team.playerDetails)) {
-            // Mapujeme cez normalizované dáta, aby sme zachovali poradie
             privateData.persons[teamKey].players = team.playerDetails.map((player) => {
-              // Nájdeme pôvodný záznam v finalTeamsDataFromPage7 podľa poradia
-              // (alebo podľa registrationNumber, ak je dostupný)
               const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
               let originalPlayer = null;
               
               if (originalTeam && originalTeam.playerDetails) {
-                // Skúsime nájsť podľa registrationNumber
                 if (player.registrationNumber) {
                   originalPlayer = originalTeam.playerDetails.find(p => 
                     p.registrationNumber === player.registrationNumber
                   );
                 }
-                // Ak sme nenašli podľa registrationNumber, použijeme rovnaký index
                 if (!originalPlayer) {
                   const playerIndex = team.playerDetails.indexOf(player);
                   originalPlayer = originalTeam.playerDetails[playerIndex] || null;
@@ -1024,12 +979,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
               let originalMember = null;
               
               if (originalTeam && originalTeam.womenTeamMemberDetails) {
-                // Skúsime nájsť podľa mena a priezviska (ak nemáme registrationNumber)
                 originalMember = originalTeam.womenTeamMemberDetails.find(m => 
                   m.firstName === member.firstName && 
                   m.lastName === member.lastName
                 );
-                // Ak sme nenašli, použijeme rovnaký index
                 if (!originalMember) {
                   const memberIndex = team.womenTeamMemberDetails.indexOf(member);
                   originalMember = originalTeam.womenTeamMemberDetails[memberIndex] || null;
@@ -1141,27 +1094,38 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         });
       });
       
-      // Uložíme do usersprivate
+      // ZÁPIS DO KOLEKCIE 'users'
+      await setDoc(userDocRef, userData);
+      
+      // ZÁPIS DO KOLEKCIE 'usersprivate'
       await setDoc(userPrivateDocRef, privateData);
+
+      console.log("register.js: Dokumenty používateľa boli úspešne vytvorené.");
 
     } catch (firestoreError) {
         let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
         if (firestoreError.code === 'permission-denied') {
             firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
+            console.error("Firestore permission denied:", firestoreError);
         } else {
             firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
+            console.error("Firestore error:", firestoreError);
         }
         dispatchAppNotification(firestoreErrorMessage, 'error');
         try {
             if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
                 await authInstance.currentUser.delete();
+                console.log("register.js: Používateľ bol vymazaný kvôli chybe pri ukladaní.");
             }
         } catch (deleteError) {
+            console.error("register.js: Chyba pri mazaní používateľa:", deleteError);
         }
+        setLoading(false);
+        isRegisteringRef.current = false;
         return;
     }
 
-    // Odoslanie emailu (rovnaké ako predtým)
+    // Odoslanie emailu
     try {
         const payload = {
             action: 'sendRegistrationEmail',
@@ -1187,7 +1151,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
             teams: teamsDataToSaveFinal,
             globalNote: finalGlobalNote 
           };
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: {
@@ -1224,6 +1188,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
   } catch (globalError) {
     let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
+    console.error("register.js: Neočakávaná chyba:", globalError);
     dispatchAppNotification(errorMessage, 'error');
   } finally {
     setLoading(false);
