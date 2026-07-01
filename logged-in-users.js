@@ -888,38 +888,44 @@ function UsersManagementApp() {
   // ============================================================
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-
+  
     // Skopírujeme e-mail používateľa do schránky
     if (userToDelete.email) {
       copyToClipboard(userToDelete.email);
       window.showGlobalNotification(`E-mail ${userToDelete.email} bol skopírovaný do schránky`, 'info');
     }
-
+  
     try {
       // 1. Získame referencie na dokumenty
       const userDocRef = doc(db, `users`, userToDelete.id);
       const userPrivateDocRef = doc(db, `usersprivate`, userToDelete.id);
       
-      // 2. Aktualizácia adminCount ak mažeme admina
+      // 2. AKTUALIZÁCIA adminCount - znížime hodnotu iba ak mažeme SCHVÁLENÉHO admina
+      // Dôležité: kontrolujeme aj či je používateľ schválený (approved === true)
       if (userToDelete.role === 'admin' && userToDelete.approved === true) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
         
         const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
+        
+        // Znížime hodnotu, ale zabezpečíme, že neklesne pod 1
+        // (minimálne 1 admin musí vždy zostať)
         const newCount = Math.max(1, currentAdminCount - 1);
-
+  
         console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
         console.log(`Nová hodnota adminCount: ${newCount}`);
         
         await updateDoc(adminCountRef, {
             count: newCount
         });
+        
+        console.log(`✅ adminCount bol znížený na ${newCount} (pôvodný admin: ${userToDelete.email})`);
       }
       
       // 3. VYMAŽEME DOKUMENT Z KOLEKCIE users
       await deleteDoc(userDocRef);
       console.log(`✅ Používateľ ${userToDelete.id} bol vymazaný z kolekcie users`);
-
+  
       // 4. VYMAŽEME DOKUMENT Z KOLEKCIE usersprivate (ak existuje)
       try {
         const privateDocSnapshot = await getDoc(userPrivateDocRef);
@@ -938,7 +944,7 @@ function UsersManagementApp() {
           // Necháme pokračovať, aj keby sa nepodarilo vymazať usersprivate
         }
       }
-
+  
       // Pridaná funkčnosť: Po úspešnom odstránení používateľa otvoríme novú kartu s Firebase Console
       if (window.firebaseConfig && window.firebaseConfig.projectId) {
         const projectId = window.firebaseConfig.projectId;
@@ -947,9 +953,9 @@ function UsersManagementApp() {
       } else {
         console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
-
+  
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený. E-mail bol skopírovaný do schránky.`, type: 'success' });
-
+  
       // Log changes
       await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}. E-mail: ${userToDelete.email}`]);
     } catch (error) {
