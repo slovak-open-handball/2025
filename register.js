@@ -835,64 +835,45 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
               if (updatedTeam.packageId === '') updatedTeam.packageId = null;
               if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
+              // Odstránime dátumy narodenia a adresy z playerDetails pre kolekciu users
               updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
                   ...p,
                   jerseyNumber: p.jerseyNumber || '',
                   firstName: p.firstName || '',
-                  lastName: p.lastName || '',
-                  dateOfBirth: p.dateOfBirth || '',
-                  address: {
-                      street: p.address?.street || '',
-                      houseNumber: p.address?.houseNumber || '',
-                      city: p.address?.city || '',
-                      postalCode: p.address?.postalCode || '',
-                      country: p.address?.country || '',
-                  }
+                  lastName: p.lastName || ''
+                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
+              // Odstránime dátumy narodenia a adresy z womenTeamMemberDetails pre kolekciu users
               updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
                   ...m,
                   firstName: m.firstName || '',
-                  lastName: m.lastName || '',
-                  dateOfBirth: m.dateOfBirth || '',
-                  address: {
-                      street: m.address?.street || '',
-                      houseNumber: m.address?.houseNumber || '',
-                      city: m.address?.city || '',
-                      postalCode: m.address?.postalCode || '',
-                      country: m.address?.country || '',
-                  }
+                  lastName: m.lastName || ''
+                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
+              // Odstránime dátumy narodenia a adresy z menTeamMemberDetails pre kolekciu users
               updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
                   ...m,
                   firstName: m.firstName || '',
-                  lastName: m.lastName || '',
-                  dateOfBirth: m.dateOfBirth || '',
-                  address: {
-                      street: m.address?.street || '',
-                      houseNumber: m.address?.houseNumber || '',
-                      city: m.address?.city || '',
-                      postalCode: m.address?.postalCode || '',
-                      country: m.address?.country || '',
-                  }
+                  lastName: m.lastName || ''
+                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
+              // Odstránime dátumy narodenia a adresy z driverDetailsMale pre kolekciu users
               updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
                   ...d,
-                  firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
-                  address: {
-                      street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
-                      city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
-                  }
+                  firstName: d.firstName || '',
+                  lastName: d.lastName || ''
+                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
+
+              // Odstránime dátumy narodenia a adresy z driverDetailsFemale pre kolekciu users
               updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale?.map(d => ({
                   ...d,
-                  firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
-                  address: {
-                      street: d.address?.street || '', houseNumber: d.address?.houseNumber || '',
-                      city: d.address?.city || '', postalCode: d.address?.postalCode || '', country: d.address?.country || '',
-                  }
+                  firstName: d.firstName || '',
+                  lastName: d.lastName || ''
+                  // ODSTRÁNENÉ: dateOfBirth a address
               })) || [];
 
               if (team.jerseyColors) {
@@ -906,18 +887,20 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           });
       }
 
-      // PRVÝ ZÁPIS: do kolekcie 'users' (všetky údaje)
+      // PRVÝ ZÁPIS: do kolekcie 'users' (všetky údaje okrem dátumov narodenia a adries)
       await setDoc(userDocRef, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         contactPhoneNumber: fullPhoneNumber,
-        country: formData.country,
-        city: formData.city,
-        postalCode: formData.postalCode,
-        street: formData.street,
-        houseNumber: formData.houseNumber,
-        billing: formData.billing,
+        // ODSTRÁNENÉ: country, city, postalCode, street, houseNumber (adresy)
+        billing: {
+          clubName: formData.billing.clubName || '',
+          ico: formData.billing.ico || '',
+          dic: formData.billing.dic || '',
+          icDph: formData.billing.icDph || ''
+          // ODSTRÁNENÉ: address z billing
+        },
         role: userRole,
         approved: true,
         registrationDate: serverTimestamp(),
@@ -927,7 +910,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         rosterEditDeadline: rosterEditDeadline,
         
         categories: formData.categories,
-        teams: teamsDataToSaveFinal,
+        teams: teamsDataToSaveFinal, // Tu už nie sú dátumy narodenia ani adresy
         note: finalGlobalNote || ''
       });
 
@@ -955,8 +938,11 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       };
 
       // Pre každú kategóriu a tím vytvoríme štruktúru s iba adresami a dátumami narodenia
-      Object.keys(teamsDataToSaveFinal).forEach(categoryName => {
-        const teams = teamsDataToSaveFinal[categoryName];
+      // Používame pôvodné dáta (pred odstránením), ktoré máme v finalTeamsDataFromPage7
+      const originalTeamsData = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+      
+      Object.keys(originalTeamsData).forEach(categoryName => {
+        const teams = originalTeamsData[categoryName];
         if (!Array.isArray(teams)) return;
 
         teams.forEach((team, teamIndex) => {
