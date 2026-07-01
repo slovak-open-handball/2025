@@ -1094,10 +1094,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         });
       });
       
-      // ZÁPIS DO KOLEKCIE 'users'
+      // 🔥 JEDEN ZÁPIS DO KOLEKCIE 'users'
       await setDoc(userDocRef, userData);
       
-      // ZÁPIS DO KOLEKCIE 'usersprivate'
+      // 🔥 JEDEN ZÁPIS DO KOLEKCIE 'usersprivate'
       await setDoc(userPrivateDocRef, privateData);
 
       console.log("register.js: Dokumenty používateľa boli úspešne vytvorené.");
