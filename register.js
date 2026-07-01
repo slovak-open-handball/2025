@@ -953,6 +953,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
       // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate'
       const privateData = {
+        role: 'club',
         address: {
           country: formData.country || '',
           city: formData.city || '',
