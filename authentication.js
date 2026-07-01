@@ -517,7 +517,6 @@ const isOnLoginPage = () => {
     return result;
 };
 
-// Pomocná funkcia na kontrolu, či sme na jednej z registračných stránok
 const isOnRegistrationPage = () => {
     // Ak to nie je HTML stránka, nie je to registračná stránka
     if (!isHtmlPage()) {
