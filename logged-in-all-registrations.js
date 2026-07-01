@@ -3566,21 +3566,106 @@ function AllRegistrationsApp() {
         let teams = [];
         filteredUsers.forEach(u => {
             if (u.teams && Object.keys(u.teams).length > 0) {
-                Object.entries(u.teams).forEach(([category, teamListRaw]) => { // Renamed teamList to teamListRaw
-                    const teamList = Array.isArray(teamListRaw) ? teamListRaw : []; // Defensive check
+                Object.entries(u.teams).forEach(([category, teamListRaw]) => {
+                    const teamList = Array.isArray(teamListRaw) ? teamListRaw : [];
                     teamList.forEach((team, teamIndex) => {
                         let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
                         let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
                         let menDriversCount = team.driverDetailsMale?.length || 0; 
                         let womenDriversCount = team.driverDetailsFemale?.length || 0; 
                         let playersCount = team.playerDetails?.length || 0;
-
+  
                         const teamTshirtsMap = new Map(
                           (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
                         );
-
+  
+                        // Získame private dáta pre tento tím
+                        const privateData = u._privateData || {};
+                        const teamKey = `${category}_team${teamIndex + 1}`;
+                        const privateTeamData = privateData.persons?.[teamKey] || {};
+  
+                        // Vytvoríme kópiu tímu s adresami a dátumami narodenia z privateData
+                        const teamWithPrivateData = {
+                          ...team,
+                          // Player details s adresami a dátumami narodenia
+                          playerDetails: (team.playerDetails || []).map((player, index) => {
+                            const privatePlayer = privateTeamData.players?.[index] || {};
+                            return {
+                              ...player,
+                              dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
+                              address: privatePlayer.address || player.address || {
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: ''
+                              }
+                            };
+                          }),
+                          // Women team member details
+                          womenTeamMemberDetails: (team.womenTeamMemberDetails || []).map((member, index) => {
+                            const privateMember = privateTeamData.womenTeamMembers?.[index] || {};
+                            return {
+                              ...member,
+                              dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                              address: privateMember.address || member.address || {
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: ''
+                              }
+                            };
+                          }),
+                          // Men team member details
+                          menTeamMemberDetails: (team.menTeamMemberDetails || []).map((member, index) => {
+                            const privateMember = privateTeamData.menTeamMembers?.[index] || {};
+                            return {
+                              ...member,
+                              dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                              address: privateMember.address || member.address || {
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: ''
+                              }
+                            };
+                          }),
+                          // Male drivers
+                          driverDetailsMale: (team.driverDetailsMale || []).map((driver, index) => {
+                            const privateDriver = privateTeamData.driversMale?.[index] || {};
+                            return {
+                              ...driver,
+                              dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                              address: privateDriver.address || driver.address || {
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: ''
+                              }
+                            };
+                          }),
+                          // Female drivers
+                          driverDetailsFemale: (team.driverDetailsFemale || []).map((driver, index) => {
+                            const privateDriver = privateTeamData.driversFemale?.[index] || {};
+                            return {
+                              ...driver,
+                              dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                              address: privateDriver.address || driver.address || {
+                                street: '',
+                                houseNumber: '',
+                                city: '',
+                                postalCode: '',
+                                country: ''
+                              }
+                            };
+                          })
+                        };
+  
                         teams.push({
-                            ...team,
+                            ...teamWithPrivateData,
                             _userId: u.id,
                             _category: category,
                             _teamIndex: teamIndex,
@@ -3590,7 +3675,8 @@ function AllRegistrationsApp() {
                             _menDriversCount: menDriversCount, 
                             _womenDriversCount: womenDriversCount, 
                             _players: playersCount,
-                            _teamTshirtsMap: teamTshirtsMap
+                            _teamTshirtsMap: teamTshirtsMap,
+                            _privateData: privateData // Pridáme aj privateData pre prípad potreby
                         });
                     });
                 });
