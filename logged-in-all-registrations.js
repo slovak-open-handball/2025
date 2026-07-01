@@ -4284,18 +4284,20 @@ const clearFilter = (column) => {
     try {
         window.showGlobalLoader();
         
+        // ============================================================
+        // PRÍPAD 1: ÚPRAVA POUŽÍVATEĽA NA NAJVYŠŠEJ ÚROVNI
+        // ============================================================
         if (originalDataPath === '') {
-            // Logika pre aktualizáciu používateľa na najvyššej úrovni
             const docSnapshot = await getDoc(targetDocRef);
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu.");
             }
             const currentDocData = docSnapshot.data();
             
-            // Získame alebo vytvoríme referenciu na usersprivate dokument
+            // Získame referenciu na usersprivate dokument
             const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
             
-            // Pripravíme dáta pre users (odstránime adresy a dátumy narodenia)
+            // Pripravíme dáta pre users (odstránime adresy)
             let finalDataToSave = { ...currentDocData };
             
             // Odstránime adresy z users (budú uložené v usersprivate)
@@ -4309,35 +4311,37 @@ const clearFilter = (column) => {
                 delete finalDataToSave.billing.address;
             }
             
-            // Spracujeme ostatné polia z updatedDataFromModal (okrem adries)
+            // Spracujeme ostatné polia z updatedDataFromModal
             for (const key in updatedDataFromModal) {
                 // Preskočíme adresové polia - tie pôjdu do usersprivate
                 if (addressFieldsToRemove.includes(key)) {
                     continue;
                 }
                 
+                const value = updatedDataFromModal[key];
+                if (value === undefined) {
+                    continue;
+                }
+                
                 if (key === 'billing') {
-                    // Pre billing uložíme len obchodné údaje (bez adresy)
                     finalDataToSave[key] = {
-                        clubName: updatedDataFromModal[key].clubName || currentDocData.billing?.clubName || '',
-                        ico: updatedDataFromModal[key].ico || currentDocData.billing?.ico || '',
-                        dic: updatedDataFromModal[key].dic || currentDocData.billing?.dic || '',
-                        icDph: updatedDataFromModal[key].icDph || currentDocData.billing?.icDph || ''
+                        clubName: value.clubName || currentDocData.billing?.clubName || '',
+                        ico: value.ico || currentDocData.billing?.ico || '',
+                        dic: value.dic || currentDocData.billing?.dic || '',
+                        icDph: value.icDph || currentDocData.billing?.icDph || ''
                     };
-                } else if (typeof updatedDataFromModal[key] === 'object' && updatedDataFromModal[key] !== null && !Array.isArray(updatedDataFromModal[key])) {
+                } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                     finalDataToSave[key] = {
                         ...(currentDocData[key] || {}),
-                        ...updatedDataFromModal[key]
+                        ...value
                     };
                 } else {
-                    finalDataToSave[key] = updatedDataFromModal[key];
+                    finalDataToSave[key] = value;
                 }
             }
             
             // PRÍPRAVA DÁT PRE USERSPRIVATE
             let privateData = {};
-            
-            // Skúsime načítať existujúce usersprivate dáta
             try {
                 const privateDocSnapshot = await getDoc(userPrivateDocRef);
                 if (privateDocSnapshot.exists()) {
@@ -4345,6 +4349,10 @@ const clearFilter = (column) => {
                 }
             } catch (e) {
                 console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
+            }
+            
+            if (!privateData || typeof privateData !== 'object') {
+                privateData = {};
             }
             
             // Aktualizujeme adresy v usersprivate
@@ -4356,7 +4364,6 @@ const clearFilter = (column) => {
                 country: updatedDataFromModal.country || currentDocData.country || ''
             };
             
-            // Aktualizujeme fakturačnú adresu v usersprivate
             privateData.billingAddress = {
                 street: updatedDataFromModal.street || currentDocData.street || '',
                 houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4374,17 +4381,111 @@ const clearFilter = (column) => {
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal();
             return;
-            
-        } else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) {
-            // ... existujúca logika pre tímy ...
-            
-        } else if (originalDataPath.includes('playerDetails') ||
+        }
+        
+        // ============================================================
+        // PRÍPAD 2: ÚPRAVA TÍMU ALEBO PRIDANIE NOVÉHO TÍMU
+        // ============================================================
+        else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) {
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
+            }
+            const currentDocData = docSnapshot.data();
+        
+            let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category;
+            if (!actualCategory) {
+                throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
+            }
+            const currentCategoryTeams = Array.isArray(currentDocData.teams?.[actualCategory]) ? currentDocData.teams[actualCategory] : [];
+        
+            let oldCategory = null;
+            let oldTeamIndex = -1;
+            const pathPartsFromOriginal = originalDataPath.split('.');
+            if (pathPartsFromOriginal.length > 1) {
+                const categoryAndIndexPartFromOriginal = pathPartsFromOriginal[1];
+                const categoryMatchFromOriginal = categoryAndIndexPartFromOriginal.match(/^(.*?)\[(\d+)\]$/);
+                if (categoryMatchFromOriginal) {
+                    oldCategory = categoryMatchFromOriginal[1];
+                    oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
+                }
+            }
+
+            const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
+
+            if (isNewTeam) {
+                const updatedTeam = { 
+                    ...updatedDataFromModal, 
+                    registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim(),
+                    accommodation: updatedDataFromModal.accommodation || { type: '' }
+                };
+                
+                const newCategoryTeams = [...currentCategoryTeams];
+                newCategoryTeams.push(updatedTeam);
+        
+                const updates = {};
+                updates[`teams.${actualCategory}`] = newCategoryTeams;
+                
+                await updateDoc(targetDocRef, updates);
+                console.log("DEBUG: Nový tím pridaný do kategórie", actualCategory);
+            } else {
+                if (!oldCategory || oldTeamIndex < 0) {
+                    throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
+                }
+        
+                const originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
+                let updatedTeam = { ...originalTeam };
+                
+                for (const key in updatedDataFromModal) {
+                    const value = updatedDataFromModal[key];
+                    if (value === undefined) continue;
+                    
+                    if (key === 'address' || key === 'billing') {
+                        updatedTeam[key] = {
+                            ...(originalTeam[key] || {}),
+                            ...(value || {})
+                        };
+                    } else if (key === 'accommodation') {
+                        updatedTeam.accommodation = value || { type: '' };
+                    } else if (key === 'packageDetails') {
+                        if (value) {
+                            updatedTeam.packageDetails = value;
+                        } else {
+                            delete updatedTeam.packageDetails;
+                        }
+                    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        updatedTeam[key] = {
+                            ...(originalTeam[key] || {}),
+                            ...value
+                        };
+                    } else {
+                        updatedTeam[key] = value;
+                    }
+                }
+                
+                const newCategoryTeams = [...currentCategoryTeams];
+                newCategoryTeams[oldTeamIndex] = updatedTeam;
+        
+                const updates = {};
+                updates[`teams.${oldCategory}`] = newCategoryTeams;
+                
+                await updateDoc(targetDocRef, updates);
+                console.log("DEBUG: Tím aktualizovaný v kategórii", oldCategory);
+            }
+        
+            setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
+            closeEditModal();
+            return;
+        }
+        
+        // ============================================================
+        // PRÍPAD 3: ÚPRAVA ČLENA TÍMU (hráč, člen RT, šofér)
+        // ============================================================
+        else if (originalDataPath.includes('playerDetails') ||
                    originalDataPath.includes('menTeamMemberDetails') ||
                    originalDataPath.includes('womenTeamMemberDetails') ||
                    originalDataPath.includes('driverDetailsMale') ||
                    originalDataPath.includes('driverDetailsFemale')) {
-            
-            // Spracovanie člena tímu - adresy a dátumy narodenia idú do usersprivate
             
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 3) {
@@ -4447,6 +4548,10 @@ const clearFilter = (column) => {
                 console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
             }
             
+            if (!privateData || typeof privateData !== 'object') {
+                privateData = {};
+            }
+            
             // Zabezpečíme štruktúru pre osoby
             if (!privateData.persons) {
                 privateData.persons = {};
@@ -4458,7 +4563,7 @@ const clearFilter = (column) => {
             }
 
             if (isReallyNew) {
-                // Pridanie nového člena
+                // PRIDANIE NOVÉHO ČLENA
                 const newMember = {
                     ...updatedDataFromModal,
                     address: updatedDataFromModal.address || {}
@@ -4469,10 +4574,8 @@ const clearFilter = (column) => {
                 delete memberForUsers.address;
                 delete memberForUsers.dateOfBirth;
                 
-                // Pridáme do tímu (bez adresy a dátumu narodenia)
                 currentMemberArray.push(memberForUsers);
                 
-                // Uložíme adresu a dátum narodenia do usersprivate
                 const memberIndexInPrivate = currentMemberArray.length - 1;
                 if (!privateData.persons[teamKey][memberArrayPath]) {
                     privateData.persons[teamKey][memberArrayPath] = [];
@@ -4488,7 +4591,6 @@ const clearFilter = (column) => {
                     }
                 };
                 
-                // Notifikácia o pridaní
                 const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'bez mena';
                 const memberType = editModalTitle.includes('hráč') ? 'Hráč' :
                                   editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
@@ -4507,7 +4609,7 @@ const clearFilter = (column) => {
                 }
                 
             } else {
-                // Úprava existujúceho člena
+                // ÚPRAVA EXISTUJÚCEHO ČLENA
                 if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
                     throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
                 }
@@ -4518,7 +4620,10 @@ const clearFilter = (column) => {
                 // Aplikácia zmien z modálu (okrem adresy a dátumu narodenia)
                 for (const key in updatedDataFromModal) {
                     if (key !== 'address' && key !== 'dateOfBirth') {
-                        updatedMember[key] = updatedDataFromModal[key];
+                        const value = updatedDataFromModal[key];
+                        if (value !== undefined) {
+                            updatedMember[key] = value;
+                        }
                     }
                 }
                 
@@ -4526,6 +4631,7 @@ const clearFilter = (column) => {
                 if (!privateData.persons[teamKey][memberArrayPath]) {
                     privateData.persons[teamKey][memberArrayPath] = [];
                 }
+                
                 privateData.persons[teamKey][memberArrayPath][memberArrayIndex] = {
                     dateOfBirth: updatedDataFromModal.dateOfBirth || originalMember.dateOfBirth || '',
                     address: updatedDataFromModal.address || originalMember.address || {
@@ -4571,16 +4677,39 @@ const clearFilter = (column) => {
             updates[`teams.${category}`] = updatedTeamsForCategory;
             await updateDoc(targetDocRef, updates);
             
-            // Uložíme do usersprivate
-            await setDoc(userPrivateDocRef, privateData, { merge: true });
+            // Uložíme do usersprivate - odstránime undefined hodnoty
+            const cleanPrivateData = JSON.parse(JSON.stringify(privateData));
+            await setDoc(userPrivateDocRef, cleanPrivateData, { merge: true });
             
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal();
             return;
-            
-        } else {
-            // ... existujúca logika pre ostatné prípady ...
         }
+        
+        // ============================================================
+        // PRÍPAD 4: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA
+        // ============================================================
+        else {
+            if (!originalDataPath) {
+                throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
+            }
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
+
+            const updates = {};
+            updates[topLevelField] = updatedObject[topLevelField];
+            
+            await updateDoc(targetDocRef, updates);
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            closeEditModal();
+            return;
+        }
+        
     } catch (e) {
         console.error("Chyba pri ukladaní dát do Firestore:", e);
         setError(`Chyba pri ukladaní dát: ${e.message}`);
