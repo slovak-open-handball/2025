@@ -765,6 +765,44 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       user = userCredential.user;
 
+      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
+      const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
+
+      try {
+          await setDoc(userDocRef, {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              contactPhoneNumber: fullPhoneNumber,
+              billing: {
+                  clubName: formData.billing.clubName || '',
+                  ico: formData.billing.ico || '',
+                  dic: formData.billing.dic || '',
+                  icDph: formData.billing.icDph || ''
+              },
+              role: userRole,
+              approved: true,
+              registrationDate: serverTimestamp(),
+              passwordLastChanged: serverTimestamp(),
+              dataEditDeadline: dataEditDeadline,
+              rosterEditDeadline: rosterEditDeadline,
+              categories: formData.categories,
+              teams: teamsDataToSaveFinal,
+              note: finalGlobalNote || ''
+          });
+      
+          await setDoc(userPrivateDocRef, privateData);
+          
+          console.log("AuthManager: Dokumenty používateľa boli úspešne vytvorené.");
+          
+      } catch (firestoreError) {
+          // Ak zlyhá vytvorenie dokumentov, musíme zmazať aj používateľa
+          if (user && authInstance.currentUser) {
+              await authInstance.currentUser.delete();
+          }
+          throw firestoreError;
+      }
+
       if (!user || !user.uid) {
         dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
         return;
