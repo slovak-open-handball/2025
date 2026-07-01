@@ -1818,25 +1818,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         
         // Zlúčenie adries z hlavného formulára
         if (privateData.address) {
-            merged.street = privateData.address.street || userData?.street || '';
-            merged.houseNumber = privateData.address.houseNumber || userData?.houseNumber || '';
-            merged.city = privateData.address.city || userData?.city || '';
-            merged.postalCode = privateData.address.postalCode || userData?.postalCode || '';
-            merged.country = privateData.address.country || userData?.country || '';
+            // Kontrola, či máme platné údaje z privateData
+            const hasPrivateAddress = privateData.address.street || privateData.address.city || privateData.address.postalCode;
+            if (hasPrivateAddress) {
+                merged.street = privateData.address.street || userData?.street || '';
+                merged.houseNumber = privateData.address.houseNumber || userData?.houseNumber || '';
+                merged.city = privateData.address.city || userData?.city || '';
+                merged.postalCode = privateData.address.postalCode || userData?.postalCode || '';
+                merged.country = privateData.address.country || userData?.country || '';
+            }
         }
         
         // Zlúčenie fakturačnej adresy
         if (privateData.billingAddress && merged.billing) {
-            if (!merged.billing.address) {
-                merged.billing.address = {};
+            const hasBillingAddress = privateData.billingAddress.street || privateData.billingAddress.city;
+            if (hasBillingAddress) {
+                if (!merged.billing.address) {
+                    merged.billing.address = {};
+                }
+                merged.billing.address = {
+                    street: privateData.billingAddress.street || merged.billing?.address?.street || '',
+                    houseNumber: privateData.billingAddress.houseNumber || merged.billing?.address?.houseNumber || '',
+                    city: privateData.billingAddress.city || merged.billing?.address?.city || '',
+                    postalCode: privateData.billingAddress.postalCode || merged.billing?.address?.postalCode || '',
+                    country: privateData.billingAddress.country || merged.billing?.address?.country || ''
+                };
             }
-            merged.billing.address = {
-                street: privateData.billingAddress.street || merged.billing?.address?.street || '',
-                houseNumber: privateData.billingAddress.houseNumber || merged.billing?.address?.houseNumber || '',
-                city: privateData.billingAddress.city || merged.billing?.address?.city || '',
-                postalCode: privateData.billingAddress.postalCode || merged.billing?.address?.postalCode || '',
-                country: privateData.billingAddress.country || merged.billing?.address?.country || ''
-            };
         }
         
         // Zlúčenie tímových údajov - dátumy narodenia a adresy
@@ -1850,77 +1857,127 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         
                         // Zlúčenie hráčov
                         if (team.playerDetails && privateTeamData.players) {
-                            team.playerDetails = team.playerDetails.map((player, index) => ({
-                                ...player,
-                                dateOfBirth: privateTeamData.players[index]?.dateOfBirth || player.dateOfBirth || '',
-                                address: privateTeamData.players[index]?.address || player.address || {
-                                    street: '',
-                                    houseNumber: '',
-                                    city: '',
-                                    postalCode: '',
-                                    country: ''
-                                }
-                            }));
+                            team.playerDetails = team.playerDetails.map((player, index) => {
+                                const privatePlayer = privateTeamData.players[index] || {};
+                                const hasPrivateData = privatePlayer.dateOfBirth || 
+                                    (privatePlayer.address && (privatePlayer.address.street || privatePlayer.address.city));
+                                
+                                return {
+                                    ...player,
+                                    dateOfBirth: hasPrivateData && privatePlayer.dateOfBirth 
+                                        ? privatePlayer.dateOfBirth 
+                                        : player.dateOfBirth || '',
+                                    address: hasPrivateData && privatePlayer.address 
+                                        ? privatePlayer.address 
+                                        : player.address || {
+                                            street: '',
+                                            houseNumber: '',
+                                            city: '',
+                                            postalCode: '',
+                                            country: ''
+                                        }
+                                };
+                            });
                         }
                         
                         // Zlúčenie žien - členiek tímu
                         if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
-                            team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => ({
-                                ...member,
-                                dateOfBirth: privateTeamData.womenTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
-                                address: privateTeamData.womenTeamMembers[index]?.address || member.address || {
-                                    street: '',
-                                    houseNumber: '',
-                                    city: '',
-                                    postalCode: '',
-                                    country: ''
-                                }
-                            }));
+                            team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => {
+                                const privateMember = privateTeamData.womenTeamMembers[index] || {};
+                                const hasPrivateData = privateMember.dateOfBirth || 
+                                    (privateMember.address && (privateMember.address.street || privateMember.address.city));
+                                
+                                return {
+                                    ...member,
+                                    dateOfBirth: hasPrivateData && privateMember.dateOfBirth 
+                                        ? privateMember.dateOfBirth 
+                                        : member.dateOfBirth || '',
+                                    address: hasPrivateData && privateMember.address 
+                                        ? privateMember.address 
+                                        : member.address || {
+                                            street: '',
+                                            houseNumber: '',
+                                            city: '',
+                                            postalCode: '',
+                                            country: ''
+                                        }
+                                };
+                            });
                         }
                         
                         // Zlúčenie mužov - členov tímu
                         if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
-                            team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => ({
-                                ...member,
-                                dateOfBirth: privateTeamData.menTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
-                                address: privateTeamData.menTeamMembers[index]?.address || member.address || {
-                                    street: '',
-                                    houseNumber: '',
-                                    city: '',
-                                    postalCode: '',
-                                    country: ''
-                                }
-                            }));
+                            team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => {
+                                const privateMember = privateTeamData.menTeamMembers[index] || {};
+                                const hasPrivateData = privateMember.dateOfBirth || 
+                                    (privateMember.address && (privateMember.address.street || privateMember.address.city));
+                                
+                                return {
+                                    ...member,
+                                    dateOfBirth: hasPrivateData && privateMember.dateOfBirth 
+                                        ? privateMember.dateOfBirth 
+                                        : member.dateOfBirth || '',
+                                    address: hasPrivateData && privateMember.address 
+                                        ? privateMember.address 
+                                        : member.address || {
+                                            street: '',
+                                            houseNumber: '',
+                                            city: '',
+                                            postalCode: '',
+                                            country: ''
+                                        }
+                                };
+                            });
                         }
                         
                         // Zlúčenie šoférov - mužov
                         if (team.driverDetailsMale && privateTeamData.driversMale) {
-                            team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => ({
-                                ...driver,
-                                dateOfBirth: privateTeamData.driversMale[index]?.dateOfBirth || driver.dateOfBirth || '',
-                                address: privateTeamData.driversMale[index]?.address || driver.address || {
-                                    street: '',
-                                    houseNumber: '',
-                                    city: '',
-                                    postalCode: '',
-                                    country: ''
-                                }
-                            }));
+                            team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => {
+                                const privateDriver = privateTeamData.driversMale[index] || {};
+                                const hasPrivateData = privateDriver.dateOfBirth || 
+                                    (privateDriver.address && (privateDriver.address.street || privateDriver.address.city));
+                                
+                                return {
+                                    ...driver,
+                                    dateOfBirth: hasPrivateData && privateDriver.dateOfBirth 
+                                        ? privateDriver.dateOfBirth 
+                                        : driver.dateOfBirth || '',
+                                    address: hasPrivateData && privateDriver.address 
+                                        ? privateDriver.address 
+                                        : driver.address || {
+                                            street: '',
+                                            houseNumber: '',
+                                            city: '',
+                                            postalCode: '',
+                                            country: ''
+                                        }
+                                };
+                            });
                         }
                         
                         // Zlúčenie šoférov - žien
                         if (team.driverDetailsFemale && privateTeamData.driversFemale) {
-                            team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => ({
-                                ...driver,
-                                dateOfBirth: privateTeamData.driversFemale[index]?.dateOfBirth || driver.dateOfBirth || '',
-                                address: privateTeamData.driversFemale[index]?.address || driver.address || {
-                                    street: '',
-                                    houseNumber: '',
-                                    city: '',
-                                    postalCode: '',
-                                    country: ''
-                                }
-                            }));
+                            team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => {
+                                const privateDriver = privateTeamData.driversFemale[index] || {};
+                                const hasPrivateData = privateDriver.dateOfBirth || 
+                                    (privateDriver.address && (privateDriver.address.street || privateDriver.address.city));
+                                
+                                return {
+                                    ...driver,
+                                    dateOfBirth: hasPrivateData && privateDriver.dateOfBirth 
+                                        ? privateDriver.dateOfBirth 
+                                        : driver.dateOfBirth || '',
+                                    address: hasPrivateData && privateDriver.address 
+                                        ? privateDriver.address 
+                                        : driver.address || {
+                                            street: '',
+                                            houseNumber: '',
+                                            city: '',
+                                            postalCode: '',
+                                            country: ''
+                                        }
+                                };
+                            });
                         }
                     });
                 }
@@ -3590,76 +3647,113 @@ function AllRegistrationsApp() {
                           // Player details s adresami a dátumami narodenia
                           playerDetails: (team.playerDetails || []).map((player, index) => {
                             const privatePlayer = privateTeamData.players?.[index] || {};
+                            // PRIORITA: Ak existuje privatePlayer s údajmi, použijeme ich
+                            const hasPrivateData = privatePlayer.dateOfBirth || 
+                              (privatePlayer.address && (privatePlayer.address.street || privatePlayer.address.city));
+                            
                             return {
                               ...player,
-                              dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
-                              address: privatePlayer.address || player.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                              }
+                              // Ak máme privatePlayer údaje, použijeme ich, inak použijeme pôvodné
+                              dateOfBirth: hasPrivateData && privatePlayer.dateOfBirth 
+                                ? privatePlayer.dateOfBirth 
+                                : player.dateOfBirth || '',
+                              address: hasPrivateData && privatePlayer.address 
+                                ? privatePlayer.address 
+                                : player.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                  }
                             };
                           }),
                           // Women team member details
                           womenTeamMemberDetails: (team.womenTeamMemberDetails || []).map((member, index) => {
                             const privateMember = privateTeamData.womenTeamMembers?.[index] || {};
+                            const hasPrivateData = privateMember.dateOfBirth || 
+                              (privateMember.address && (privateMember.address.street || privateMember.address.city));
+                            
                             return {
                               ...member,
-                              dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                              address: privateMember.address || member.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                              }
+                              dateOfBirth: hasPrivateData && privateMember.dateOfBirth 
+                                ? privateMember.dateOfBirth 
+                                : member.dateOfBirth || '',
+                              address: hasPrivateData && privateMember.address 
+                                ? privateMember.address 
+                                : member.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                  }
                             };
                           }),
                           // Men team member details
                           menTeamMemberDetails: (team.menTeamMemberDetails || []).map((member, index) => {
                             const privateMember = privateTeamData.menTeamMembers?.[index] || {};
+                            const hasPrivateData = privateMember.dateOfBirth || 
+                              (privateMember.address && (privateMember.address.street || privateMember.address.city));
+                            
                             return {
                               ...member,
-                              dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                              address: privateMember.address || member.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                              }
+                              dateOfBirth: hasPrivateData && privateMember.dateOfBirth 
+                                ? privateMember.dateOfBirth 
+                                : member.dateOfBirth || '',
+                              address: hasPrivateData && privateMember.address 
+                                ? privateMember.address 
+                                : member.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                  }
                             };
                           }),
                           // Male drivers
                           driverDetailsMale: (team.driverDetailsMale || []).map((driver, index) => {
                             const privateDriver = privateTeamData.driversMale?.[index] || {};
+                            const hasPrivateData = privateDriver.dateOfBirth || 
+                              (privateDriver.address && (privateDriver.address.street || privateDriver.address.city));
+                            
                             return {
                               ...driver,
-                              dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                              address: privateDriver.address || driver.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                              }
+                              dateOfBirth: hasPrivateData && privateDriver.dateOfBirth 
+                                ? privateDriver.dateOfBirth 
+                                : driver.dateOfBirth || '',
+                              address: hasPrivateData && privateDriver.address 
+                                ? privateDriver.address 
+                                : driver.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                  }
                             };
                           }),
                           // Female drivers
                           driverDetailsFemale: (team.driverDetailsFemale || []).map((driver, index) => {
                             const privateDriver = privateTeamData.driversFemale?.[index] || {};
+                            const hasPrivateData = privateDriver.dateOfBirth || 
+                              (privateDriver.address && (privateDriver.address.street || privateDriver.address.city));
+                            
                             return {
                               ...driver,
-                              dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                              address: privateDriver.address || driver.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                              }
+                              dateOfBirth: hasPrivateData && privateDriver.dateOfBirth 
+                                ? privateDriver.dateOfBirth 
+                                : driver.dateOfBirth || '',
+                              address: hasPrivateData && privateDriver.address 
+                                ? privateDriver.address 
+                                : driver.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                  }
                             };
                           })
                         };
@@ -3676,14 +3770,13 @@ function AllRegistrationsApp() {
                             _womenDriversCount: womenDriversCount, 
                             _players: playersCount,
                             _teamTshirtsMap: teamTshirtsMap,
-                            _privateData: privateData // Pridáme aj privateData pre prípad potreby
+                            _privateData: privateData
                         });
                     });
                 });
             }
         });
         return teams.sort((a, b) => {
-            // Najprv podľa kategórie (alfabeticky)
             if (a._category !== b._category) {
                 return a._category.localeCompare(b._category);
             }
