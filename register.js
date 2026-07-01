@@ -1154,14 +1154,6 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
             console.error("Firestore error:", firestoreError);
         }
         dispatchAppNotification(firestoreErrorMessage, 'error');
-        try {
-            if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
-                await authInstance.currentUser.delete();
-                console.log("register.js: Používateľ bol vymazaný kvôli chybe pri ukladaní.");
-            }
-        } catch (deleteError) {
-            console.error("register.js: Chyba pri mazaní používateľa:", deleteError);
-        }
         setLoading(false);
         isRegisteringRef.current = false;
         return;
