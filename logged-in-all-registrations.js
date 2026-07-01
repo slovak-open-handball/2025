@@ -3909,204 +3909,205 @@ function AllRegistrationsApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-
-    // Upravená funkcia pre načítanie používateľov - pridanie načítania z usersprivate
-    React.useEffect(() => {
-      let unsubscribeAllUsers;
-      let unsubscribeAllPrivateUsers;
-
-      if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-        if (typeof window.showGlobalLoader === 'function') {
-          window.showGlobalLoader();
-        }
-    
-        try {
-          const usersCollectionRef = collection(db, 'users');
-          const privateUsersCollectionRef = collection(db, 'usersprivate');
-    
-          // Načítanie users
-          unsubscribeAllUsers = onSnapshot(usersCollectionRef, usersSnapshot => {
-            const usersData = usersSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-    
-            // Načítanie usersprivate
-            unsubscribeAllPrivateUsers = onSnapshot(privateUsersCollectionRef, privateSnapshot => {
-              const privateDataMap = {};
-              privateSnapshot.docs.forEach(doc => {
-                privateDataMap[doc.id] = doc.data();
-              });
-    
-              // Zlúčenie údajov - z usersprivate preberieme adresy a dátumy narodenia
-              const mergedUsersData = usersData.map(user => {
-                const privateData = privateDataMap[user.id] || {};
-                
-                // Zlúčenie adries z hlavného formulára
-                const mergedUser = {
-                  ...user,
-                  // Adresy z usersprivate
-                  street: privateData.address?.street || user.street || '',
-                  houseNumber: privateData.address?.houseNumber || user.houseNumber || '',
-                  city: privateData.address?.city || user.city || '',
-                  postalCode: privateData.address?.postalCode || user.postalCode || '',
-                  country: privateData.address?.country || user.country || '',
-                  // Fakturačná adresa z usersprivate
-                  billing: {
-                    ...user.billing,
-                    address: privateData.billingAddress || user.billing?.address || {
-                      street: '',
-                      houseNumber: '',
-                      city: '',
-                      postalCode: '',
-                      country: ''
-                    }
-                  }
-                };
-    
-                // Zlúčenie tímových údajov - pridanie dátumov narodenia a adries z usersprivate
-                if (mergedUser.teams && privateData.persons) {
-                  Object.keys(mergedUser.teams).forEach(category => {
-                    const teams = mergedUser.teams[category];
-                    if (Array.isArray(teams)) {
-                      teams.forEach((team, teamIndex) => {
-                        const teamKey = `${category}_team${teamIndex + 1}`;
-                        const privateTeamData = privateData.persons?.[teamKey] || {};
-    
-                        // Zlúčenie hráčov
-                        if (team.playerDetails && privateTeamData.players) {
-                          team.playerDetails = team.playerDetails.map((player, index) => ({
-                            ...player,
-                            dateOfBirth: privateTeamData.players[index]?.dateOfBirth || player.dateOfBirth || '',
-                            address: privateTeamData.players[index]?.address || player.address || {
-                              street: '',
-                              houseNumber: '',
-                              city: '',
-                              postalCode: '',
-                              country: ''
-                            }
-                          }));
-                        }
-    
-                        // Zlúčenie žien - členiek tímu
-                        if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
-                          team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => ({
-                            ...member,
-                            dateOfBirth: privateTeamData.womenTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
-                            address: privateTeamData.womenTeamMembers[index]?.address || member.address || {
-                              street: '',
-                              houseNumber: '',
-                              city: '',
-                              postalCode: '',
-                              country: ''
-                            }
-                          }));
-                        }
-
-                        // Zlúčenie mužov - členov tímu
-                        if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
-                          team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => ({
-                            ...member,
-                            dateOfBirth: privateTeamData.menTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
-                            address: privateTeamData.menTeamMembers[index]?.address || member.address || {
-                              street: '',
-                              houseNumber: '',
-                              city: '',
-                              postalCode: '',
-                              country: ''
-                            }
-                          }));
-                        }
-    
-                        // Zlúčenie šoférov - mužov
-                        if (team.driverDetailsMale && privateTeamData.driversMale) {
-                          team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => ({
-                            ...driver,
-                            dateOfBirth: privateTeamData.driversMale[index]?.dateOfBirth || driver.dateOfBirth || '',
-                            address: privateTeamData.driversMale[index]?.address || driver.address || {
-                              street: '',
-                              houseNumber: '',
-                              city: '',
-                              postalCode: '',
-                              country: ''
-                            }
-                          }));
-                        }
-    
-                        // Zlúčenie šoférov - žien
-                        if (team.driverDetailsFemale && privateTeamData.driversFemale) {
-                          team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => ({
-                            ...driver,
-                            dateOfBirth: privateTeamData.driversFemale[index]?.dateOfBirth || driver.dateOfBirth || '',
-                            address: privateTeamData.driversFemale[index]?.address || driver.address || {
-                              street: '',
-                              houseNumber: '',
-                              city: '',
-                              postalCode: '',
-                              country: ''
-                            }
-                          }));
-                        }
-                      });
-                    }
-                  });
-                }
-    
-                return mergedUser;
-              });
-    
-              setAllUsers(mergedUsersData);
-              setFilteredUsers(mergedUsersData);
-              if (typeof window.hideGlobalLoader === 'function') {
-                window.hideGlobalLoader();
-              }
-            }, error => {
-              console.error("Chyba pri načítaní usersprivate:", error);
-              // Ak sa nepodarí načítať usersprivate, použijeme len users dáta
-              setAllUsers(usersData);
-              setFilteredUsers(usersData);
-              if (typeof window.hideGlobalLoader === 'function') {
-                window.hideGlobalLoader();
-              }
+  // Upravená funkcia pre načítanie používateľov - pridanie načítania z usersprivate
+  React.useEffect(() => {
+    let unsubscribeAllUsers;
+    let unsubscribeAllPrivateUsers;
+  
+    if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+      if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader();
+      }
+  
+      try {
+        const usersCollectionRef = collection(db, 'users');
+        const privateUsersCollectionRef = collection(db, 'usersprivate');
+  
+        // Načítanie users
+        unsubscribeAllUsers = onSnapshot(usersCollectionRef, usersSnapshot => {
+          const usersData = usersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+  
+          // Načítanie usersprivate
+          unsubscribeAllPrivateUsers = onSnapshot(privateUsersCollectionRef, privateSnapshot => {
+            const privateDataMap = {};
+            privateSnapshot.docs.forEach(doc => {
+              privateDataMap[doc.id] = doc.data();
             });
+  
+            // Zlúčenie údajov - z usersprivate preberieme adresy a dátumy narodenia
+            const mergedUsersData = usersData.map(user => {
+              const privateData = privateDataMap[user.id] || {};
+              
+              // Zlúčenie adries z hlavného formulára
+              const mergedUser = {
+                ...user,
+                // Adresy z usersprivate (ak existujú, inak použijeme z users)
+                street: privateData.address?.street || user.street || '',
+                houseNumber: privateData.address?.houseNumber || user.houseNumber || '',
+                city: privateData.address?.city || user.city || '',
+                postalCode: privateData.address?.postalCode || user.postalCode || '',
+                country: privateData.address?.country || user.country || '',
+                // Fakturačná adresa z usersprivate
+                billing: {
+                  ...user.billing,
+                  address: privateData.billingAddress || user.billing?.address || {
+                    street: '',
+                    houseNumber: '',
+                    city: '',
+                    postalCode: '',
+                    country: ''
+                  }
+                },
+                // Pridáme aj pôvodné private dáta pre použitie v tabuľke
+                _privateData: privateData
+              };
+  
+              // Zlúčenie tímových údajov - pridanie dátumov narodenia a adries z usersprivate
+              if (mergedUser.teams && privateData.persons) {
+                Object.keys(mergedUser.teams).forEach(category => {
+                  const teams = mergedUser.teams[category];
+                  if (Array.isArray(teams)) {
+                    teams.forEach((team, teamIndex) => {
+                      const teamKey = `${category}_team${teamIndex + 1}`;
+                      const privateTeamData = privateData.persons?.[teamKey] || {};
+  
+                      // Zlúčenie hráčov
+                      if (team.playerDetails && privateTeamData.players) {
+                        team.playerDetails = team.playerDetails.map((player, index) => ({
+                          ...player,
+                          dateOfBirth: privateTeamData.players[index]?.dateOfBirth || player.dateOfBirth || '',
+                          address: privateTeamData.players[index]?.address || player.address || {
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: ''
+                          }
+                        }));
+                      }
+  
+                      // Zlúčenie žien - členiek tímu
+                      if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
+                        team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => ({
+                          ...member,
+                          dateOfBirth: privateTeamData.womenTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
+                          address: privateTeamData.womenTeamMembers[index]?.address || member.address || {
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: ''
+                          }
+                        }));
+                      }
+  
+                      // Zlúčenie mužov - členov tímu
+                      if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
+                        team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => ({
+                          ...member,
+                          dateOfBirth: privateTeamData.menTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
+                          address: privateTeamData.menTeamMembers[index]?.address || member.address || {
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: ''
+                          }
+                        }));
+                      }
+  
+                      // Zlúčenie šoférov - mužov
+                      if (team.driverDetailsMale && privateTeamData.driversMale) {
+                        team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => ({
+                          ...driver,
+                          dateOfBirth: privateTeamData.driversMale[index]?.dateOfBirth || driver.dateOfBirth || '',
+                          address: privateTeamData.driversMale[index]?.address || driver.address || {
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: ''
+                          }
+                        }));
+                      }
+  
+                      // Zlúčenie šoférov - žien
+                      if (team.driverDetailsFemale && privateTeamData.driversFemale) {
+                        team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => ({
+                          ...driver,
+                          dateOfBirth: privateTeamData.driversFemale[index]?.dateOfBirth || driver.dateOfBirth || '',
+                          address: privateTeamData.driversFemale[index]?.address || driver.address || {
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: ''
+                          }
+                        }));
+                      }
+                    });
+                  }
+                });
+              }
+  
+              return mergedUser;
+            });
+  
+            setAllUsers(mergedUsersData);
+            setFilteredUsers(mergedUsersData);
+            if (typeof window.hideGlobalLoader === 'function') {
+              window.hideGlobalLoader();
+            }
           }, error => {
-            console.error("Chyba pri načítaní používateľov:", error);
-            setError(`Chyba pri načítaní používateľov: ${error.message}`);
+            console.error("Chyba pri načítaní usersprivate:", error);
+            // Ak sa nepodarí načítať usersprivate, použijeme len users dáta
+            setAllUsers(usersData);
+            setFilteredUsers(usersData);
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
             }
           });
-        } catch (e) {
-          console.error("Chyba pri nastavovaní onSnapshot:", e);
-          setError(`Chyba pri načítaní používateľov: ${e.message}`);
+        }, error => {
+          console.error("Chyba pri načítaní používateľov:", error);
+          setError(`Chyba pri načítaní používateľov: ${error.message}`);
           if (typeof window.hideGlobalLoader === 'function') {
             window.hideGlobalLoader();
           }
-        }
-      } else if (isAuthReady && user === null) {
+        });
+      } catch (e) {
+        console.error("Chyba pri nastavovaní onSnapshot:", e);
+        setError(`Chyba pri načítaní používateľov: ${e.message}`);
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
-        window.location.href = 'login.html';
-        return;
-      } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-        setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-        if (typeof window.showGlobalLoader === 'function') {
-          window.showGlobalLoader();
-        }
-        window.location.href = 'logged-in-my-data.html';
-        return;
       }
-
-      return () => {
-        if (unsubscribeAllUsers) {
-          unsubscribeAllUsers();
-        }
-        if (unsubscribeAllPrivateUsers) {
-          unsubscribeAllPrivateUsers();
-        }
-      };
-    }, [db, userProfileData, isAuthReady, user]);
+    } else if (isAuthReady && user === null) {
+      if (typeof window.hideGlobalLoader === 'function') {
+        window.hideGlobalLoader();
+      }
+      window.location.href = 'login.html';
+      return;
+    } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
+      setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
+      if (typeof window.showGlobalLoader === 'function') {
+        window.showGlobalLoader();
+      }
+      window.location.href = 'logged-in-my-data.html';
+      return;
+    }
+  
+    return () => {
+      if (unsubscribeAllUsers) {
+        unsubscribeAllUsers();
+      }
+      if (unsubscribeAllPrivateUsers) {
+        unsubscribeAllPrivateUsers();
+      }
+    };
+}, [db, userProfileData, isAuthReady, user]);
 
   React.useEffect(() => {
     let unsubscribeSettings;
