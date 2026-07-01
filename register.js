@@ -767,6 +767,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
     let user = null;
     try {
+      // 🔥 1. VYTVORENIE POUŽÍVATEĽA
       const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       user = userCredential.user;
 
@@ -775,6 +776,43 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         setLoading(false);
         isRegisteringRef.current = false;
         return;
+      }
+
+      console.log("register.js: Používateľ vytvorený, UID:", user.uid);
+
+      // 🔥 2. POČKÁME NA DOKONČENIE PRIHLÁSENIA
+      // Počkáme na aktuálneho používateľa (mal by byť rovnaký)
+      let retries = 0;
+      const maxRetries = 10;
+      let currentUser = authInstance.currentUser;
+      
+      while (!currentUser && retries < maxRetries) {
+        console.log(`register.js: Čakám na prihlásenie používateľa (pokus ${retries + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        currentUser = authInstance.currentUser;
+        retries++;
+      }
+
+      if (!currentUser) {
+        dispatchAppNotification('Chyba: Používateľ nebol prihlásený po vytvorení účtu. Skúste to prosím znova.', 'error');
+        setLoading(false);
+        isRegisteringRef.current = false;
+        return;
+      }
+
+      console.log("register.js: Používateľ je prihlásený, UID:", currentUser.uid);
+
+      // 🔥 3. POČKÁME NA AKTUALIZÁCIU TOKENU (dôležité pre Firestore)
+      // Firebase potrebuje čas na aktualizáciu ID tokenu
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Overíme, či je token platný
+      try {
+        await currentUser.getIdToken(true); // Force refresh token
+        console.log("register.js: Token bol aktualizovaný.");
+      } catch (tokenError) {
+        console.warn("register.js: Chyba pri aktualizácii tokenu:", tokenError);
+        // Pokračujeme aj napriek chybe, možno token ešte nie je pripravený
       }
 
     } catch (authError) {
@@ -809,7 +847,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         return;
     }
 
-    // VYTVORÍME REFERENCIE NA DOKUMENTY
+    // 🔥 4. TERAZ MÁME PRIHLÁSENÉHO POUŽÍVATEĽA - MÔŽEME ZAPISOVAŤ DO DB
     const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
     const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
     
@@ -1094,13 +1132,17 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         });
       });
       
-      // 🔥 JEDEN ZÁPIS DO KOLEKCIE 'users'
-      await setDoc(userDocRef, userData);
+      console.log("register.js: Začínam zápis do Firestore...");
       
-      // 🔥 JEDEN ZÁPIS DO KOLEKCIE 'usersprivate'
+      // ZÁPIS DO KOLEKCIE 'users'
+      await setDoc(userDocRef, userData);
+      console.log("register.js: Zápis do 'users' dokončený.");
+      
+      // ZÁPIS DO KOLEKCIE 'usersprivate'
       await setDoc(userPrivateDocRef, privateData);
+      console.log("register.js: Zápis do 'usersprivate' dokončený.");
 
-      console.log("register.js: Dokumenty používateľa boli úspešne vytvorené.");
+      console.log("register.js: Všetky dokumenty používateľa boli úspešne vytvorené.");
 
     } catch (firestoreError) {
         let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
