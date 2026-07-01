@@ -752,26 +752,54 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     };
 
     const formatAddress = (member) => {
-        if (!member) return '-';
-
-        let addressData = member;
-        if (member.address && typeof member.address === 'object') {
-            addressData = member.address;
+      if (!member) return '-';
+    
+      // Skúsime načítať adresu z privateData ak je dostupná
+      let addressData = null;
+      
+      // Ak máme _privateData a vieme identifikovať člena
+      if (member._userId && member._category !== undefined && member._teamIndex !== undefined) {
+        const privateData = member._privateData;
+        if (privateData?.persons) {
+          const teamKey = `${member._category}_team${member._teamIndex + 1}`;
+          const teamPrivateData = privateData.persons[teamKey];
+          if (teamPrivateData) {
+            // Zistíme typ člena podľa originalArray
+            const memberType = member.originalArray;
+            const memberIndex = member.originalIndex;
+            if (memberType && memberIndex !== undefined && teamPrivateData[memberType] && teamPrivateData[memberType][memberIndex]) {
+              const privateMember = teamPrivateData[memberType][memberIndex];
+              if (privateMember?.address) {
+                addressData = privateMember.address;
+              }
+            }
+          }
         }
-
-        const street = addressData.street || '';
-        const houseNumber = addressData.houseNumber || '';
-        const postalCode = formatPostalCodeForDisplay(addressData.postalCode);
-        const city = addressData.city || '';
-        const country = addressData.country || '';
-
-        const parts = [
-            `${street} ${houseNumber}`.trim(),
-            `${postalCode} ${city}`.trim(),
-            country.trim()
-        ].filter(p => p !== '');
-
-        return parts.join(', ');
+      }
+    
+      // Ak sme nenašli v privateData, použijeme adresu z member objektu
+      if (!addressData) {
+        if (member.address && typeof member.address === 'object') {
+          addressData = member.address;
+        } else {
+          // Ak nie je adresa, vrátime pomlčku
+          return '-';
+        }
+      }
+    
+      const street = addressData.street || '';
+      const houseNumber = addressData.houseNumber || '';
+      const postalCode = formatPostalCodeForDisplay(addressData.postalCode);
+      const city = addressData.city || '';
+      const country = addressData.country || '';
+    
+      const parts = [
+        `${street} ${houseNumber}`.trim(),
+        `${postalCode} ${city}`.trim(),
+        country.trim()
+      ].filter(p => p !== '');
+    
+      return parts.join(', ') || '-';
     };
 
     const handleAccommodationToggle = async (member, isChecked) => {
@@ -1142,7 +1170,33 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, 
+                          (() => {
+                            // Skúsime načítať dátum narodenia z privateData
+                            let dateOfBirth = member.dateOfBirth;
+                            
+                            if (member._userId && member._category !== undefined && member._teamIndex !== undefined) {
+                              const privateData = member._privateData;
+                              if (privateData?.persons) {
+                                const teamKey = `${member._category}_team${member._teamIndex + 1}`;
+                                const teamPrivateData = privateData.persons[teamKey];
+                                if (teamPrivateData) {
+                                  const memberType = member.originalArray;
+                                  const memberIndex = member.originalIndex;
+                                  if (memberType && memberIndex !== undefined && teamPrivateData[memberType] && teamPrivateData[memberType][memberIndex]) {
+                                    const privateMember = teamPrivateData[memberType][memberIndex];
+                                    if (privateMember?.dateOfBirth) {
+                                      dateOfBirth = privateMember.dateOfBirth;
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                            
+                            return formatDateToDMMYYYY(dateOfBirth);
+                          })()
+                        ),
+
                         React.createElement('td', { className: jerseyNumberCellClass }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
                             member.registrationNumber || '-'
@@ -2312,80 +2366,112 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     };
 
     const renderMemberFields = () => {
-        const memberElements = [];
-        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
-        let memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth',
-            'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+      const memberElements = [];
+      const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
+      let memberFieldsOrder = [
+        'firstName', 'lastName', 'dateOfBirth',
+        'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+      ];
+      if (isPlayer) {
+        memberFieldsOrder = [
+          'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+          'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-        if (isPlayer) {
-            memberFieldsOrder = [
-                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
-                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-            ];
-        }
-        memberFieldsOrder.forEach(path => {
-            const value = getNestedValue(localEditedData, path);
-            const inputValue = value === undefined || value === null ? '' : value;
-            const labelText = formatLabel(path);
-            let inputType = 'text';
-            let isCheckbox = false;
-            let customProps = {};
-
-            if (typeof inputValue === 'boolean') {
-                isCheckbox = true;
-            } else if (path.includes('dateOfBirth')) {
-                inputType = 'date';
-            } else if (path.includes('jerseyNumber')) {
-                customProps = {
-                    onChange: (e) => handleNumericInput(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
-                    maxLength: 3
-                };
-            } else if (path.includes('registrationNumber')) {
-                customProps = {
-                    onChange: (e) => handleChange(path, e.target.value),
-                    maxLength: 20
-                };
-            } else if (path.includes('postalCode')) {
-                customProps = {
-                    onChange: (e) => handlePostalCodeChange(e, path),
-                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9 ]*',
-                    maxLength: 6,
-                    value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                    readOnly: !isSavable
-                };
+      }
+    
+      memberFieldsOrder.forEach(path => {
+        // Špeciálne spracovanie pre adresy - načítame z privateData
+        let value;
+        if (path.startsWith('address.')) {
+          // Skúsime načítať z privateData ak je dostupné
+          if (localEditedData._privateData) {
+            const addressField = path.split('.')[1];
+            // Nájdenie príslušného člena v privateData podľa originalArray a originalIndex
+            const memberArrayType = localEditedData.originalArray;
+            const memberIndex = localEditedData.originalIndex;
+            
+            if (memberArrayType && memberIndex !== undefined && localEditedData._privateData?.persons) {
+              // Pre každú kategóriu skúsime nájsť tím
+              for (const categoryKey in localEditedData._privateData.persons) {
+                const teamData = localEditedData._privateData.persons[categoryKey];
+                if (teamData && teamData[memberArrayType] && teamData[memberArrayType][memberIndex]) {
+                  const privateMember = teamData[memberArrayType][memberIndex];
+                  if (privateMember.address && privateMember.address[addressField] !== undefined) {
+                    value = privateMember.address[addressField];
+                    break;
+                  }
+                }
+              }
             }
-
-            memberElements.push(React.createElement(
-                'div',
-                { key: path, className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                isCheckbox ? (
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600`,
-                        checked: getNestedValue(localEditedData, path) === true,
-                        onChange: (e) => handleChange(path, e.target.checked),
-                        disabled: !isSavable
-                    })
-                ) : (
-                    React.createElement('input', {
-                        ref: el => inputRefs.current[path] = el,
-                        type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(inputValue, path),
-                        onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                        readOnly: !isSavable,
-                        ...customProps
-                    })
-                )
-            ));
-        });
-        return memberElements.filter(Boolean);
+          }
+          // Ak sme nenašli v privateData, použijeme hodnotu z localEditedData
+          if (value === undefined) {
+            value = getNestedValue(localEditedData, path);
+          }
+        } else {
+          value = getNestedValue(localEditedData, path);
+        }
+    
+        const inputValue = value === undefined || value === null ? '' : value;
+        const labelText = formatLabel(path);
+        let inputType = 'text';
+        let isCheckbox = false;
+        let customProps = {};
+    
+        if (typeof inputValue === 'boolean') {
+          isCheckbox = true;
+        } else if (path.includes('dateOfBirth')) {
+          inputType = 'date';
+        } else if (path.includes('jerseyNumber')) {
+          customProps = {
+            onChange: (e) => handleNumericInput(e, path),
+            inputMode: 'numeric',
+            pattern: '[0-9]*',
+            maxLength: 3
+          };
+        } else if (path.includes('registrationNumber')) {
+          customProps = {
+            onChange: (e) => handleChange(path, e.target.value),
+            maxLength: 20
+          };
+        } else if (path.includes('postalCode')) {
+          customProps = {
+            onChange: (e) => handlePostalCodeChange(e, path),
+            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+            inputMode: 'numeric',
+            pattern: '[0-9 ]*',
+            maxLength: 6,
+            value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
+            readOnly: !isSavable
+          };
+        }
+    
+        memberElements.push(React.createElement(
+          'div',
+          { key: path, className: 'mb-4' },
+          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+          isCheckbox ? (
+            React.createElement('input', {
+              type: 'checkbox',
+              className: `form-checkbox h-5 w-5 text-blue-600`,
+              checked: getNestedValue(localEditedData, path) === true,
+              onChange: (e) => handleChange(path, e.target.checked),
+              disabled: !isSavable
+            })
+          ) : (
+            React.createElement('input', {
+              ref: el => inputRefs.current[path] = el,
+              type: inputType,
+              className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+              value: formatDisplayValue(inputValue, path),
+              onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
+              readOnly: !isSavable,
+              ...customProps
+            })
+          )
+        ));
+      });
+      return memberElements.filter(Boolean);
     };
 
     const renderDataFields = (obj, currentPath = '') => {
@@ -4533,9 +4619,9 @@ const clearFilter = (column) => {
         console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
         setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
         return;
-    }
-
-    try {
+      }
+    
+      try {
         window.showGlobalLoader();
         
         // ============================================================
@@ -4736,209 +4822,227 @@ const clearFilter = (column) => {
         // PRÍPAD 3: ÚPRAVA ČLENA TÍMU (hráč, člen RT, šofér)
         // ============================================================
         else if (originalDataPath.includes('playerDetails') ||
-                   originalDataPath.includes('menTeamMemberDetails') ||
-                   originalDataPath.includes('womenTeamMemberDetails') ||
-                   originalDataPath.includes('driverDetailsMale') ||
-                   originalDataPath.includes('driverDetailsFemale')) {
-            
-            const pathParts = originalDataPath.split('.');
-            if (pathParts.length !== 3) {
-                throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty.`);
-            }
-
-            const categoryAndIndexPart = pathParts[1];
-            const memberArrayAndIndexPart = pathParts[2];
-
-            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-            if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
-
-            const category = categoryMatch[1];
-            const teamIndex = parseInt(categoryMatch[2]);
-
-            const isReallyNew = memberArrayAndIndexPart.includes('[-1]');
-
-            let memberArrayPath;
-            let memberArrayIndex;
-
-            if (isReallyNew) {
-                const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
-                if (!arrayNameMatch) throw new Error("Neplatný formát [-1]");
-                memberArrayPath = arrayNameMatch[1];
-                memberArrayIndex = -1;
-            } else {
-                const existingMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-                if (!existingMatch) throw new Error("Neplatný formát indexu člena");
-                memberArrayPath = existingMatch[1];
-                memberArrayIndex = parseInt(existingMatch[2]);
-            }
-
-            // Načítanie aktuálneho dokumentu users
-            const docSnapshot = await getDoc(targetDocRef);
-            if (!docSnapshot.exists()) {
-                throw new Error("Dokument používateľa sa nenašiel.");
-            }
-
-            const currentDocData = docSnapshot.data();
-            const teamsInCategory = currentDocData.teams?.[category] || [];
-            if (teamIndex < 0 || teamIndex >= teamsInCategory.length) {
-                throw new Error(`Tím s indexom ${teamIndex} v kategórii ${category} neexistuje.`);
-            }
-
-            // Hlboká kópia tímu
-            const teamToUpdate = JSON.parse(JSON.stringify(teamsInCategory[teamIndex]));
-            let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
-
-            // Získame referenciu na usersprivate
-            const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-            
-            // Načítame existujúce usersprivate dáta
-            let privateData = {};
-            try {
-                const privateDocSnapshot = await getDoc(userPrivateDocRef);
-                if (privateDocSnapshot.exists()) {
-                    privateData = privateDocSnapshot.data();
-                }
-            } catch (e) {
-                console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
-            }
-            
-            if (!privateData || typeof privateData !== 'object') {
-                privateData = {};
-            }
-            
-            // Zabezpečíme štruktúru pre osoby
-            if (!privateData.persons) {
-                privateData.persons = {};
-            }
-            
-            const teamKey = `${category}_team${teamIndex + 1}`;
-            if (!privateData.persons[teamKey]) {
-                privateData.persons[teamKey] = {};
-            }
-
-            if (isReallyNew) {
-                // PRIDANIE NOVÉHO ČLENA
-                const newMember = {
-                    ...updatedDataFromModal,
-                    address: updatedDataFromModal.address || {}
-                };
-
-                // Odstránime adresu a dátum narodenia z údajov pre users
-                const memberForUsers = { ...newMember };
-                delete memberForUsers.address;
-                delete memberForUsers.dateOfBirth;
-                
-                currentMemberArray.push(memberForUsers);
-                
-                const memberIndexInPrivate = currentMemberArray.length - 1;
-                if (!privateData.persons[teamKey][memberArrayPath]) {
-                    privateData.persons[teamKey][memberArrayPath] = [];
-                }
-                privateData.persons[teamKey][memberArrayPath][memberIndexInPrivate] = {
-                    dateOfBirth: newMember.dateOfBirth || '',
-                    address: newMember.address || {
-                        street: '',
-                        houseNumber: '',
-                        city: '',
-                        postalCode: '',
-                        country: ''
-                    }
-                };
-                
-                const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'bez mena';
-                const memberType = editModalTitle.includes('hráč') ? 'Hráč' :
-                                  editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
-                                  editModalTitle.includes('člen realizačného tímu (muž)') ? 'Člen RT – muž' :
-                                  editModalTitle.includes('šofér (žena)') ? 'Šofér – žena' :
-                                  editModalTitle.includes('šofér (muž)') ? 'Šofér – muž' : 'Člen tímu';
-                
-                const userEmail = window.auth.currentUser?.email;
-                if (userEmail) {
-                    const notificationsCollectionRef = collection(db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        userEmail,
-                        changes: [`Nový ${memberType} pridaný: ${memberName} (Tím: ${teamToUpdate.teamName || 'Bez názvu'}, ${category})`],
-                        timestamp: serverTimestamp()
-                    });
-                }
-                
-            } else {
-                // ÚPRAVA EXISTUJÚCEHO ČLENA
-                if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
-                    throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
-                }
-                
-                const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
-                let updatedMember = { ...originalMember };
-                
-                // Aplikácia zmien z modálu (okrem adresy a dátumu narodenia)
-                for (const key in updatedDataFromModal) {
-                    if (key !== 'address' && key !== 'dateOfBirth') {
-                        const value = updatedDataFromModal[key];
-                        if (value !== undefined) {
-                            updatedMember[key] = value;
-                        }
-                    }
-                }
-                
-                // Uložíme adresu a dátum narodenia do usersprivate
-                if (!privateData.persons[teamKey][memberArrayPath]) {
-                    privateData.persons[teamKey][memberArrayPath] = [];
-                }
-                
-                privateData.persons[teamKey][memberArrayPath][memberArrayIndex] = {
-                    dateOfBirth: updatedDataFromModal.dateOfBirth || originalMember.dateOfBirth || '',
-                    address: updatedDataFromModal.address || originalMember.address || {
-                        street: '',
-                        houseNumber: '',
-                        city: '',
-                        postalCode: '',
-                        country: ''
-                    }
-                };
-                
-                // Vymažeme adresu a dátum narodenia z users
-                delete updatedMember.address;
-                delete updatedMember.dateOfBirth;
-                
-                currentMemberArray[memberArrayIndex] = updatedMember;
-                
-                // Zmeny pre notifikáciu
-                const changes = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY);
-                if (changes.length > 0) {
-                    const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'bez mena';
-                    const userEmail = window.auth.currentUser?.email;
-                    if (userEmail) {
-                        const notificationsCollectionRef = collection(db, 'notifications');
-                        await addDoc(notificationsCollectionRef, {
-                            userEmail,
-                            changes: changes.map(c => `${memberName} – ${memberArrayPath === 'playerDetails' ? 'hráč' : 'člen tímu'} – tím ${teamToUpdate.teamName || 'Bez názvu'} (${category}): ${c}`),
-                            timestamp: serverTimestamp()
-                        });
-                    }
-                }
-            }
-            
-            // Uložíme aktualizovaný tím do users (bez adries a dátumov narodenia)
-            teamToUpdate[memberArrayPath] = currentMemberArray;
-            const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
-            
-            const updatedTeamsForCategory = [...teamsInCategory];
-            updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
-            
-            // Uložíme do users
-            const updates = {};
-            updates[`teams.${category}`] = updatedTeamsForCategory;
-            await updateDoc(targetDocRef, updates);
-            
-            // Uložíme do usersprivate - odstránime undefined hodnoty
-            const cleanPrivateData = JSON.parse(JSON.stringify(privateData));
-            await setDoc(userPrivateDocRef, cleanPrivateData, { merge: true });
-            
-            setUserNotificationMessage("Zmeny boli uložené.", 'success');
-            closeEditModal();
-            return;
+                         originalDataPath.includes('menTeamMemberDetails') ||
+                         originalDataPath.includes('womenTeamMemberDetails') ||
+                         originalDataPath.includes('driverDetailsMale') ||
+                         originalDataPath.includes('driverDetailsFemale')) {
+      
+        const pathParts = originalDataPath.split('.');
+        if (pathParts.length !== 3) {
+          throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty.`);
         }
+
+        const categoryAndIndexPart = pathParts[1];
+        const memberArrayAndIndexPart = pathParts[2];
+  
+        const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+        if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
+  
+        const category = categoryMatch[1];
+        const teamIndex = parseInt(categoryMatch[2]);
+  
+        const isReallyNew = memberArrayAndIndexPart.includes('[-1]');
+  
+        let memberArrayPath;
+        let memberArrayIndex;
+  
+        if (isReallyNew) {
+          const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
+          if (!arrayNameMatch) throw new Error("Neplatný formát [-1]");
+          memberArrayPath = arrayNameMatch[1];
+          memberArrayIndex = -1;
+        } else {
+          const existingMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+          if (!existingMatch) throw new Error("Neplatný formát indexu člena");
+          memberArrayPath = existingMatch[1];
+          memberArrayIndex = parseInt(existingMatch[2]);
+        }
+  
+        // Načítanie aktuálneho dokumentu users
+        const docSnapshot = await getDoc(targetDocRef);
+        if (!docSnapshot.exists()) {
+          throw new Error("Dokument používateľa sa nenašiel.");
+        }
+  
+        const currentDocData = docSnapshot.data();
+        const teamsInCategory = currentDocData.teams?.[category] || [];
+        if (teamIndex < 0 || teamIndex >= teamsInCategory.length) {
+          throw new Error(`Tím s indexom ${teamIndex} v kategórii ${category} neexistuje.`);
+        }
+  
+        // Hlboká kópia tímu
+        const teamToUpdate = JSON.parse(JSON.stringify(teamsInCategory[teamIndex]));
+        let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
+  
+        // Získame referenciu na usersprivate
+        const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+        
+        // Načítame existujúce usersprivate dáta
+        let privateData = {};
+        try {
+          const privateDocSnapshot = await getDoc(userPrivateDocRef);
+          if (privateDocSnapshot.exists()) {
+            privateData = privateDocSnapshot.data();
+          }
+        } catch (e) {
+          console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
+        }
+        
+        if (!privateData || typeof privateData !== 'object') {
+          privateData = {};
+        }
+        
+        // Zabezpečíme štruktúru pre osoby
+        if (!privateData.persons) {
+          privateData.persons = {};
+        }
+        
+        const teamKey = `${category}_team${teamIndex + 1}`;
+        if (!privateData.persons[teamKey]) {
+          privateData.persons[teamKey] = {};
+        }
+  
+        // ============================================================
+        // PRIDANIE NOVÉHO ČLENA
+        // ============================================================
+        if (isReallyNew) {
+          const newMember = {
+            ...updatedDataFromModal,
+            address: updatedDataFromModal.address || {}
+          };
+  
+          // Odstránime adresu a dátum narodenia z údajov pre users
+          const memberForUsers = { ...newMember };
+          delete memberForUsers.address;
+          delete memberForUsers.dateOfBirth;
+          // Odstránime aj _privateData ak existuje (nemalo by, ale pre istotu)
+          delete memberForUsers._privateData;
+          
+          currentMemberArray.push(memberForUsers);
+          
+          const memberIndexInPrivate = currentMemberArray.length - 1;
+          if (!privateData.persons[teamKey][memberArrayPath]) {
+            privateData.persons[teamKey][memberArrayPath] = [];
+          }
+          privateData.persons[teamKey][memberArrayPath][memberIndexInPrivate] = {
+            dateOfBirth: newMember.dateOfBirth || '',
+            address: newMember.address || {
+              street: '',
+              houseNumber: '',
+              city: '',
+              postalCode: '',
+              country: ''
+            }
+          };
+          
+          const memberName = `${newMember.firstName || ''} ${newMember.lastName || ''}`.trim() || 'bez mena';
+          const memberType = editModalTitle.includes('hráč') ? 'Hráč' :
+                            editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
+                            editModalTitle.includes('člen realizačného tímu (muž)') ? 'Člen RT – muž' :
+                            editModalTitle.includes('šofér (žena)') ? 'Šofér – žena' :
+                            editModalTitle.includes('šofér (muž)') ? 'Šofér – muž' : 'Člen tímu';
+          
+          const userEmail = window.auth.currentUser?.email;
+          if (userEmail) {
+            const notificationsCollectionRef = collection(db, 'notifications');
+            await addDoc(notificationsCollectionRef, {
+              userEmail,
+              changes: [`Nový ${memberType} pridaný: ${memberName} (Tím: ${teamToUpdate.teamName || 'Bez názvu'}, ${category})`],
+              timestamp: serverTimestamp()
+            });
+          }
+        } 
+        // ============================================================
+        // ÚPRAVA EXISTUJÚCEHO ČLENA
+        // ============================================================
+        else {
+          if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
+            throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
+          }
+          
+          const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
+          let updatedMember = { ...originalMember };
+          
+          // Aplikácia zmien z modálu (okrem adresy a dátumu narodenia)
+          for (const key in updatedDataFromModal) {
+            if (key !== 'address' && key !== 'dateOfBirth' && key !== '_privateData') {
+              const value = updatedDataFromModal[key];
+              if (value !== undefined) {
+                updatedMember[key] = value;
+              }
+            }
+          }
+          
+          // Uložíme adresu a dátum narodenia do usersprivate
+          if (!privateData.persons[teamKey][memberArrayPath]) {
+            privateData.persons[teamKey][memberArrayPath] = [];
+          }
+          
+          // Získame existujúce private dáta pre tohto člena
+          const existingPrivateMember = privateData.persons[teamKey][memberArrayPath][memberArrayIndex] || {};
+          
+          privateData.persons[teamKey][memberArrayPath][memberArrayIndex] = {
+            dateOfBirth: updatedDataFromModal.dateOfBirth !== undefined 
+              ? updatedDataFromModal.dateOfBirth 
+              : existingPrivateMember.dateOfBirth || originalMember.dateOfBirth || '',
+            address: updatedDataFromModal.address !== undefined 
+              ? updatedDataFromModal.address 
+              : existingPrivateMember.address || originalMember.address || {
+                  street: '',
+                  houseNumber: '',
+                  city: '',
+                  postalCode: '',
+                  country: ''
+                }
+          };
+          
+          // Vymažeme adresu a dátum narodenia z users
+          delete updatedMember.address;
+          delete updatedMember.dateOfBirth;
+          delete updatedMember._privateData;
+          
+          currentMemberArray[memberArrayIndex] = updatedMember;
+          
+          // Zmeny pre notifikáciu
+          const changes = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY);
+          if (changes.length > 0) {
+            const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'bez mena';
+            const userEmail = window.auth.currentUser?.email;
+            if (userEmail) {
+              const notificationsCollectionRef = collection(db, 'notifications');
+              await addDoc(notificationsCollectionRef, {
+                userEmail,
+                changes: changes.map(c => `${memberName} – ${memberArrayPath === 'playerDetails' ? 'hráč' : 'člen tímu'} – tím ${teamToUpdate.teamName || 'Bez názvu'} (${category}): ${c}`),
+                timestamp: serverTimestamp()
+              });
+            }
+          }
+        }
+        
+        // ============================================================
+        // ULOŽENIE DO USERS A USERSPRIVATE
+        // ============================================================
+        
+        // Uložíme aktualizovaný tím do users (bez adries a dátumov narodenia)
+        teamToUpdate[memberArrayPath] = currentMemberArray;
+        const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
+        
+        const updatedTeamsForCategory = [...teamsInCategory];
+        updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+        
+        // Uložíme do users
+        const updates = {};
+        updates[`teams.${category}`] = updatedTeamsForCategory;
+        await updateDoc(targetDocRef, updates);
+        
+        // Uložíme do usersprivate - odstránime undefined hodnoty
+        const cleanPrivateData = JSON.parse(JSON.stringify(privateData));
+        await setDoc(userPrivateDocRef, cleanPrivateData, { merge: true });
+        
+        setUserNotificationMessage("Zmeny boli uložené.", 'success');
+        closeEditModal();
+        return;
+      }
         
         // ============================================================
         // PRÍPAD 4: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA
@@ -5194,129 +5298,138 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
   };
 
   // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
-const formatTableCellValue = (value, columnId, userObject) => {
-  if (value === null || value === undefined || value === "") return '-';
-
+  const formatTableCellValue = (value, columnId, userObject) => {
+    if (value === null || value === undefined || value === "") return '-';
+  
     if (columnId === 'role') {
-    switch (value) {
-      case 'club':
-        return 'Klub';
-      case 'hall':
-        return 'Hala';
-      case 'admin':
-        return 'Administrátor';
-      case 'volunteer':
-        return 'Dobrovoľník';
-      case 'referee':
-        return 'Rozhodca';
-      default:
-        return value;
-    }
-  }
-
-  // Špecifické formátovanie na základe ID stĺpca
-  if (columnId === 'registrationDate') {
-    let date;
-    // Ak je to Firebase Timestamp objekt s .toDate() metódou
-    if (value && typeof value.toDate === 'function') {
-      date = value.toDate();
-    }
-    // Ak je to mapa {seconds, nanoseconds} a nemá .toDate() metódu
-    else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-      // Vytvorenie Date objektu zo sekúnd a nanosekúnd
-      date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-    } else {
-      return '-'; // Vrátiť pomlčku, ak hodnota nie je platný dátumový formát
-    }
-    try {
-      // Formát DD. MM. YYYY hh:mm
-      const options = {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false // Použiť 24-hodinový formát
-      };
-      return date.toLocaleString('sk-SK', options);
-    } catch (e) {
-      console.error("Chyba pri formátovaní dátumu v tabuľke:", value, e);
-      return '[Chyba Dátumu]'; // Záložná reťazcová reprezentácia pri chybe
-    }
-  }
-  else if (columnId === 'approved') {
-    return value ? 'Áno' : 'Nie';
-  }
-  else if (columnId === 'postalCode') {
-        return formatPostalCodeForDisplay(value);
-  }
-  else if (columnId === 'contactPhoneNumber') {
-    const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
-    const formattedNumber = formatNumberGroups(numberWithoutDialCode);
-    return `${dialCode} ${formattedNumber}`;
-  }
-  // Handle top-level address fields
-  else if (['street', 'houseNumber', 'city', 'country', 'note'].includes(columnId)) {
-    return value;
-  }
-  else if (columnId === 'arrival.type') {
-    const arrivalType = getNestedValue(userObject, 'arrival.type');
-    const arrivalTime = getNestedValue(userObject, 'arrival.time');
-    return formatArrivalTime(arrivalType, arrivalTime);
-  }
-  // --- NOVÉ STĽPCE ---
-  else if (columnId === 'tshirtSize') {
-    return value || '-'; // Zobraziť veľkosť trička alebo pomlčku
-  }
-  else if (columnId === 'selectedDates') {
-    if (!value || !Array.isArray(value)) return '-';
-    // Prevedenie dátumov z "yyyy-mm-dd" na "dd. mm. yyyy"
-    return value
-      .map(dateStr => {
-        const [year, month, day] = dateStr.split('-');
-        return `${day}. ${month}. ${year}`;
-      })
-      .join(', ');
-  }
-  else if (columnId === 'volunteerRoles') {
-    if (!value || !Array.isArray(value)) return '-';
-    // Ak je to pole, zobrazíme jeho prvky oddelené čiarkou
-    return value.join(', ');
-  }
-  // --- KONIEC NOVÝCH STāPCOV ---
-
-  // Všeobecné formátovanie pre iné prípady, podobné formatDisplayValue
-  if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-  if (Array.isArray(value)) {
-    return value.map(item => {
-      if (typeof item === 'object' && item !== null) {
-        // Pre vnorené objekty v poliach poskytnúť súhrn alebo zjednodušený reťazec
-        if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-        if (item.size) return item.size; // Pre veľkosti tričiek
-        return '[Objekt]'; // Všeobecné pre iné objekty
+      switch (value) {
+        case 'club': return 'Klub';
+        case 'hall': return 'Hala';
+        case 'admin': return 'Administrátor';
+        case 'volunteer': return 'Dobrovoľník';
+        case 'referee': return 'Rozhodca';
+        default: return value;
       }
-      return String(item);
-    }).join(', ');
-  }
-  if (typeof value === 'object') {
-    // Heuristika pre bežné komplexné objekty
-    // Adresný objekt (len pre vnorené, ak by sa taký našiel)
-    if (value.street || value.city) {
-      return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
     }
-    if (value.name || value.type) { // Objekt balíka, ubytovania, príchodu
-      return value.name || value.type;
+  
+    // Dátum registrácie
+    if (columnId === 'registrationDate') {
+      let date;
+      if (value && typeof value.toDate === 'function') {
+        date = value.toDate();
+      } else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+        date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+      } else {
+        return '-';
+      }
+      try {
+        const options = {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        };
+        return date.toLocaleString('sk-SK', options);
+      } catch (e) {
+        return '[Chyba Dátumu]';
+      }
     }
-    // Záložná možnosť pre akýkoľvek iný objekt
-    try {
-      return JSON.stringify(value);
-    } catch (e) {
-      console.error("Chyba pri prevode objektu na reťazec pre bunku tabuľky:", value, e);
-      return '[Objekt]';
+  
+    // Schválený
+    if (columnId === 'approved') {
+      return value ? 'Áno' : 'Nie';
     }
-  }
-  return String(value);
-};
+  
+    // PSČ - formátovanie s medzerou
+    if (columnId === 'postalCode') {
+      return formatPostalCodeForDisplay(value);
+    }
+  
+    // Telefónne číslo
+    if (columnId === 'contactPhoneNumber') {
+      const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
+      const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+      return `${dialCode} ${formattedNumber}`;
+    }
+  
+    // Adresové polia - načítame z userObject._privateData ak existuje
+    if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
+      // Skúsime načítať z privateData
+      if (userObject._privateData?.address) {
+        const privateAddress = userObject._privateData.address;
+        // Mapovanie stĺpcov na kľúče v privateData
+        const mapping = {
+          'street': 'street',
+          'houseNumber': 'houseNumber',
+          'city': 'city',
+          'country': 'country'
+        };
+        const privateValue = privateAddress[mapping[columnId]];
+        if (privateValue) return privateValue;
+      }
+      // Fallback na hodnotu z user objektu
+      return value || '-';
+    }
+  
+    // Poznámka
+    if (columnId === 'note') {
+      return value || '-';
+    }
+  
+    // Typ dopravy
+    if (columnId === 'arrival.type') {
+      const arrivalType = getNestedValue(userObject, 'arrival.type');
+      const arrivalTime = getNestedValue(userObject, 'arrival.time');
+      return formatArrivalTime(arrivalType, arrivalTime);
+    }
+  
+    // Dobrovoľnícke polia
+    if (columnId === 'tshirtSize') {
+      return value || '-';
+    }
+    if (columnId === 'selectedDates') {
+      if (!value || !Array.isArray(value)) return '-';
+      return value
+        .map(dateStr => {
+          const [year, month, day] = dateStr.split('-');
+          return `${day}. ${month}. ${year}`;
+        })
+        .join(', ');
+    }
+    if (columnId === 'volunteerRoles') {
+      if (!value || !Array.isArray(value)) return '-';
+      return value.join(', ');
+    }
+  
+    // Všeobecné formátovanie
+    if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+    if (Array.isArray(value)) {
+      return value.map(item => {
+        if (typeof item === 'object' && item !== null) {
+          if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+          if (item.size) return item.size;
+          return '[Objekt]';
+        }
+        return String(item);
+      }).join(', ');
+    }
+    if (typeof value === 'object') {
+      if (value.street || value.city) {
+        return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+      }
+      if (value.name || value.type) {
+        return value.name || value.type;
+      }
+      try {
+        return JSON.stringify(value);
+      } catch (e) {
+        return '[Objekt]';
+      }
+    }
+    return String(value);
+  };
 
 
   return React.createElement(
