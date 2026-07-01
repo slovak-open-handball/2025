@@ -1623,6 +1623,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const [userRole, setUserRole] = React.useState('');
     const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false);
     const [isTargetUserHall, setIsTargetUserHall] = React.useState(false);
+    const [privateData, setPrivateData] = React.useState(null);
     const inputRefs = React.useRef({});
 
     // Stavy pre Phone Input
@@ -1666,6 +1667,27 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     const [deleteTeamConfirmMessage, setDeleteTeamConfirmMessage] = React.useState('');
 
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
+
+    // Načítanie usersprivate dát pri otvorení modálu
+    React.useEffect(() => {
+        const loadPrivateData = async () => {
+            if (isOpen && targetDocRef) {
+                try {
+                    const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                    const privateDocSnapshot = await getDoc(userPrivateDocRef);
+                    if (privateDocSnapshot.exists()) {
+                        setPrivateData(privateDocSnapshot.data());
+                    } else {
+                        setPrivateData(null);
+                    }
+                } catch (error) {
+                    console.error("Chyba pri načítaní usersprivate dát:", error);
+                    setPrivateData(null);
+                }
+            }
+        };
+        loadPrivateData();
+    }, [isOpen, targetDocRef, db]);
 
     React.useEffect(() => {
         if (!isOpen) {
@@ -1788,6 +1810,126 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         }
     }, [packages, selectedAccommodationType, title]);
 
+    // Funkcia na zlúčenie údajov z usersprivate
+    const mergePrivateData = React.useCallback((userData) => {
+        if (!privateData) return userData;
+        
+        const merged = JSON.parse(JSON.stringify(userData || {}));
+        
+        // Zlúčenie adries z hlavného formulára
+        if (privateData.address) {
+            merged.street = privateData.address.street || userData?.street || '';
+            merged.houseNumber = privateData.address.houseNumber || userData?.houseNumber || '';
+            merged.city = privateData.address.city || userData?.city || '';
+            merged.postalCode = privateData.address.postalCode || userData?.postalCode || '';
+            merged.country = privateData.address.country || userData?.country || '';
+        }
+        
+        // Zlúčenie fakturačnej adresy
+        if (privateData.billingAddress && merged.billing) {
+            if (!merged.billing.address) {
+                merged.billing.address = {};
+            }
+            merged.billing.address = {
+                street: privateData.billingAddress.street || merged.billing?.address?.street || '',
+                houseNumber: privateData.billingAddress.houseNumber || merged.billing?.address?.houseNumber || '',
+                city: privateData.billingAddress.city || merged.billing?.address?.city || '',
+                postalCode: privateData.billingAddress.postalCode || merged.billing?.address?.postalCode || '',
+                country: privateData.billingAddress.country || merged.billing?.address?.country || ''
+            };
+        }
+        
+        // Zlúčenie tímových údajov - dátumy narodenia a adresy
+        if (merged.teams && privateData.persons) {
+            Object.keys(merged.teams).forEach(category => {
+                const teams = merged.teams[category];
+                if (Array.isArray(teams)) {
+                    teams.forEach((team, teamIndex) => {
+                        const teamKey = `${category}_team${teamIndex + 1}`;
+                        const privateTeamData = privateData.persons?.[teamKey] || {};
+                        
+                        // Zlúčenie hráčov
+                        if (team.playerDetails && privateTeamData.players) {
+                            team.playerDetails = team.playerDetails.map((player, index) => ({
+                                ...player,
+                                dateOfBirth: privateTeamData.players[index]?.dateOfBirth || player.dateOfBirth || '',
+                                address: privateTeamData.players[index]?.address || player.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                }
+                            }));
+                        }
+                        
+                        // Zlúčenie žien - členiek tímu
+                        if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
+                            team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => ({
+                                ...member,
+                                dateOfBirth: privateTeamData.womenTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
+                                address: privateTeamData.womenTeamMembers[index]?.address || member.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                }
+                            }));
+                        }
+                        
+                        // Zlúčenie mužov - členov tímu
+                        if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
+                            team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => ({
+                                ...member,
+                                dateOfBirth: privateTeamData.menTeamMembers[index]?.dateOfBirth || member.dateOfBirth || '',
+                                address: privateTeamData.menTeamMembers[index]?.address || member.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                }
+                            }));
+                        }
+                        
+                        // Zlúčenie šoférov - mužov
+                        if (team.driverDetailsMale && privateTeamData.driversMale) {
+                            team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => ({
+                                ...driver,
+                                dateOfBirth: privateTeamData.driversMale[index]?.dateOfBirth || driver.dateOfBirth || '',
+                                address: privateTeamData.driversMale[index]?.address || driver.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                }
+                            }));
+                        }
+                        
+                        // Zlúčenie šoférov - žien
+                        if (team.driverDetailsFemale && privateTeamData.driversFemale) {
+                            team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => ({
+                                ...driver,
+                                dateOfBirth: privateTeamData.driversFemale[index]?.dateOfBirth || driver.dateOfBirth || '',
+                                address: privateTeamData.driversFemale[index]?.address || driver.address || {
+                                    street: '',
+                                    houseNumber: '',
+                                    city: '',
+                                    postalCode: '',
+                                    country: ''
+                                }
+                            }));
+                        }
+                    });
+                }
+            });
+        }
+        
+        return merged;
+    }, [privateData]);
+
     React.useEffect(() => {
         let currentUserRole = '';
         if (window.globalUserProfileData && window.globalUserProfileData.role) {
@@ -1893,8 +2035,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             setTeamTshirts(initialTshirts);
         }
 
-        setLocalEditedData(initialData);
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes]);
+        // Aplikácia zlúčenia s usersprivate
+        const mergedData = mergePrivateData(initialData);
+        setLocalEditedData(mergedData);
+    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes, privateData, mergePrivateData]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -2260,8 +2404,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                                         handleChange(path, newDates);
                                                     },
                                                     className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
-                                                    disabled: !isSavable
-                                                }),
+                                                    disabled: !isSavable                                                }),
                                                 React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, displayDate)
                                             );
                                         })
@@ -2385,8 +2528,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
                     // Telefónne číslo
                     if (path === 'contactPhoneNumber') {
-                        // Použiť existujúce stavy displayDialCode a displayPhoneNumber z komponentu
-                        // a setIsDialCodeModalOpen z komponentu
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
                                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
