@@ -883,19 +883,24 @@ function UsersManagementApp() {
     }
   };
   
+  // ============================================================
+  // UPRAVENÁ FUNKCIA handleDeleteUser - maže aj z usersprivate
+  // ============================================================
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     // Skopírujeme e-mail používateľa do schránky
     if (userToDelete.email) {
       copyToClipboard(userToDelete.email);
-      // Voliteľne: Zobrazenie oznámenia
       window.showGlobalNotification(`E-mail ${userToDelete.email} bol skopírovaný do schránky`, 'info');
     }
 
     try {
+      // 1. Získame referencie na dokumenty
       const userDocRef = doc(db, `users`, userToDelete.id);
+      const userPrivateDocRef = doc(db, `usersprivate`, userToDelete.id);
       
+      // 2. Aktualizácia adminCount ak mažeme admina
       if (userToDelete.role === 'admin' && userToDelete.approved === true) {
         const adminCountRef = doc(db, `settings`, `adminCount`);
         const adminCountSnap = await getDoc(adminCountRef);
@@ -911,10 +916,30 @@ function UsersManagementApp() {
         });
       }
       
+      // 3. VYMAŽEME DOKUMENT Z KOLEKCIE users
       await deleteDoc(userDocRef);
+      console.log(`✅ Používateľ ${userToDelete.id} bol vymazaný z kolekcie users`);
+
+      // 4. VYMAŽEME DOKUMENT Z KOLEKCIE usersprivate (ak existuje)
+      try {
+        const privateDocSnapshot = await getDoc(userPrivateDocRef);
+        if (privateDocSnapshot.exists()) {
+          await deleteDoc(userPrivateDocRef);
+          console.log(`✅ Používateľ ${userToDelete.id} bol vymazaný z kolekcie usersprivate`);
+        } else {
+          console.log(`ℹ️ Dokument v usersprivate pre ${userToDelete.id} neexistuje, preskakujem.`);
+        }
+      } catch (privateError) {
+        // Ak dokument neexistuje, pokračujeme ďalej
+        if (privateError.code === 'not-found') {
+          console.log(`ℹ️ Dokument v usersprivate pre ${userToDelete.id} neexistuje.`);
+        } else {
+          console.error('Chyba pri mazaní z usersprivate:', privateError);
+          // Necháme pokračovať, aj keby sa nepodarilo vymazať usersprivate
+        }
+      }
 
       // Pridaná funkčnosť: Po úspešnom odstránení používateľa otvoríme novú kartu s Firebase Console
-      // Spoliehame sa na globálne definovaný window.firebaseConfig
       if (window.firebaseConfig && window.firebaseConfig.projectId) {
         const projectId = window.firebaseConfig.projectId;
         const firebaseConsoleUrl = `https://console.firebase.google.com/project/${projectId}/authentication/users`;
