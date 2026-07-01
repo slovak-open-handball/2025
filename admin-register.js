@@ -321,7 +321,7 @@ function App() {
 
     try {
       // --- ZMENA: Upravená podmienka. Ak je počet adminov menší ako 2, nastav schválenie na true. Inak na false. ---
-      const approvedStatus = adminCount < 2; // CHANGE: Changed condition to < 2
+      const approvedStatus = adminCount === 0; // Iba prvý admin má approved: true
       console.log(`Počet adminov je ${adminCount}, preto bude status schválenia: ${approvedStatus}`);
       // --------------------------------------------------------------------------
 
