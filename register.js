@@ -944,8 +944,8 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
-        dataEditDeadline: dataEditDeadline,
-        rosterEditDeadline: rosterEditDeadline,
+        dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
+        rosterEditDeadline: rosterEditDeadline ? Timestamp.fromDate(rosterEditDeadline) : null,
         categories: formData.categories,
         teams: teamsDataToSaveFinal,
         note: finalGlobalNote || ''
