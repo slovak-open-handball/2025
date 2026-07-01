@@ -22,6 +22,10 @@ let shownNotificationIds = new Set();
 // Globálna premenná pre viditeľnosť stránok
 let pagesVisibility = {};
 
+// Globálna premenná pre stav registrácie
+let registrationDates = null;
+let hasCategories = false;
+
 /**
  * Kontroluje, či je používateľ "skutočne" prihlásený (email používateľ, nie anonymný)
  * @returns {boolean} - true pre email používateľa, false pre anonymného alebo neprihláseného
@@ -364,7 +368,6 @@ const updateNavigationLinks = () => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
         
-        // 🔥 ODSTRÁŇTE ŠPECIÁLNE PRAVIDLO - RIADTE SA LEN DB
         const isVisible = pageConfig && pageConfig.visible === true;
         
         if (isVisible) {
@@ -378,13 +381,13 @@ const updateNavigationLinks = () => {
         }
     });
 
-    // 3. Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
+    // Špeciálne spracovanie pre "register" - zachováme existujúcu logiku
     const registerLink = document.getElementById('register-link');
     if (registerLink) {
         updateRegistrationLinkVisibility(window.globalUserProfileData);
     }
 
-    // 4. Home link - vždy viditeľný
+    // Home link - vždy viditeľný
     const homeLink = document.getElementById('home-link');
     if (homeLink) {
         homeLink.classList.remove('hidden');
@@ -444,18 +447,73 @@ const checkCurrentPageAccess = () => {
 const getHoverColorByRole = (role) => {
   switch (role) {
     case 'admin':
-      return '#e3f2fd'; // bledá modrá pre admina
+      return '#e3f2fd';
     case 'hall':
-      return '#fef3e2'; // bledá oranžová pre hall
+      return '#fef3e2';
     case 'club':
-      return '#f3e5f5'; // bledá fialová pre club
+      return '#f3e5f5';
     case 'referee':
-      return '#e8f5e9'; // bledá zelená pre referee
+      return '#e8f5e9';
     case 'volunteer':
-      return '#fff3e0'; // bledá oranžová pre volunteer
+      return '#fff3e0';
     default:
-      return '#e3f2fd'; // bledá modrá pre neprihláseného
+      return '#e3f2fd';
   }
+};
+
+/**
+ * Aktualizuje text v hlavičke "Registrácia na turnaj"
+ * @param {boolean} isRegistrationOpen - true ak je registrácia otvorená
+ */
+const updateHeaderRegistrationText = (isRegistrationOpen) => {
+    const registrationHeaderText = document.getElementById('registration-header-text');
+    if (!registrationHeaderText) {
+        return;
+    }
+
+    // Kontrola či sú kategórie definované
+    if (!hasCategories) {
+        registrationHeaderText.classList.add('hidden');
+        return;
+    }
+
+    // Kontrola či je používateľ prihlásený
+    const isLoggedIn = isReallyLoggedIn();
+    
+    // Ak je používateľ prihlásený, text nezobrazujeme
+    if (isLoggedIn) {
+        registrationHeaderText.classList.add('hidden');
+        return;
+    }
+
+    if (isRegistrationOpen) {
+        registrationHeaderText.classList.remove('hidden');
+        registrationHeaderText.textContent = 'Registrácia na turnaj';
+    } else {
+        registrationHeaderText.classList.add('hidden');
+    }
+};
+
+/**
+ * Kontroluje, či je registrácia otvorená na základe dátumu a kategórií
+ * @returns {boolean} - true ak je registrácia otvorená
+ */
+const isRegistrationOpen = () => {
+    // Ak nie sú kategórie, registrácia nie je otvorená
+    if (!hasCategories) {
+        return false;
+    }
+
+    // Ak nie sú dáta o registrácii, registrácia nie je otvorená
+    if (!registrationDates || !registrationDates.registrationStartDate || !registrationDates.registrationEndDate) {
+        return false;
+    }
+
+    const now = new Date();
+    const registrationStart = registrationDates.registrationStartDate.toDate();
+    const registrationEnd = registrationDates.registrationEndDate.toDate();
+
+    return now >= registrationStart && now <= registrationEnd;
 };
 
 const updateHeaderLinks = (userProfileData) => {    
@@ -463,7 +521,7 @@ const updateHeaderLinks = (userProfileData) => {
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const headerElement = document.querySelector('header');
-    const navLinks = document.querySelectorAll('nav a'); // Všetky navigačné odkazy
+    const navLinks = document.querySelectorAll('nav a');
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
         return;
@@ -472,6 +530,9 @@ const updateHeaderLinks = (userProfileData) => {
     // NAJPRV AKTUALIZUJEME NAVIGAČNÉ ODKAZY (NEZÁVISLE OD PRIHLÁSENIA)
     updateNavigationLinks();
     checkCurrentPageAccess();
+
+    // AKTUALIZUJEME TEXT REGISTRÁCIE V HLAVIČKE
+    updateHeaderRegistrationText(isRegistrationOpen());
 
     if (window.location.pathname.includes('register.html') || window.location.pathname.includes('logged-in-registration.html')) {
         headerElement.style.backgroundColor = '#1D4ED8'; 
@@ -484,8 +545,14 @@ const updateHeaderLinks = (userProfileData) => {
             registerLink.classList.add('hidden');
         }
         
+        // Skryjeme text registrácie na registračných stránkach
+        const registrationHeaderText = document.getElementById('registration-header-text');
+        if (registrationHeaderText) {
+            registrationHeaderText.classList.add('hidden');
+        }
+        
         // Nastavenie hover farby pre registračné stránky
-        const hoverColor = '#e3f2fd'; // bledomodrá
+        const hoverColor = '#e3f2fd';
         navLinks.forEach(link => {
             link.addEventListener('mouseenter', function() {
                 this.style.backgroundColor = hoverColor;
@@ -559,7 +626,7 @@ const updateHeaderLinks = (userProfileData) => {
             headerElement.style.backgroundColor = getHeaderColorByRole(null);
             
             // NASTAVENIE HOVER FARBY PRE NEPRIHLÁSENÉHO POUŽÍVATEĽA
-            const hoverColor = '#e3f2fd'; // bledomodrá
+            const hoverColor = '#e3f2fd';
             navLinks.forEach(link => {
                 link.removeEventListener('mouseenter', link._mouseEnterHandler);
                 link.removeEventListener('mouseleave', link._mouseLeaveHandler);
@@ -594,13 +661,16 @@ const updateHeaderLinks = (userProfileData) => {
 
         updateRegistrationLinkVisibility(userProfileData);
         
+        // Znovu aktualizujeme text v hlavičke
+        updateHeaderRegistrationText(isRegistrationOpen());
+        
         headerElement.classList.remove('invisible');
     }
 };
 
 const initializeNavHoverStyles = () => {
     const navLinks = document.querySelectorAll('nav a');
-    const defaultHoverColor = '#e3f2fd'; // bledomodrá
+    const defaultHoverColor = '#e3f2fd';
     
     navLinks.forEach(link => {
         link._mouseEnterHandler = function() {
@@ -622,12 +692,8 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    const isRegistrationOpen = window.registrationDates && 
-        new Date() >= window.registrationDates.registrationStartDate.toDate() && 
-        new Date() <= window.registrationDates.registrationEndDate.toDate();
-    const hasCategories = window.hasCategories;
-
-    const shouldShowRegisterLink = hasCategories && isRegistrationOpen && !isReallyLoggedIn();
+    const isRegistrationOpenNow = isRegistrationOpen();
+    const shouldShowRegisterLink = hasCategories && isRegistrationOpenNow && !isReallyLoggedIn();
 
     if (shouldShowRegisterLink) {
         registerLink.classList.remove('hidden');
@@ -755,11 +821,17 @@ const setupFirestoreListeners = () => {
         const registrationDocRef = doc(window.db, "settings", "registration");
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                window.registrationDates = docSnap.data();
+                registrationDates = docSnap.data();
+                window.registrationDates = registrationDates;
             } else {
+                registrationDates = null;
                 window.registrationDates = null;
             }
             window.isRegistrationDataLoaded = true; 
+            
+            // Aktualizujeme text v hlavičke po zmene dátumu registrácie
+            updateHeaderRegistrationText(isRegistrationOpen());
+            updateRegistrationLinkVisibility(window.globalUserProfileData);
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             window.isRegistrationDataLoaded = true;
@@ -770,13 +842,19 @@ const setupFirestoreListeners = () => {
         onSnapshot(categoriesDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const categories = docSnap.data();
-                window.hasCategories = Object.keys(categories).length > 0;
+                hasCategories = Object.keys(categories).length > 0;
+                window.hasCategories = hasCategories;
             } else {
+                hasCategories = false;
                 window.hasCategories = false;
             }
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            
+            // Aktualizujeme text v hlavičke po zmene kategórií
+            updateHeaderRegistrationText(isRegistrationOpen());
+            updateRegistrationLinkVisibility(window.globalUserProfileData);
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             window.isCategoriesDataLoaded = true;
@@ -795,7 +873,9 @@ const setupFirestoreListeners = () => {
             clearInterval(registrationCheckIntervalId);
         }
         registrationCheckIntervalId = setInterval(() => {
-            if (window.registrationDates) {
+            if (registrationDates) {
+                // Pravidelne kontrolujeme stav registrácie
+                updateHeaderRegistrationText(isRegistrationOpen());
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
         }, 1000); 
@@ -821,6 +901,7 @@ const setupFirestoreListeners = () => {
     } catch (error) {
     }
 };
+
 window.loadHeaderAndScripts = async () => {
     
     try {
@@ -840,6 +921,12 @@ window.loadHeaderAndScripts = async () => {
         
         // INICIALIZÁCIA: Nastavíme základné hover štýly
         initializeNavHoverStyles();
+
+        // INICIALIZÁCIA: Skryjeme text registrácie na začiatku
+        const registrationHeaderText = document.getElementById('registration-header-text');
+        if (registrationHeaderText) {
+            registrationHeaderText.classList.add('hidden');
+        }
 
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
