@@ -466,31 +466,32 @@ const getHoverColorByRole = (role) => {
  * @param {boolean} isRegistrationOpen - true ak je registrácia otvorená
  */
 const updateHeaderRegistrationText = (isRegistrationOpen) => {
-    const registrationHeaderText = document.getElementById('registration-header-text');
-    if (!registrationHeaderText) {
-        return;
+    const registrationHeaderLink = document.getElementById('registration-header-link');
+    if (registrationHeaderLink) {
+        registrationHeaderLink.classList.add('hidden');
     }
 
     // Kontrola či sú kategórie definované
     if (!hasCategories) {
-        registrationHeaderText.classList.add('hidden');
+        registrationHeaderLink.classList.add('hidden');
         return;
     }
 
     // Kontrola či je používateľ prihlásený
     const isLoggedIn = isReallyLoggedIn();
     
-    // Ak je používateľ prihlásený, text nezobrazujeme
+    // Ak je používateľ prihlásený, odkaz nezobrazujeme
     if (isLoggedIn) {
-        registrationHeaderText.classList.add('hidden');
+        registrationHeaderLink.classList.add('hidden');
         return;
     }
 
     if (isRegistrationOpen) {
-        registrationHeaderText.classList.remove('hidden');
-        registrationHeaderText.textContent = 'Registrácia na turnaj';
+        registrationHeaderLink.classList.remove('hidden');
+        registrationHeaderLink.textContent = 'Registrácia na turnaj';
+        registrationHeaderLink.href = 'register.html';
     } else {
-        registrationHeaderText.classList.add('hidden');
+        registrationHeaderLink.classList.add('hidden');
     }
 };
 
