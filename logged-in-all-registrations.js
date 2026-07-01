@@ -4139,7 +4139,8 @@ function AllRegistrationsApp() {
                     postalCode: '',
                     country: ''
                   }
-                }
+                },
+                _privateData: privateData
               };
   
               // Zlúčenie tímových údajov - pridanie dátumov narodenia a adries z usersprivate
