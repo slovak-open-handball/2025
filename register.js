@@ -775,12 +775,11 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         if (authError.code) {
             switch (authError.code) {
                 case 'auth/email-already-in-use':
-                    // OPRAVA: Odstránenie nefunkčného HTML a automatické presmerovanie po 3 sekundách.
                     authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.';
                     dispatchAppNotification(authErrorMessage, 'error');
                     setTimeout(() => {
                         setPage(1);
-                    }, 3000); // 3-sekundová pauza pred presmerovaním
+                    }, 3000);
                     return;
                 case 'auth/invalid-email':
                     authErrorMessage = 'Neplatný formát e-mailovej adresy.';
@@ -800,7 +799,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     }
 
     const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
+    const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
+    
     try {
+      // Normalizácia tímových údajov
       for (const categoryName in teamsDataToSaveFinal) {
           const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
           teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => {
@@ -876,7 +878,6 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
                   }
               })) || [];
 
-              // NOVINKA: Normalizácia driverDetailsMale a driverDetailsFemale
               updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
                   ...d,
                   firstName: d.firstName || '', lastName: d.lastName || '', dateOfBirth: d.dateOfBirth || '',
@@ -905,6 +906,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           });
       }
 
+      // PRVÝ ZÁPIS: do kolekcie 'users' (všetky údaje)
       await setDoc(userDocRef, {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -920,14 +922,122 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
-
+        
         dataEditDeadline: dataEditDeadline,
         rosterEditDeadline: rosterEditDeadline,
         
         categories: formData.categories,
         teams: teamsDataToSaveFinal,
-        note: finalGlobalNote || '' // NOVINKA: Uloženie poznámky zo samostatného propu
+        note: finalGlobalNote || ''
       });
+
+      // DRUHÝ ZÁPIS: do kolekcie 'usersprivate' (LEN adresy a dátumy narodenia)
+      // Bez mien, priezvisk, emailu, telefónu a iných osobných údajov
+      const privateData = {
+        // Iba adresy z hlavného formulára (bez mien)
+        address: {
+          country: formData.country || '',
+          city: formData.city || '',
+          postalCode: formData.postalCode || '',
+          street: formData.street || '',
+          houseNumber: formData.houseNumber || ''
+        },
+        // Fakturačná adresa (bez názvu klubu, IČO, DIČ, IČ DPH - to sú obchodné údaje)
+        billingAddress: {
+          street: formData.street || '',
+          houseNumber: formData.houseNumber || '',
+          city: formData.city || '',
+          postalCode: formData.postalCode || '',
+          country: formData.country || ''
+        },
+        // Dátumy narodenia a adresy všetkých osôb (bez mien)
+        persons: {}
+      };
+
+      // Pre každú kategóriu a tím vytvoríme štruktúru s iba adresami a dátumami narodenia
+      Object.keys(teamsDataToSaveFinal).forEach(categoryName => {
+        const teams = teamsDataToSaveFinal[categoryName];
+        if (!Array.isArray(teams)) return;
+
+        teams.forEach((team, teamIndex) => {
+          const teamKey = `${categoryName}_team${teamIndex + 1}`;
+          privateData.persons[teamKey] = {};
+
+          // Hráči (playerDetails) - LEN dátum narodenia a adresa
+          if (team.playerDetails && Array.isArray(team.playerDetails)) {
+            privateData.persons[teamKey].players = team.playerDetails.map(player => ({
+              dateOfBirth: player.dateOfBirth || '',
+              address: player.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+              }
+            }));
+          }
+
+          // Ženy - členky tímu (womenTeamMemberDetails) - LEN dátum narodenia a adresa
+          if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+            privateData.persons[teamKey].womenTeamMembers = team.womenTeamMemberDetails.map(member => ({
+              dateOfBirth: member.dateOfBirth || '',
+              address: member.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+              }
+            }));
+          }
+
+          // Muži - členovia tímu (menTeamMemberDetails) - LEN dátum narodenia a adresa
+          if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+            privateData.persons[teamKey].menTeamMembers = team.menTeamMemberDetails.map(member => ({
+              dateOfBirth: member.dateOfBirth || '',
+              address: member.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+              }
+            }));
+          }
+
+          // Šoféri - muži (driverDetailsMale) - LEN dátum narodenia a adresa
+          if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+            privateData.persons[teamKey].driversMale = team.driverDetailsMale.map(driver => ({
+              dateOfBirth: driver.dateOfBirth || '',
+              address: driver.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+              }
+            }));
+          }
+
+          // Šoféri - ženy (driverDetailsFemale) - LEN dátum narodenia a adresa
+          if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+            privateData.persons[teamKey].driversFemale = team.driverDetailsFemale.map(driver => ({
+              dateOfBirth: driver.dateOfBirth || '',
+              address: driver.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+              }
+            }));
+          }
+        });
+      });
+
+      // Uložíme do usersprivate
+      await setDoc(userPrivateDocRef, privateData);
+
     } catch (firestoreError) {
         let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
         if (firestoreError.code === 'permission-denied') {
@@ -945,6 +1055,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         return;
     }
 
+    // Odoslanie emailu (rovnaké ako predtým)
     try {
         const payload = {
             action: 'sendRegistrationEmail',
@@ -996,8 +1107,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     });
     setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
     setTeamsDataFromPage4({});
-    setGlobalNote(''); // NOVINKA: Reset globálnej poznámky
-    // setPage(1);  // Už sa volá vyššie v prípade chyby s emailom
+    setGlobalNote('');
 
     setTimeout(async () => {
       if (authInstance && authInstance.currentUser) {
@@ -1013,7 +1123,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     setLoading(false);
     isRegisteringRef.current = false;
   }
-};  
+};
 
   const isPage1FormDataEmpty = (data) => {
     if (data.firstName.trim() !== '' ||
