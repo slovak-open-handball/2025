@@ -412,13 +412,10 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
         const userId = userProfileData.id;
         userIdRef.current = userId;
         const userDocRef = doc(window.db, 'users', userId);
-        
-        console.log('MyDataApp: 📡 Nastavujem real-time listener pre users kolekciu:', userId);
-        
+                
         const unsubscribeUsers = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const updatedUserData = docSnap.data();
-                console.log('MyDataApp: 🔄 Zmena v users dokumente:', updatedUserData);
                 
                 // Zlúčime dáta - zachováme existujúce private dáta
                 setUserProfileData(prevData => {
@@ -429,26 +426,14 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                         uid: userId,
                     };
                     
-                    console.log('MyDataApp: 📦 Aktualizované dáta po zmene v users:', {
-                        dataEditDeadline: mergedData.dataEditDeadline,
-                        rosterEditDeadline: mergedData.rosterEditDeadline,
-                        firstName: mergedData.firstName,
-                        lastName: mergedData.lastName,
-                        email: mergedData.email
-                    });
-                    
                     return mergedData;
                 });
                 
-            } else {
-                console.warn('MyDataApp: Dokument používateľa v users neexistuje');
             }
         }, (error) => {
-            console.error('MyDataApp: Chyba pri listenri users:', error);
         });
         
         return () => {
-            console.log('MyDataApp: 📡 Odpájam real-time listener pre users');
             unsubscribeUsers();
         };
     }, [userProfileData?.id]);
@@ -462,14 +447,11 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
         }
         
         const userId = userProfileData.id;
-        const privateDocRef = doc(window.db, 'usersprivate', userId);
-        
-        console.log('MyDataApp: 📡 Nastavujem real-time listener pre usersprivate kolekciu:', userId);
+        const privateDocRef = doc(window.db, 'usersprivate', userId);        
         
         const unsubscribePrivate = onSnapshot(privateDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const privateData = docSnap.data();
-                console.log('MyDataApp: 🔄 Zmena v usersprivate dokumente:', privateData);
                 
                 // Aktualizujeme len private dáta
                 setUserProfileData(prevData => {
@@ -480,23 +462,14 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                         persons: privateData.persons || {},
                     };
                     
-                    console.log('MyDataApp: 📦 Aktualizované dáta po zmene v usersprivate:', {
-                        address: mergedData.address,
-                        billingAddress: mergedData.billingAddress
-                    });
-                    
                     return mergedData;
                 });
                 
-            } else {
-                console.warn('MyDataApp: Dokument používateľa v usersprivate neexistuje');
             }
         }, (error) => {
-            console.error('MyDataApp: Chyba pri listenri usersprivate:', error);
         });
         
         return () => {
-            console.log('MyDataApp: 📡 Odpájam real-time listener pre usersprivate');
             unsubscribePrivate();
         };
     }, [userProfileData?.id]);
@@ -513,25 +486,19 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     useEffect(() => {
         let timer;
         
-        const updateCanEditStatus = () => {
-            console.log('updateCanEditStatus - userProfileData:', userProfileData);
-            console.log('updateCanEditStatus - dataEditDeadline:', userProfileData?.dataEditDeadline);
-            console.log('updateCanEditStatus - settingsRegistrationDates:', settingsRegistrationDates);
-            
+        const updateCanEditStatus = () => {            
             // NASTAVÍME PREDVOLENÉ HODNOTY
             setCanEdit(false);
             setIsPasswordChangeOnlyMode(false);
             
             // KONTROLA: Či máme userProfileData
             if (!userProfileData) {
-                console.log('updateCanEditStatus: userProfileData chýba');
                 return;
             }
             
             // ADMIN - vždy môže editovať
             const isAdmin = userProfileData.role === 'admin';
             if (isAdmin) {
-                console.log('updateCanEditStatus: Používateľ je admin, povoľujem editáciu');
                 setCanEdit(true);
                 return;
             }
@@ -553,7 +520,6 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                 else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
-                console.log('updateCanEditStatus: Používam individuálny deadline z userProfileData');
             }
             
             // 2. AK NEMÁME INDIVIDUÁLNY DEADLINE, POUŽIJEME GLOBÁLNY ZO SETTINGS
@@ -570,36 +536,24 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                 else {
                     deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline);
                 }
-                console.log('updateCanEditStatus: Používam globálny deadline zo settings');
             }
             
             // 3. AK NEMÁME ŽIADNY DEADLINE, NEPOVOLÍME EDITÁCIU
             if (!deadlineDate) {
-                console.log('updateCanEditStatus: Žiadny deadline dostupný, editácia zakázaná');
                 setCanEdit(false);
                 setIsPasswordChangeOnlyMode(false);
                 return;
             }
             
-            console.log('=== DEADLINE CHECK ===');
-            console.log('Deadline date:', deadlineDate);
-            console.log('Deadline timestamp:', deadlineDate.getTime());
-            console.log('Current time:', new Date());
-            console.log('Current timestamp:', Date.now());
-            console.log('Is now <= deadline?', Date.now() <= deadlineDate.getTime());
-            console.log('User role:', userProfileData.role);
-            
             const deadlineMillis = deadlineDate.getTime();
             const nowMillis = Date.now();
             
             if (nowMillis <= deadlineMillis) {
-                console.log('updateCanEditStatus: ✅ EDITÁCIA POVOLENÁ (deadline ešte neuplynul)');
                 setCanEdit(true);
                 // Nastavíme timer na automatické vypnutie po uplynutí deadline
                 if (timer) clearTimeout(timer);
                 if (deadlineMillis - nowMillis > 0) {
                     timer = setTimeout(() => {
-                        console.log('updateCanEditStatus: ⏰ DEADLINE UPLYNUL, vypínam editáciu');
                         setCanEdit(false);
                         if (userProfileData.role === 'club') {
                             setIsPasswordChangeOnlyMode(true);
@@ -609,7 +563,6 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                     }, deadlineMillis - nowMillis + 100);
                 }
             } else {
-                console.log('updateCanEditStatus: ❌ EDITÁCIA ZAKÁZANÁ (deadline už uplynul)');
                 setCanEdit(false);
                 if (userProfileData.role === 'club') {
                     setIsPasswordChangeOnlyMode(true);
@@ -701,12 +654,10 @@ let pendingUserProfileData = null;
 // ============================================================
 const loadUserPrivateData = async (userId) => {
     if (!window.db) {
-        console.warn('loadUserPrivateData: window.db nie je inicializované');
         return {};
     }
     
     if (!userId) {
-        console.warn('loadUserPrivateData: Chýba userId');
         return {};
     }
     
@@ -715,12 +666,10 @@ const loadUserPrivateData = async (userId) => {
         const privateDocSnap = await getDoc(privateDocRef);
         if (privateDocSnap.exists()) {
             const data = privateDocSnap.data();
-            console.log('loadUserPrivateData: Načítané dáta z usersprivate:', data);
             return data;
         }
         return {};
     } catch (error) {
-        console.error('Chyba pri načítaní usersprivate:', error);
         return {};
     }
 };
@@ -731,12 +680,8 @@ const renderMyDataApp = (userProfileData) => {
         try {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log('renderMyDataApp: Aplikácia vykreslená');
         } catch (error) {
-            console.error('renderMyDataApp: Chyba pri vykresľovaní:', error);
         }
-    } else {
-        console.warn('renderMyDataApp: rootElement alebo ReactDOM nie je dostupný');
     }
 };
 
@@ -762,7 +707,6 @@ const processUserData = async (userProfileData) => {
     const userId = userProfileData.id || userProfileData.uid;
     
     if (!userId) {
-        console.warn('processUserData: Chýba id/uid v userProfileData', userProfileData);
         renderMyDataApp(userProfileData);
         return;
     }
@@ -772,18 +716,9 @@ const processUserData = async (userProfileData) => {
     if (window.db) {
         try {
             privateData = await loadUserPrivateData(userId);
-            console.log('processUserData: Načítané private dáta:', privateData);
-            
-            if (privateData.address) {
-                console.log('processUserData: Adresa z private dát:', privateData.address);
-            } else {
-                console.warn('processUserData: V private dátach chýba pole "address"');
-            }
         } catch (error) {
-            console.error('processUserData: Chyba pri načítaní private dát:', error);
         }
     } else {
-        console.warn('processUserData: window.db nie je dostupný, private dáta sa nenačítajú');
         pendingUserProfileData = userProfileData;
         return;
     }
@@ -796,20 +731,16 @@ const processUserData = async (userProfileData) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-            console.log('processUserData: Dáta z users:', userData);
             
             // Ak má používateľ dataEditDeadline, použijeme ho
             if (userData.dataEditDeadline) {
-                console.log('processUserData: Používateľ má individuálny dataEditDeadline');
                 userProfileData.dataEditDeadline = userData.dataEditDeadline;
             }
             if (userData.rosterEditDeadline) {
-                console.log('processUserData: Používateľ má individuálny rosterEditDeadline');
                 userProfileData.rosterEditDeadline = userData.rosterEditDeadline;
             }
         }
     } catch (error) {
-        console.error('processUserData: Chyba pri načítaní users dát:', error);
     }
     
     // Zlúčime dáta z users a usersprivate
@@ -820,13 +751,6 @@ const processUserData = async (userProfileData) => {
         billingAddress: privateData.billingAddress || {},
         persons: privateData.persons || {},
     };
-    
-    console.log('processUserData: Zlúčené dáta:', {
-        address: mergedData.address,
-        billing: mergedData.billing,
-        dataEditDeadline: mergedData.dataEditDeadline,
-        rosterEditDeadline: mergedData.rosterEditDeadline
-    });
     
     renderMyDataApp(mergedData);
     
@@ -864,7 +788,6 @@ const processUserData = async (userProfileData) => {
 
 const handleDataUpdateAndRender = async (event) => {
     const userProfileData = event.detail;
-    console.log('handleDataUpdateAndRender: Prijaté dáta:', userProfileData ? 'má dáta' : 'null');
     
     if (userProfileData) {
         window.globalUserProfileData = userProfileData;
@@ -873,7 +796,6 @@ const handleDataUpdateAndRender = async (event) => {
     if (isDbInitialized && window.db) {
         await processUserData(userProfileData);
     } else if (userProfileData) {
-        console.log('handleDataUpdateAndRender: db ešte nie je inicializovaná, ukladám dáta na neskôr');
         pendingUserProfileData = userProfileData;
     } else {
         const rootElement = document.getElementById('root');
@@ -893,19 +815,15 @@ const handleDataUpdateAndRender = async (event) => {
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 window.addEventListener('dbInitialized', async () => {
-    console.log('logged-in-my-data: dbInitialized event received');
     isDbInitialized = true;
     
     if (pendingUserProfileData) {
-        console.log('logged-in-my-data: Spracúvam čakajúce dáta po inicializácii db');
         const dataToProcess = pendingUserProfileData;
         pendingUserProfileData = null;
         await processUserData(dataToProcess);
     } else if (window.globalUserProfileData) {
-        console.log('logged-in-my-data: Spracúvam globálne dáta po inicializácii db');
         await processUserData(window.globalUserProfileData);
     } else {
-        console.log('logged-in-my-data: Žiadne dáta po inicializácii db');
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
@@ -920,19 +838,14 @@ window.addEventListener('dbInitialized', async () => {
     }
 });
 
-console.log('logged-in-my-data: Inicializácia...');
-
 if (window.db) {
     isDbInitialized = true;
-    console.log('logged-in-my-data: db už je inicializovaný');
 }
 
 if (window.globalUserProfileData) {
-    console.log('logged-in-my-data: Mám globálne dáta');
     if (isDbInitialized) {
         processUserData(window.globalUserProfileData);
     } else {
-        console.log('logged-in-my-data: Čakám na inicializáciu db...');
         pendingUserProfileData = window.globalUserProfileData;
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -947,7 +860,6 @@ if (window.globalUserProfileData) {
         }
     }
 } else {
-    console.log('logged-in-my-data: Žiadne globálne dáta');
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
