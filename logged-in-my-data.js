@@ -364,7 +364,7 @@ const globalDataStore = (() => {
 })();
 
 // ============================================================
-// HLAVNÁ KOMPONENTA MyDataApp S REAL-TIME LISTENEROM
+// HLAVNÁ KOMPONENTA MyDataApp S REAL-TIME LISTENEROM PRE OBE KOLEKCIE
 // ============================================================
 const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -374,6 +374,7 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
     const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
+    const userIdRef = useRef(null);
     
     const { 
         isGlobalAuthReady, 
@@ -401,7 +402,7 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     }, [window.db]);
     
     // ============================================================
-    // REAL-TIME LISTENER PRE SLEDOVANIE ZMIEN V DOKUMENTE POUŽÍVATEĽA
+    // REAL-TIME LISTENER PRE SLEDOVANIE ZMIEN V users KOLEKCII
     // ============================================================
     useEffect(() => {
         if (!window.db || !userProfileData?.id) {
@@ -409,60 +410,96 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
         }
         
         const userId = userProfileData.id;
+        userIdRef.current = userId;
         const userDocRef = doc(window.db, 'users', userId);
         
-        console.log('MyDataApp: Nastavujem real-time listener pre používateľa:', userId);
+        console.log('MyDataApp: 📡 Nastavujem real-time listener pre users kolekciu:', userId);
         
-        const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+        const unsubscribeUsers = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const updatedUserData = docSnap.data();
-                console.log('MyDataApp: 🔄 Zmena v dokumente používateľa:', updatedUserData);
+                console.log('MyDataApp: 🔄 Zmena v users dokumente:', updatedUserData);
                 
-                // Načítame aj private dáta pri zmene
-                let privateData = {};
-                try {
-                    const privateDocRef = doc(window.db, 'usersprivate', userId);
-                    const privateDocSnap = await getDoc(privateDocRef);
-                    if (privateDocSnap.exists()) {
-                        privateData = privateDocSnap.data();
-                    }
-                } catch (error) {
-                    console.error('MyDataApp: Chyba pri načítaní private dát:', error);
-                }
-                
-                // Zlúčime dáta
-                const mergedData = {
-                    ...updatedUserData,
-                    id: userId,
-                    uid: userId,
-                    address: privateData.address || {},
-                    billingAddress: privateData.billingAddress || {},
-                    persons: privateData.persons || {},
-                };
-                
-                console.log('MyDataApp: 📦 Aktualizované dáta:', {
-                    dataEditDeadline: mergedData.dataEditDeadline,
-                    rosterEditDeadline: mergedData.rosterEditDeadline,
-                    firstName: mergedData.firstName,
-                    lastName: mergedData.lastName,
-                    email: mergedData.email
+                // Zlúčime dáta - zachováme existujúce private dáta
+                setUserProfileData(prevData => {
+                    const mergedData = {
+                        ...prevData,
+                        ...updatedUserData,
+                        id: userId,
+                        uid: userId,
+                    };
+                    
+                    console.log('MyDataApp: 📦 Aktualizované dáta po zmene v users:', {
+                        dataEditDeadline: mergedData.dataEditDeadline,
+                        rosterEditDeadline: mergedData.rosterEditDeadline,
+                        firstName: mergedData.firstName,
+                        lastName: mergedData.lastName,
+                        email: mergedData.email
+                    });
+                    
+                    return mergedData;
                 });
                 
-                // Aktualizujeme stav
-                setUserProfileData(mergedData);
-                
             } else {
-                console.warn('MyDataApp: Dokument používateľa neexistuje');
+                console.warn('MyDataApp: Dokument používateľa v users neexistuje');
             }
         }, (error) => {
-            console.error('MyDataApp: Chyba pri listenri:', error);
+            console.error('MyDataApp: Chyba pri listenri users:', error);
         });
         
         return () => {
-            console.log('MyDataApp: Odpájam real-time listener');
-            unsubscribe();
+            console.log('MyDataApp: 📡 Odpájam real-time listener pre users');
+            unsubscribeUsers();
         };
-    }, [userProfileData?.id]); // Znovu sa spustí len ak sa zmení ID používateľa
+    }, [userProfileData?.id]);
+    
+    // ============================================================
+    // REAL-TIME LISTENER PRE SLEDOVANIE ZMIEN V usersprivate KOLEKCII
+    // ============================================================
+    useEffect(() => {
+        if (!window.db || !userProfileData?.id) {
+            return;
+        }
+        
+        const userId = userProfileData.id;
+        const privateDocRef = doc(window.db, 'usersprivate', userId);
+        
+        console.log('MyDataApp: 📡 Nastavujem real-time listener pre usersprivate kolekciu:', userId);
+        
+        const unsubscribePrivate = onSnapshot(privateDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+                const privateData = docSnap.data();
+                console.log('MyDataApp: 🔄 Zmena v usersprivate dokumente:', privateData);
+                
+                // Aktualizujeme len private dáta
+                setUserProfileData(prevData => {
+                    const mergedData = {
+                        ...prevData,
+                        address: privateData.address || {},
+                        billingAddress: privateData.billingAddress || {},
+                        persons: privateData.persons || {},
+                    };
+                    
+                    console.log('MyDataApp: 📦 Aktualizované dáta po zmene v usersprivate:', {
+                        address: mergedData.address,
+                        billingAddress: mergedData.billingAddress
+                    });
+                    
+                    return mergedData;
+                });
+                
+            } else {
+                console.warn('MyDataApp: Dokument používateľa v usersprivate neexistuje');
+            }
+        }, (error) => {
+            console.error('MyDataApp: Chyba pri listenri usersprivate:', error);
+        });
+        
+        return () => {
+            console.log('MyDataApp: 📡 Odpájam real-time listener pre usersprivate');
+            unsubscribePrivate();
+        };
+    }, [userProfileData?.id]);
     
     useEffect(() => {
         if (userProfileData) {
