@@ -194,9 +194,7 @@
 
                     const root = ReactDOM.createRoot(document.getElementById('root'));
                     root.render(React.createElement(window.RostersApp, null));
-                    console.log("logged-in-rosters.html: React App bola vykreslená.");
                 } catch (error) {
-                    console.error("logged-in-rosters.html: Chyba pri vykresľovaní React aplikácie:", error);
                 }
             } else {
                 // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
@@ -221,10 +219,7 @@
             // Zabezpečíme, že hlavička je načítaná a inicializovaná
             if (typeof window.loadHeaderAndScripts === 'function') {
                 await window.loadHeaderAndScripts();
-                console.log("logged-in-rosters.html: Hlavička načítaná. Spúšťam renderovanie.");
                 checkReadyAndRender();
-            } else {
-                console.error("logged-in-rosters.html: Funkcia loadHeaderAndScripts nie je definovaná.");
             }
         });
     </script>
