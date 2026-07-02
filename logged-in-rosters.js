@@ -2576,7 +2576,6 @@ const handleDeleteTeam = async (teamToDelete) => {
         if (userEmail) {
             const changes = [
                 `Tím "${teamName}" (${category}) bol vymazaný`,
-                `Počet zostávajúcich tímov v kategórii: ${currentTeamsCopy[cat]?.length || 0}`
             ];
             const notificationsRef = collection(db, 'notifications');
             await addDoc(notificationsRef, {
