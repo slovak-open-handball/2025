@@ -661,35 +661,87 @@ function MemberDetailsModal({
                 if (isEditMode && memberData) {
                     setFirstName(memberData.firstName || '');
                     setLastName(memberData.lastName || '');
+                    setJerseyNumber(memberData.jerseyNumber || '');
+                    setRegistrationNumber(memberData.registrationNumber || '');
                     
                     // Skúsime načítať dátum narodenia a adresu z usersprivate
+                    let foundPrivateData = false;
+                    
                     if (memberData._privateData && teamOfMemberToEdit) {
                         const teamKey = `${teamOfMemberToEdit.categoryName}_team${teamOfMemberToEdit._teamIndex + 1}`;
                         const privateTeamData = memberData._privateData.persons?.[teamKey];
                         
                         if (privateTeamData) {
-                            // Mapovanie názvov polí
-                            const privateArrayName = memberData.originalType === 'player' ? 'players' :
-                                                    memberData.originalType === 'womenTeamMember' ? 'womenTeamMembers' :
-                                                    memberData.originalType === 'menTeamMember' ? 'menTeamMembers' :
-                                                    memberData.originalType === 'driverFemale' ? 'driversFemale' :
-                                                    'driversMale';
+                            // Mapovanie názvov polí - musí zodpovedať štruktúre v register.js
+                            let privateArrayName;
+                            switch (memberData.originalType) {
+                                case 'player':
+                                    privateArrayName = 'players';
+                                    break;
+                                case 'womenTeamMember':
+                                    privateArrayName = 'womenTeamMembers';
+                                    break;
+                                case 'menTeamMember':
+                                    privateArrayName = 'menTeamMembers';
+                                    break;
+                                case 'driverFemale':
+                                    privateArrayName = 'driversFemale';
+                                    break;
+                                case 'driverMale':
+                                    privateArrayName = 'driversMale';
+                                    break;
+                                default:
+                                    privateArrayName = null;
+                            }
                             
-                            const privateMember = privateTeamData[privateArrayName]?.[memberData._memberIndex];
-                            if (privateMember) {
-                                setDateOfBirth(privateMember.dateOfBirth || '');
-                                setStreet(privateMember.address?.street || '');
-                                setHouseNumber(privateMember.address?.houseNumber || '');
-                                setPostalCode(privateMember.address?.postalCode || '');
-                                setCity(privateMember.address?.city || '');
-                                setCountry(privateMember.address?.country || '');
+                            if (privateArrayName && privateTeamData[privateArrayName]) {
+                                // Skúsime nájsť člena podľa mena a priezviska (ak _memberIndex nefunguje)
+                                let privateMember = null;
+                                
+                                // Najprv skúsime podľa indexu
+                                if (memberData._memberIndex !== undefined && privateTeamData[privateArrayName][memberData._memberIndex]) {
+                                    privateMember = privateTeamData[privateArrayName][memberData._memberIndex];
+                                } else {
+                                    // Ak index nefunguje, skúsime podľa mena a priezviska
+                                    privateMember = privateTeamData[privateArrayName].find(
+                                        p => p.firstName === memberData.firstName && 
+                                             p.lastName === memberData.lastName
+                                    );
+                                }
+                                
+                                if (privateMember) {
+                                    setDateOfBirth(privateMember.dateOfBirth || '');
+                                    if (privateMember.address) {
+                                        setStreet(privateMember.address.street || '');
+                                        setHouseNumber(privateMember.address.houseNumber || '');
+                                        setPostalCode(privateMember.address.postalCode || '');
+                                        setCity(privateMember.address.city || '');
+                                        setCountry(privateMember.address.country || '');
+                                    }
+                                    foundPrivateData = true;
+                                }
                             }
                         }
                     }
                     
-                    setJerseyNumber(memberData.jerseyNumber || '');
-                    setRegistrationNumber(memberData.registrationNumber || '');
-    
+                    // Ak sme nenašli dáta v usersprivate, použijeme údaje z memberData (fallback)
+                    if (!foundPrivateData) {
+                        setDateOfBirth(memberData.dateOfBirth || '');
+                        if (memberData.address) {
+                            setStreet(memberData.address.street || '');
+                            setHouseNumber(memberData.address.houseNumber || '');
+                            setPostalCode(memberData.address.postalCode || '');
+                            setCity(memberData.address.city || '');
+                            setCountry(memberData.address.country || '');
+                        } else {
+                            setStreet('');
+                            setHouseNumber('');
+                            setPostalCode('');
+                            setCity('');
+                            setCountry('');
+                        }
+                    }
+                    
                     if (memberType === 'player' && memberData.registrationNumber) {
                         checkRegistrationDuplicate(memberData.registrationNumber);
                     }
@@ -2420,6 +2472,7 @@ useEffect(() => {
                   type: 'Hráč',
                   _memberIndex: index,
                   _privateData: team._privateData,
+                  _teamIndex: team._teamIndex,
                   ...player,
               });
           });
@@ -2763,7 +2816,11 @@ const handleOpenAddMemberTypeModal = (team) => {
   };
 
 const handleOpenEditMemberDetailsModal = (team, member) => {
-    setTeamOfMemberToEdit(team);
+    setTeamOfMemberToEdit({
+        ...team,
+        categoryName: team.categoryName,
+        _teamIndex: team._teamIndex,  
+    });
     setMemberToEdit(member);
     setMemberTypeToAdd(member.originalType);
     setTeamAccommodationTypeToAddMemberTo(team.accommodation?.type || 'bez ubytovania');
