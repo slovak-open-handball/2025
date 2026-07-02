@@ -3261,9 +3261,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         
                                 // 🔧 Zistíme, či ide o úpravu existujúceho člena tímu
                                 const isEditingTeamMember = 
-                                    (editModalTitle.includes('Upraviť hráč') ||
-                                     editModalTitle.includes('Upraviť člen realizačného tímu') ||
-                                     editModalTitle.includes('Upraviť šofér')) &&
+                                    (editModalTitle.toLowerCase().includes('upraviť hráč') ||
+                                     editModalTitle.toLowerCase().includes('upraviť člen realizačného tímu') ||
+                                     editModalTitle.toLowerCase().includes('upraviť šofér')) &&
                                     originalDataPath && 
                                     (originalDataPath.includes('playerDetails') ||
                                      originalDataPath.includes('menTeamMemberDetails') ||
