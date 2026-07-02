@@ -3000,7 +3000,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         return;
     }
 
-    const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+    // Vytvoríme hlbokú kópiu tímu
+    const teamToUpdate = JSON.parse(JSON.stringify(currentTeams[teamCategory][teamIndex]));
     let memberArrayName;
     switch (memberToEdit.originalType) {
         case 'player':          memberArrayName = 'playerDetails'; break;
@@ -3025,16 +3026,24 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     }
 
     const originalMemberData = memberArray[memberIndex];
+    
+    // === PRIPRAVÍME DÁTA PRE USERS (LEN ZÁKLADNÉ ÚDAJE - BEZ ADRESY A DÁTUMU) ===
     const memberForUsers = {
-        ...originalMemberData,
         firstName: updatedMemberDetails.firstName !== undefined ? updatedMemberDetails.firstName : originalMemberData.firstName || '',
         lastName: updatedMemberDetails.lastName !== undefined ? updatedMemberDetails.lastName : originalMemberData.lastName || '',
         jerseyNumber: updatedMemberDetails.jerseyNumber !== undefined ? updatedMemberDetails.jerseyNumber : originalMemberData.jerseyNumber || null,
         registrationNumber: updatedMemberDetails.registrationNumber !== undefined ? updatedMemberDetails.registrationNumber : originalMemberData.registrationNumber || null,
     };
-    delete memberForUsers.dateOfBirth;
-    delete memberForUsers.address;
+    // ZACHOVÁME AJ ĎALŠIE POLIA, KTORÉ MÔŽU BYŤ V ORIGINÁLI (napr. originalType, atď.)
+    // ale NIKDY NEPRIDÁME dateOfBirth a address
+    // Ak sú v originalMemberData nejaké ďalšie polia, zachováme ich
+    for (const key in originalMemberData) {
+        if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData'].includes(key)) {
+            memberForUsers[key] = originalMemberData[key];
+        }
+    }
 
+    // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S ADRESOU A DÁTUMOM) ===
     const memberForPrivate = {
         dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined ? updatedMemberDetails.dateOfBirth : originalMemberData.dateOfBirth || '',
         address: updatedMemberDetails.address !== undefined ? updatedMemberDetails.address : originalMemberData.address || {
@@ -3046,12 +3055,76 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         }
     };
 
+    // Aktualizujeme člena v poli (BEZ ADRESY A DÁTUMU)
     memberArray[memberIndex] = memberForUsers;
-    currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
+    // 🔥 DÔLEŽITÉ: Pre každý tím v kategórii MUSÍME ZABEZPEČIŤ, ŽE ŽIADNY ČLEN NEMÁ ADRESU A DÁTUM
+    // Prejdeme všetky polia členov a odstránime dateOfBirth a address
+    const cleanTeamMembers = (team) => {
+        const cleanTeam = { ...team };
+        
+        // Vyčistíme playerDetails
+        if (cleanTeam.playerDetails) {
+            cleanTeam.playerDetails = cleanTeam.playerDetails.map(p => {
+                const clean = { ...p };
+                delete clean.dateOfBirth;
+                delete clean.address;
+                return clean;
+            });
+        }
+        
+        // Vyčistíme womenTeamMemberDetails
+        if (cleanTeam.womenTeamMemberDetails) {
+            cleanTeam.womenTeamMemberDetails = cleanTeam.womenTeamMemberDetails.map(m => {
+                const clean = { ...m };
+                delete clean.dateOfBirth;
+                delete clean.address;
+                return clean;
+            });
+        }
+        
+        // Vyčistíme menTeamMemberDetails
+        if (cleanTeam.menTeamMemberDetails) {
+            cleanTeam.menTeamMemberDetails = cleanTeam.menTeamMemberDetails.map(m => {
+                const clean = { ...m };
+                delete clean.dateOfBirth;
+                delete clean.address;
+                return clean;
+            });
+        }
+        
+        // Vyčistíme driverDetailsFemale
+        if (cleanTeam.driverDetailsFemale) {
+            cleanTeam.driverDetailsFemale = cleanTeam.driverDetailsFemale.map(d => {
+                const clean = { ...d };
+                delete clean.dateOfBirth;
+                delete clean.address;
+                return clean;
+            });
+        }
+        
+        // Vyčistíme driverDetailsMale
+        if (cleanTeam.driverDetailsMale) {
+            cleanTeam.driverDetailsMale = cleanTeam.driverDetailsMale.map(d => {
+                const clean = { ...d };
+                delete clean.dateOfBirth;
+                delete clean.address;
+                return clean;
+            });
+        }
+        
+        return cleanTeam;
+    };
+
+    // Vyčistíme celý tím
+    const cleanedTeam = cleanTeamMembers(teamToUpdate);
+    currentTeams[teamCategory][teamIndex] = cleanedTeam;
 
     try {
+        // === 1. ULOŽÍME DO USERS (BEZ ADRIES A DÁTUMOV) ===
         await updateDoc(userDocRef, { teams: currentTeams });
 
+        // === 2. ULOŽÍME DO USERSPRIVATE (S ADRESAMI A DÁTUMAMI) ===
         let privateData = {};
         try {
             const privateDocSnapshot = await getDoc(userPrivateDocRef);
@@ -3059,6 +3132,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                 privateData = privateDocSnapshot.data();
             }
         } catch (e) {
+            // Dokument ešte neexistuje
         }
 
         if (!privateData.persons) privateData.persons = {};
@@ -3079,6 +3153,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
+        // === NOTIFIKÁCIA ===
         const changes = getChangesForNotification(
             { 
                 firstName: originalMemberData.firstName, 
@@ -3115,6 +3190,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         setTeamOfMemberToEdit(null);
         setShowMemberDetailsModal(false);
     } catch (error) {
+        console.error('Chyba pri aktualizácii člena tímu:', error);
         showLocalNotification('Nastala chyba pri aktualizácii údajov člena tímu.', 'error');
     }
 };
