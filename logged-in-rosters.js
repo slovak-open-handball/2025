@@ -489,6 +489,7 @@ function MemberDetailsModal({
     currentTeam,
     maxPlayersPerTeam,
     maxImplementationMembers,
+    teamOfMemberToEdit,
 }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -3587,6 +3588,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               currentTeam: isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo,
               maxPlayersPerTeam: getLimitsForTeam(isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo).numberOfPlayers,
               maxImplementationMembers: getLimitsForTeam(isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo).numberOfImplementationTeam,
+              teamOfMemberToEdit: teamOfMemberToEdit,
           }
       ),
     
