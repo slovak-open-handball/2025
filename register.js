@@ -736,7 +736,63 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
   const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
 
-  let teamsDataToSaveFinal = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+  // 🔥 VYTVORÍME DVE KÓPIE - JEDNU PRE USERS (BEZ ADRIES) A JEDNU PRE USERSPRIVATE (S ADRESAMI)
+  let teamsDataForUsers = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+  let teamsDataForPrivate = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+
+  // 🔥 ODSTRÁNIME ADRESY A DÁTUMY NARODENIA Z teamsDataForUsers
+  for (const categoryName in teamsDataForUsers) {
+    const teams = teamsDataForUsers[categoryName];
+    if (!Array.isArray(teams)) continue;
+
+    teamsDataForUsers[categoryName] = teams.map(team => {
+      const updatedTeam = { ...team };
+
+      // Odstránime adresy a dátumy z playerDetails
+      if (updatedTeam.playerDetails && Array.isArray(updatedTeam.playerDetails)) {
+        updatedTeam.playerDetails = updatedTeam.playerDetails.map(player => ({
+          jerseyNumber: player.jerseyNumber || '',
+          firstName: player.firstName || '',
+          lastName: player.lastName || '',
+          registrationNumber: player.registrationNumber || ''
+        }));
+      }
+
+      // Odstránime adresy a dátumy z womenTeamMemberDetails
+      if (updatedTeam.womenTeamMemberDetails && Array.isArray(updatedTeam.womenTeamMemberDetails)) {
+        updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails.map(member => ({
+          firstName: member.firstName || '',
+          lastName: member.lastName || ''
+        }));
+      }
+
+      // Odstránime adresy a dátumy z menTeamMemberDetails
+      if (updatedTeam.menTeamMemberDetails && Array.isArray(updatedTeam.menTeamMemberDetails)) {
+        updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails.map(member => ({
+          firstName: member.firstName || '',
+          lastName: member.lastName || ''
+        }));
+      }
+
+      // Odstránime adresy a dátumy z driverDetailsMale
+      if (updatedTeam.driverDetailsMale && Array.isArray(updatedTeam.driverDetailsMale)) {
+        updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale.map(driver => ({
+          firstName: driver.firstName || '',
+          lastName: driver.lastName || ''
+        }));
+      }
+
+      // Odstránime adresy a dátumy z driverDetailsFemale
+      if (updatedTeam.driverDetailsFemale && Array.isArray(updatedTeam.driverDetailsFemale)) {
+        updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale.map(driver => ({
+          firstName: driver.firstName || '',
+          lastName: driver.lastName || ''
+        }));
+      }
+
+      return updatedTeam;
+    });
+  }
 
   try {
     const authInstance = window.auth;
@@ -781,7 +837,6 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       console.log("register.js: Používateľ vytvorený, UID:", user.uid);
 
       // 🔥 2. POČKÁME NA DOKONČENIE PRIHLÁSENIA
-      // Počkáme na aktuálneho používateľa (mal by byť rovnaký)
       let retries = 0;
       const maxRetries = 10;
       let currentUser = authInstance.currentUser;
@@ -802,17 +857,14 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
 
       console.log("register.js: Používateľ je prihlásený, UID:", currentUser.uid);
 
-      // 🔥 3. POČKÁME NA AKTUALIZÁCIU TOKENU (dôležité pre Firestore)
-      // Firebase potrebuje čas na aktualizáciu ID tokenu
+      // 🔥 3. POČKÁME NA AKTUALIZÁCIU TOKENU
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Overíme, či je token platný
       try {
-        await currentUser.getIdToken(true); // Force refresh token
+        await currentUser.getIdToken(true);
         console.log("register.js: Token bol aktualizovaný.");
       } catch (tokenError) {
         console.warn("register.js: Chyba pri aktualizácii tokenu:", tokenError);
-        // Pokračujeme aj napriek chybe, možno token ešte nie je pripravený
       }
 
     } catch (authError) {
@@ -852,10 +904,10 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
     const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
     
     try {
-      // Normalizácia tímových údajov
-      for (const categoryName in teamsDataToSaveFinal) {
-          const currentTeamsInCategory = Array.isArray(teamsDataToSaveFinal[categoryName]) ? teamsDataToSaveFinal[categoryName] : [];
-          teamsDataToSaveFinal[categoryName] = currentTeamsInCategory.map(team => {
+      // Normalizácia tímových údajov pre private (s adresami a dátumami)
+      for (const categoryName in teamsDataForPrivate) {
+          const currentTeamsInCategory = Array.isArray(teamsDataForPrivate[categoryName]) ? teamsDataForPrivate[categoryName] : [];
+          teamsDataForPrivate[categoryName] = currentTeamsInCategory.map(team => {
               const updatedTeam = { ...team };
 
               updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
@@ -885,37 +937,49 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
               if (updatedTeam.packageId === '') updatedTeam.packageId = null;
               if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
-              // Odstránime dátumy narodenia a adresy z playerDetails pre kolekciu users
-              updatedTeam.playerDetails = updatedTeam.playerDetails?.map(p => ({
-                  ...p,
-                  jerseyNumber: p.jerseyNumber || '',
-                  firstName: p.firstName || '',
-                  lastName: p.lastName || ''
-              })) || [];
+              if (team.jerseyColors) {
+                updatedTeam.jerseyColors = {
+                  color1: team.jerseyColors.color1 || '',
+                  color2: team.jerseyColors.color2 || ''
+                };
+              }
 
-              updatedTeam.womenTeamMemberDetails = updatedTeam.womenTeamMemberDetails?.map(m => ({
-                  ...m,
-                  firstName: m.firstName || '',
-                  lastName: m.lastName || ''
-              })) || [];
+              return updatedTeam;
+          });
+      }
 
-              updatedTeam.menTeamMemberDetails = updatedTeam.menTeamMemberDetails?.map(m => ({
-                  ...m,
-                  firstName: m.firstName || '',
-                  lastName: m.lastName || ''
-              })) || [];
+      // Normalizácia tímových údajov pre users (už sú bez adries, ale potrebujeme ďalšiu normalizáciu)
+      for (const categoryName in teamsDataForUsers) {
+          const currentTeamsInCategory = Array.isArray(teamsDataForUsers[categoryName]) ? teamsDataForUsers[categoryName] : [];
+          teamsDataForUsers[categoryName] = currentTeamsInCategory.map(team => {
+              const updatedTeam = { ...team };
 
-              updatedTeam.driverDetailsMale = updatedTeam.driverDetailsMale?.map(d => ({
-                  ...d,
-                  firstName: d.firstName || '',
-                  lastName: d.lastName || ''
-              })) || [];
+              updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
+              updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
+              updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
 
-              updatedTeam.driverDetailsFemale = updatedTeam.driverDetailsFemale?.map(d => ({
-                  ...d,
-                  firstName: d.firstName || '',
-                  lastName: d.lastName || ''
-              })) || [];
+              updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
+                  ...tshirt,
+                  quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+              }));
+
+              updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
+              if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
+
+              updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
+              if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
+
+              if (updatedTeam.arrival.type === 'vlastná doprava') {
+                  updatedTeam.arrival.drivers = {
+                      male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
+                      female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
+                  };
+              } else {
+                  updatedTeam.arrival.drivers = null;
+              }
+
+              if (updatedTeam.packageId === '') updatedTeam.packageId = null;
+              if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
 
               if (team.jerseyColors) {
                 updatedTeam.jerseyColors = {
@@ -928,7 +992,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           });
       }
 
-      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users'
+      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users' - BEZ ADRIES A DÁTUMOV NARODENIA
       const userData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -947,11 +1011,11 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
         rosterEditDeadline: rosterEditDeadline ? Timestamp.fromDate(rosterEditDeadline) : null,
         categories: formData.categories,
-        teams: teamsDataToSaveFinal,
+        teams: teamsDataForUsers,  // ✅ ČISTÉ DÁTA BEZ ADRIES A DÁTUMOV
         note: finalGlobalNote || ''
       };
 
-      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate'
+      // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate' - S ADRESAMI A DÁTUMAMI
       const privateData = {
         role: 'club',
         approved: true,
@@ -965,9 +1029,9 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
         persons: {}
       };
 
-      // SPRACOVANIE PERSONS PRE usersprivate
-      Object.keys(teamsDataToSaveFinal).forEach(categoryName => {
-        const teams = teamsDataToSaveFinal[categoryName];
+      // SPRACOVANIE PERSONS PRE usersprivate - POUŽIJEME teamsDataForPrivate (S ADRESAMI)
+      Object.keys(teamsDataForPrivate).forEach(categoryName => {
+        const teams = teamsDataForPrivate[categoryName];
         if (!Array.isArray(teams)) return;
       
         teams.forEach((team, teamIndex) => {
@@ -1060,13 +1124,13 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
       
       console.log("register.js: Začínam zápis do Firestore...");
       
-      // ZÁPIS DO KOLEKCIE 'users'
+      // ZÁPIS DO KOLEKCIE 'users' - BEZ ADRIES A DÁTUMOV
       await setDoc(userDocRef, userData);
       console.log("register.js: Zápis do 'users' dokončený.");
 
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // ZÁPIS DO KOLEKCIE 'usersprivate'
+      // ZÁPIS DO KOLEKCIE 'usersprivate' - S ADRESAMI A DÁTUMAMI
       await setDoc(userPrivateDocRef, privateData);
       console.log("register.js: Zápis do 'usersprivate' dokončený.");
 
@@ -1110,7 +1174,7 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
               }
             },
             categories: formData.categories,
-            teams: teamsDataToSaveFinal,
+            teams: teamsDataForPrivate,  // Posielame dáta s adresami pre email
             globalNote: finalGlobalNote 
           };
         await fetch(GOOGLE_APPS_SCRIPT_URL, {
