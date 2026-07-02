@@ -370,6 +370,8 @@ const MyDataApp = ({ userProfileData }) => {
     const [canEdit, setCanEdit] = useState(false);
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
+    const [isDataReady, setIsDataReady] = useState(false); // NOVÝ STAV
+    
     const { 
         isGlobalAuthReady, 
         isRegistrationDataLoaded, 
@@ -403,6 +405,25 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
     
+    // NOVÝ EFFECT: Sledujeme, kedy sú všetky dáta pripravené
+    useEffect(() => {
+        const allDataReady = userProfileData && 
+                            isGlobalAuthReady && 
+                            isRegistrationDataLoaded && 
+                            isCategoriesDataLoaded && 
+                            settingsRegistrationDates;
+        
+        console.log('MyDataApp - allDataReady:', allDataReady);
+        console.log('  userProfileData:', !!userProfileData);
+        console.log('  isGlobalAuthReady:', isGlobalAuthReady);
+        console.log('  isRegistrationDataLoaded:', isRegistrationDataLoaded);
+        console.log('  isCategoriesDataLoaded:', isCategoriesDataLoaded);
+        console.log('  settingsRegistrationDates:', !!settingsRegistrationDates);
+        
+        setIsDataReady(allDataReady);
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]);
+    
+    // Hlavný effect pre kontrolu deadline - spustí sa len keď sú dáta pripravené
     useEffect(() => {
         let timer;
         
@@ -419,28 +440,8 @@ const MyDataApp = ({ userProfileData }) => {
             setIsPasswordChangeOnlyMode(false);
             
             // KONTROLA: Či sú všetky potrebné dáta načítané
-            if (!userProfileData) {
-                console.log('updateCanEditStatus: userProfileData chýba');
-                return;
-            }
-            
-            if (!isGlobalAuthReady) {
-                console.log('updateCanEditStatus: isGlobalAuthReady = false');
-                return;
-            }
-            
-            if (!isRegistrationDataLoaded) {
-                console.log('updateCanEditStatus: isRegistrationDataLoaded = false');
-                return;
-            }
-            
-            if (!isCategoriesDataLoaded) {
-                console.log('updateCanEditStatus: isCategoriesDataLoaded = false');
-                return;
-            }
-            
-            if (!settingsRegistrationDates) {
-                console.log('updateCanEditStatus: settingsRegistrationDates chýba');
+            if (!isDataReady) {
+                console.log('updateCanEditStatus: Dáta ešte nie sú pripravené, čakám...');
                 return;
             }
             
@@ -531,14 +532,17 @@ const MyDataApp = ({ userProfileData }) => {
             }
         };
         
-        updateCanEditStatus();
+        // Spustíme kontrolu len keď sú dáta pripravené
+        if (isDataReady) {
+            updateCanEditStatus();
+        }
         
         return () => {
             if (timer) {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]);
+    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, isDataReady]);
     
     const getRoleColor = (role) => {
         switch (role) {
