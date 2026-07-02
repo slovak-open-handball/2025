@@ -2227,10 +2227,12 @@ useEffect(() => {
                                               mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
                                                   const privatePlayer = privateTeamData.players?.[playerIndex] || {};
                                                   return {
+                                                      // IBA POVOLENÉ POLIA PRE USERS
                                                       firstName: player.firstName || '',
                                                       lastName: player.lastName || '',
                                                       jerseyNumber: player.jerseyNumber || null,
                                                       registrationNumber: player.registrationNumber || null,
+                                                      // Ďalšie polia, ktoré nie sú zakázané
                                                       ...Object.fromEntries(
                                                           Object.entries(player)
                                                               .filter(([key]) => 
@@ -2238,6 +2240,7 @@ useEffect(() => {
                                                                     'dateOfBirth', 'address', '_privateData'].includes(key)
                                                               )
                                                       ),
+                                                      // Súkromné dáta - ODDELENE pre zobrazenie
                                                       _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
                                                       _address: privatePlayer.address || player.address || {
                                                           street: '',
@@ -2363,15 +2366,6 @@ useEffect(() => {
                                           }
   
                                           // ============================================================
-                                          // 🔧 VYTVORENIE _teamTshirtsMap AKO OBYČAJNÝ OBJEKT (nie Map)
-                                          // ============================================================
-                                          const tshirtsMap = {};
-                                          (team.tshirts || []).forEach(t => {
-                                              const size = String(t.size).trim();
-                                              tshirtsMap[size] = t.quantity || 0;
-                                          });
-  
-                                          // ============================================================
                                           // 🆕 KRITICKÉ: NEPOUŽÍVAJ ...team - explicitne definuj všetky polia
                                           // ============================================================
                                           return {
@@ -2406,8 +2400,7 @@ useEffect(() => {
                                               _menDriversCount: mergedDriverDetailsMale.length,
                                               _womenDriversCount: mergedDriverDetailsFemale.length,
                                               _players: mergedPlayerDetails.length,
-                                              // 🔧 _teamTshirtsMap je TERAZ OBYČAJNÝ OBJEKT, nie Map
-                                              _teamTshirtsMap: tshirtsMap
+                                              _teamTshirtsMap: {}
                                           };
                                       });
                                   }
@@ -2489,13 +2482,10 @@ useEffect(() => {
                   _memberIndex: index,
                   _privateData: team._privateData,
                   _teamIndex: team._teamIndex,
-                  // Explicitne definujeme iba povolené polia
                   firstName: member.firstName || '',
                   lastName: member.lastName || '',
-                  // Súkromné dáta oddelene
                   _dateOfBirth: member._dateOfBirth || '',
                   _address: member._address || {},
-                  // Ďalšie polia (okrem zakázaných)
                   ...Object.fromEntries(
                       Object.entries(member)
                           .filter(([key]) => 
@@ -2515,13 +2505,10 @@ useEffect(() => {
                   _memberIndex: index,
                   _privateData: team._privateData,
                   _teamIndex: team._teamIndex,
-                  // Explicitne definujeme iba povolené polia
                   firstName: member.firstName || '',
                   lastName: member.lastName || '',
-                  // Súkromné dáta oddelene
                   _dateOfBirth: member._dateOfBirth || '',
                   _address: member._address || {},
-                  // Ďalšie polia (okrem zakázaných)
                   ...Object.fromEntries(
                       Object.entries(member)
                           .filter(([key]) => 
@@ -2541,13 +2528,10 @@ useEffect(() => {
                   _memberIndex: index,
                   _privateData: team._privateData,
                   _teamIndex: team._teamIndex,
-                  // Explicitne definujeme iba povolené polia
                   firstName: driver.firstName || '',
                   lastName: driver.lastName || '',
-                  // Súkromné dáta oddelene
                   _dateOfBirth: driver._dateOfBirth || '',
                   _address: driver._address || {},
-                  // Ďalšie polia (okrem zakázaných)
                   ...Object.fromEntries(
                       Object.entries(driver)
                           .filter(([key]) => 
@@ -2567,13 +2551,10 @@ useEffect(() => {
                   _memberIndex: index,
                   _privateData: team._privateData,
                   _teamIndex: team._teamIndex,
-                  // Explicitne definujeme iba povolené polia
                   firstName: driver.firstName || '',
                   lastName: driver.lastName || '',
-                  // Súkromné dáta oddelene
                   _dateOfBirth: driver._dateOfBirth || '',
                   _address: driver._address || {},
-                  // Ďalšie polia (okrem zakázaných)
                   ...Object.fromEntries(
                       Object.entries(driver)
                           .filter(([key]) => 
