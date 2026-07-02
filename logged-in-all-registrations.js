@@ -2322,34 +2322,16 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     
         memberFieldsOrder.forEach(path => {
             let value;
-            // Špeciálne spracovanie pre adresy – načítame výhradne z _privateData
-            if (path.startsWith('address.')) {
+            // Špeciálne spracovanie pre dátum narodenia a adresy
+            if (path === 'dateOfBirth') {
+                // Použijeme _dateOfBirth ak existuje, inak dateOfBirth
+                value = localEditedData._dateOfBirth || localEditedData.dateOfBirth || '';
+            } else if (path.startsWith('address.')) {
                 const addressField = path.split('.')[1];
-                // Skúsime získať adresu z privateData
-                const privateData = localEditedData._privateData;
-                if (privateData?.persons) {
-                    const memberArrayType = localEditedData.originalArray;
-                    const memberIndex = localEditedData.originalIndex;
-                    if (memberArrayType && memberIndex !== undefined) {
-                        // Prejdeme všetky kategórie, aby sme našli správny tím
-                        for (const categoryKey in privateData.persons) {
-                            const teamData = privateData.persons[categoryKey];
-                            if (teamData && teamData[memberArrayType] && teamData[memberArrayType][memberIndex]) {
-                                const privateMember = teamData[memberArrayType][memberIndex];
-                                if (privateMember.address && privateMember.address[addressField] !== undefined) {
-                                    value = privateMember.address[addressField];
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                // Ak sa hodnota nenašla, nastavíme prázdny reťazec (žiaden fallback)
-                if (value === undefined) {
-                    value = '';
-                }
+                // Použijeme _address ak existuje, inak address
+                const addressData = localEditedData._address || localEditedData.address || {};
+                value = addressData[addressField] || '';
             } else {
-                // Pre ostatné polia (firstName, lastName, atď.) použijeme localEditedData
                 value = getNestedValue(localEditedData, path);
             }
     
