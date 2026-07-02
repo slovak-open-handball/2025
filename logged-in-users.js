@@ -89,10 +89,8 @@ const copyToClipboard = (text) => {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text)
       .then(() => {
-        console.log('E-mail bol skopírovaný do schránky:', text);
       })
       .catch(err => {
-        console.error('Chyba pri kopírovaní do schránky:', err);
         fallbackCopyTextToClipboard(text);
       });
   } else {
@@ -113,9 +111,7 @@ const fallbackCopyTextToClipboard = (text) => {
   
   try {
     document.execCommand('copy');
-    console.log('E-mail bol skopírovaný do schránky (fallback):', text);
   } catch (err) {
-    console.error('Chyba pri kopírovaní do schránky (fallback):', err);
   }
   
   document.body.removeChild(textArea);
@@ -245,7 +241,6 @@ function AssignHallModal({ user, onClose, onAssign }) {
         hallsList.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
         setHalls(hallsList);
       } catch (error) {
-        console.error('Chyba pri načítaní hál:', error);
         window.showGlobalNotification('Nepodarilo sa načítať zoznam hál', 'error');
       } finally {
         setLoading(false);
@@ -561,7 +556,6 @@ function UsersManagementApp() {
             newHallNames[hallId] = 'Neznáma hala';
           }
         } catch (error) {
-          console.error('Chyba pri načítaní názvu haly:', error);
           newHallNames[hallId] = 'Chyba načítania';
         }
       }
@@ -592,7 +586,6 @@ function UsersManagementApp() {
   const logChanges = async (changes) => {
     try {
       if (!auth.currentUser || !globalUserProfileData || !db) {
-        console.error("Not able to log changes: User not authenticated or global data not available.");
         return;
       }
       const notificationsRef = collection(db, `notifications`);
@@ -604,7 +597,6 @@ function UsersManagementApp() {
         userName: `${globalUserProfileData.firstName} ${globalUserProfileData.lastName}`
       });
     } catch (error) {
-      console.error("Error logging changes:", error);
     }
   };
 
@@ -626,7 +618,6 @@ function UsersManagementApp() {
   const fetchData = async () => {
     setLoading(true);
     if (!globalUserProfileData || !defaultDeadlines.dataEditDeadline || !defaultDeadlines.rosterEditDeadline) {
-      console.log("UsersManagementApp: Data uživatele nebo defaultDeadlines nejsou k dispozici.");
       setLoading(false);
       return;
     }
@@ -641,97 +632,73 @@ function UsersManagementApp() {
 
       const adminCountRef = doc(db, `settings`, `adminCount`);
       const unsubscribeAdminCount = onSnapshot(adminCountRef, (adminCountSnap) => {
-        if (adminCountSnap.exists()) {
-          console.log('Aktuální hodnota adminCount:', adminCountSnap.data().count);
-        } else {
-          console.log('Dokument adminCount neexistuje.');
-        }
       }, (error) => {
-        console.error("Chyba při načítání adminCount:", error);
       });
 
       const q = query(usersCol);
 
       const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
-        const usersList = await Promise.all(snapshot.docs.map(async docSnapshot => {
-          const userData = {
-            id: docSnapshot.id,
-            ...docSnapshot.data()
-          };
-
-          // Logika pro aktualizaci dat
-          if (userData.role === 'admin' || userData.role === 'hall') {
-            const updateData = {};
-            if (userData.hasOwnProperty('dataEditDeadline')) {
-              updateData.dataEditDeadline = deleteField();
-            }
-            if (userData.hasOwnProperty('rosterEditDeadline')) {
-              updateData.rosterEditDeadline = deleteField();
-            }
-            if (Object.keys(updateData).length > 0) {
-              await updateDoc(doc(db, `users`, userData.id), updateData);
-            }
-          } else if (userData.role === 'club') {
-            let needsUpdate = false;
-            const updateData = {};
-            
-            // Kontrola dataEditDeadline
-            if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
-              updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-              needsUpdate = true;
-            } else {
-              const userDate = userData.dataEditDeadline.toDate ? userData.dataEditDeadline.toDate() : new Date(userData.dataEditDeadline);
-              if (userDate < defaultDeadlines.dataEditDeadline) {
-                updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-                needsUpdate = true;
+          const usersList = await Promise.all(snapshot.docs.map(async docSnapshot => {
+              let userData = {
+                  id: docSnapshot.id,
+                  ...docSnapshot.data()
+              };
+      
+              // === SPRÁVNE SPRACOVANIE DEADLINOV PRE KAŽDÉHO POUŽÍVATEĽA ===
+              if (userData.role === 'admin' || userData.role === 'hall') {
+                  const updateData = {};
+                  if (userData.hasOwnProperty('dataEditDeadline')) {
+                      updateData.dataEditDeadline = deleteField();
+                  }
+                  if (userData.hasOwnProperty('rosterEditDeadline')) {
+                      updateData.rosterEditDeadline = deleteField();
+                  }
+                  if (Object.keys(updateData).length > 0) {
+                      await updateDoc(doc(db, `users`, userData.id), updateData);
+                  }
+              } 
+              else if (userData.role === 'club' || userData.role === 'referee' || userData.role === 'volunteer') {
+                  const updateData = {};
+                  let needsUpdate = false;
+      
+                  const defaultDataDeadline = defaultDeadlines.dataEditDeadline;
+                  const defaultRosterDeadline = defaultDeadlines.rosterEditDeadline;
+      
+                  // dataEditDeadline
+                  if (!userData.dataEditDeadline || 
+                      (userData.dataEditDeadline && 
+                       userData.dataEditDeadline.toDate && 
+                       userData.dataEditDeadline.toDate() < defaultDataDeadline)) {
+                      updateData.dataEditDeadline = defaultDataDeadline;
+                      needsUpdate = true;
+                  }
+      
+                  // rosterEditDeadline
+                  if (userData.role === 'club') {
+                      if (!userData.rosterEditDeadline || 
+                          (userData.rosterEditDeadline && 
+                           userData.rosterEditDeadline.toDate && 
+                           userData.rosterEditDeadline.toDate() < defaultRosterDeadline)) {
+                          updateData.rosterEditDeadline = defaultRosterDeadline;
+                          needsUpdate = true;
+                      }
+                  } else {
+                      // referee a volunteer nemajú roster deadline
+                      if (userData.hasOwnProperty('rosterEditDeadline')) {
+                          updateData.rosterEditDeadline = deleteField();
+                          needsUpdate = true;
+                      }
+                  }
+      
+                  if (needsUpdate) {
+                      await updateDoc(doc(db, `users`, userData.id), updateData);
+                  }
               }
-            }
-            
-            // Kontrola rosterEditDeadline
-            if (userData.rosterEditDeadline === undefined || userData.rosterEditDeadline === null) {
-              updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
-              needsUpdate = true;
-            } else {
-              const userDate = userData.rosterEditDeadline.toDate ? userData.rosterEditDeadline.toDate() : new Date(userData.rosterEditDeadline);
-              if (userDate < defaultDeadlines.rosterEditDeadline) {
-                updateData.rosterEditDeadline = defaultDeadlines.rosterEditDeadline;
-                needsUpdate = true;
-              }
-            }
-            
-            if (needsUpdate) {
-              await updateDoc(doc(db, `users`, userData.id), updateData);
-            }
-          } else if (userData.role === 'referee' || userData.role === 'volunteer') {
-            let needsUpdate = false;
-            const updateData = {};
-            
-            // Kontrola dataEditDeadline
-            if (userData.dataEditDeadline === undefined || userData.dataEditDeadline === null) {
-              updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-              needsUpdate = true;
-            } else {
-              const userDate = userData.dataEditDeadline.toDate ? userData.dataEditDeadline.toDate() : new Date(userData.dataEditDeadline);
-              if (userDate < defaultDeadlines.dataEditDeadline) {
-                updateData.dataEditDeadline = defaultDeadlines.dataEditDeadline;
-                needsUpdate = true;
-              }
-            }
-            
-            if (userData.rosterEditDeadline !== undefined) {
-              updateData.rosterEditDeadline = deleteField();
-              needsUpdate = true;
-            }
-            if (needsUpdate) {
-              await updateDoc(doc(db, `users`, userData.id), updateData);
-            }
-          }
-
-          return userData;
-        }));
+      
+              return userData;
+          }));
 
         const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
-        console.log("🔍 Nájdení schválení admini:", adminUsers.map(u => ({
           id: u.id,
           name: `${u.firstName} ${u.lastName}`,
           regSeconds: u.registrationDate?.seconds,
@@ -748,7 +715,6 @@ function UsersManagementApp() {
               const dateB = b.registrationDate?.seconds || 0;
               return dateA - dateB;
             });
-            console.log("🏆 Najstarší admin (Superadmin):", validAdminUsers[0].firstName, validAdminUsers[0].lastName);
             setOldestAdminId(validAdminUsers[0].id);
           } else {
             // Fallback: ak všetci majú chybný dátum, zober prvého
@@ -766,7 +732,6 @@ function UsersManagementApp() {
         
         setLoading(false);
       }, (error) => {
-        console.error("Chyba při načítání uživatelů:", error);
         setLoading(false);
         setNotification({ message: 'Chyba při načítání uživatelů.', type: 'error' });
       });
@@ -800,10 +765,7 @@ function UsersManagementApp() {
         const adminCountSnap = await getDoc(adminCountRef);
 
         const currentAdminCount = adminCountSnap.exists() ? adminCountSnap.data().count : 0;
-        const newCount = Math.max(1, currentAdminCount - 1);
-        
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-        console.log(`Nová hodnota adminCount: ${newCount}`);
+        const newCount = Math.max(1, currentAdminCount - 1);        
           
         await updateDoc(adminCountRef, {
             count: newCount
@@ -834,7 +796,6 @@ function UsersManagementApp() {
       // Log notification s preloženými názvami
       await logChanges([`Zmena roly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${getTranslatedRole(oldRole)}' na '${getTranslatedRole(newRole)}'`]);
     } catch (error) {
-      console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
     }
   };
@@ -859,7 +820,6 @@ function UsersManagementApp() {
             }));
           }
         } catch (error) {
-          console.error('Chyba pri načítaní názvu haly:', error);
         }
       }
       
@@ -878,7 +838,6 @@ function UsersManagementApp() {
       
       await logChanges([`Zmena priradenej haly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldHallName}' na: '${hallNameForLog}'`]);
     } catch (error) {
-      console.error('Chyba pri priradení haly:', error);
       setNotification({ message: 'Nepodarilo sa priradiť halu.', type: 'error' });
     }
   };
@@ -910,39 +869,23 @@ function UsersManagementApp() {
         
         // Znížime hodnotu, ale zabezpečíme, že neklesne pod 1
         // (minimálne 1 admin musí vždy zostať)
-        const newCount = Math.max(1, currentAdminCount - 1);
-  
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
-        console.log(`Nová hodnota adminCount: ${newCount}`);
+        const newCount = Math.max(1, currentAdminCount - 1);  
         
         await updateDoc(adminCountRef, {
             count: newCount
-        });
-        
-        console.log(`✅ adminCount bol znížený na ${newCount} (pôvodný admin: ${userToDelete.email})`);
+        });        
       }
       
       // 3. VYMAŽEME DOKUMENT Z KOLEKCIE users
       await deleteDoc(userDocRef);
-      console.log(`✅ Používateľ ${userToDelete.id} bol vymazaný z kolekcie users`);
   
       // 4. VYMAŽEME DOKUMENT Z KOLEKCIE usersprivate (ak existuje)
       try {
         const privateDocSnapshot = await getDoc(userPrivateDocRef);
         if (privateDocSnapshot.exists()) {
           await deleteDoc(userPrivateDocRef);
-          console.log(`✅ Používateľ ${userToDelete.id} bol vymazaný z kolekcie usersprivate`);
-        } else {
-          console.log(`ℹ️ Dokument v usersprivate pre ${userToDelete.id} neexistuje, preskakujem.`);
         }
       } catch (privateError) {
-        // Ak dokument neexistuje, pokračujeme ďalej
-        if (privateError.code === 'not-found') {
-          console.log(`ℹ️ Dokument v usersprivate pre ${userToDelete.id} neexistuje.`);
-        } else {
-          console.error('Chyba pri mazaní z usersprivate:', privateError);
-          // Necháme pokračovať, aj keby sa nepodarilo vymazať usersprivate
-        }
       }
   
       // Pridaná funkčnosť: Po úspešnom odstránení používateľa otvoríme novú kartu s Firebase Console
@@ -950,8 +893,6 @@ function UsersManagementApp() {
         const projectId = window.firebaseConfig.projectId;
         const firebaseConsoleUrl = `https://console.firebase.google.com/project/${projectId}/authentication/users`;
         window.open(firebaseConsoleUrl, '_blank');
-      } else {
-        console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
   
       setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený. E-mail bol skopírovaný do schránky.`, type: 'success' });
@@ -959,7 +900,6 @@ function UsersManagementApp() {
       // Log changes
       await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}. E-mail: ${userToDelete.email}`]);
     } catch (error) {
-      console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
     } finally {
       setUserToDelete(null);
@@ -968,7 +908,6 @@ function UsersManagementApp() {
 
   const sendApprovalEmail = async (userEmail) => {
     if (!googleScriptUrl_for_email) {
-      console.error("Google Apps Script URL nie je definovaná.");
       setNotification({ message: 'Chyba: URL skriptu nebola nájdená.', type: 'error' });
       return;
     }
@@ -991,10 +930,8 @@ function UsersManagementApp() {
         body: JSON.stringify(payload),
       });
   
-      console.log('Požiadavka na odoslanie e-mailu odoslaná.');
       setNotification({ message: `E-mail o schválení bol odoslaný na ${userEmail}.`, type: 'success' });
     } catch (error) {
-      console.error("Chyba pri odosielaní e-mailu o schválení:", error);
       setNotification({ message: 'Nepodarilo sa odoslať e-mail o schválení.', type: 'error' });
     }
   };
@@ -1013,13 +950,11 @@ function UsersManagementApp() {
       
       if (adminCountSnap.exists()) {
         const currentAdminCount = adminCountSnap.data().count;
-        console.log(`Aktuálna hodnota adminCount: ${currentAdminCount}`);
         
         await updateDoc(adminCountRef, {
           count: increment(1)
         });
       } else {
-        console.log('Dokument adminCount neexistuje, vytvárame ho s hodnotou 1.');
         await setDoc(adminCountRef, {
           count: 1
         });
@@ -1035,7 +970,6 @@ function UsersManagementApp() {
         await logChanges([`Schválenie admina: ${userToApprove.firstName} ${userToApprove.lastName}.`]);
       }
     } catch (error) {
-      console.error("Chyba pri schvaľovaní admina:", error);
       setNotification({ message: 'Nepodarilo sa schváliť admina.', type: 'error' });
     }
   };
@@ -1077,17 +1011,38 @@ function UsersManagementApp() {
       }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    // Firebase Timestamp object handling
-    if (date.toDate) {
-      date = date.toDate();
-    }
-    // Check if it's a valid Date object
-    if (!(date instanceof Date) || isNaN(date)) {
-        return '-';
-    }
-    return date.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const formatDate = (dateValue) => {
+      if (!dateValue) return '-';
+    
+      let date;
+    
+      // Firebase Timestamp
+      if (dateValue && typeof dateValue.toDate === 'function') {
+          date = dateValue.toDate();
+      } 
+      // Plain Date object
+      else if (dateValue instanceof Date) {
+          date = dateValue;
+      } 
+      // Timestamp objekt z JSON (seconds + nanoseconds)
+      else if (dateValue && typeof dateValue.seconds === 'number') {
+          date = new Date(dateValue.seconds * 1000);
+      } 
+      else {
+          date = new Date(dateValue);
+      }
+  
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+          return '-';
+      }
+  
+      return date.toLocaleDateString('sk-SK', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+      });
   };
 
   // Funkcia na otvorenie modálneho okna pre úpravu dátumu
@@ -1118,7 +1073,6 @@ function UsersManagementApp() {
       const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
       await logChanges([change]);
     } catch (error) {
-      console.error("Chyba pri aktualizácii dátumu:", error);
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
     } finally {
       setShowDateEditModal(false);
@@ -1240,31 +1194,24 @@ function UsersManagementApp() {
                 user.hallId ? (hallNames[user.hallId] || '') : 'Žiadna priradená hala'
               ),
               
-              // PRE OSTATNÉ ROLY: Štandardné zobrazenie dátumov
+              // Úprava údajov
               (window.isCurrentUserAdmin && !isHall) && React.createElement(
-                'td',
-                {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditDataDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
-                  onClick: () => {
-                    if (canEditDataDeadline) {
-                      handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline);
-                    }
-                  }
-                },
-                canEditDataDeadline ? formatDate(user.dataEditDeadline) : '-'
+                  'td',
+                  {
+                      className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditDataDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                      onClick: () => canEditDataDeadline && handleEditDateClick(user, 'dataEditDeadline', user.dataEditDeadline)
+                  },
+                  formatDate(user.dataEditDeadline)
               ),
               
+              // Úprava súpisiek
               (window.isCurrentUserAdmin && !isHall) && React.createElement(
-                'td',
-                {
-                  className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditRosterDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
-                  onClick: () => {
-                    if (canEditRosterDeadline) {
-                      handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline);
-                    }
-                  }
-                },
-                canEditRosterDeadline ? formatDate(user.rosterEditDeadline) : '-'
+                  'td',
+                  {
+                      className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditRosterDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                      onClick: () => canEditRosterDeadline && handleEditDateClick(user, 'rosterEditDeadline', user.rosterEditDeadline)
+                  },
+                  formatDate(user.rosterEditDeadline)
               ),
               
               React.createElement(
@@ -1356,14 +1303,12 @@ const initializeAndRenderApp = () => {
   const rootElement = document.getElementById('users-management-root');
 
   if (!window.isGlobalAuthReady || !window.globalUserProfileData) {
-    console.log("logged-in-users.js: Čakám na inicializáciu autentifikácie a načítanie dát používateľa...");
     return;
   }
 
   window.removeEventListener('globalDataUpdated', initializeAndRenderApp);
 
   if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
     if (rootElement) {
       rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
     }
@@ -1372,7 +1317,6 @@ const initializeAndRenderApp = () => {
 
   const root = ReactDOM.createRoot(rootElement);
   root.render(React.createElement(UsersManagementApp, null));
-  console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 };
 
 // Pridanie štýlov pre hnedú farbu (ak ešte nie sú definované)
@@ -1400,6 +1344,5 @@ window.addEventListener('globalDataUpdated', initializeAndRenderApp);
 
 // Pre prípad, že udalosť už prebehla
 if (window.isGlobalAuthReady && window.globalUserProfileData) {
-    console.log('logged-in-users.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
     initializeAndRenderApp();
 }
