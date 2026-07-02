@@ -436,41 +436,53 @@ function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
 
 // Komponent pre modálne okno na úpravu dátumu
 function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
-    // Upravená funkcia na konverziu dátumu
-    const formatDateForInput = (date) => {
-      if (!date) return '';
-      // Ak je objekt `Date` už inicializovaný z Firestore Timestamp,
-      // automaticky používa lokálne časové pásmo.
-      let d = date.toDate ? date.toDate() : new Date(date);
-      
-      // Získanie komponentov dátumu a času z objektu Date,
-      // ktoré už sú v lokálnom časovom pásme
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+    const formatDateForInput = (dateValue) => {
+        if (!dateValue) return '';
+        
+        let date;
+        
+        // Firebase Timestamp
+        if (dateValue && typeof dateValue.toDate === 'function') {
+            date = dateValue.toDate();
+        } 
+        // Timestamp objekt (seconds)
+        else if (dateValue && typeof dateValue.seconds === 'number') {
+            date = new Date(dateValue.seconds * 1000);
+        } 
+        // Už je Date
+        else if (dateValue instanceof Date) {
+            date = dateValue;
+        } 
+        else {
+            date = new Date(dateValue);
+        }
 
-  const [selectedDate, setSelectedDate] = useState(formatDateForInput(currentDate));
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return '';
+        }
 
-  const handleDateChange = (e) => {
-      setSelectedDate(e.target.value);
-  };
+        // Formát pre datetime-local input (YYYY-MM-DDTHH:MM)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
-  const handleSave = () => {
-    // `datetime-local` input už pracuje s lokálnym časom.
-    // Získame ho ako objekt Date a uložíme do Firestore.
-    // Firestore ho automaticky konvertuje na UTC timestamp.
-    const newDate = new Date(selectedDate);
-    onSave(user, dateType, newDate);
-    onClose();
-  };
+    const [selectedDate, setSelectedDate] = useState(formatDateForInput(currentDate));
 
+    const handleSave = () => {
+        if (!selectedDate) return;
+        const newDate = new Date(selectedDate);
+        onSave(user, dateType, newDate);
+        onClose();
+    };
 
-    const title = dateType === 'dataEditDeadline' ? 'Úprava dátumu pre úpravu údajov' : 'Úprava dátumu pre úpravu súpisiek';
+    const title = dateType === 'dataEditDeadline' 
+        ? 'Úprava dátumu pre úpravu údajov' 
+        : 'Úprava dátumu pre úpravu súpisiek';
 
     return React.createElement(
         'div',
@@ -486,16 +498,16 @@ function EditDateModal({ user, dateType, currentDate, onClose, onSave }) {
                     type: 'datetime-local',
                     id: 'date-input',
                     value: selectedDate,
-                    onChange: handleDateChange,
+                    onChange: (e) => setSelectedDate(e.target.value),
                     className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'
                 })
             ),
-            React.createElement('div', { className: 'flex justify-end' },
+            React.createElement('div', { className: 'flex justify-end space-x-2' },
                 React.createElement(
                     'button',
                     {
                         onClick: onClose,
-                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2'
+                        className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md'
                     },
                     'Zrušiť'
                 ),
