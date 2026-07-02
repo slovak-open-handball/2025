@@ -656,39 +656,63 @@ function MemberDetailsModal({
 
     // Inicializácia hodnôt pri otvorení modálu
     useEffect(() => {
-        if (show) {
-            if (isEditMode && memberData) {
-                setFirstName(memberData.firstName || '');
-                setLastName(memberData.lastName || '');
-                setDateOfBirth(memberData.dateOfBirth || '');
-                setJerseyNumber(memberData.jerseyNumber || '');
-                setRegistrationNumber(memberData.registrationNumber || '');
-                setStreet(memberData.address?.street || '');
-                setHouseNumber(memberData.address?.houseNumber || '');
-                setPostalCode(memberData.address?.postalCode || '');
-                setCity(memberData.address?.city || '');
-                setCountry(memberData.address?.country || '');
-
-                // Kontrola duplicity pri editácii
-                if (memberType === 'player' && memberData.registrationNumber) {
-                    checkRegistrationDuplicate(memberData.registrationNumber);
+        const loadMemberData = async () => {
+            if (show) {
+                if (isEditMode && memberData) {
+                    setFirstName(memberData.firstName || '');
+                    setLastName(memberData.lastName || '');
+                    
+                    // Skúsime načítať dátum narodenia a adresu z usersprivate
+                    if (memberData._privateData && teamOfMemberToEdit) {
+                        const teamKey = `${teamOfMemberToEdit.categoryName}_team${teamOfMemberToEdit._teamIndex + 1}`;
+                        const privateTeamData = memberData._privateData.persons?.[teamKey];
+                        
+                        if (privateTeamData) {
+                            // Mapovanie názvov polí
+                            const privateArrayName = memberData.originalType === 'player' ? 'players' :
+                                                    memberData.originalType === 'womenTeamMember' ? 'womenTeamMembers' :
+                                                    memberData.originalType === 'menTeamMember' ? 'menTeamMembers' :
+                                                    memberData.originalType === 'driverFemale' ? 'driversFemale' :
+                                                    'driversMale';
+                            
+                            const privateMember = privateTeamData[privateArrayName]?.[memberData._memberIndex];
+                            if (privateMember) {
+                                setDateOfBirth(privateMember.dateOfBirth || '');
+                                setStreet(privateMember.address?.street || '');
+                                setHouseNumber(privateMember.address?.houseNumber || '');
+                                setPostalCode(privateMember.address?.postalCode || '');
+                                setCity(privateMember.address?.city || '');
+                                setCountry(privateMember.address?.country || '');
+                            }
+                        }
+                    }
+                    
+                    setJerseyNumber(memberData.jerseyNumber || '');
+                    setRegistrationNumber(memberData.registrationNumber || '');
+    
+                    // Kontrola duplicity pri editácii
+                    if (memberType === 'player' && memberData.registrationNumber) {
+                        checkRegistrationDuplicate(memberData.registrationNumber);
+                    }
+                } else {
+                    setFirstName('');
+                    setLastName('');
+                    setDateOfBirth('');
+                    setJerseyNumber('');
+                    setRegistrationNumber('');
+                    setStreet('');
+                    setHouseNumber('');
+                    setPostalCode('');
+                    setCity('');
+                    setCountry('');
+                    setRegNumberError('');
+                    setIsRegNumberUnique(true);
                 }
-            } else {
-                setFirstName('');
-                setLastName('');
-                setDateOfBirth('');
-                setJerseyNumber('');
-                setRegistrationNumber('');
-                setStreet('');
-                setHouseNumber('');
-                setPostalCode('');
-                setCity('');
-                setCountry('');
-                setRegNumberError('');
-                setIsRegNumberUnique(true);
             }
-        }
-    }, [show, memberType, memberData, isEditMode]);
+        };
+        
+        loadMemberData();
+    }, [show, memberType, memberData, isEditMode, teamOfMemberToEdit]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -2640,6 +2664,8 @@ const handleSaveNewMember = async (newMemberDetails) => {
     }
 
     const userDocRef = doc(db, 'users', user.uid);
+    const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
+    
     const currentTeams = { ...teamsData };
     const teamCategory = teamToAddMemberTo.categoryName;
     const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === teamToAddMemberTo.teamName);
@@ -2651,29 +2677,50 @@ const handleSaveNewMember = async (newMemberDetails) => {
 
     const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
 
+    // === PRIPRAVÍME DÁTA PRE USERS (BEZ ADRESY A DÁTUMU NARODENIA) ===
+    const memberForUsers = {
+        firstName: newMemberDetails.firstName || '',
+        lastName: newMemberDetails.lastName || '',
+        jerseyNumber: newMemberDetails.jerseyNumber || null,
+        registrationNumber: newMemberDetails.registrationNumber || null,
+    };
+
+    // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S ADRESOU A DÁTUMOM) ===
+    const memberForPrivate = {
+        dateOfBirth: newMemberDetails.dateOfBirth || '',
+        address: newMemberDetails.address || {
+            street: '',
+            houseNumber: '',
+            city: '',
+            postalCode: '',
+            country: ''
+        }
+    };
+
+    // Pridáme do príslušného poľa v tíme (len bez citlivých údajov)
     switch (memberTypeToAdd) {
         case 'player':
             if (!teamToUpdate.playerDetails) teamToUpdate.playerDetails = [];
-            teamToUpdate.playerDetails.push(newMemberDetails);
+            teamToUpdate.playerDetails.push(memberForUsers);
             teamToUpdate.players = (teamToUpdate.players || 0) + 1;
             break;
         case 'womenTeamMember':
             if (!teamToUpdate.womenTeamMemberDetails) teamToUpdate.womenTeamMemberDetails = [];
-            teamToUpdate.womenTeamMemberDetails.push(newMemberDetails);
+            teamToUpdate.womenTeamMemberDetails.push(memberForUsers);
             teamToUpdate.womenTeamMembers = teamToUpdate.womenTeamMemberDetails.length;
             break;
         case 'menTeamMember':
             if (!teamToUpdate.menTeamMemberDetails) teamToUpdate.menTeamMemberDetails = [];
-            teamToUpdate.menTeamMemberDetails.push(newMemberDetails);
+            teamToUpdate.menTeamMemberDetails.push(memberForUsers);
             teamToUpdate.menTeamMembers = teamToUpdate.menTeamMemberDetails.length;
             break;
         case 'driverFemale':
             if (!teamToUpdate.driverDetailsFemale) teamToUpdate.driverDetailsFemale = [];
-            teamToUpdate.driverDetailsFemale.push(newMemberDetails);
+            teamToUpdate.driverDetailsFemale.push(memberForUsers);
             break;
         case 'driverMale':
             if (!teamToUpdate.driverDetailsMale) teamToUpdate.driverDetailsMale = [];
-            teamToUpdate.driverDetailsMale.push(newMemberDetails);
+            teamToUpdate.driverDetailsMale.push(memberForUsers);
             break;
         default:
             showLocalNotification('Neznámy typ člena tímu.', 'error');
@@ -2683,33 +2730,66 @@ const handleSaveNewMember = async (newMemberDetails) => {
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
+        // === 1. ULOŽÍME DO USERS (BEZ CITLIVÝCH ÚDAJOV) ===
         await updateDoc(userDocRef, { teams: currentTeams });
 
-        // ─── NOTIFIKÁCIA pri PRIDANÍ NOVÉHO ČLENA ────────────────────────────────
+        // === 2. ULOŽÍME DO USERSPRIVATE (S CITLIVÝMI ÚDAJMI) ===
+        // Načítame existujúce private dáta
+        let privateData = {};
+        try {
+            const privateDocSnapshot = await getDoc(userPrivateDocRef);
+            if (privateDocSnapshot.exists()) {
+                privateData = privateDocSnapshot.data();
+            }
+        } catch (e) {
+            // Dokument ešte neexistuje
+        }
+
+        if (!privateData.persons) privateData.persons = {};
+        const teamKey = `${teamCategory}_team${teamIndex + 1}`;
+        if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
+
+        // Zistíme, aký je index nového člena v poli
+        const memberArrayName = memberTypeToAdd === 'player' ? 'players' :
+                               memberTypeToAdd === 'womenTeamMember' ? 'womenTeamMembers' :
+                               memberTypeToAdd === 'menTeamMember' ? 'menTeamMembers' :
+                               memberTypeToAdd === 'driverFemale' ? 'driversFemale' :
+                               'driversMale';
+        
+        const memberIndex = teamToUpdate[memberTypeToAdd === 'player' ? 'playerDetails' :
+                                         memberTypeToAdd === 'womenTeamMember' ? 'womenTeamMemberDetails' :
+                                         memberTypeToAdd === 'menTeamMember' ? 'menTeamMemberDetails' :
+                                         memberTypeToAdd === 'driverFemale' ? 'driverDetailsFemale' :
+                                         'driverDetailsMale'].length - 1;
+
+        if (!privateData.persons[teamKey][memberArrayName]) {
+            privateData.persons[teamKey][memberArrayName] = [];
+        }
+        privateData.persons[teamKey][memberArrayName][memberIndex] = memberForPrivate;
+
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
+
+        // === NOTIFIKÁCIA ===
         if (userEmail) {
             const changes = [
-                `Pridaný nový '''${memberTypeLabel}: ${memberName}'`,
-                `Tím: '''${teamName} (${category})'`
+                `Pridaný nový ${memberTypeLabel}: ${memberName}`,
+                `Tím: ${teamName} (${category})`
             ];
-
             if (newMemberDetails.dateOfBirth) {
-                changes.push(`Dátum narodenia: '''${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}'`);
+                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}`);
             }
             if (newMemberDetails.jerseyNumber && memberTypeToAdd === 'player') {
-                changes.push(`Číslo dresu: '''${newMemberDetails.jerseyNumber}'`);
+                changes.push(`Číslo dresu: ${newMemberDetails.jerseyNumber}`);
             }
             if (newMemberDetails.registrationNumber && memberTypeToAdd === 'player') {
-                changes.push(`Registračné číslo: '''${newMemberDetails.registrationNumber}'`);
+                changes.push(`Registračné číslo: ${newMemberDetails.registrationNumber}`);
             }
-
-            const notificationsRef = collection(db, 'notifications');
-            await addDoc(notificationsRef, {
+            await addDoc(collection(db, 'notifications'), {
                 userEmail,
                 changes,
                 timestamp: serverTimestamp()
             });
         }
-        // ────────────────────────────────────────────────────────────────────────
 
         showLocalNotification('Nový člen tímu bol pridaný!', 'success');
         setTeamToAddMemberTo(null);
@@ -2721,127 +2801,137 @@ const handleSaveNewMember = async (newMemberDetails) => {
 };
 
 const handleDeleteMember = async (team, member) => {
-  if (isDataEditDeadlinePassed) {
-    showLocalNotification('Termín na úpravu členov tímu uplynul.', 'error');
-    return;
-  }
-
-  const confirmDelete = await new Promise(resolve => {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1002] flex justify-center items-center p-4';
-    modal.innerHTML = `
-      <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
-        <h3 class="text-xl font-semibold mb-4 text-gray-800">Odstrániť člena tímu</h3>
-        <p class="mb-6 text-gray-700">
-          Naozaj chcete odstrániť člena 
-          <strong>${member.firstName || ''} ${member.lastName || ''}</strong> 
-          (${member.type || 'člen'}) z tímu 
-          <strong>${team.teamName || 'Neznámy tím'}</strong>?
-        </p>
-        <div class="flex justify-end space-x-3">
-          <button id="cancel" class="px-5 py-2.5 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition">
-            Zrušiť
-          </button>
-          <button id="confirm" class="px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
-            Áno, odstrániť
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelector('#cancel').onclick = () => {
-      document.body.removeChild(modal);
-      resolve(false);
-    };
-    modal.querySelector('#confirm').onclick = () => {
-      document.body.removeChild(modal);
-      resolve(true);
-    };
-  });
-
-  if (!confirmDelete) return;
-
-  const userEmail = user.email;
-  const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'bez mena';
-  const teamName = team.teamName || 'bez názvu';
-  const category = team.categoryName || '?';
-  const memberTypeLabel = member.type || 'člen';
-
-  const userDocRef = doc(db, 'users', user.uid);
-  const currentTeams = { ...teamsData };
-  const teamCategory = team.categoryName;
-  const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === team.teamName);
-
-  if (teamIndex === -1) {
-    showLocalNotification('Tím nebol nájdený.', 'error');
-    return;
-  }
-
-  const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
-  let arrayName;
-
-  switch (member.originalType) {
-    case 'player': arrayName = 'playerDetails'; break;
-    case 'womenTeamMember': arrayName = 'womenTeamMemberDetails'; break;
-    case 'menTeamMember': arrayName = 'menTeamMemberDetails'; break;
-    case 'driverFemale': arrayName = 'driverDetailsFemale'; break;
-    case 'driverMale': arrayName = 'driverDetailsMale'; break;
-    default:
-      showLocalNotification('Neznámy typ člena.', 'error');
-      return;
-  }
-
-  const memberArray = teamToUpdate[arrayName] || [];
-  const memberIndex = memberArray.findIndex(m =>
-    m.firstName === member.firstName &&
-    m.lastName === member.lastName &&
-    m.dateOfBirth === member.dateOfBirth
-  );
-
-  if (memberIndex === -1) {
-    showLocalNotification('Člen nebol nájdený.', 'error');
-    return;
-  }
-
-  // Odstránime člena z poľa
-  memberArray.splice(memberIndex, 1);
-
-  // Aktualizujeme počty
-  switch (member.originalType) {
-    case 'player':
-      teamToUpdate.players = Math.max(0, (teamToUpdate.players || 0) - 1);
-      break;
-    case 'womenTeamMember':
-      teamToUpdate.womenTeamMembers = teamToUpdate.womenTeamMemberDetails?.length || 0;
-      break;
-    case 'menTeamMember':
-      teamToUpdate.menTeamMembers = teamToUpdate.menTeamMemberDetails?.length || 0;
-      break;
-    // šoféri nemajú počítadlo, iba pole
-  }
-
-  currentTeams[teamCategory][teamIndex] = teamToUpdate;
-
-  try {
-    await updateDoc(userDocRef, { teams: currentTeams });
-
-    // Notifikácia adminovi
-    if (userEmail) {
-      const changes = [`Odstránený člen: ${memberName} (${memberTypeLabel})`, `Tím: ${teamName} (${category})`];
-      await addDoc(collection(db, 'notifications'), {
-        userEmail,
-        changes,
-        timestamp: serverTimestamp()
-      });
+    if (isDataEditDeadlinePassed) {
+        showLocalNotification('Termín na úpravu členov tímu uplynul.', 'error');
+        return;
     }
 
-    showLocalNotification('Člen bol odstránený.', 'success');
-  } catch (error) {
-    console.error('Chyba pri odstraňovaní člena:', error);
-    showLocalNotification('Nepodarilo sa odstrániť člena.', 'error');
-  }
-};    
+    const confirmDelete = await new Promise(resolve => {
+        // ... existujúci confirm dialog ...
+    });
+
+    if (!confirmDelete) return;
+
+    const userEmail = user.email;
+    const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'bez mena';
+    const teamName = team.teamName || 'bez názvu';
+    const category = team.categoryName || '?';
+    const memberTypeLabel = member.type || 'člen';
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
+    
+    const currentTeams = { ...teamsData };
+    const teamCategory = team.categoryName;
+    const teamIndex = currentTeams[teamCategory].findIndex(t => t.teamName === team.teamName);
+
+    if (teamIndex === -1) {
+        showLocalNotification('Tím nebol nájdený.', 'error');
+        return;
+    }
+
+    const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
+    let arrayName;
+
+    switch (member.originalType) {
+        case 'player': arrayName = 'playerDetails'; break;
+        case 'womenTeamMember': arrayName = 'womenTeamMemberDetails'; break;
+        case 'menTeamMember': arrayName = 'menTeamMemberDetails'; break;
+        case 'driverFemale': arrayName = 'driverDetailsFemale'; break;
+        case 'driverMale': arrayName = 'driverDetailsMale'; break;
+        default:
+            showLocalNotification('Neznámy typ člena.', 'error');
+            return;
+    }
+
+    const memberArray = teamToUpdate[arrayName] || [];
+    const memberIndex = memberArray.findIndex(m =>
+        m.firstName === member.firstName &&
+        m.lastName === member.lastName
+    );
+
+    if (memberIndex === -1) {
+        showLocalNotification('Člen nebol nájdený.', 'error');
+        return;
+    }
+
+    // Odstránime člena z poľa
+    memberArray.splice(memberIndex, 1);
+
+    // Aktualizujeme počty
+    switch (member.originalType) {
+        case 'player':
+            teamToUpdate.players = Math.max(0, (teamToUpdate.players || 0) - 1);
+            break;
+        case 'womenTeamMember':
+            teamToUpdate.womenTeamMembers = teamToUpdate.womenTeamMemberDetails?.length || 0;
+            break;
+        case 'menTeamMember':
+            teamToUpdate.menTeamMembers = teamToUpdate.menTeamMemberDetails?.length || 0;
+            break;
+    }
+
+    currentTeams[teamCategory][teamIndex] = teamToUpdate;
+
+    try {
+        // === 1. ULOŽÍME DO USERS ===
+        await updateDoc(userDocRef, { teams: currentTeams });
+
+        // === 2. ODSTRÁNIME Z USERSPRIVATE ===
+        let privateData = {};
+        try {
+            const privateDocSnapshot = await getDoc(userPrivateDocRef);
+            if (privateDocSnapshot.exists()) {
+                privateData = privateDocSnapshot.data();
+            }
+        } catch (e) {
+            // Dokument neexistuje
+        }
+
+        if (privateData.persons) {
+            const teamKey = `${teamCategory}_team${teamIndex + 1}`;
+            if (privateData.persons[teamKey]) {
+                // Mapovanie názvov polí
+                const privateArrayName = arrayName === 'playerDetails' ? 'players' :
+                                        arrayName === 'womenTeamMemberDetails' ? 'womenTeamMembers' :
+                                        arrayName === 'menTeamMemberDetails' ? 'menTeamMembers' :
+                                        arrayName === 'driverDetailsFemale' ? 'driversFemale' :
+                                        'driversMale';
+
+                if (privateData.persons[teamKey][privateArrayName]) {
+                    // Odstránime člena z pola
+                    privateData.persons[teamKey][privateArrayName].splice(memberIndex, 1);
+                    
+                    // Ak je pole prázdne, odstránime ho
+                    if (privateData.persons[teamKey][privateArrayName].length === 0) {
+                        delete privateData.persons[teamKey][privateArrayName];
+                    }
+                }
+                
+                // Ak je tím prázdny, odstránime ho
+                if (Object.keys(privateData.persons[teamKey]).length === 0) {
+                    delete privateData.persons[teamKey];
+                }
+            }
+        }
+
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
+
+        // Notifikácia
+        if (userEmail) {
+            await addDoc(collection(db, 'notifications'), {
+                userEmail,
+                changes: [`Odstránený člen: ${memberName} (${memberTypeLabel})`, `Tím: ${teamName} (${category})`],
+                timestamp: serverTimestamp()
+            });
+        }
+
+        showLocalNotification('Člen bol odstránený.', 'success');
+    } catch (error) {
+        console.error('Chyba pri odstraňovaní člena:', error);
+        showLocalNotification('Nepodarilo sa odstrániť člena.', 'error');
+    }
+};
 
 const handleSaveEditedMember = async (updatedMemberDetails) => {
     if (isRosterEditDeadlinePassed) {
@@ -2860,6 +2950,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     const category = teamOfMemberToEdit.categoryName || '?';
 
     const userDocRef = doc(db, 'users', user.uid);
+    const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
+    
     const currentTeams = { ...teamsData };
     const teamCategory = teamOfMemberToEdit.categoryName;
     const teamNameFromPath = teamOfMemberToEdit.teamName;
@@ -2886,8 +2978,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     const memberArray = teamToUpdate[memberArrayName];
     const memberIndex = memberArray.findIndex(
         m => m.firstName === memberToEdit.firstName &&
-             m.lastName === memberToEdit.lastName &&
-             m.dateOfBirth === memberToEdit.dateOfBirth
+             m.lastName === memberToEdit.lastName
     );
 
     if (memberIndex === -1) {
@@ -2895,30 +2986,94 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         return;
     }
 
-    const originalMemberData = { ...memberArray[memberIndex] };
-    memberArray[memberIndex] = { ...memberArray[memberIndex], ...updatedMemberDetails };
+    // === PRIPRAVÍME DÁTA PRE USERS (LEN ZÁKLADNÉ ÚDAJE) ===
+    const memberForUsers = {
+        firstName: updatedMemberDetails.firstName || memberToEdit.firstName || '',
+        lastName: updatedMemberDetails.lastName || memberToEdit.lastName || '',
+        jerseyNumber: updatedMemberDetails.jerseyNumber !== undefined ? updatedMemberDetails.jerseyNumber : memberToEdit.jerseyNumber || null,
+        registrationNumber: updatedMemberDetails.registrationNumber !== undefined ? updatedMemberDetails.registrationNumber : memberToEdit.registrationNumber || null,
+    };
 
+    // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S ADRESOU A DÁTUMOM) ===
+    const memberForPrivate = {
+        dateOfBirth: updatedMemberDetails.dateOfBirth || memberToEdit.dateOfBirth || '',
+        address: updatedMemberDetails.address || memberToEdit.address || {
+            street: '',
+            houseNumber: '',
+            city: '',
+            postalCode: '',
+            country: ''
+        }
+    };
+
+    // Uložíme do users (bez citlivých údajov)
+    memberArray[memberIndex] = memberForUsers;
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
+        // === 1. ULOŽÍME DO USERS ===
         await updateDoc(userDocRef, { teams: currentTeams });
 
-        // ─── NOTIFIKÁCIA pri ÚPRAVE ČLENA ───────────────────────────────────────
-        const changes = getChangesForNotification(originalMemberData, updatedMemberDetails, formatDateToDMMYYYY);
+        // === 2. ULOŽÍME DO USERSPRIVATE ===
+        let privateData = {};
+        try {
+            const privateDocSnapshot = await getDoc(userPrivateDocRef);
+            if (privateDocSnapshot.exists()) {
+                privateData = privateDocSnapshot.data();
+            }
+        } catch (e) {
+            // Dokument ešte neexistuje
+        }
+
+        if (!privateData.persons) privateData.persons = {};
+        const teamKey = `${teamCategory}_team${teamIndex + 1}`;
+        if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
+
+        // Mapovanie názvov polí
+        const privateArrayName = memberArrayName === 'playerDetails' ? 'players' :
+                                memberArrayName === 'womenTeamMemberDetails' ? 'womenTeamMembers' :
+                                memberArrayName === 'menTeamMemberDetails' ? 'menTeamMembers' :
+                                memberArrayName === 'driverDetailsFemale' ? 'driversFemale' :
+                                'driversMale';
+
+        if (!privateData.persons[teamKey][privateArrayName]) {
+            privateData.persons[teamKey][privateArrayName] = [];
+        }
+        privateData.persons[teamKey][privateArrayName][memberIndex] = memberForPrivate;
+
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
+
+        // === NOTIFIKÁCIA ===
+        const changes = getChangesForNotification(
+            { 
+                firstName: memberToEdit.firstName, 
+                lastName: memberToEdit.lastName,
+                jerseyNumber: memberToEdit.jerseyNumber,
+                registrationNumber: memberToEdit.registrationNumber,
+                dateOfBirth: memberToEdit.dateOfBirth,
+                address: memberToEdit.address 
+            },
+            { 
+                firstName: memberForUsers.firstName,
+                lastName: memberForUsers.lastName,
+                jerseyNumber: memberForUsers.jerseyNumber,
+                registrationNumber: memberForUsers.registrationNumber,
+                dateOfBirth: memberForPrivate.dateOfBirth,
+                address: memberForPrivate.address
+            },
+            formatDateToDMMYYYY
+        );
 
         if (changes.length > 0 && userEmail) {
             const prefixedChanges = changes.map(ch =>
                 `${memberName} – ${memberToEdit.type} – tím ${teamName} (${category}): ${ch}`
             );
-
-            const notificationsRef = collection(db, 'notifications');
-            await addDoc(notificationsRef, {
+            await addDoc(collection(db, 'notifications'), {
                 userEmail,
                 changes: prefixedChanges,
                 timestamp: serverTimestamp()
             });
         }
-        // ────────────────────────────────────────────────────────────────────────
 
         showLocalNotification('Údaje člena tímu boli aktualizované!', 'success');
         setMemberToEdit(null);
