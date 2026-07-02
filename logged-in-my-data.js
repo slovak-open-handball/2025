@@ -570,6 +570,12 @@ const MyDataApp = ({ userProfileData }) => {
 let isEmailSyncListenerSetup = false;
 
 const loadUserPrivateData = async (uid) => {
+    // Kontrola, či je window.db inicializované
+    if (!window.db) {
+        console.warn('loadUserPrivateData: window.db nie je inicializované');
+        return {};
+    }
+    
     try {
         const privateDocRef = doc(window.db, 'usersprivate', uid);
         const privateDocSnap = await getDoc(privateDocRef);
@@ -583,59 +589,14 @@ const loadUserPrivateData = async (uid) => {
     }
 };
 
+let privateDataLoaded = false;
+
 const handleDataUpdateAndRender = async (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
     
-    if (userProfileData) {
-        // Načítame dáta z usersprivate
-        const privateData = await loadUserPrivateData(userProfileData.uid);
-        
-        // Zlúčime dáta z users a usersprivate
-        const mergedData = {
-            ...userProfileData,
-            billingAddress: privateData.billingAddress || {},
-            address: privateData.address || {},
-            persons: privateData.persons || {},
-            // Ak sú v privateData aj iné polia, môžeme ich pridať
-        };
-        
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {            
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-            
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {                                
-                                await updateDoc(userProfileRef, {
-                                    email: user.email
-                                });            
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });                                
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');            
-                            }
-                        }
-                    } catch (error) {
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
-                    }
-                }
-            });
-            isEmailSyncListenerSetup = true; 
-        }
-        
-        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-            const root = ReactDOM.createRoot(rootElement);
-            // Použijeme mergedData namiesto userProfileData
-            root.render(React.createElement(MyDataApp, { userProfileData: mergedData }));
-        }
-    } else {
+    if (!userProfileData) {
+        // Zobrazíme spinner
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -646,6 +607,80 @@ const handleDataUpdateAndRender = async (event) => {
                 )
             );
         }
+        return;
+    }
+    
+    // Ak nemáme uid, nemôžeme načítať private dáta
+    if (!userProfileData.uid) {
+        console.warn('handleDataUpdateAndRender: Chýba uid v userProfileData');
+        // Zobrazíme dáta bez private dát
+        renderMyDataApp(userProfileData, {});
+        return;
+    }
+    
+    // Načítame dáta z usersprivate (iba ak je window.db dostupný)
+    let privateData = {};
+    if (window.db) {
+        try {
+            privateData = await loadUserPrivateData(userProfileData.uid);
+            console.log('handleDataUpdateAndRender: Načítané private dáta:', privateData);
+        } catch (error) {
+            console.error('handleDataUpdateAndRender: Chyba pri načítaní private dát:', error);
+        }
+    } else {
+        console.warn('handleDataUpdateAndRender: window.db nie je dostupný, private dáta sa nenačítajú');
+    }
+    
+    // Zlúčime dáta z users a usersprivate
+    const mergedData = {
+        ...userProfileData,
+        billingAddress: privateData.billingAddress || {},
+        address: privateData.address || {},
+        persons: privateData.persons || {},
+        // Zachováme aj pôvodné polia pre prípad, že by tam boli
+        ...privateData
+    };
+    
+    // Renderujeme aplikáciu s merged dátami
+    renderMyDataApp(mergedData, privateData);
+    
+    // Nastavíme listener pre email synchronizáciu (iba raz)
+    if (window.auth && window.db && !isEmailSyncListenerSetup) {            
+        onAuthStateChanged(window.auth, async (user) => {
+            if (user) {
+                try {
+                    const userProfileRef = doc(window.db, 'users', user.uid);
+                    const docSnap = await getDoc(userProfileRef);
+        
+                    if (docSnap.exists()) {
+                        const firestoreEmail = docSnap.data().email;
+                        if (user.email !== firestoreEmail) {                                
+                            await updateDoc(userProfileRef, {
+                                email: user.email
+                            });            
+                            const notificationsCollectionRef = collection(window.db, 'notifications');
+                            await addDoc(notificationsCollectionRef, {
+                                userEmail: user.email,
+                                changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                timestamp: new Date(),
+                            });                                
+                            window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');            
+                        }
+                    }
+                } catch (error) {
+                    window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                }
+            }
+        });
+        isEmailSyncListenerSetup = true; 
+    }
+};
+
+const renderMyDataApp = (userProfileData, privateData) => {
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(MyDataApp, { userProfileData }));
     }
 };
 
