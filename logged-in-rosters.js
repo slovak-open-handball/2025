@@ -558,13 +558,13 @@ function MemberDetailsModal({
         }
 
         const existingPlayers = currentTeam?.playerDetails || [];
-
+    
         const isDuplicate = existingPlayers.some(player => {
             if (isEditMode) {
                 if (
                     player.firstName === memberData?.firstName &&
                     player.lastName === memberData?.lastName &&
-                    (player._dateOfBirth || player.dateOfBirth) === (memberData?._dateOfBirth || memberData?.dateOfBirth)
+                    (player._dateOfBirth || player.dateOfBirth) === (memberData?._dateOfBirth || memberData?.dateOfBirth)  // 🔧 OPRAVA
                 ) {
                     return false;
                 }
@@ -662,15 +662,23 @@ function MemberDetailsModal({
                     }
                     
                     if (!foundPrivateData) {
-                        // Namiesto memberData.dateOfBirth
+                        // 🔧 OPRAVA: Použi _dateOfBirth a _address
                         setDateOfBirth(memberData._dateOfBirth || memberData.dateOfBirth || '');
-                        if (memberData._address || memberData.address) {
-                            const addr = memberData._address || memberData.address;
-                            setStreet(addr.street || '');
-                            setHouseNumber(addr.houseNumber || '');
-                            setPostalCode(addr.postalCode || '');
-                            setCity(addr.city || '');
-                            setCountry(addr.country || '');
+                        
+                        // 🔧 OPRAVA: Použi _address
+                        const addressData = memberData._address || memberData.address;
+                        if (addressData) {
+                            setStreet(addressData.street || '');
+                            setHouseNumber(addressData.houseNumber || '');
+                            setPostalCode(addressData.postalCode || '');
+                            setCity(addressData.city || '');
+                            setCountry(addressData.country || '');
+                        } else {
+                            setStreet('');
+                            setHouseNumber('');
+                            setPostalCode('');
+                            setCity('');
+                            setCountry('');
                         }
                     }
                     
