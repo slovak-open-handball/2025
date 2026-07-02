@@ -677,12 +677,18 @@ const processUserData = async (userProfileData) => {
         try {
             privateData = await loadUserPrivateData(userId);
             console.log('processUserData: Načítané private dáta:', privateData);
+            
+            // KONTROLA: Či máme adresu v private dátech
+            if (privateData.address) {
+                console.log('processUserData: Adresa z private dát:', privateData.address);
+            } else {
+                console.warn('processUserData: V private dátach chýba pole "address"');
+            }
         } catch (error) {
             console.error('processUserData: Chyba pri načítaní private dát:', error);
         }
     } else {
         console.warn('processUserData: window.db nie je dostupný, private dáta sa nenačítajú');
-        // Ak db nie je dostupný, uložíme dáta na neskôr
         pendingUserProfileData = userProfileData;
         return;
     }
@@ -690,11 +696,19 @@ const processUserData = async (userProfileData) => {
     // Zlúčime dáta z users a usersprivate
     const mergedData = {
         ...userProfileData,
-        uid: userId, // Pridáme uid pre prípad, že by ho niekto očakával
-        billingAddress: privateData.billingAddress || {},
+        uid: userId,
+        // DÔLEŽITÉ: Použijeme address z privateData, ak existuje, inak prázdny objekt
         address: privateData.address || {},
+        billingAddress: privateData.billingAddress || {}, // Pre kompatibilitu
         persons: privateData.persons || {},
     };
+    
+    // KONTROLA: Vypíšeme výsledné dáta
+    console.log('processUserData: Zlúčené dáta:', {
+        address: mergedData.address,
+        billing: mergedData.billing,
+        billingAddress: mergedData.billingAddress
+    });
     
     // Renderujeme aplikáciu s merged dátami
     renderMyDataApp(mergedData);
