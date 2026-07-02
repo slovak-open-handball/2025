@@ -1341,11 +1341,9 @@ const formatLabel = (key) => {
     return label;
 };
 
-// Pomocná funkcia na porovnávanie zmien pre notifikácie
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
-    
-    // Keys that should NEVER trigger a notification
+
     const universallyIgnoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
@@ -1355,17 +1353,15 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         'note'
     ]);
 
-    // Kľúče/časti cesty, ktoré sa majú úplne ignorovať pri generovaní notifikácií
     const ignoredPathPatterns = new Set([
         'meals',
         'packageDetails.meals',
         'packageDetails.createdAt',
         'packageDetails.updatedAt',
         'packageDetails.accommodationTypes',
-        'accommodationTypes'      
+        'accommodationTypes'
     ]);
 
-    // Mapovanie názvov pre lepšie zobrazenie v notifikáciách
     const getBetterLabel = (path, originalLabel) => {
         if (path === 'packageDetails.price') {
             return 'Cena balíka';
@@ -1375,8 +1371,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 
     const normalizeValueForComparison = (value, path) => {
         if (value === null || value === undefined) return '';
-    
-        // ŠPECIÁLNE SPRACOVANIE PRE selectedDates (pole dátumov)
+
         if (path === 'selectedDates' && Array.isArray(value)) {
             return value.map(dateStr => {
                 if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
@@ -1385,14 +1380,13 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 return dateStr;
             }).join(', ');
         }
-    
-        // ─── ŠPECIÁLNE SPRACOVANIE DÁTUMOV ───────────────────────────────
+
         const lowerPath = path.toLowerCase();
-        const isDateField = 
-            lowerPath.includes('dateofbirth') || 
+        const isDateField =
+            lowerPath.includes('dateofbirth') ||
             lowerPath.includes('registrationdate') ||
             lowerPath.includes('date');
-    
+
         if (isDateField) {
             if (value && typeof value.toDate === 'function') {
                 return formatDateFn(value.toDate());
@@ -1402,8 +1396,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             }
             return String(value);
         }
-    
-        // ─── Zvyšok pôvodnej logiky ──────────────────────────────────────
+
         if (value && typeof value.toDate === 'function') {
             return value.toDate().toISOString();
         }
@@ -1428,7 +1421,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         return String(value);
     };
 
-    // Kontrola, či má byť daná cesta ignorovaná
     const shouldIgnorePath = (path) => {
         for (const pattern of ignoredPathPatterns) {
             if (path.includes(pattern)) {
@@ -1438,43 +1430,68 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         return false;
     };
 
+    // Pomocná funkcia na porovnanie adresy ako samostatných polí
+    const compareAddress = (origAddr, updAddr, prefix = '') => {
+        const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
+        addrFields.forEach(field => {
+            const origVal = origAddr?.[field] || '';
+            const updVal = updAddr?.[field] || '';
+            if (origVal !== updVal) {
+                const label = formatLabel(`address.${field}`);
+                const displayOrig = origVal || '-';
+                const displayUpd = updVal || '-';
+                // Pre PSČ formátovať s medzerou
+                let finalUpd = displayUpd;
+                let finalOrig = displayOrig;
+                if (field === 'postalCode') {
+                    finalOrig = formatPostalCodeForDisplay(origVal);
+                    finalUpd = formatPostalCodeForDisplay(updVal);
+                }
+                changes.push(`Zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
+            }
+        });
+    };
+
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
         const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-            
-            // Ignorovať ak je kľúč v universallyIgnoredKeys alebo cesta obsahuje ignorovaný vzor
+
             if (universallyIgnoredKeys.has(key)) continue;
             if (shouldIgnorePath(currentPath)) continue;
-            
-            // ŠPECIÁLNE SPRACOVANIE PRE accommodation - spracujeme len ako celok, nie jeho časti
+
+            // Špeciálne spracovanie pre accommodation
             if (key === 'accommodation') {
                 const origAccommodation = origObj?.accommodation;
                 const updAccommodation = updObj?.accommodation;
-                
                 const origAccType = origAccommodation?.type || 'bez ubytovania';
                 const updAccType = updAccommodation?.type || 'bez ubytovania';
-                
                 if (origAccType !== updAccType) {
                     changes.push(`Zmena Typ ubytovania: z '${origAccType}' na '${updAccType}'`);
                 }
                 continue;
             }
-            
-            // ŠPECIÁLNE SPRACOVANIE PRE selectedDates
+
+            // Špeciálne spracovanie pre address – rozložíme na jednotlivé polia
+            if (key === 'address') {
+                const origAddr = origObj?.address || {};
+                const updAddr = updObj?.address || {};
+                compareAddress(origAddr, updAddr, currentPath);
+                continue;
+            }
+
+            // Špeciálne spracovanie pre selectedDates
             if (currentPath === 'selectedDates') {
                 const originalDates = Array.isArray(origObj?.[key]) ? origObj[key] : [];
                 const updatedDates = Array.isArray(updObj?.[key]) ? updObj[key] : [];
-                
                 const formattedOriginal = originalDates.map(d => formatDateFn(d)).join(', ');
                 const formattedUpdated = updatedDates.map(d => formatDateFn(d)).join(', ');
-                
                 if (formattedOriginal !== formattedUpdated) {
                     changes.push(`Zmena ${formatLabel(currentPath)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
                 }
                 continue;
             }
-    
+
             const origValue = origObj ? origObj[key] : undefined;
             const updValue = updObj ? updObj[key] : undefined;
 
@@ -1528,7 +1545,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     const updatedArrival = formatArrivalTime(updated?.arrival?.type, updated?.arrival?.time);
 
     if (originalArrival !== updatedArrival) {
-      changes.push(`Zmena dopravy: z '${originalArrival}' na '${updatedArrival}'`);
+        changes.push(`Zmena dopravy: z '${originalArrival}' na '${updatedArrival}'`);
     }
 
     return changes;
