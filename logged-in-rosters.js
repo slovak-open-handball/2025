@@ -2227,12 +2227,10 @@ useEffect(() => {
                                                 mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
                                                     const privatePlayer = privateTeamData.players?.[playerIndex] || {};
                                                     return {
-                                                        // IBA POVOLENÉ POLIA PRE USERS
                                                         firstName: player.firstName || '',
                                                         lastName: player.lastName || '',
                                                         jerseyNumber: player.jerseyNumber || null,
                                                         registrationNumber: player.registrationNumber || null,
-                                                        // Ďalšie polia, ktoré nie sú zakázané
                                                         ...Object.fromEntries(
                                                             Object.entries(player)
                                                                 .filter(([key]) => 
@@ -2240,7 +2238,6 @@ useEffect(() => {
                                                                       'dateOfBirth', 'address', '_privateData'].includes(key)
                                                                 )
                                                         ),
-                                                        // Súkromné dáta - ODDELENE pre zobrazenie
                                                         _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
                                                         _address: privatePlayer.address || player.address || {
                                                             street: '',
@@ -2365,17 +2362,44 @@ useEffect(() => {
                                                 });
                                             }
     
+                                            // ============================================================
+                                            // 🆕 KRITICKÉ: NEPOUŽÍVAJ ...team - explicitne definuj všetky polia
+                                            // ============================================================
                                             return {
-                                                ...team,
-                                                clubName: team.clubName?.trim() || currentClubName,
+                                                // Základné polia tímu (čisté dáta)
+                                                teamName: team.teamName || '',
                                                 categoryName: team.categoryName || categoryKey,
+                                                clubName: team.clubName?.trim() || currentClubName,
+                                                arrival: team.arrival || { type: '', time: '' },
+                                                accommodation: team.accommodation || { type: '' },
+                                                packageDetails: team.packageDetails || { name: '' },
+                                                tshirts: team.tshirts || [],
+                                                jerseyHomeColor: team.jerseyHomeColor || '',
+                                                jerseyAwayColor: team.jerseyAwayColor || '',
+                                                players: team.players || 0,
+                                                menTeamMembers: team.menTeamMembers || 0,
+                                                womenTeamMembers: team.womenTeamMembers || 0,
+                                                // Polia s členmi (už zlúčené)
                                                 playerDetails: mergedPlayerDetails,
                                                 womenTeamMemberDetails: mergedWomenTeamMembers,
                                                 menTeamMemberDetails: mergedMenTeamMembers,
                                                 driverDetailsFemale: mergedDriverDetailsFemale,
                                                 driverDetailsMale: mergedDriverDetailsMale,
+                                                // Pomocné polia
                                                 _privateData: privateData,
-                                                _teamKey: teamKey
+                                                _teamKey: teamKey,
+                                                _userId: user.uid,
+                                                _category: categoryKey,
+                                                _teamIndex: teamIndex,
+                                                _registeredBy: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Neznámy',
+                                                _menTeamMembersCount: mergedMenTeamMembers.length,
+                                                _womenTeamMembersCount: mergedWomenTeamMembers.length,
+                                                _menDriversCount: mergedDriverDetailsMale.length,
+                                                _womenDriversCount: mergedDriverDetailsFemale.length,
+                                                _players: mergedPlayerDetails.length,
+                                                _teamTshirtsMap: new Map(
+                                                    (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
+                                                )
                                             };
                                         });
                                     }
