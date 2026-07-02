@@ -3168,7 +3168,6 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                 const clean = { ...item };
                 delete clean.dateOfBirth;
                 delete clean.address;
-                // Odstránime aj prípadné _privateData
                 delete clean._privateData;
                 return clean;
             });
@@ -3187,9 +3186,11 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     const cleanedTeam = cleanTeamMembers(teamToUpdate);
     currentTeams[teamCategory][teamIndex] = cleanedTeam;
 
-    await updateDoc(userDocRef, { teams: currentTeams });
-
     try {
+        // === 1. ULOŽÍME DO USERS (BEZ ADRIES A DÁTUMOV) - IBA RAZ ===
+        await updateDoc(userDocRef, { teams: currentTeams });
+
+        // === 2. ULOŽÍME DO USERSPRIVATE (S ADRESAMI A DÁTUMAMI) ===
         let privateData = {};
         try {
             const privateDocSnapshot = await getDoc(userPrivateDocRef);
