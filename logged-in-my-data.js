@@ -405,42 +405,67 @@ const MyDataApp = ({ userProfileData }) => {
     }, [userProfileData]);
     
     useEffect(() => {
-        let timer;         
+        let timer;
+        
         const updateCanEditStatus = () => {
             console.log('updateCanEditStatus - userProfileData:', userProfileData);
             console.log('updateCanEditStatus - dataEditDeadline:', userProfileData?.dataEditDeadline);
             console.log('updateCanEditStatus - settingsRegistrationDates:', settingsRegistrationDates);
+            console.log('updateCanEditStatus - isGlobalAuthReady:', isGlobalAuthReady);
+            console.log('updateCanEditStatus - isRegistrationDataLoaded:', isRegistrationDataLoaded);
+            console.log('updateCanEditStatus - isCategoriesDataLoaded:', isCategoriesDataLoaded);
             
-            setCanEdit(false); 
+            // NASTAVÍME PREDVOLENÉ HODNOTY
+            setCanEdit(false);
             setIsPasswordChangeOnlyMode(false);
-            if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !settingsRegistrationDates) {
+            
+            // KONTROLA: Či sú všetky potrebné dáta načítané
+            if (!userProfileData) {
+                console.log('updateCanEditStatus: userProfileData chýba');
                 return;
             }
+            
+            if (!isGlobalAuthReady) {
+                console.log('updateCanEditStatus: isGlobalAuthReady = false');
+                return;
+            }
+            
+            if (!isRegistrationDataLoaded) {
+                console.log('updateCanEditStatus: isRegistrationDataLoaded = false');
+                return;
+            }
+            
+            if (!isCategoriesDataLoaded) {
+                console.log('updateCanEditStatus: isCategoriesDataLoaded = false');
+                return;
+            }
+            
+            if (!settingsRegistrationDates) {
+                console.log('updateCanEditStatus: settingsRegistrationDates chýba');
+                return;
+            }
+            
+            // VŠETKY DÁTA SÚ NAČÍTANÉ - POKRAČUJEME KONTROLOU
             const isAdmin = userProfileData.role === 'admin';
             if (isAdmin) {
                 setCanEdit(true);
-                return; 
+                return;
             }
             
-            // SPRÁVNA KONVERZIA DÁTUMU - ošetrenie pre Timestamp aj Date
+            // SPRÁVNA KONVERZIA DÁTUMU
             let deadlineDate = null;
             
             // Najprv skúsime získať dátum z userProfileData
             if (userProfileData?.dataEditDeadline) {
-                // Ak je to Timestamp z Firestore (má toDate metódu)
                 if (typeof userProfileData.dataEditDeadline.toDate === 'function') {
                     deadlineDate = userProfileData.dataEditDeadline.toDate();
                 } 
-                // Ak je to už Date objekt
                 else if (userProfileData.dataEditDeadline instanceof Date) {
                     deadlineDate = userProfileData.dataEditDeadline;
                 } 
-                // Ak je to objekt s seconds (Timestamp)
                 else if (userProfileData.dataEditDeadline.seconds !== undefined) {
-                    // Konvertujeme seconds na milisekundy
                     deadlineDate = new Date(userProfileData.dataEditDeadline.seconds * 1000);
                 } 
-                // Ak je to reťazec alebo číslo
                 else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
@@ -462,7 +487,6 @@ const MyDataApp = ({ userProfileData }) => {
                 }
             }
             
-            // KONTROLA: Vypíšeme deadline a aktuálny čas pre debug
             if (deadlineDate) {
                 console.log('=== DEADLINE CHECK ===');
                 console.log('Deadline date:', deadlineDate);
@@ -475,11 +499,10 @@ const MyDataApp = ({ userProfileData }) => {
             
             const deadlineMillis = deadlineDate ? deadlineDate.getTime() : null;
             
-            if (deadlineMillis !== null) { 
+            if (deadlineMillis !== null) {
                 const nowMillis = Date.now();
-                // UPRAVENÉ: Odstránená výnimka pre referee a volunteer
-                if (nowMillis <= deadlineMillis) { 
-                    setCanEdit(true); 
+                if (nowMillis <= deadlineMillis) {
+                    setCanEdit(true);
                     if (timer) clearTimeout(timer);
                     if (deadlineMillis - nowMillis > 0) {
                         timer = setTimeout(() => {
@@ -489,7 +512,7 @@ const MyDataApp = ({ userProfileData }) => {
                             } else {
                                 setIsPasswordChangeOnlyMode(false);
                             }
-                        }, deadlineMillis - nowMillis + 100); 
+                        }, deadlineMillis - nowMillis + 100);
                     }
                 } else {
                     setCanEdit(false);
@@ -500,12 +523,13 @@ const MyDataApp = ({ userProfileData }) => {
                     }
                 }
             } else {
-                // Ak nie je žiadny deadline, NEPOVOLÍME editáciu nikomu (okrem admina)
                 setCanEdit(false);
                 setIsPasswordChangeOnlyMode(false);
             }
         };
+        
         updateCanEditStatus();
+        
         return () => {
             if (timer) {
                 clearTimeout(timer);
