@@ -161,30 +161,29 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
            const originalBillingData = originalDataRef.current;
            const changeMessages = [];
    
-           // Mapovanie pre názvy polí - OPRAVENÉ
+           // Mapovanie pre názvy polí
            const fieldNames = {
                'billing.clubName': 'Názov klubu',
                'billing.ico': 'IČO',
                'billing.dic': 'DIČ',
                'billing.icdph': 'IČ DPH',
-               'address.street': 'Ulica',           // OPRAVENÉ
-               'address.houseNumber': 'Číslo domu', // OPRAVENÉ
-               'address.city': 'Mesto',             // OPRAVENÉ
-               'address.postalCode': 'PSČ',         // OPRAVENÉ
-               'address.country': 'Krajina',        // OPRAVENÉ (bolo 'adress.country')
+               'address.street': 'Ulica',
+               'address.houseNumber': 'Číslo domu',
+               'address.city': 'Mesto',
+               'address.postalCode': 'PSČ',
+               'address.country': 'Krajina',
            };
    
-           // OPRAVENÉ: používame 'address' namiesto 'billingAddress'
            const changes = {
                'billing.clubName': clubName,
                'billing.ico': ico,
                'billing.dic': dic,
                'billing.icdph': icdph,
-               'address.street': street,           // OPRAVENÉ
-               'address.houseNumber': houseNumber, // OPRAVENÉ
-               'address.city': city,               // OPRAVENÉ
-               'address.postalCode': normalizedPostalCode, // OPRAVENÉ
-               'address.country': country,         // OPRAVENÉ
+               'address.street': street,
+               'address.houseNumber': houseNumber,
+               'address.city': city,
+               'address.postalCode': normalizedPostalCode,
+               'address.country': country,
            };
    
            for (const key in changes) {
@@ -193,10 +192,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                
                // Získame pôvodnú hodnotu podľa kľúča
                if (key.startsWith('billing.')) {
-                   const fieldKey = key.substring(8); // odstránime 'billing.'
+                   const fieldKey = key.substring(8);
                    originalValue = originalBillingData[fieldKey];
                } else if (key.startsWith('address.')) {
-                   const fieldKey = key.substring(8); // odstránime 'address.' (bolo 15)
+                   const fieldKey = key.substring(8);
                    originalValue = originalBillingData[fieldKey];
                } else {
                    originalValue = originalBillingData[key];
@@ -210,12 +209,12 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                }
            }
    
-           // Uložíme zmeny do notifikácií
+           // ✅ UPRAVENÉ: Uložíme zmeny do notifikácií s použitím serverTimestamp()
            if (changeMessages.length > 0) {
                await addDoc(collection(db, 'notifications'), {
                    userEmail: user.email,
                    changes: changeMessages,
-                   timestamp: new Date().toISOString(),
+                   timestamp: serverTimestamp(), // POUŽITIE SERVER TIMESTAMP NAMIESTO new Date().toISOString()
                });
            }
            
