@@ -974,155 +974,86 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           const teamKey = `${categoryName}_team${teamIndex + 1}`;
           privateData.persons[teamKey] = {};
       
-          // Hráči (playerDetails)
+          // Hráči (playerDetails) - ukladáme kompletné údaje vrátane adries
           if (team.playerDetails && Array.isArray(team.playerDetails)) {
-            privateData.persons[teamKey].players = team.playerDetails.map((player) => {
-              const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
-              let originalPlayer = null;
-              
-              if (originalTeam && originalTeam.playerDetails) {
-                if (player.registrationNumber) {
-                  originalPlayer = originalTeam.playerDetails.find(p => 
-                    p.registrationNumber === player.registrationNumber
-                  );
-                }
-                if (!originalPlayer) {
-                  const playerIndex = team.playerDetails.indexOf(player);
-                  originalPlayer = originalTeam.playerDetails[playerIndex] || null;
-                }
+            privateData.persons[teamKey].players = team.playerDetails.map((player) => ({
+              jerseyNumber: player.jerseyNumber || '',
+              firstName: player.firstName || '',
+              lastName: player.lastName || '',
+              dateOfBirth: player.dateOfBirth || '',
+              registrationNumber: player.registrationNumber || '',
+              address: player.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
               }
-              
-              return {
-                dateOfBirth: originalPlayer?.dateOfBirth || '',
-                address: originalPlayer?.address || {
-                  street: '',
-                  houseNumber: '',
-                  city: '',
-                  postalCode: '',
-                  country: ''
-                }
-              };
-            });
+            }));
           }
       
           // Ženy - členky tímu (womenTeamMemberDetails)
           if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-            privateData.persons[teamKey].womenTeamMembers = team.womenTeamMemberDetails.map((member) => {
-              const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
-              let originalMember = null;
-              
-              if (originalTeam && originalTeam.womenTeamMemberDetails) {
-                originalMember = originalTeam.womenTeamMemberDetails.find(m => 
-                  m.firstName === member.firstName && 
-                  m.lastName === member.lastName
-                );
-                if (!originalMember) {
-                  const memberIndex = team.womenTeamMemberDetails.indexOf(member);
-                  originalMember = originalTeam.womenTeamMemberDetails[memberIndex] || null;
-                }
+            privateData.persons[teamKey].womenTeamMembers = team.womenTeamMemberDetails.map((member) => ({
+              firstName: member.firstName || '',
+              lastName: member.lastName || '',
+              dateOfBirth: member.dateOfBirth || '',
+              address: member.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
               }
-              
-              return {
-                dateOfBirth: originalMember?.dateOfBirth || '',
-                address: originalMember?.address || {
-                  street: '',
-                  houseNumber: '',
-                  city: '',
-                  postalCode: '',
-                  country: ''
-                }
-              };
-            });
+            }));
           }
-
+      
           // Muži - členovia tímu (menTeamMemberDetails)
           if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-            privateData.persons[teamKey].menTeamMembers = team.menTeamMemberDetails.map((member) => {
-              const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
-              let originalMember = null;
-              
-              if (originalTeam && originalTeam.menTeamMemberDetails) {
-                originalMember = originalTeam.menTeamMemberDetails.find(m => 
-                  m.firstName === member.firstName && 
-                  m.lastName === member.lastName
-                );
-                if (!originalMember) {
-                  const memberIndex = team.menTeamMemberDetails.indexOf(member);
-                  originalMember = originalTeam.menTeamMemberDetails[memberIndex] || null;
-                }
+            privateData.persons[teamKey].menTeamMembers = team.menTeamMemberDetails.map((member) => ({
+              firstName: member.firstName || '',
+              lastName: member.lastName || '',
+              dateOfBirth: member.dateOfBirth || '',
+              address: member.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
               }
-              
-              return {
-                dateOfBirth: originalMember?.dateOfBirth || '',
-                address: originalMember?.address || {
-                  street: '',
-                  houseNumber: '',
-                  city: '',
-                  postalCode: '',
-                  country: ''
-                }
-              };
-            });
+            }));
           }
-
+      
           // Šoféri - muži (driverDetailsMale)
           if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-            privateData.persons[teamKey].driversMale = team.driverDetailsMale.map((driver) => {
-              const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
-              let originalDriver = null;
-              
-              if (originalTeam && originalTeam.driverDetailsMale) {
-                originalDriver = originalTeam.driverDetailsMale.find(d => 
-                  d.firstName === driver.firstName && 
-                  d.lastName === driver.lastName
-                );
-                if (!originalDriver) {
-                  const driverIndex = team.driverDetailsMale.indexOf(driver);
-                  originalDriver = originalTeam.driverDetailsMale[driverIndex] || null;
-                }
+            privateData.persons[teamKey].driversMale = team.driverDetailsMale.map((driver) => ({
+              firstName: driver.firstName || '',
+              lastName: driver.lastName || '',
+              dateOfBirth: driver.dateOfBirth || '',
+              address: driver.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
               }
-              
-              return {
-                dateOfBirth: originalDriver?.dateOfBirth || '',
-                address: originalDriver?.address || {
-                  street: '',
-                  houseNumber: '',
-                  city: '',
-                  postalCode: '',
-                  country: ''
-                }
-              };
-            });
+            }));
           }
-
+      
           // Šoféri - ženy (driverDetailsFemale)
           if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-            privateData.persons[teamKey].driversFemale = team.driverDetailsFemale.map((driver) => {
-              const originalTeam = finalTeamsDataFromPage7[categoryName]?.[teamIndex];
-              let originalDriver = null;
-        
-              if (originalTeam && originalTeam.driverDetailsFemale) {
-                originalDriver = originalTeam.driverDetailsFemale.find(d => 
-                  d.firstName === driver.firstName && 
-                  d.lastName === driver.lastName
-                );
-                if (!originalDriver) {
-                  const driverIndex = team.driverDetailsFemale.indexOf(driver);
-                  originalDriver = originalTeam.driverDetailsFemale[driverIndex] || null;
-                }
+            privateData.persons[teamKey].driversFemale = team.driverDetailsFemale.map((driver) => ({
+              firstName: driver.firstName || '',
+              lastName: driver.lastName || '',
+              dateOfBirth: driver.dateOfBirth || '',
+              address: driver.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
               }
-        
-              return {
-                dateOfBirth: originalDriver?.dateOfBirth || '',
-                address: originalDriver?.address || {
-                  street: '',
-                  houseNumber: '',
-                  city: '',
-                  postalCode: '',
-                  country: ''
-                }
-              };
-            });
+            }));
           }
         });
       });
