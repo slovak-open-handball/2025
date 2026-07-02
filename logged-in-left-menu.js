@@ -29,95 +29,15 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
+    // JEDNOTNÁ funkcia na zvýraznenie pre všetky roly (používa modrú farbu ako pre admina)
     const highlightActiveMenuLink = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-        const role = userProfileData?.role || 'default';
-        
-        const getRoleColors = (role) => {
-            switch (role) {
-                case 'admin':
-                    return { 
-                        bgClasses: ['bg-blue-100', 'dark:bg-blue-900/30'], 
-                        textClasses: ['text-blue-600', 'dark:text-blue-400']
-                    };
-                case 'hall':
-                    return { 
-                        bgClasses: ['bg-[#b06835]/20', 'dark:bg-[#b06835]/10'], 
-                        textClasses: ['text-[#b06835]', 'dark:text-[#b06835]/80']
-                    };
-                case 'club':
-                    return { 
-                        bgClasses: ['bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10'], 
-                        textClasses: ['text-[#9333EA]', 'dark:text-[#9333EA]/80']
-                    };
-                case 'referee':
-                    return { 
-                        bgClasses: ['bg-[#007800]/20', 'dark:bg-[#007800]/10'], 
-                        textClasses: ['text-[#007800]', 'dark:text-[#007800]/80']
-                    };
-                case 'volunteer':
-                    return { 
-                        bgClasses: ['bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10'], 
-                        textClasses: ['text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80']
-                    };
-                default:
-                    return { 
-                        bgClasses: ['bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10'], 
-                        textClasses: ['text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80']
-                    };
-            }
-        };
-        
-        const roleColors = getRoleColors(role);
 
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (href) {
-                link.classList.remove(
-                    'bg-blue-100', 'dark:bg-blue-900', 
-                    'text-blue-600', 'dark:text-blue-300',
-                    'text-[#1F2937]', 'dark:text-[#1F2937]/90',
-                    'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
-                    'text-[#b06835]', 'dark:text-[#b06835]/80',
-                    'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
-                    'text-[#9333EA]', 'dark:text-[#9333EA]/80',
-                    'bg-[#007800]/20', 'dark:bg-[#007800]/10',
-                    'text-[#007800]', 'dark:text-[#007800]/80',
-                    'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
-                    'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
-                    'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
-                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
-                    'text-white', 'dark:text-white',
-                    'hover:text-white', 'hover:dark:text-white'
-                );
-                
-                if (currentPath.includes(href) || 
-                    (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
-                    (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
-                    (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
-                    (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
-                    (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
-                    (href === 'logged-in-map.html' && currentPath.includes('map')) ||
-                    (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
-                    (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
-                    (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
-                    (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) { 
-                    link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
-                    link.classList.add('hover:text-white', 'hover:dark:text-white');
-                }
-            }
-        });
-    };
-
-    const highlightActiveMenuLinkGray = () => {
-        const currentPath = window.location.pathname;
-        const menuLinks = document.querySelectorAll('#left-menu a');
-
-        menuLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href) {
+                // Odstránime všetky predchádzajúce triedy
                 link.classList.remove(
                     'bg-blue-100', 'dark:bg-blue-900', 
                     'text-blue-600', 'dark:text-blue-300',
@@ -136,6 +56,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'hover:text-white', 'hover:dark:text-white'
                 );
                 
+                // Pridáme modré zvýraznenie pre aktívnu stránku (rovnaké pre všetkých)
                 if (currentPath.includes(href) || 
                     (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                     (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
@@ -148,42 +69,32 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
                     (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
-                    link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                    // POUŽIJEME MODRÚ FARBU pre všetky roly (ako pre admina)
+                    link.classList.add('bg-blue-100', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-300');
                     link.classList.add('hover:text-white', 'hover:dark:text-white');
                     
                     const icon = link.querySelector('svg');
                     if (icon) {
-                        icon.style.color = '#1F2937';
-                        icon.classList.add('dark:text-[#1F2937]/90');
-                        icon.classList.add('hover:text-white', 'hover:dark:text-white');
+                        icon.style.color = '#3B82F6'; // modrá farba
+                        icon.classList.add('dark:text-blue-300');
+                        icon.classList.remove('dark:text-[#1F2937]/90');
                     }
                 } else {
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '';
+                        icon.classList.remove('dark:text-blue-300');
                         icon.classList.remove('dark:text-[#1F2937]/90');
-                        icon.classList.remove('hover:text-white', 'hover:dark:text-white');
                     }
                 }
             }
         });
     };
 
+    // JEDNOTNÁ funkcia pre farbu menu tlačidla - vždy modrá
     const getColorForRole = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff';
-            case 'hall':
-                return '#b06835';
-            case 'club':
-                return '#9333EA';
-            case 'referee':
-                return '#007800';
-            case 'volunteer':
-                return '#FFAC1C';
-            default:
-                return '#1D4ED8';
-        }
+        // VŠETKY roly budú mať modrú farbu
+        return '#3B82F6'; // modrá farba (ako pre admina)
     };
 
     const applyMenuState = () => {
@@ -244,13 +155,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             notificationsLink?.classList.remove('hidden');
             teamRostersLink?.classList.add('hidden');
             
-            // 🔥 TEAMS-IN-GROUPS - pre admina VŽDY viditeľné
             if (teamsInGroupsLink) {
                 teamsInGroupsLink.classList.remove('hidden');
                 teamsInGroupsLink.style.display = '';
             }
             
-            // 🔥 MAPA - pre admina VŽDY viditeľná
             if (mapLink) {
                 mapLink.classList.remove('hidden');
                 mapLink.style.display = '';
@@ -296,7 +205,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else if (userProfileData.role === 'hall') {
-            // Pre hall - skryjeme všetky admin odkazy
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -318,7 +226,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else {
-            // Ostatné roly - skryjeme všetky admin odkazy
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -360,13 +267,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     applyMenuState();
     updateMenuText();
     showRoleBasedLinks();
-    setTimeout(highlightActiveMenuLinkGray, 100);
+    setTimeout(highlightActiveMenuLink, 100);
     
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
-        setTimeout(highlightActiveMenuLinkGray, 300);
+        setTimeout(highlightActiveMenuLink, 300);
     });
 
     leftMenu.addEventListener('mouseenter', () => {
@@ -376,7 +283,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            setTimeout(highlightActiveMenuLinkGray, 100);
+            setTimeout(highlightActiveMenuLink, 100);
         }
     });
 
