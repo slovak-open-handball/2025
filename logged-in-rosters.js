@@ -3158,48 +3158,27 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
     // 🔥 KRITICKÁ ČASŤ: VYČISTÍME CELÝ TÍM OD ADRIES A DÁTUMOV
     const cleanTeamMembers = (team) => {
-        const cleanTeam = { ...team };
+        // Vytvoríme hlbokú kópiu tímu
+        const cleanTeam = JSON.parse(JSON.stringify(team));
         
-        if (cleanTeam.playerDetails) {
-            cleanTeam.playerDetails = cleanTeam.playerDetails.map(p => {
-                const clean = { ...p };
+        // Vyčistíme všetky polia s členmi
+        const cleanArray = (arr) => {
+            if (!arr) return arr;
+            return arr.map(item => {
+                const clean = { ...item };
                 delete clean.dateOfBirth;
                 delete clean.address;
+                // Odstránime aj prípadné _privateData
+                delete clean._privateData;
                 return clean;
             });
-        }
-        if (cleanTeam.womenTeamMemberDetails) {
-            cleanTeam.womenTeamMemberDetails = cleanTeam.womenTeamMemberDetails.map(m => {
-                const clean = { ...m };
-                delete clean.dateOfBirth;
-                delete clean.address;
-                return clean;
-            });
-        }
-        if (cleanTeam.menTeamMemberDetails) {
-            cleanTeam.menTeamMemberDetails = cleanTeam.menTeamMemberDetails.map(m => {
-                const clean = { ...m };
-                delete clean.dateOfBirth;
-                delete clean.address;
-                return clean;
-            });
-        }
-        if (cleanTeam.driverDetailsFemale) {
-            cleanTeam.driverDetailsFemale = cleanTeam.driverDetailsFemale.map(d => {
-                const clean = { ...d };
-                delete clean.dateOfBirth;
-                delete clean.address;
-                return clean;
-            });
-        }
-        if (cleanTeam.driverDetailsMale) {
-            cleanTeam.driverDetailsMale = cleanTeam.driverDetailsMale.map(d => {
-                const clean = { ...d };
-                delete clean.dateOfBirth;
-                delete clean.address;
-                return clean;
-            });
-        }
+        };
+        
+        cleanTeam.playerDetails = cleanArray(cleanTeam.playerDetails);
+        cleanTeam.womenTeamMemberDetails = cleanArray(cleanTeam.womenTeamMemberDetails);
+        cleanTeam.menTeamMemberDetails = cleanArray(cleanTeam.menTeamMemberDetails);
+        cleanTeam.driverDetailsFemale = cleanArray(cleanTeam.driverDetailsFemale);
+        cleanTeam.driverDetailsMale = cleanArray(cleanTeam.driverDetailsMale);
         
         return cleanTeam;
     };
@@ -3207,13 +3186,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     // Vyčistíme celý tím
     const cleanedTeam = cleanTeamMembers(teamToUpdate);
     currentTeams[teamCategory][teamIndex] = cleanedTeam;
+
     await updateDoc(userDocRef, { teams: currentTeams });
 
     try {
-        // === 1. ULOŽÍME DO USERS (BEZ ADRIES A DÁTUMOV) ===
-        await updateDoc(userDocRef, { teams: currentTeams });
-
-        // === 2. ULOŽÍME DO USERSPRIVATE (S ADRESAMI A DÁTUMAMI) ===
         let privateData = {};
         try {
             const privateDocSnapshot = await getDoc(userPrivateDocRef);
