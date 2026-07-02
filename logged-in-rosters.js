@@ -658,6 +658,11 @@ function MemberDetailsModal({
     useEffect(() => {
         const loadMemberData = async () => {
             if (show) {
+                console.log('🔍 MemberDetailsModal - show:', show);
+                console.log('🔍 MemberDetailsModal - isEditMode:', isEditMode);
+                console.log('🔍 MemberDetailsModal - memberData:', memberData);
+                console.log('🔍 MemberDetailsModal - teamOfMemberToEdit:', teamOfMemberToEdit);
+                
                 if (isEditMode && memberData) {
                     setFirstName(memberData.firstName || '');
                     setLastName(memberData.lastName || '');
@@ -666,10 +671,15 @@ function MemberDetailsModal({
                     
                     // Skúsime načítať dátum narodenia a adresu z usersprivate
                     let foundPrivateData = false;
+
+                    console.log('🔍 memberData._privateData:', memberData._privateData);
+                    console.log('🔍 teamOfMemberToEdit:', teamOfMemberToEdit);
                     
                     if (memberData._privateData && teamOfMemberToEdit) {
                         const teamKey = `${teamOfMemberToEdit.categoryName}_team${teamOfMemberToEdit._teamIndex + 1}`;
+                        console.log('🔍 teamKey:', teamKey);
                         const privateTeamData = memberData._privateData.persons?.[teamKey];
+                        console.log('🔍 privateTeamData:', privateTeamData);
                         
                         if (privateTeamData) {
                             // Mapovanie názvov polí - musí zodpovedať štruktúre v register.js
@@ -693,25 +703,33 @@ function MemberDetailsModal({
                                 default:
                                     privateArrayName = null;
                             }
+
+                            console.log('🔍 privateArrayName:', privateArrayName);
+                            console.log('🔍 memberData._memberIndex:', memberData._memberIndex);
                             
                             if (privateArrayName && privateTeamData[privateArrayName]) {
+                                console.log('🔍 privateTeamData[privateArrayName]:', privateTeamData[privateArrayName]);
                                 // Skúsime nájsť člena podľa mena a priezviska (ak _memberIndex nefunguje)
                                 let privateMember = null;
                                 
                                 // Najprv skúsime podľa indexu
                                 if (memberData._memberIndex !== undefined && privateTeamData[privateArrayName][memberData._memberIndex]) {
                                     privateMember = privateTeamData[privateArrayName][memberData._memberIndex];
+                                    console.log('🔍 privateMember found by index:', privateMember);
                                 } else {
                                     // Ak index nefunguje, skúsime podľa mena a priezviska
                                     privateMember = privateTeamData[privateArrayName].find(
                                         p => p.firstName === memberData.firstName && 
                                              p.lastName === memberData.lastName
                                     );
+                                    console.log('🔍 privateMember found by name:', privateMember);
                                 }
                                 
                                 if (privateMember) {
+                                    console.log('🔍 Setting dateOfBirth from privateMember:', privateMember.dateOfBirth);
                                     setDateOfBirth(privateMember.dateOfBirth || '');
                                     if (privateMember.address) {
+                                        console.log('🔍 Setting address from privateMember:', privateMember.address);
                                         setStreet(privateMember.address.street || '');
                                         setHouseNumber(privateMember.address.houseNumber || '');
                                         setPostalCode(privateMember.address.postalCode || '');
@@ -726,6 +744,7 @@ function MemberDetailsModal({
                     
                     // Ak sme nenašli dáta v usersprivate, použijeme údaje z memberData (fallback)
                     if (!foundPrivateData) {
+                        console.log('🔍 Using fallback data from memberData');
                         setDateOfBirth(memberData.dateOfBirth || '');
                         if (memberData.address) {
                             setStreet(memberData.address.street || '');
