@@ -2812,7 +2812,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
         }
         privateData.persons[teamKey][memberArrayName][memberIndex] = memberForPrivate;
 
-        await updateDoc(userPrivateDocRef, privateData);
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
 
         if (userEmail) {
             const changes = [
@@ -2988,7 +2988,7 @@ const handleDeleteMember = async (team, member) => {
             }
         }
 
-        await updateDoc(userPrivateDocRef, privateData);
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
 
         // Notifikácia
         if (userEmail) {
@@ -3176,7 +3176,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         
         privateData.persons[teamKey][privateArrayName][memberIndex] = memberForPrivate;
 
-        await updateDoc(userPrivateDocRef, privateData);
+        await setDoc(userPrivateDocRef, privateData, { merge: true });
 
         // === NOTIFIKÁCIA ===
         const changes = getChangesForNotification(
