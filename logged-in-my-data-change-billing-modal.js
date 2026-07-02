@@ -168,11 +168,11 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                'billing.ico': 'IČO',
                'billing.dic': 'DIČ',
                'billing.icdph': 'IČ DPH',
-               'billingAddress.street': 'Ulica (fakturačná)',
-               'billingAddress.houseNumber': 'Číslo domu (fakturačné)',
-               'billingAddress.city': 'Mesto (fakturačné)',
-               'billingAddress.postalCode': 'PSČ (fakturačné)',
-               'billingAddress.country': 'Krajina (fakturačná)',
+               'billingAddress.street': 'Ulica',
+               'billingAddress.houseNumber': 'Číslo domu',
+               'billingAddress.city': 'Mesto',
+               'billingAddress.postalCode': 'PSČ',
+               'billingAddress.country': 'Krajina',
            };
    
            const changes = {
@@ -370,7 +370,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' },
-                        'Ulica (fakturačná)'
+                        'Ulica'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -388,7 +388,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Číslo domu (fakturačné)'
+                        'Číslo domu'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -410,7 +410,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' },
-                        'Mesto (fakturačné)'
+                        'Mesto'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -428,7 +428,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' },
-                        'PSČ (fakturačné)'
+                        'PSČ'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -451,7 +451,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' },
-                    'Krajina (fakturačná)'
+                    'Krajina'
                 ),
                 React.createElement('input', {
                     type: 'text',
