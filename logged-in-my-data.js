@@ -571,15 +571,20 @@ let isEmailSyncListenerSetup = false;
 let isDbInitialized = false;
 let pendingUserProfileData = null;
 
-const loadUserPrivateData = async (uid) => {
+const loadUserPrivateData = async (userId) => {
     // Kontrola, či je window.db inicializované
     if (!window.db) {
         console.warn('loadUserPrivateData: window.db nie je inicializované');
         return {};
     }
     
+    if (!userId) {
+        console.warn('loadUserPrivateData: Chýba userId');
+        return {};
+    }
+    
     try {
-        const privateDocRef = doc(window.db, 'usersprivate', uid);
+        const privateDocRef = doc(window.db, 'usersprivate', userId);
         const privateDocSnap = await getDoc(privateDocRef);
         if (privateDocSnap.exists()) {
             return privateDocSnap.data();
