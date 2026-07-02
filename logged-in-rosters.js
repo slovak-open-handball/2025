@@ -1028,13 +1028,13 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
         e.preventDefault();
     
         if (isDataEditDeadlinePassed) {
-          showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
-          return;
+            showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
+            return;
         }
     
         if (isTshirtCountMismatch) {
-          showLocalNotification(`Počet tričiek (${totalTshirtsQuantity}) sa musí rovnať počtu členov v tíme (${totalMembersCount}).`, 'error');
-          return;
+            showLocalNotification(`Počet tričiek (${totalTshirtsQuantity}) sa musí rovnať počtu členov v tíme (${totalMembersCount}).`, 'error');
+            return;
         }
     
         let finalArrivalTime = '';
@@ -1061,33 +1061,9 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             jerseyAwayColor: editedTeamData.jerseyAwayColor?.trim() || ''
         };
     
-        // 🔧 OPRAVA: Odstráň _dateOfBirth a _address z členov tímu
-        // Musíme prejsť cez všetky polia s členmi a odstrániť tieto polia
-        const cleanMemberArrays = (arr) => {
-            if (!arr) return arr;
-            return arr.map(item => {
-                const clean = { ...item };
-                delete clean._dateOfBirth;
-                delete clean._address;
-                return clean;
-            });
-        };
-    
-        if (updatedTeamData.playerDetails) {
-            updatedTeamData.playerDetails = cleanMemberArrays(updatedTeamData.playerDetails);
-        }
-        if (updatedTeamData.womenTeamMemberDetails) {
-            updatedTeamData.womenTeamMemberDetails = cleanMemberArrays(updatedTeamData.womenTeamMemberDetails);
-        }
-        if (updatedTeamData.menTeamMemberDetails) {
-            updatedTeamData.menTeamMemberDetails = cleanMemberArrays(updatedTeamData.menTeamMemberDetails);
-        }
-        if (updatedTeamData.driverDetailsFemale) {
-            updatedTeamData.driverDetailsFemale = cleanMemberArrays(updatedTeamData.driverDetailsFemale);
-        }
-        if (updatedTeamData.driverDetailsMale) {
-            updatedTeamData.driverDetailsMale = cleanMemberArrays(updatedTeamData.driverDetailsMale);
-        }
+        // 🔧 ODSTRÁNENÉ: cleanMemberArrays - čistenie sa vykonáva v handleSaveTeam
+        // Súkromné dáta (_dateOfBirth, _address) zostávajú v updatedTeamData
+        // aby ich handleSaveTeam mohol extrahovať pred odstránením
     
         await onSaveTeam(updatedTeamData);
         setHasChanges(false);
@@ -2654,8 +2630,9 @@ const handleSaveTeam = async (updatedTeamData) => {
         return;
     }
 
-    // === NAJPRV EXTRAHUJ SÚKROMNÉ DÁTA Z PÔVODNÝCH DÁT ===
-    // Predtým než vytvoríme čisté dáta pre users
+    // ============================================================
+    // 🔧 KRITICKÉ: NAJPRV EXTRAHUJ SÚKROMNÉ DÁTA (PRED odstránením)
+    // ============================================================
     const extractPrivateData = (members) => {
         if (!members) return [];
         return members.map(member => ({
@@ -2670,7 +2647,7 @@ const handleSaveTeam = async (updatedTeamData) => {
         }));
     };
 
-    // Extrahujeme súkromné dáta z aktuálnych dát (pred očistením)
+    // Extrahujeme súkromné dáta z aktuálnych dát (PRED odstránením)
     const privateDataForTeam = {
         players: extractPrivateData(updatedTeamData.playerDetails || []),
         womenTeamMembers: extractPrivateData(updatedTeamData.womenTeamMemberDetails || []),
@@ -2679,7 +2656,38 @@ const handleSaveTeam = async (updatedTeamData) => {
         driversMale: extractPrivateData(updatedTeamData.driverDetailsMale || [])
     };
 
-    // === TERAZ VYTVORÍME ČISTÉ DÁTA PRE USERS ===
+    // ============================================================
+    // 🔧 TERAZ ODSTRÁŇ _dateOfBirth a _address z updatedTeamData
+    // ============================================================
+    const cleanMemberArrays = (arr) => {
+        if (!arr) return arr;
+        return arr.map(item => {
+            const clean = { ...item };
+            delete clean._dateOfBirth;
+            delete clean._address;
+            return clean;
+        });
+    };
+
+    if (updatedTeamData.playerDetails) {
+        updatedTeamData.playerDetails = cleanMemberArrays(updatedTeamData.playerDetails);
+    }
+    if (updatedTeamData.womenTeamMemberDetails) {
+        updatedTeamData.womenTeamMemberDetails = cleanMemberArrays(updatedTeamData.womenTeamMemberDetails);
+    }
+    if (updatedTeamData.menTeamMemberDetails) {
+        updatedTeamData.menTeamMemberDetails = cleanMemberArrays(updatedTeamData.menTeamMemberDetails);
+    }
+    if (updatedTeamData.driverDetailsFemale) {
+        updatedTeamData.driverDetailsFemale = cleanMemberArrays(updatedTeamData.driverDetailsFemale);
+    }
+    if (updatedTeamData.driverDetailsMale) {
+        updatedTeamData.driverDetailsMale = cleanMemberArrays(updatedTeamData.driverDetailsMale);
+    }
+
+    // ============================================================
+    // 🔧 TERAZ VYTVOR ČISTÉ DÁTA PRE USERS
+    // ============================================================
     const createCleanTeamForUsers = (team) => {
         const cleanTeam = JSON.parse(JSON.stringify(team));
     
@@ -2741,13 +2749,14 @@ const handleSaveTeam = async (updatedTeamData) => {
         const teamKey = `${teamCategory}_team${teamIndex + 1}`;
         if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
 
-        // Použijeme už extrahované súkromné dáta
+        // Použijeme už extrahované súkromné dáta (z PRED odstránením)
         privateData.persons[teamKey].players = privateDataForTeam.players;
         privateData.persons[teamKey].womenTeamMembers = privateDataForTeam.womenTeamMembers;
         privateData.persons[teamKey].menTeamMembers = privateDataForTeam.menTeamMembers;
         privateData.persons[teamKey].driversFemale = privateDataForTeam.driversFemale;
         privateData.persons[teamKey].driversMale = privateDataForTeam.driversMale;
 
+        // Uložíme do usersprivate - použijeme merge aby sme zachovali existujúce dáta
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
         // === 3. NOTIFIKÁCIA ===
