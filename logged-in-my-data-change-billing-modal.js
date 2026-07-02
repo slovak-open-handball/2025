@@ -37,7 +37,13 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         if (show && userProfileData) {
             // Získame billing adresu z usersprivate (billingAddress)
             const billingAddress = userProfileData.billingAddress || {};
-            
+        
+            console.log('ChangeBillingModal - Načítavam dáta:', {
+                billingAddress: billingAddress,
+                billing: userProfileData.billing,
+                userProfileData: userProfileData
+            });
+        
             // Uložíme pôvodné dáta do ref pre neskoršie porovnanie
             originalDataRef.current = {
                 clubName: userProfileData.billing?.clubName || '',
@@ -50,20 +56,19 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 dic: userProfileData.billing?.dic || '',
                 icdph: userProfileData.billing?.icdph || ''
             };
-            
-            // Pri otvorení modalu inicializujeme stavy ako prázdne reťazce,
-            // aby sa do inputov nepredvyplňovali hodnoty.
-            setClubName('');
-            setStreet('');
-            setHouseNumber('');
-            setCity('');
-            setPostalCode('');
-            setCountry('');
-            setIco('');
-            setDic('');
-            setIcdph('');
+        
+            // NAČÍTAME HODNOTY DO FORMULÁRA - dôležitá zmena!
+            setClubName(userProfileData.billing?.clubName || '');
+            setStreet(billingAddress.street || '');
+            setHouseNumber(billingAddress.houseNumber || '');
+            setCity(billingAddress.city || '');
+            setPostalCode(billingAddress.postalCode || '');
+            setCountry(billingAddress.country || '');
+            setIco(userProfileData.billing?.ico || '');
+            setDic(userProfileData.billing?.dic || '');
+            setIcdph(userProfileData.billing?.icdph || '');
             setError(null);
-            
+        
             // Nastavíme, že sa jedná o počiatočné načítanie.
             isInitialLoad.current = true;
         }
