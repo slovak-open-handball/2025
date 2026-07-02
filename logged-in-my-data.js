@@ -569,10 +569,37 @@ const MyDataApp = ({ userProfileData }) => {
 
 let isEmailSyncListenerSetup = false;
 
-const handleDataUpdateAndRender = (event) => {
+const loadUserPrivateData = async (uid) => {
+    try {
+        const privateDocRef = doc(window.db, 'usersprivate', uid);
+        const privateDocSnap = await getDoc(privateDocRef);
+        if (privateDocSnap.exists()) {
+            return privateDocSnap.data();
+        }
+        return {};
+    } catch (error) {
+        console.error('Chyba pri načítaní usersprivate:', error);
+        return {};
+    }
+};
+
+const handleDataUpdateAndRender = async (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
+    
     if (userProfileData) {
+        // Načítame dáta z usersprivate
+        const privateData = await loadUserPrivateData(userProfileData.uid);
+        
+        // Zlúčime dáta z users a usersprivate
+        const mergedData = {
+            ...userProfileData,
+            billingAddress: privateData.billingAddress || {},
+            address: privateData.address || {},
+            persons: privateData.persons || {},
+            // Ak sú v privateData aj iné polia, môžeme ich pridať
+        };
+        
         if (window.auth && window.db && !isEmailSyncListenerSetup) {            
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -602,9 +629,11 @@ const handleDataUpdateAndRender = (event) => {
             });
             isEmailSyncListenerSetup = true; 
         }
+        
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(MyDataApp, { userProfileData }));
+            // Použijeme mergedData namiesto userProfileData
+            root.render(React.createElement(MyDataApp, { userProfileData: mergedData }));
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
