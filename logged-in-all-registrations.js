@@ -3195,17 +3195,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             try {
                                 window.showGlobalLoader();
                                 const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
-
+                        
                                 if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
                                     dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
                                 } else if (isTargetUserAdmin || isTargetUserHall) {
                                     delete dataToPrepareForSave.contactPhoneNumber;
                                 }
-
+                        
                                 if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
                                     dataToPrepareForSave.category = selectedCategory;
                                     dataToPrepareForSave._category = selectedCategory;
-
+                        
                                     if (selectedArrivalType) {
                                         dataToPrepareForSave.arrival = { type: selectedArrivalType };
                                         if (selectedArrivalType === 'verejná doprava - vlak' || selectedArrivalType === 'verejná doprava - autobus') {
@@ -3216,12 +3216,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     } else {
                                         dataToPrepareForSave.arrival = { type: '' };
                                     }
-
+                        
                                     if (!dataToPrepareForSave.accommodation) {
                                         dataToPrepareForSave.accommodation = {};
                                     }
                                     dataToPrepareForSave.accommodation.type = selectedAccommodationType;
-
+                        
                                     if (selectedPackageName) {
                                         const selectedPackage = packages.find(pkg => pkg.name === selectedPackageName);
                                         if (selectedPackage) {
@@ -3231,23 +3231,24 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     } else {
                                         delete dataToPrepareForSave.packageDetails;
                                     }
-
+                        
                                     dataToPrepareForSave.tshirts = teamTshirts
                                         .filter(t => t.size && t.quantity > 0)
                                         .map(({ size, quantity }) => ({ size, quantity }));
                                 }
-
+                        
                                 const finalDataToSave = {};
                                 Object.keys(dataToPrepareForSave).forEach(key => {
                                     if (!['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
                                         const value = dataToPrepareForSave[key];
                                         if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
+                                            // Preskočíme billing pre admin/hall
                                         } else {
                                             finalDataToSave[key] = value;
                                         }
                                     }
                                 });
-
+                        
                                 const isAddingNewMember = isNewEntry && (
                                     editModalTitle.toLowerCase().includes('pridať nový hráč') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
@@ -3255,37 +3256,53 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     editModalTitle.toLowerCase().includes('pridať nový šofér (žena)') ||
                                     editModalTitle.toLowerCase().includes('pridať nový šofér (muž)')
                                 );
-
+                        
                                 const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
+                        
+                                // 🔧 Zistíme, či ide o úpravu existujúceho člena tímu
+                                const isEditingTeamMember = 
+                                    (editModalTitle.includes('Upraviť hráč') ||
+                                     editModalTitle.includes('Upraviť člen realizačného tímu') ||
+                                     editModalTitle.includes('Upraviť šofér')) &&
+                                    originalDataPath && 
+                                    (originalDataPath.includes('playerDetails') ||
+                                     originalDataPath.includes('menTeamMemberDetails') ||
+                                     originalDataPath.includes('womenTeamMemberDetails') ||
+                                     originalDataPath.includes('driverDetailsMale') ||
+                                     originalDataPath.includes('driverDetailsFemale'));
+                        
                                 let generatedChanges = [];
-
+                        
+                                // ============================================================
+                                // GENEROVANIE NOTIFIKÁCIÍ – PRESKOČÍME PRE ÚPRAVU ČLENA TÍMU
+                                // ============================================================
                                 if (isAddingNewMember) {
                                     console.log("DEBUG: Nový člen → preskakujem getChangesForNotification v DataEditModal");
                                 } else if (isAddingNewTeam) {
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
-                                } else {
+                                } else if (!isEditingTeamMember) {
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave));
-
+                        
                                     if (isTargetUserAdmin || isTargetUserHall) {
                                         delete originalDataForCompare.address;
                                         delete originalDataForCompare.billing;
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
-
+                        
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
                                         modifiedDataForCompare,
                                         formatDateToDMMYYYY
                                     );
-
+                        
                                     const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                     const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
                                     if (originalCategory !== updatedCategory && !generatedChanges.some(c => c.includes('Zmena Kategórie:'))) {
                                         generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                     }
-
+                        
                                     if (finalDataToSave.teamName || finalDataToSave._category) {
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
@@ -3294,23 +3311,34 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         );
                                     }
                                 }
-
-                                if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam) {
+                        
+                                // ============================================================
+                                // ULOŽENIE NOTIFIKÁCIÍ (LEN AK NIE SÚ PRÁZDNÉ A NIE JE TO ÚPRAVA ČLENA)
+                                // ============================================================
+                                if (generatedChanges.length > 0 && !isAddingNewMember && !isEditingTeamMember) {
+                                    const userEmail = window.auth.currentUser?.email;
+                                    if (userEmail) {
+                                        const notificationsCollectionRef = collection(db, 'notifications');
+                                        await addDoc(notificationsCollectionRef, {
+                                            userEmail,
+                                            changes: generatedChanges,
+                                            timestamp: serverTimestamp()
+                                        });
+                                    }
+                                }
+                        
+                                // ============================================================
+                                // SPRÁVA O "ŽIADNE ZMENY" – PRESKOČÍME PRE ÚPRAVU ČLENA
+                                // ============================================================
+                                if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam && !isEditingTeamMember) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                                     onClose();
                                     return;
                                 }
-
-                                const userEmail = window.auth.currentUser?.email;
-                                if (generatedChanges.length > 0 && userEmail) {
-                                    const notificationsCollectionRef = collection(db, 'notifications');
-                                    await addDoc(notificationsCollectionRef, {
-                                        userEmail,
-                                        changes: generatedChanges,
-                                        timestamp: serverTimestamp()
-                                    });
-                                }
-
+                        
+                                // ============================================================
+                                // ZAVOLÁME ONSAVE (TAM SA GENERUJÚ NOTIFIKÁCIE S KONTEXTOM PRE ČLENA)
+                                // ============================================================
                                 onSave(
                                     finalDataToSave,
                                     targetDocRef,
@@ -3319,7 +3347,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     isTargetUserAdmin,
                                     isTargetUserHall
                                 );
-
+                        
                             } catch (e) {
                                 console.error("Chyba v DataEditModal pri ukladaní:", e);
                                 setError(`Chyba pri ukladaní: ${e.message}`);
