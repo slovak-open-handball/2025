@@ -1872,31 +1872,47 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         
         // Zlúčenie adries z hlavného formulára
         if (privateData.address) {
-            // Kontrola, či máme platné údaje z privateData
             const hasPrivateAddress = privateData.address.street || privateData.address.city || privateData.address.postalCode;
             if (hasPrivateAddress) {
-                merged.street = privateData.address.street || userData?.street || '';
-                merged.houseNumber = privateData.address.houseNumber || userData?.houseNumber || '';
-                merged.city = privateData.address.city || userData?.city || '';
-                merged.postalCode = privateData.address.postalCode || userData?.postalCode || '';
-                merged.country = privateData.address.country || userData?.country || '';
+                merged.street = privateData.address.street || '';
+                merged.houseNumber = privateData.address.houseNumber || '';
+                merged.city = privateData.address.city || '';
+                merged.postalCode = privateData.address.postalCode || '';
+                merged.country = privateData.address.country || '';
+            } else {
+                // Ak v privateData nie je adresa, nastavíme prázdne (žiaden fallback)
+                merged.street = '';
+                merged.houseNumber = '';
+                merged.city = '';
+                merged.postalCode = '';
+                merged.country = '';
             }
         }
         
         // Zlúčenie fakturačnej adresy
-        if (privateData.billingAddress && merged.billing) {
+        if (privateData.billingAddress) {
             const hasBillingAddress = privateData.billingAddress.street || privateData.billingAddress.city;
             if (hasBillingAddress) {
-                if (!merged.billing.address) {
-                    merged.billing.address = {};
-                }
+                if (!merged.billing) merged.billing = {};
+                if (!merged.billing.address) merged.billing.address = {};
                 merged.billing.address = {
-                    street: privateData.billingAddress.street || merged.billing?.address?.street || '',
-                    houseNumber: privateData.billingAddress.houseNumber || merged.billing?.address?.houseNumber || '',
-                    city: privateData.billingAddress.city || merged.billing?.address?.city || '',
-                    postalCode: privateData.billingAddress.postalCode || merged.billing?.address?.postalCode || '',
-                    country: privateData.billingAddress.country || merged.billing?.address?.country || ''
+                    street: privateData.billingAddress.street || '',
+                    houseNumber: privateData.billingAddress.houseNumber || '',
+                    city: privateData.billingAddress.city || '',
+                    postalCode: privateData.billingAddress.postalCode || '',
+                    country: privateData.billingAddress.country || ''
                 };
+            } else {
+                // Ak nie je fakturačná adresa, odstráňte ju (alebo nechajte prázdnu)
+                if (merged.billing) {
+                    merged.billing.address = {
+                        street: '',
+                        houseNumber: '',
+                        city: '',
+                        postalCode: '',
+                        country: ''
+                    };
+                }
             }
         }
         
@@ -4136,25 +4152,25 @@ function AllRegistrationsApp() {
                 console.log('DEBUG: Private data for user j3UgdXoHtBOnDq5eLyKwFiTUguS2:', privateData);
               }
   
-              // Zlúčenie adries z hlavného formulára
               const mergedUser = {
-                ...user,
-                street: privateData.address?.street || user.street || '',
-                houseNumber: privateData.address?.houseNumber || user.houseNumber || '',
-                city: privateData.address?.city || user.city || '',
-                postalCode: privateData.address?.postalCode || user.postalCode || '',
-                country: privateData.address?.country || user.country || '',
-                billing: {
-                  ...user.billing,
-                  address: privateData.billingAddress || user.billing?.address || {
-                    street: '',
-                    houseNumber: '',
-                    city: '',
-                    postalCode: '',
-                    country: ''
-                  }
-                },
-                _privateData: privateData
+                  ...user,
+                  // Adresy načítame výhradne z privateData (žiaden fallback na user)
+                  street: privateData.address?.street || '',
+                  houseNumber: privateData.address?.houseNumber || '',
+                  city: privateData.address?.city || '',
+                  postalCode: privateData.address?.postalCode || '',
+                  country: privateData.address?.country || '',
+                  billing: {
+                      ...user.billing,
+                      address: privateData.billingAddress || user.billing?.address || {
+                          street: '',
+                          houseNumber: '',
+                          city: '',
+                          postalCode: '',
+                          country: ''
+                      }
+                  },
+                  _privateData: privateData
               };
   
               // Zlúčenie tímových údajov - pridanie dátumov narodenia a adries z usersprivate
@@ -5372,23 +5388,21 @@ const clearFilter = (column) => {
       return `${dialCode} ${formattedNumber}`;
     }
   
-    // Adresové polia - načítame z userObject._privateData ak existuje
+    // Adresové polia - načítame výhradne z _privateData
     if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
-      // Skúsime načítať z privateData
-      if (userObject._privateData?.address) {
-        const privateAddress = userObject._privateData.address;
-        // Mapovanie stĺpcov na kľúče v privateData
-        const mapping = {
-          'street': 'street',
-          'houseNumber': 'houseNumber',
-          'city': 'city',
-          'country': 'country'
-        };
-        const privateValue = privateAddress[mapping[columnId]];
-        if (privateValue) return privateValue;
-      }
-      // Fallback na hodnotu z user objektu
-      return value || '-';
+        const privateAddress = userObject._privateData?.address;
+        if (privateAddress) {
+            const mapping = {
+                'street': 'street',
+                'houseNumber': 'houseNumber',
+                'city': 'city',
+                'country': 'country'
+            };
+            const privateValue = privateAddress[mapping[columnId]];
+            if (privateValue) return privateValue;
+        }
+        // Ak v _privateData chýba, vrátime pomlčku (žiaden fallback na user[columnId])
+        return '-';
     }
   
     // Poznámka
