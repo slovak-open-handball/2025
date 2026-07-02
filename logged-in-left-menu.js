@@ -29,11 +29,67 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
-    // JEDNOTNÁ funkcia na zvýraznenie pre všetky roly (používa modrú farbu ako pre admina)
+    // Funkcia na získanie farieb podľa roly
+    const getRoleColors = (role) => {
+        switch (role) {
+            case 'admin':
+                return { 
+                    bg: 'bg-blue-100', 
+                    darkBg: 'dark:bg-blue-900/30', 
+                    text: 'text-blue-600', 
+                    darkText: 'dark:text-blue-300',
+                    color: '#3B82F6'
+                };
+            case 'hall':
+                return { 
+                    bg: 'bg-[#b06835]/20', 
+                    darkBg: 'dark:bg-[#b06835]/10', 
+                    text: 'text-[#b06835]', 
+                    darkText: 'dark:text-[#b06835]/80',
+                    color: '#b06835'
+                };
+            case 'club':
+                return { 
+                    bg: 'bg-[#9333EA]/20', 
+                    darkBg: 'dark:bg-[#9333EA]/10', 
+                    text: 'text-[#9333EA]', 
+                    darkText: 'dark:text-[#9333EA]/80',
+                    color: '#9333EA'
+                };
+            case 'referee':
+                return { 
+                    bg: 'bg-[#007800]/20', 
+                    darkBg: 'dark:bg-[#007800]/10', 
+                    text: 'text-[#007800]', 
+                    darkText: 'dark:text-[#007800]/80',
+                    color: '#007800'
+                };
+            case 'volunteer':
+                return { 
+                    bg: 'bg-[#FFAC1C]/20', 
+                    darkBg: 'dark:bg-[#FFAC1C]/10', 
+                    text: 'text-[#FFAC1C]', 
+                    darkText: 'dark:text-[#FFAC1C]/80',
+                    color: '#FFAC1C'
+                };
+            default:
+                return { 
+                    bg: 'bg-[#1D4ED8]/20', 
+                    darkBg: 'dark:bg-[#1D4ED8]/10', 
+                    text: 'text-[#1D4ED8]', 
+                    darkText: 'dark:text-[#1D4ED8]/80',
+                    color: '#1D4ED8'
+                };
+        }
+    };
+    
+    // Funkcia na zvýraznenie aktívneho menu podľa roly
     const highlightActiveMenuLink = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-
+        const role = userProfileData?.role || 'default';
+        const roleColors = getRoleColors(role);
+        
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (href) {
@@ -56,7 +112,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'hover:text-white', 'hover:dark:text-white'
                 );
                 
-                // Pridáme modré zvýraznenie pre aktívnu stránku (rovnaké pre všetkých)
+                // Pridáme zvýraznenie podľa roly pre aktívnu stránku
                 if (currentPath.includes(href) || 
                     (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                     (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
@@ -69,21 +125,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
                     (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
-                    // POUŽIJEME MODRÚ FARBU pre všetky roly (ako pre admina)
-                    link.classList.add('bg-blue-100', 'dark:bg-blue-900/30', 'text-blue-600', 'dark:text-blue-300');
+                    
+                    // POUŽIJEME FARBU PODĽA ROLY
+                    link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
                     link.classList.add('hover:text-white', 'hover:dark:text-white');
                     
                     const icon = link.querySelector('svg');
                     if (icon) {
-                        icon.style.color = '#3B82F6'; // modrá farba
-                        icon.classList.add('dark:text-blue-300');
+                        icon.style.color = roleColors.color;
+                        icon.classList.add(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
                     }
                 } else {
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '';
-                        icon.classList.remove('dark:text-blue-300');
+                        icon.classList.remove(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
                     }
                 }
@@ -91,10 +148,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         });
     };
 
-    // JEDNOTNÁ funkcia pre farbu menu tlačidla - vždy modrá
+    // Funkcia pre farbu menu tlačidla podľa roly
     const getColorForRole = (role) => {
-        // VŠETKY roly budú mať modrú farbu
-        return '#3B82F6'; // modrá farba (ako pre admina)
+        switch (role) {
+            case 'admin':
+                return '#3B82F6';
+            case 'hall':
+                return '#b06835';
+            case 'club':
+                return '#9333EA';
+            case 'referee':
+                return '#007800';
+            case 'volunteer':
+                return '#FFAC1C';
+            default:
+                return '#1D4ED8';
+        }
     };
 
     const applyMenuState = () => {
@@ -325,6 +394,62 @@ const loadLeftMenu = async (userProfileData) => {
                 setTimeout(() => {
                     const currentPath = window.location.pathname;
                     const menuLinks = document.querySelectorAll('#left-menu a');
+                    const role = userProfileData?.role || 'default';
+                    
+                    const getRoleColors = (role) => {
+                        switch (role) {
+                            case 'admin':
+                                return { 
+                                    bg: 'bg-blue-100', 
+                                    darkBg: 'dark:bg-blue-900/30', 
+                                    text: 'text-blue-600', 
+                                    darkText: 'dark:text-blue-300',
+                                    color: '#3B82F6'
+                                };
+                            case 'hall':
+                                return { 
+                                    bg: 'bg-[#b06835]/20', 
+                                    darkBg: 'dark:bg-[#b06835]/10', 
+                                    text: 'text-[#b06835]', 
+                                    darkText: 'dark:text-[#b06835]/80',
+                                    color: '#b06835'
+                                };
+                            case 'club':
+                                return { 
+                                    bg: 'bg-[#9333EA]/20', 
+                                    darkBg: 'dark:bg-[#9333EA]/10', 
+                                    text: 'text-[#9333EA]', 
+                                    darkText: 'dark:text-[#9333EA]/80',
+                                    color: '#9333EA'
+                                };
+                            case 'referee':
+                                return { 
+                                    bg: 'bg-[#007800]/20', 
+                                    darkBg: 'dark:bg-[#007800]/10', 
+                                    text: 'text-[#007800]', 
+                                    darkText: 'dark:text-[#007800]/80',
+                                    color: '#007800'
+                                };
+                            case 'volunteer':
+                                return { 
+                                    bg: 'bg-[#FFAC1C]/20', 
+                                    darkBg: 'dark:bg-[#FFAC1C]/10', 
+                                    text: 'text-[#FFAC1C]', 
+                                    darkText: 'dark:text-[#FFAC1C]/80',
+                                    color: '#FFAC1C'
+                                };
+                            default:
+                                return { 
+                                    bg: 'bg-[#1D4ED8]/20', 
+                                    darkBg: 'dark:bg-[#1D4ED8]/10', 
+                                    text: 'text-[#1D4ED8]', 
+                                    darkText: 'dark:text-[#1D4ED8]/80',
+                                    color: '#1D4ED8'
+                                };
+                        }
+                    };
+                    
+                    const roleColors = getRoleColors(role);
 
                     menuLinks.forEach(link => {
                         const href = link.getAttribute('href');
@@ -359,18 +484,20 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
                                 (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
-                                link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                                // Použijeme farby podľa roly
+                                link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
                                 link.classList.add('hover:text-white', 'hover:dark:text-white');
                                 
                                 const icon = link.querySelector('svg');
                                 if (icon) {
-                                    icon.style.color = '#1F2937';
-                                    icon.classList.add('dark:text-[#1F2937]/90');
+                                    icon.style.color = roleColors.color;
+                                    icon.classList.add(roleColors.darkText);
                                 }
                             } else {
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = '';
+                                    icon.classList.remove(roleColors.darkText);
                                     icon.classList.remove('dark:text-[#1F2937]/90');
                                 }
                             }
