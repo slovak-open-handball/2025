@@ -623,9 +623,12 @@ const processUserData = async (userProfileData) => {
         return;
     }
     
-    // Ak nemáme uid, nemôžeme načítať private dáta
-    if (!userProfileData.uid) {
-        console.warn('processUserData: Chýba uid v userProfileData');
+    // Použijeme id alebo uid (podľa toho, čo je dostupné)
+    const userId = userProfileData.id || userProfileData.uid;
+    
+    // Ak nemáme userId, nemôžeme načítať private dáta
+    if (!userId) {
+        console.warn('processUserData: Chýba id/uid v userProfileData', userProfileData);
         renderMyDataApp(userProfileData);
         return;
     }
@@ -634,7 +637,7 @@ const processUserData = async (userProfileData) => {
     let privateData = {};
     if (window.db) {
         try {
-            privateData = await loadUserPrivateData(userProfileData.uid);
+            privateData = await loadUserPrivateData(userId);
             console.log('processUserData: Načítané private dáta:', privateData);
         } catch (error) {
             console.error('processUserData: Chyba pri načítaní private dát:', error);
@@ -649,6 +652,7 @@ const processUserData = async (userProfileData) => {
     // Zlúčime dáta z users a usersprivate
     const mergedData = {
         ...userProfileData,
+        uid: userId, // Pridáme uid pre prípad, že by ho niekto očakával
         billingAddress: privateData.billingAddress || {},
         address: privateData.address || {},
         persons: privateData.persons || {},
