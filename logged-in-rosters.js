@@ -2172,272 +2172,280 @@ useEffect(() => {
         };
     }, [db]);
 
-    // ============================================================
-    // UPRAVENÝ useEffect PRE NAČÍTANIE DÁT - RostersApp
-    // ============================================================
-    
-    useEffect(() => {
-        let unsubscribeUserDoc;
-        let unsubscribeUserPrivate;
-    
-        if (user && db && isAuthReady) {
-            setLoading(true);
-    
-            try {
-                const userDocRef = doc(db, 'users', user.uid);
-                const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
-    
-                unsubscribeUserPrivate = onSnapshot(userPrivateDocRef, (privateDocSnapshot) => {
-                    let privateData = {};
-                    if (privateDocSnapshot.exists()) {
-                        privateData = privateDocSnapshot.data();
-                    }
-    
-                    unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
-                        if (docSnapshot.exists()) {
-                            const userData = docSnapshot.data();
-                            
-                            const userDataWithPrivate = {
-                                ...userData,
-                                _privateData: privateData
-                            };
-    
-                            setUserProfileData(userDataWithPrivate);
-    
-                            if (userData.role !== 'club') {
-                                window.location.href = 'logged-in-my-data.html';
-                                return;
-                            }
-    
-                            if (userData.teams) {
-                                const normalizedTeams = {};
-                                const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
-    
-                                for (const categoryKey in userData.teams) {
-                                    if (Object.prototype.hasOwnProperty.call(userData.teams, categoryKey)) {
-                                        normalizedTeams[categoryKey] = userData.teams[categoryKey].map((team, teamIndex) => {
-                                            const teamKey = `${categoryKey}_team${teamIndex + 1}`;
-                                            const privateTeamData = privateData.persons?.[teamKey] || {};
-    
-                                            // ============================================================
-                                            // 🆕 UPRAVENÉ: Hráči - BEZ spread operátora
-                                            // ============================================================
-                                            let mergedPlayerDetails = [];
-                                            if (team.playerDetails) {
-                                                mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
-                                                    const privatePlayer = privateTeamData.players?.[playerIndex] || {};
-                                                    return {
-                                                        firstName: player.firstName || '',
-                                                        lastName: player.lastName || '',
-                                                        jerseyNumber: player.jerseyNumber || null,
-                                                        registrationNumber: player.registrationNumber || null,
-                                                        ...Object.fromEntries(
-                                                            Object.entries(player)
-                                                                .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
-                                                                      'dateOfBirth', 'address', '_privateData'].includes(key)
-                                                                )
-                                                        ),
-                                                        _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
-                                                        _address: privatePlayer.address || player.address || {
-                                                            street: '',
-                                                            houseNumber: '',
-                                                            city: '',
-                                                            postalCode: '',
-                                                            country: ''
-                                                        }
-                                                    };
-                                                });
-                                            }
-    
-                                            // ============================================================
-                                            // 🆕 UPRAVENÉ: Ženy RT - BEZ spread operátora
-                                            // ============================================================
-                                            let mergedWomenTeamMembers = [];
-                                            if (team.womenTeamMemberDetails) {
-                                                mergedWomenTeamMembers = team.womenTeamMemberDetails.map((member, memberIndex) => {
-                                                    const privateMember = privateTeamData.womenTeamMembers?.[memberIndex] || {};
-                                                    return {
-                                                        firstName: member.firstName || '',
-                                                        lastName: member.lastName || '',
-                                                        ...Object.fromEntries(
-                                                            Object.entries(member)
-                                                                .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
-                                                                )
-                                                        ),
-                                                        _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                                                        _address: privateMember.address || member.address || {
-                                                            street: '',
-                                                            houseNumber: '',
-                                                            city: '',
-                                                            postalCode: '',
-                                                            country: ''
-                                                        }
-                                                    };
-                                                });
-                                            }
-    
-                                            // ============================================================
-                                            // 🆕 UPRAVENÉ: Muži RT - BEZ spread operátora
-                                            // ============================================================
-                                            let mergedMenTeamMembers = [];
-                                            if (team.menTeamMemberDetails) {
-                                                mergedMenTeamMembers = team.menTeamMemberDetails.map((member, memberIndex) => {
-                                                    const privateMember = privateTeamData.menTeamMembers?.[memberIndex] || {};
-                                                    return {
-                                                        firstName: member.firstName || '',
-                                                        lastName: member.lastName || '',
-                                                        ...Object.fromEntries(
-                                                            Object.entries(member)
-                                                                .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
-                                                                )
-                                                        ),
-                                                        _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                                                        _address: privateMember.address || member.address || {
-                                                            street: '',
-                                                            houseNumber: '',
-                                                            city: '',
-                                                            postalCode: '',
-                                                            country: ''
-                                                        }
-                                                    };
-                                                });
-                                            }
-    
-                                            // ============================================================
-                                            // 🆕 UPRAVENÉ: Šoférky (ženy) - BEZ spread operátora
-                                            // ============================================================
-                                            let mergedDriverDetailsFemale = [];
-                                            if (team.driverDetailsFemale) {
-                                                mergedDriverDetailsFemale = team.driverDetailsFemale.map((driver, driverIndex) => {
-                                                    const privateDriver = privateTeamData.driversFemale?.[driverIndex] || {};
-                                                    return {
-                                                        firstName: driver.firstName || '',
-                                                        lastName: driver.lastName || '',
-                                                        ...Object.fromEntries(
-                                                            Object.entries(driver)
-                                                                .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
-                                                                )
-                                                        ),
-                                                        _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                                                        _address: privateDriver.address || driver.address || {
-                                                            street: '',
-                                                            houseNumber: '',
-                                                            city: '',
-                                                            postalCode: '',
-                                                            country: ''
-                                                        }
-                                                    };
-                                                });
-                                            }
-    
-                                            // ============================================================
-                                            // 🆕 UPRAVENÉ: Šoféri (muži) - BEZ spread operátora
-                                            // ============================================================
-                                            let mergedDriverDetailsMale = [];
-                                            if (team.driverDetailsMale) {
-                                                mergedDriverDetailsMale = team.driverDetailsMale.map((driver, driverIndex) => {
-                                                    const privateDriver = privateTeamData.driversMale?.[driverIndex] || {};
-                                                    return {
-                                                        firstName: driver.firstName || '',
-                                                        lastName: driver.lastName || '',
-                                                        ...Object.fromEntries(
-                                                            Object.entries(driver)
-                                                                .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
-                                                                )
-                                                        ),
-                                                        _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                                                        _address: privateDriver.address || driver.address || {
-                                                            street: '',
-                                                            houseNumber: '',
-                                                            city: '',
-                                                            postalCode: '',
-                                                            country: ''
-                                                        }
-                                                    };
-                                                });
-                                            }
-    
-                                            // ============================================================
-                                            // 🆕 KRITICKÉ: NEPOUŽÍVAJ ...team - explicitne definuj všetky polia
-                                            // ============================================================
-                                            return {
-                                                // Základné polia tímu (čisté dáta)
-                                                teamName: team.teamName || '',
-                                                categoryName: team.categoryName || categoryKey,
-                                                clubName: team.clubName?.trim() || currentClubName,
-                                                arrival: team.arrival || { type: '', time: '' },
-                                                accommodation: team.accommodation || { type: '' },
-                                                packageDetails: team.packageDetails || { name: '' },
-                                                tshirts: team.tshirts || [],
-                                                jerseyHomeColor: team.jerseyHomeColor || '',
-                                                jerseyAwayColor: team.jerseyAwayColor || '',
-                                                players: team.players || 0,
-                                                menTeamMembers: team.menTeamMembers || 0,
-                                                womenTeamMembers: team.womenTeamMembers || 0,
-                                                // Polia s členmi (už zlúčené)
-                                                playerDetails: mergedPlayerDetails,
-                                                womenTeamMemberDetails: mergedWomenTeamMembers,
-                                                menTeamMemberDetails: mergedMenTeamMembers,
-                                                driverDetailsFemale: mergedDriverDetailsFemale,
-                                                driverDetailsMale: mergedDriverDetailsMale,
-                                                // Pomocné polia
-                                                _privateData: privateData,
-                                                _teamKey: teamKey,
-                                                _userId: user.uid,
-                                                _category: categoryKey,
-                                                _teamIndex: teamIndex,
-                                                _registeredBy: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Neznámy',
-                                                _menTeamMembersCount: mergedMenTeamMembers.length,
-                                                _womenTeamMembersCount: mergedWomenTeamMembers.length,
-                                                _menDriversCount: mergedDriverDetailsMale.length,
-                                                _womenDriversCount: mergedDriverDetailsFemale.length,
-                                                _players: mergedPlayerDetails.length,
-                                                _teamTshirtsMap: new Map(
-                                                    (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
-                                                )
-                                            };
-                                        });
-                                    }
-                                }
-                                setTeamsData(normalizedTeams);
-                            } else {
-                                setTeamsData({});
-                            }
-                            setLoading(false);
-                        } else {
-                            setLoading(false);
-                        }
-                    }, error => {
-                        setLoading(false);
-                    });
-                }, error => {
-                    setLoading(false);
-                });
-    
-            } catch (e) {
-                setLoading(false);
-            }
-        } else if (isAuthReady && user === null) {
-            setLoading(false);
-            setUserProfileData(null);
-            setTeamsData({});
-        }
-    
-        return () => {
-            if (unsubscribeUserDoc) {
-                unsubscribeUserDoc();
-            }
-            if (unsubscribeUserPrivate) {
-                unsubscribeUserPrivate();
-            }
-        };
-    }, [user, db, isAuthReady, auth]);
-
+  // ============================================================
+  // UPRAVENÝ useEffect PRE NAČÍTANIE DÁT - RostersApp
+  // ============================================================
+  
+  useEffect(() => {
+      let unsubscribeUserDoc;
+      let unsubscribeUserPrivate;
+  
+      if (user && db && isAuthReady) {
+          setLoading(true);
+  
+          try {
+              const userDocRef = doc(db, 'users', user.uid);
+              const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
+  
+              unsubscribeUserPrivate = onSnapshot(userPrivateDocRef, (privateDocSnapshot) => {
+                  let privateData = {};
+                  if (privateDocSnapshot.exists()) {
+                      privateData = privateDocSnapshot.data();
+                  }
+  
+                  unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
+                      if (docSnapshot.exists()) {
+                          const userData = docSnapshot.data();
+                          
+                          const userDataWithPrivate = {
+                              ...userData,
+                              _privateData: privateData
+                          };
+  
+                          setUserProfileData(userDataWithPrivate);
+  
+                          if (userData.role !== 'club') {
+                              window.location.href = 'logged-in-my-data.html';
+                              return;
+                          }
+  
+                          if (userData.teams) {
+                              const normalizedTeams = {};
+                              const currentClubName = userData.billing?.clubName?.trim() || 'Neznámy klub';
+  
+                              for (const categoryKey in userData.teams) {
+                                  if (Object.prototype.hasOwnProperty.call(userData.teams, categoryKey)) {
+                                      normalizedTeams[categoryKey] = userData.teams[categoryKey].map((team, teamIndex) => {
+                                          const teamKey = `${categoryKey}_team${teamIndex + 1}`;
+                                          const privateTeamData = privateData.persons?.[teamKey] || {};
+  
+                                          // ============================================================
+                                          // 🆕 UPRAVENÉ: Hráči - BEZ spread operátora
+                                          // ============================================================
+                                          let mergedPlayerDetails = [];
+                                          if (team.playerDetails) {
+                                              mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
+                                                  const privatePlayer = privateTeamData.players?.[playerIndex] || {};
+                                                  return {
+                                                      firstName: player.firstName || '',
+                                                      lastName: player.lastName || '',
+                                                      jerseyNumber: player.jerseyNumber || null,
+                                                      registrationNumber: player.registrationNumber || null,
+                                                      ...Object.fromEntries(
+                                                          Object.entries(player)
+                                                              .filter(([key]) => 
+                                                                  !['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
+                                                                    'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                              )
+                                                      ),
+                                                      _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
+                                                      _address: privatePlayer.address || player.address || {
+                                                          street: '',
+                                                          houseNumber: '',
+                                                          city: '',
+                                                          postalCode: '',
+                                                          country: ''
+                                                      }
+                                                  };
+                                              });
+                                          }
+  
+                                          // ============================================================
+                                          // 🆕 UPRAVENÉ: Ženy RT - BEZ spread operátora
+                                          // ============================================================
+                                          let mergedWomenTeamMembers = [];
+                                          if (team.womenTeamMemberDetails) {
+                                              mergedWomenTeamMembers = team.womenTeamMemberDetails.map((member, memberIndex) => {
+                                                  const privateMember = privateTeamData.womenTeamMembers?.[memberIndex] || {};
+                                                  return {
+                                                      firstName: member.firstName || '',
+                                                      lastName: member.lastName || '',
+                                                      ...Object.fromEntries(
+                                                          Object.entries(member)
+                                                              .filter(([key]) => 
+                                                                  !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                              )
+                                                      ),
+                                                      _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                                                      _address: privateMember.address || member.address || {
+                                                          street: '',
+                                                          houseNumber: '',
+                                                          city: '',
+                                                          postalCode: '',
+                                                          country: ''
+                                                      }
+                                                  };
+                                              });
+                                          }
+  
+                                          // ============================================================
+                                          // 🆕 UPRAVENÉ: Muži RT - BEZ spread operátora
+                                          // ============================================================
+                                          let mergedMenTeamMembers = [];
+                                          if (team.menTeamMemberDetails) {
+                                              mergedMenTeamMembers = team.menTeamMemberDetails.map((member, memberIndex) => {
+                                                  const privateMember = privateTeamData.menTeamMembers?.[memberIndex] || {};
+                                                  return {
+                                                      firstName: member.firstName || '',
+                                                      lastName: member.lastName || '',
+                                                      ...Object.fromEntries(
+                                                          Object.entries(member)
+                                                              .filter(([key]) => 
+                                                                  !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                              )
+                                                      ),
+                                                      _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                                                      _address: privateMember.address || member.address || {
+                                                          street: '',
+                                                          houseNumber: '',
+                                                          city: '',
+                                                          postalCode: '',
+                                                          country: ''
+                                                      }
+                                                  };
+                                              });
+                                          }
+  
+                                          // ============================================================
+                                          // 🆕 UPRAVENÉ: Šoférky (ženy) - BEZ spread operátora
+                                          // ============================================================
+                                          let mergedDriverDetailsFemale = [];
+                                          if (team.driverDetailsFemale) {
+                                              mergedDriverDetailsFemale = team.driverDetailsFemale.map((driver, driverIndex) => {
+                                                  const privateDriver = privateTeamData.driversFemale?.[driverIndex] || {};
+                                                  return {
+                                                      firstName: driver.firstName || '',
+                                                      lastName: driver.lastName || '',
+                                                      ...Object.fromEntries(
+                                                          Object.entries(driver)
+                                                              .filter(([key]) => 
+                                                                  !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                              )
+                                                      ),
+                                                      _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                                                      _address: privateDriver.address || driver.address || {
+                                                          street: '',
+                                                          houseNumber: '',
+                                                          city: '',
+                                                          postalCode: '',
+                                                          country: ''
+                                                      }
+                                                  };
+                                              });
+                                          }
+  
+                                          // ============================================================
+                                          // 🆕 UPRAVENÉ: Šoféri (muži) - BEZ spread operátora
+                                          // ============================================================
+                                          let mergedDriverDetailsMale = [];
+                                          if (team.driverDetailsMale) {
+                                              mergedDriverDetailsMale = team.driverDetailsMale.map((driver, driverIndex) => {
+                                                  const privateDriver = privateTeamData.driversMale?.[driverIndex] || {};
+                                                  return {
+                                                      firstName: driver.firstName || '',
+                                                      lastName: driver.lastName || '',
+                                                      ...Object.fromEntries(
+                                                          Object.entries(driver)
+                                                              .filter(([key]) => 
+                                                                  !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                              )
+                                                      ),
+                                                      _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                                                      _address: privateDriver.address || driver.address || {
+                                                          street: '',
+                                                          houseNumber: '',
+                                                          city: '',
+                                                          postalCode: '',
+                                                          country: ''
+                                                      }
+                                                  };
+                                              });
+                                          }
+  
+                                          // ============================================================
+                                          // 🔧 VYTVORENIE _teamTshirtsMap AKO OBYČAJNÝ OBJEKT (nie Map)
+                                          // ============================================================
+                                          const tshirtsMap = {};
+                                          (team.tshirts || []).forEach(t => {
+                                              const size = String(t.size).trim();
+                                              tshirtsMap[size] = t.quantity || 0;
+                                          });
+  
+                                          // ============================================================
+                                          // 🆕 KRITICKÉ: NEPOUŽÍVAJ ...team - explicitne definuj všetky polia
+                                          // ============================================================
+                                          return {
+                                              // Základné polia tímu (čisté dáta)
+                                              teamName: team.teamName || '',
+                                              categoryName: team.categoryName || categoryKey,
+                                              clubName: team.clubName?.trim() || currentClubName,
+                                              arrival: team.arrival || { type: '', time: '' },
+                                              accommodation: team.accommodation || { type: '' },
+                                              packageDetails: team.packageDetails || { name: '' },
+                                              tshirts: team.tshirts || [],
+                                              jerseyHomeColor: team.jerseyHomeColor || '',
+                                              jerseyAwayColor: team.jerseyAwayColor || '',
+                                              players: team.players || 0,
+                                              menTeamMembers: team.menTeamMembers || 0,
+                                              womenTeamMembers: team.womenTeamMembers || 0,
+                                              // Polia s členmi (už zlúčené)
+                                              playerDetails: mergedPlayerDetails,
+                                              womenTeamMemberDetails: mergedWomenTeamMembers,
+                                              menTeamMemberDetails: mergedMenTeamMembers,
+                                              driverDetailsFemale: mergedDriverDetailsFemale,
+                                              driverDetailsMale: mergedDriverDetailsMale,
+                                              // Pomocné polia
+                                              _privateData: privateData,
+                                              _teamKey: teamKey,
+                                              _userId: user.uid,
+                                              _category: categoryKey,
+                                              _teamIndex: teamIndex,
+                                              _registeredBy: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Neznámy',
+                                              _menTeamMembersCount: mergedMenTeamMembers.length,
+                                              _womenTeamMembersCount: mergedWomenTeamMembers.length,
+                                              _menDriversCount: mergedDriverDetailsMale.length,
+                                              _womenDriversCount: mergedDriverDetailsFemale.length,
+                                              _players: mergedPlayerDetails.length,
+                                              // 🔧 _teamTshirtsMap je TERAZ OBYČAJNÝ OBJEKT, nie Map
+                                              _teamTshirtsMap: tshirtsMap
+                                          };
+                                      });
+                                  }
+                              }
+                              setTeamsData(normalizedTeams);
+                          } else {
+                              setTeamsData({});
+                          }
+                          setLoading(false);
+                      } else {
+                          setLoading(false);
+                      }
+                  }, error => {
+                      setLoading(false);
+                  });
+              }, error => {
+                  setLoading(false);
+              });
+  
+          } catch (e) {
+              setLoading(false);
+          }
+      } else if (isAuthReady && user === null) {
+          setLoading(false);
+          setUserProfileData(null);
+          setTeamsData({});
+      }
+  
+      return () => {
+          if (unsubscribeUserDoc) {
+              unsubscribeUserDoc();
+          }
+          if (unsubscribeUserPrivate) {
+              unsubscribeUserPrivate();
+          }
+      };
+  }, [user, db, isAuthReady, auth]);
+  
   if (!isAuthReady || !userProfileData) {
     return null;
   }
