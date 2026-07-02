@@ -109,7 +109,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
                     'text-[#1F2937]', 'dark:text-[#1F2937]/90',
                     'text-white', 'dark:text-white',
-                    'hover:text-white', 'hover:dark:text-white'
+                    'hover:text-white', 'hover:dark:text-white',
+                    // Odstránime aj hover triedy pre rôzne roly
+                    'hover:bg-blue-100', 'hover:dark:bg-blue-900/30',
+                    'hover:bg-[#b06835]/20', 'hover:dark:bg-[#b06835]/10',
+                    'hover:bg-[#9333EA]/20', 'hover:dark:bg-[#9333EA]/10',
+                    'hover:bg-[#007800]/20', 'hover:dark:bg-[#007800]/10',
+                    'hover:bg-[#FFAC1C]/20', 'hover:dark:bg-[#FFAC1C]/10',
+                    'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10'
                 );
                 
                 // Pridáme zvýraznenie podľa roly pre aktívnu stránku
@@ -128,13 +135,16 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     
                     // POUŽIJEME FARBU PODĽA ROLY
                     link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
-                    link.classList.add('hover:text-white', 'hover:dark:text-white');
+                    // HOVER bude mať MODRÚ FARBU pre VŠETKÝCH (ako admin)
+                    link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
                     
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = roleColors.color;
                         icon.classList.add(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
+                        // Hover ikony bude modrý pre všetkých
+                        icon.classList.add('hover:text-blue-600', 'hover:dark:text-blue-300');
                     }
                 } else {
                     const icon = link.querySelector('svg');
@@ -142,6 +152,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                         icon.style.color = '';
                         icon.classList.remove(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
+                        icon.classList.remove('hover:text-blue-600', 'hover:dark:text-blue-300');
                     }
                 }
             }
@@ -469,7 +480,13 @@ const loadLeftMenu = async (userProfileData) => {
                                 'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
                                 'text-[#1F2937]', 'dark:text-[#1F2937]/90',
                                 'text-white', 'dark:text-white',
-                                'hover:text-white', 'hover:dark:text-white'
+                                'hover:text-white', 'hover:dark:text-white',
+                                'hover:bg-blue-100', 'hover:dark:bg-blue-900/30',
+                                'hover:bg-[#b06835]/20', 'hover:dark:bg-[#b06835]/10',
+                                'hover:bg-[#9333EA]/20', 'hover:dark:bg-[#9333EA]/10',
+                                'hover:bg-[#007800]/20', 'hover:dark:bg-[#007800]/10',
+                                'hover:bg-[#FFAC1C]/20', 'hover:dark:bg-[#FFAC1C]/10',
+                                'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10'
                             );
                             
                             if (currentPath.includes(href) || 
@@ -486,12 +503,15 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
                                 // Použijeme farby podľa roly
                                 link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
-                                link.classList.add('hover:text-white', 'hover:dark:text-white');
+                                // HOVER bude mať MODRÚ FARBU pre VŠETKÝCH (ako admin)
+                                link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
                                 
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = roleColors.color;
                                     icon.classList.add(roleColors.darkText);
+                                    // Hover ikony bude modrý pre všetkých
+                                    icon.classList.add('hover:text-blue-600', 'hover:dark:text-blue-300');
                                 }
                             } else {
                                 const icon = link.querySelector('svg');
@@ -499,6 +519,7 @@ const loadLeftMenu = async (userProfileData) => {
                                     icon.style.color = '';
                                     icon.classList.remove(roleColors.darkText);
                                     icon.classList.remove('dark:text-[#1F2937]/90');
+                                    icon.classList.remove('hover:text-blue-600', 'hover:dark:text-blue-300');
                                 }
                             }
                         }
@@ -582,6 +603,12 @@ const addCustomStyles = () => {
             
             .text-\\[\\#1D4ED8\\] { color: #1D4ED8; }
             .dark .dark\\:text-\\[\\#1D4ED8\\]\\/80 { color: rgba(29, 78, 216, 0.8); }
+            
+            /* Hover farby - MODRÁ pre všetkých (ako admin) */
+            .hover\\:bg-blue-100:hover { background-color: #DBEAFE; }
+            .dark .hover\\:dark\\:bg-blue-900\\/30:hover { background-color: rgba(30, 58, 138, 0.3); }
+            .hover\\:text-blue-600:hover { color: #2563EB; }
+            .dark .hover\\:dark\\:text-blue-300:hover { color: #93C5FD; }
         `;
         document.head.appendChild(style);
     }
