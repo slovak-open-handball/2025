@@ -38,7 +38,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-blue-900/30', 
                     text: 'text-blue-600', 
                     darkText: 'dark:text-blue-300',
-                    color: '#3B82F6'
+                    color: '#3B82F6',
+                    hoverBg: 'hover:bg-blue-100',
+                    hoverDarkBg: 'hover:dark:bg-blue-900/30',
+                    hoverText: 'hover:text-blue-600',
+                    hoverDarkText: 'hover:dark:text-blue-300'
                 };
             case 'hall':
                 return { 
@@ -46,7 +50,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-[#b06835]/10', 
                     text: 'text-[#b06835]', 
                     darkText: 'dark:text-[#b06835]/80',
-                    color: '#b06835'
+                    color: '#b06835',
+                    hoverBg: 'hover:bg-[#b06835]/20',
+                    hoverDarkBg: 'hover:dark:bg-[#b06835]/10',
+                    hoverText: 'hover:text-[#b06835]',
+                    hoverDarkText: 'hover:dark:text-[#b06835]/80'
                 };
             case 'club':
                 return { 
@@ -54,7 +62,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-[#9333EA]/10', 
                     text: 'text-[#9333EA]', 
                     darkText: 'dark:text-[#9333EA]/80',
-                    color: '#9333EA'
+                    color: '#9333EA',
+                    hoverBg: 'hover:bg-[#9333EA]/20',
+                    hoverDarkBg: 'hover:dark:bg-[#9333EA]/10',
+                    hoverText: 'hover:text-[#9333EA]',
+                    hoverDarkText: 'hover:dark:text-[#9333EA]/80'
                 };
             case 'referee':
                 return { 
@@ -62,7 +74,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-[#007800]/10', 
                     text: 'text-[#007800]', 
                     darkText: 'dark:text-[#007800]/80',
-                    color: '#007800'
+                    color: '#007800',
+                    hoverBg: 'hover:bg-[#007800]/20',
+                    hoverDarkBg: 'hover:dark:bg-[#007800]/10',
+                    hoverText: 'hover:text-[#007800]',
+                    hoverDarkText: 'hover:dark:text-[#007800]/80'
                 };
             case 'volunteer':
                 return { 
@@ -70,7 +86,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-[#FFAC1C]/10', 
                     text: 'text-[#FFAC1C]', 
                     darkText: 'dark:text-[#FFAC1C]/80',
-                    color: '#FFAC1C'
+                    color: '#FFAC1C',
+                    hoverBg: 'hover:bg-[#FFAC1C]/20',
+                    hoverDarkBg: 'hover:dark:bg-[#FFAC1C]/10',
+                    hoverText: 'hover:text-[#FFAC1C]',
+                    hoverDarkText: 'hover:dark:text-[#FFAC1C]/80'
                 };
             default:
                 return { 
@@ -78,7 +98,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     darkBg: 'dark:bg-[#1D4ED8]/10', 
                     text: 'text-[#1D4ED8]', 
                     darkText: 'dark:text-[#1D4ED8]/80',
-                    color: '#1D4ED8'
+                    color: '#1D4ED8',
+                    hoverBg: 'hover:bg-[#1D4ED8]/20',
+                    hoverDarkBg: 'hover:dark:bg-[#1D4ED8]/10',
+                    hoverText: 'hover:text-[#1D4ED8]',
+                    hoverDarkText: 'hover:dark:text-[#1D4ED8]/80'
                 };
         }
     };
@@ -110,17 +134,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'text-[#1F2937]', 'dark:text-[#1F2937]/90',
                     'text-white', 'dark:text-white',
                     'hover:text-white', 'hover:dark:text-white',
-                    // Odstránime aj hover triedy pre rôzne roly
+                    // Odstránime hover triedy
                     'hover:bg-blue-100', 'hover:dark:bg-blue-900/30',
+                    'hover:text-blue-600', 'hover:dark:text-blue-300',
                     'hover:bg-[#b06835]/20', 'hover:dark:bg-[#b06835]/10',
+                    'hover:text-[#b06835]', 'hover:dark:text-[#b06835]/80',
                     'hover:bg-[#9333EA]/20', 'hover:dark:bg-[#9333EA]/10',
+                    'hover:text-[#9333EA]', 'hover:dark:text-[#9333EA]/80',
                     'hover:bg-[#007800]/20', 'hover:dark:bg-[#007800]/10',
+                    'hover:text-[#007800]', 'hover:dark:text-[#007800]/80',
                     'hover:bg-[#FFAC1C]/20', 'hover:dark:bg-[#FFAC1C]/10',
-                    'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10'
+                    'hover:text-[#FFAC1C]', 'hover:dark:text-[#FFAC1C]/80',
+                    'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10',
+                    'hover:text-[#1D4ED8]', 'hover:dark:text-[#1D4ED8]/80'
                 );
                 
-                // Pridáme zvýraznenie podľa roly pre aktívnu stránku
-                if (currentPath.includes(href) || 
+                const isActive = currentPath.includes(href) || 
                     (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                     (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
                     (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
@@ -131,28 +160,28 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                    (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
-                    
-                    // POUŽIJEME FARBU PODĽA ROLY
+                    (href === 'logged-in-catering.html' && currentPath.includes('catering'));
+                
+                if (isActive) {
+                    // AKTÍVNA STRÁNKA - použijeme farby podľa roly aj pre hover
                     link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
-                    // HOVER bude mať MODRÚ FARBU pre VŠETKÝCH (ako admin)
-                    link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
+                    link.classList.add(roleColors.hoverBg, roleColors.hoverDarkBg, roleColors.hoverText, roleColors.hoverDarkText);
                     
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = roleColors.color;
                         icon.classList.add(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
-                        // Hover ikony bude modrý pre všetkých
-                        icon.classList.add('hover:text-blue-600', 'hover:dark:text-blue-300');
                     }
                 } else {
+                    // NEAKTÍVNA STRÁNKA - žiadne zvýraznenie, hover ako admin (modrý)
+                    link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
+                    
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '';
                         icon.classList.remove(roleColors.darkText);
                         icon.classList.remove('dark:text-[#1F2937]/90');
-                        icon.classList.remove('hover:text-blue-600', 'hover:dark:text-blue-300');
                     }
                 }
             }
@@ -415,7 +444,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-blue-900/30', 
                                     text: 'text-blue-600', 
                                     darkText: 'dark:text-blue-300',
-                                    color: '#3B82F6'
+                                    color: '#3B82F6',
+                                    hoverBg: 'hover:bg-blue-100',
+                                    hoverDarkBg: 'hover:dark:bg-blue-900/30',
+                                    hoverText: 'hover:text-blue-600',
+                                    hoverDarkText: 'hover:dark:text-blue-300'
                                 };
                             case 'hall':
                                 return { 
@@ -423,7 +456,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-[#b06835]/10', 
                                     text: 'text-[#b06835]', 
                                     darkText: 'dark:text-[#b06835]/80',
-                                    color: '#b06835'
+                                    color: '#b06835',
+                                    hoverBg: 'hover:bg-[#b06835]/20',
+                                    hoverDarkBg: 'hover:dark:bg-[#b06835]/10',
+                                    hoverText: 'hover:text-[#b06835]',
+                                    hoverDarkText: 'hover:dark:text-[#b06835]/80'
                                 };
                             case 'club':
                                 return { 
@@ -431,7 +468,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-[#9333EA]/10', 
                                     text: 'text-[#9333EA]', 
                                     darkText: 'dark:text-[#9333EA]/80',
-                                    color: '#9333EA'
+                                    color: '#9333EA',
+                                    hoverBg: 'hover:bg-[#9333EA]/20',
+                                    hoverDarkBg: 'hover:dark:bg-[#9333EA]/10',
+                                    hoverText: 'hover:text-[#9333EA]',
+                                    hoverDarkText: 'hover:dark:text-[#9333EA]/80'
                                 };
                             case 'referee':
                                 return { 
@@ -439,7 +480,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-[#007800]/10', 
                                     text: 'text-[#007800]', 
                                     darkText: 'dark:text-[#007800]/80',
-                                    color: '#007800'
+                                    color: '#007800',
+                                    hoverBg: 'hover:bg-[#007800]/20',
+                                    hoverDarkBg: 'hover:dark:bg-[#007800]/10',
+                                    hoverText: 'hover:text-[#007800]',
+                                    hoverDarkText: 'hover:dark:text-[#007800]/80'
                                 };
                             case 'volunteer':
                                 return { 
@@ -447,7 +492,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-[#FFAC1C]/10', 
                                     text: 'text-[#FFAC1C]', 
                                     darkText: 'dark:text-[#FFAC1C]/80',
-                                    color: '#FFAC1C'
+                                    color: '#FFAC1C',
+                                    hoverBg: 'hover:bg-[#FFAC1C]/20',
+                                    hoverDarkBg: 'hover:dark:bg-[#FFAC1C]/10',
+                                    hoverText: 'hover:text-[#FFAC1C]',
+                                    hoverDarkText: 'hover:dark:text-[#FFAC1C]/80'
                                 };
                             default:
                                 return { 
@@ -455,7 +504,11 @@ const loadLeftMenu = async (userProfileData) => {
                                     darkBg: 'dark:bg-[#1D4ED8]/10', 
                                     text: 'text-[#1D4ED8]', 
                                     darkText: 'dark:text-[#1D4ED8]/80',
-                                    color: '#1D4ED8'
+                                    color: '#1D4ED8',
+                                    hoverBg: 'hover:bg-[#1D4ED8]/20',
+                                    hoverDarkBg: 'hover:dark:bg-[#1D4ED8]/10',
+                                    hoverText: 'hover:text-[#1D4ED8]',
+                                    hoverDarkText: 'hover:dark:text-[#1D4ED8]/80'
                                 };
                         }
                     };
@@ -482,14 +535,20 @@ const loadLeftMenu = async (userProfileData) => {
                                 'text-white', 'dark:text-white',
                                 'hover:text-white', 'hover:dark:text-white',
                                 'hover:bg-blue-100', 'hover:dark:bg-blue-900/30',
+                                'hover:text-blue-600', 'hover:dark:text-blue-300',
                                 'hover:bg-[#b06835]/20', 'hover:dark:bg-[#b06835]/10',
+                                'hover:text-[#b06835]', 'hover:dark:text-[#b06835]/80',
                                 'hover:bg-[#9333EA]/20', 'hover:dark:bg-[#9333EA]/10',
+                                'hover:text-[#9333EA]', 'hover:dark:text-[#9333EA]/80',
                                 'hover:bg-[#007800]/20', 'hover:dark:bg-[#007800]/10',
+                                'hover:text-[#007800]', 'hover:dark:text-[#007800]/80',
                                 'hover:bg-[#FFAC1C]/20', 'hover:dark:bg-[#FFAC1C]/10',
-                                'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10'
+                                'hover:text-[#FFAC1C]', 'hover:dark:text-[#FFAC1C]/80',
+                                'hover:bg-[#1D4ED8]/20', 'hover:dark:bg-[#1D4ED8]/10',
+                                'hover:text-[#1D4ED8]', 'hover:dark:text-[#1D4ED8]/80'
                             );
                             
-                            if (currentPath.includes(href) || 
+                            const isActive = currentPath.includes(href) || 
                                 (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                                 (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
                                 (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
@@ -500,26 +559,27 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                                (href === 'logged-in-catering.html' && currentPath.includes('catering'))) {
-                                // Použijeme farby podľa roly
+                                (href === 'logged-in-catering.html' && currentPath.includes('catering'));
+                            
+                            if (isActive) {
+                                // AKTÍVNA STRÁNKA - farby podľa roly aj pre hover
                                 link.classList.add(roleColors.bg, roleColors.darkBg, roleColors.text, roleColors.darkText);
-                                // HOVER bude mať MODRÚ FARBU pre VŠETKÝCH (ako admin)
-                                link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
+                                link.classList.add(roleColors.hoverBg, roleColors.hoverDarkBg, roleColors.hoverText, roleColors.hoverDarkText);
                                 
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = roleColors.color;
                                     icon.classList.add(roleColors.darkText);
-                                    // Hover ikony bude modrý pre všetkých
-                                    icon.classList.add('hover:text-blue-600', 'hover:dark:text-blue-300');
                                 }
                             } else {
+                                // NEAKTÍVNA STRÁNKA - hover ako admin (modrý)
+                                link.classList.add('hover:bg-blue-100', 'hover:dark:bg-blue-900/30', 'hover:text-blue-600', 'hover:dark:text-blue-300');
+                                
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = '';
                                     icon.classList.remove(roleColors.darkText);
                                     icon.classList.remove('dark:text-[#1F2937]/90');
-                                    icon.classList.remove('hover:text-blue-600', 'hover:dark:text-blue-300');
                                 }
                             }
                         }
@@ -604,7 +664,7 @@ const addCustomStyles = () => {
             .text-\\[\\#1D4ED8\\] { color: #1D4ED8; }
             .dark .dark\\:text-\\[\\#1D4ED8\\]\\/80 { color: rgba(29, 78, 216, 0.8); }
             
-            /* Hover farby - MODRÁ pre všetkých (ako admin) */
+            /* Hover farby - MODRÁ pre neaktívne stránky (ako admin) */
             .hover\\:bg-blue-100:hover { background-color: #DBEAFE; }
             .dark .hover\\:dark\\:bg-blue-900\\/30:hover { background-color: rgba(30, 58, 138, 0.3); }
             .hover\\:text-blue-600:hover { color: #2563EB; }
