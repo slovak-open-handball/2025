@@ -2321,20 +2321,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         }
     
         memberFieldsOrder.forEach(path => {
-            let value;
-            // Špeciálne spracovanie pre dátum narodenia a adresy
-            if (path === 'dateOfBirth') {
-                // Použijeme _dateOfBirth ak existuje, inak dateOfBirth
-                value = localEditedData._dateOfBirth || localEditedData.dateOfBirth || '';
-            } else if (path.startsWith('address.')) {
-                const addressField = path.split('.')[1];
-                // Použijeme _address ak existuje, inak address
-                const addressData = localEditedData._address || localEditedData.address || {};
-                value = addressData[addressField] || '';
-            } else {
-                value = getNestedValue(localEditedData, path);
-            }
-    
+            const value = getNestedValue(localEditedData, path);
             const inputValue = value === undefined || value === null ? '' : value;
             const labelText = formatLabel(path);
             let inputType = 'text';
@@ -3601,19 +3588,29 @@ function AllRegistrationsApp() {
   // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
 
   const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
-      // Odstrániť citlivé alebo irelevantné kľúče pred odovzdaním do modálneho okna
+      // Odstrániť citlivé alebo irelevantné kľúče
       const cleanedData = { ...data };
-      delete cleanedData.password; // Príklad: odstránenie hesla
-      delete cleanedData.emailVerified; // Príklad: odstránenie interných stavov
-      delete cleanedData.id; // ID je často súčasťou cesty a nemalo by sa upravovať
-
+      delete cleanedData.password;
+      delete cleanedData.emailVerified;
+      delete cleanedData.id;
+  
+      // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov (ak existujú)
+      if (cleanedData._dateOfBirth) {
+          cleanedData.dateOfBirth = cleanedData._dateOfBirth;
+          // cleanedData._dateOfBirth môžeme ponechať, nebude prekážať
+      }
+      if (cleanedData._address) {
+          // Zlúčime _address do existujúceho address, alebo vytvoríme nový
+          cleanedData.address = { ...(cleanedData.address || {}), ...cleanedData._address };
+          // cleanedData._address môžeme ponechať
+      }
+  
       setEditingData(cleanedData);
       setEditModalTitle(title);
       setEditingDocRef(targetDocRef);
       setEditingDataPath(originalDataPath);
-      setIsNewEntry(newEntryFlag); // Nastaviť príznak
+      setIsNewEntry(newEntryFlag);
       setIsEditModalOpen(true);
-      // console.log("openEditModal: Opening modal with title:", title, "data:", cleanedData, "path:", originalDataPath, "isNewEntry:", newEntryFlag); // Debug log
   };
 
   const closeEditModal = () => {
