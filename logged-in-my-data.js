@@ -684,21 +684,38 @@ const renderMyDataApp = (userProfileData, privateData) => {
     }
 };
 
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+indow.addEventListener('dbInitialized', async () => {
+    console.log('logged-in-my-data: dbInitialized event received');
+    // Ak už máme globalUserProfileData, načítame private dáta
+    if (window.globalUserProfileData) {
+        await handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    }
+});
 
-// Upravená časť na konci súboru - načítanie počiatočných dát
+// Načítanie počiatočných dát
 if (window.globalUserProfileData) {
-    (async () => {
-        const privateData = await loadUserPrivateData(window.globalUserProfileData.uid);
-        const mergedData = {
-            ...window.globalUserProfileData,
-            billingAddress: privateData.billingAddress || {},
-            address: privateData.address || {},
-            persons: privateData.persons || {},
-        };
-        handleDataUpdateAndRender({ detail: mergedData });
-    })();
+    // Ak už máme globalUserProfileData, načítame private dáta
+    // Počkáme ale na inicializáciu db
+    if (window.db) {
+        handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    } else {
+        // Počkáme na udalosť dbInitialized
+        console.log('logged-in-my-data: Čakám na inicializáciu db...');
+        // Zobrazíme spinner
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center items-center h-full pt-16' },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                )
+            );
+        }
+    }
 } else {
+    // Žiadne dáta, zobrazíme spinner
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
