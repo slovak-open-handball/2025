@@ -676,6 +676,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
       console.log('DEBUG TeamDetailsContent: player address:', team.playerDetails[0]?.address);
     }
 
+    const allConsolidatedMembers = [];
+
     const createMember = (member, type, originalArray, originalIndex) => {
         // Vylúčime pôvodné dateOfBirth a address
         const { dateOfBirth, address, ...rest } = member;
