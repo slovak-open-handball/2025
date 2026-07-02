@@ -1940,17 +1940,32 @@ useEffect(() => {
     let unsubscribeSettings;
     let unsubscribeUserDeadlines;
 
+    const safeToDate = (value) => {
+        if (!value) return null;
+        // Už je Date objekt
+        if (value instanceof Date) return value;
+        // Firebase Timestamp
+        if (typeof value.toDate === 'function') {
+            return value.toDate();
+        }
+        // String (ISO formát)
+        if (typeof value === 'string') {
+            const parsed = new Date(value);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        }
+        return null;
+    };
+
     const fetchDeadlines = async () => {
         try {
             const settingsDocRef = doc(db, 'settings', 'registration');
             unsubscribeSettings = onSnapshot(settingsDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    const settingsRosterDeadline = data.rosterEditDeadline?.toDate() || null;
-                    const settingsDataDeadline = data.dataEditDeadline?.toDate() || null;
+                    const settingsRosterDeadline = safeToDate(data.rosterEditDeadline);
+                    const settingsDataDeadline = safeToDate(data.dataEditDeadline);
 
-                    console.log("Načítané deadliny z nastavení (Timestamp → Date):", 
-                    {
+                    console.log("Načítané deadliny z nastavení:", {
                         rosterEditDeadline: settingsRosterDeadline,
                         dataEditDeadline: settingsDataDeadline
                     });
@@ -1963,52 +1978,46 @@ useEffect(() => {
 
                             if (userDocSnapshot.exists()) {
                                 const userData = userDocSnapshot.data();
-                                userRosterDeadline = userData.rosterEditDeadline?.toDate() || null;
-                                userDataDeadline = userData.dataEditDeadline?.toDate() || null;
+                                userRosterDeadline = safeToDate(userData.rosterEditDeadline);
+                                userDataDeadline = safeToDate(userData.dataEditDeadline);
 
-                                console.log("Načítané deadliny z používateľského profilu (Timestamp → Date):", 
-                                {
+                                console.log("Načítané deadliny z používateľa:", {
                                     userRosterDeadline,
                                     userDataDeadline
                                 });
                             }
 
-                            const finalRosterDeadline = !userRosterDeadline || !settingsRosterDeadline
-                                ? userRosterDeadline || settingsRosterDeadline
-                                : new Date(Math.max(userRosterDeadline.getTime(), settingsRosterDeadline.getTime()));
+                            // Finálne deadliny = maximum z nastavení a používateľa
+                            const finalRosterDeadline = 
+                                [settingsRosterDeadline, userRosterDeadline]
+                                    .filter(Boolean)
+                                    .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 
-                            const finalDataDeadline = !userDataDeadline || !settingsDataDeadline
-                                ? userDataDeadline || settingsDataDeadline
-                                : new Date(Math.max(userDataDeadline.getTime(), settingsDataDeadline.getTime()));
+                            const finalDataDeadline = 
+                                [settingsDataDeadline, userDataDeadline]
+                                    .filter(Boolean)
+                                    .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 
-                            console.log("Finálne deadliny (maximum z oboch zdrojov):", {
+                            console.log("Finálne deadliny:", {
                                 rosterEditDeadline: finalRosterDeadline,
                                 dataEditDeadline: finalDataDeadline
                             });
 
                             setRosterEditDeadline(finalRosterDeadline);
                             setDataEditDeadline(finalDataDeadline);
-                        }, (error) => {
-                            console.error("Chyba pri načítaní používateľských deadlinov:", error);
-                            setRosterEditDeadline(settingsRosterDeadline);
-                            setDataEditDeadline(settingsDataDeadline);
                         });
                     } else {
                         setRosterEditDeadline(settingsRosterDeadline);
                         setDataEditDeadline(settingsDataDeadline);
                     }
                 } else {
-                    console.log("Dokument s nastaveniami neexistuje.");
+                    console.log("Dokument settings/registration neexistuje.");
                     setRosterEditDeadline(null);
                     setDataEditDeadline(null);
                 }
-            }, (error) => {
-                console.error("Chyba pri načítaní deadlinov z nastavení:", error);
-                setRosterEditDeadline(null);
-                setDataEditDeadline(null);
             });
         } catch (e) {
-            console.error("Chyba pri nastavovaní onSnapshot pre deadliny:", e);
+            console.error("Chyba pri nastavovaní deadlinov:", e);
             setRosterEditDeadline(null);
             setDataEditDeadline(null);
         }
