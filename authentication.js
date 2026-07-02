@@ -177,6 +177,9 @@ const setupFirebase = () => {
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
         window.appCheck = appCheck;
+
+        window.dispatchEvent(new CustomEvent('dbInitialized'));
+        console.log("AuthManager: Udalosť dbInitialized odoslaná.");
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
