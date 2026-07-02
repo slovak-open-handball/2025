@@ -2492,14 +2492,23 @@ const handleDeleteTeam = async (teamToDelete) => {
 
     const confirmDelete = await new Promise(resolve => {
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex justify-center items-center p-4 z-[1001]';
+        modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1002] flex justify-center items-center p-4';
         modal.innerHTML = `
             <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
-                <p class="mb-6 text-gray-700">Naozaj chcete vymazať tím <strong>${teamToDelete.teamName}</strong>? Táto akcia je nevratná.</p>
-                <div class="flex justify-end space-x-2">
-                    <button id="cancel" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Zrušiť</button>
-                    <button id="confirm" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Vymazať</button>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Odstrániť člena tímu</h3>
+                <p class="mb-6 text-gray-700">
+                    Naozaj chcete odstrániť člena 
+                    <strong>${member.firstName || ''} ${member.lastName || ''}</strong> 
+                    (${member.type || 'člen'}) z tímu 
+                    <strong>${team.teamName || 'Neznámy tím'}</strong>?
+                </p>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel" class="px-5 py-2.5 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition">
+                        Zrušiť
+                    </button>
+                    <button id="confirm" class="px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                        Áno, odstrániť
+                    </button>
                 </div>
             </div>
         `;
