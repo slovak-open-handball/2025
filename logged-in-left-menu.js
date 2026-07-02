@@ -7,7 +7,7 @@ const loadLeftMenu = async (userProfileData) => {
         try {
             const response = await fetch('logged-in-left-menu.html');
             if (!response.ok) throw new Error(`HTTP chyba! Stav: ${response.status}`);
-           
+          
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
             const db = window.db;
@@ -55,12 +55,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-     
+    
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
 
-            // Odstránenie všetkých farebných tried (vrátane role-based)
             link.classList.remove(
                 'bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300',
                 'bg-[#b06835]/20', 'dark:bg-[#b06835]/10', 'text-[#b06835]', 'dark:text-[#b06835]/80',
@@ -196,13 +195,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
 
-    // Inicializácia
     applyMenuState();
     updateMenuText();
     showRoleBasedLinks();
     setTimeout(highlightActiveMenuLinkGray, 100);
 
-    // Event listeners
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
@@ -241,12 +238,21 @@ const addCustomStyles = () => {
             transition: color 200ms ease;
         }
 
-        /* Hover pre VŠETKY riadky (všetky roly) */
+        /* Hover pre všetky riadky (vrátane aktívnych) */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
-        /* Zachovanie farby textu a ikony pri hover */
+        /* Aktívny riadok má prioritu bez hoveru */
+        #left-menu a.bg-\\[\\#F9FAFB\\],
+        #left-menu a.dark\\:bg-gray-800\\/30 {
+            background-color: #F9FAFB !important;
+        }
+        .dark #left-menu a.dark\\:bg-gray-800\\/30 {
+            background-color: rgba(31, 41, 55, 0.3) !important;
+        }
+
+        /* Zachovanie farby textu pri hover */
         #left-menu a:hover,
         #left-menu a:hover .whitespace-nowrap,
         #left-menu a:hover svg {
