@@ -564,7 +564,7 @@ function MemberDetailsModal({
                 if (
                     player.firstName === memberData?.firstName &&
                     player.lastName === memberData?.lastName &&
-                    player.dateOfBirth === memberData?.dateOfBirth
+                    (player._dateOfBirth || player.dateOfBirth) === (memberData?._dateOfBirth || memberData?.dateOfBirth)
                 ) {
                     return false;
                 }
@@ -662,19 +662,15 @@ function MemberDetailsModal({
                     }
                     
                     if (!foundPrivateData) {
-                        setDateOfBirth(memberData.dateOfBirth || '');
-                        if (memberData.address) {
-                            setStreet(memberData.address.street || '');
-                            setHouseNumber(memberData.address.houseNumber || '');
-                            setPostalCode(memberData.address.postalCode || '');
-                            setCity(memberData.address.city || '');
-                            setCountry(memberData.address.country || '');
-                        } else {
-                            setStreet('');
-                            setHouseNumber('');
-                            setPostalCode('');
-                            setCity('');
-                            setCountry('');
+                        // Namiesto memberData.dateOfBirth
+                        setDateOfBirth(memberData._dateOfBirth || memberData.dateOfBirth || '');
+                        if (memberData._address || memberData.address) {
+                            const addr = memberData._address || memberData.address;
+                            setStreet(addr.street || '');
+                            setHouseNumber(addr.houseNumber || '');
+                            setPostalCode(addr.postalCode || '');
+                            setCity(addr.city || '');
+                            setCountry(addr.country || '');
                         }
                     }
                     
