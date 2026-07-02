@@ -2196,10 +2196,14 @@ useEffect(() => {
         };
     }, [db]);
 
+    // ============================================================
+    // UPRAVENÝ useEffect PRE NAČÍTANIE DÁT - RostersApp
+    // ============================================================
+    
     useEffect(() => {
         let unsubscribeUserDoc;
         let unsubscribeUserPrivate;
-
+    
         if (user && db && isAuthReady) {
             setLoading(true);
     
@@ -2239,17 +2243,20 @@ useEffect(() => {
                                             const teamKey = `${categoryKey}_team${teamIndex + 1}`;
                                             const privateTeamData = privateData.persons?.[teamKey] || {};
     
+                                            // ============================================================
+                                            // 🆕 UPRAVENÉ: Hráči - BEZ spread operátora
+                                            // ============================================================
                                             let mergedPlayerDetails = [];
                                             if (team.playerDetails) {
                                                 mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
                                                     const privatePlayer = privateTeamData.players?.[playerIndex] || {};
                                                     return {
-                                                        // VYBERIEME LEN POVOLENÉ POLIA PRE USERS
+                                                        // IBA POVOLENÉ POLIA PRE USERS
                                                         firstName: player.firstName || '',
                                                         lastName: player.lastName || '',
                                                         jerseyNumber: player.jerseyNumber || null,
                                                         registrationNumber: player.registrationNumber || null,
-                                                        // A akékoľvek ďalšie polia, ktoré nie sú zakázané
+                                                        // Ďalšie polia, ktoré nie sú zakázané
                                                         ...Object.fromEntries(
                                                             Object.entries(player)
                                                                 .filter(([key]) => 
@@ -2257,7 +2264,7 @@ useEffect(() => {
                                                                       'dateOfBirth', 'address', '_privateData'].includes(key)
                                                                 )
                                                         ),
-                                                        // Súkromné dáta uchovávame oddelene pre zobrazenie
+                                                        // Súkromné dáta - ODDELENE pre zobrazenie
                                                         _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
                                                         _address: privatePlayer.address || player.address || {
                                                             street: '',
@@ -2270,6 +2277,9 @@ useEffect(() => {
                                                 });
                                             }
     
+                                            // ============================================================
+                                            // 🆕 UPRAVENÉ: Ženy RT - BEZ spread operátora
+                                            // ============================================================
                                             let mergedWomenTeamMembers = [];
                                             if (team.womenTeamMemberDetails) {
                                                 mergedWomenTeamMembers = team.womenTeamMemberDetails.map((member, memberIndex) => {
@@ -2277,7 +2287,6 @@ useEffect(() => {
                                                     return {
                                                         firstName: member.firstName || '',
                                                         lastName: member.lastName || '',
-                                                        // RT nemajú jerseyNumber a registrationNumber
                                                         ...Object.fromEntries(
                                                             Object.entries(member)
                                                                 .filter(([key]) => 
@@ -2296,6 +2305,9 @@ useEffect(() => {
                                                 });
                                             }
     
+                                            // ============================================================
+                                            // 🆕 UPRAVENÉ: Muži RT - BEZ spread operátora
+                                            // ============================================================
                                             let mergedMenTeamMembers = [];
                                             if (team.menTeamMemberDetails) {
                                                 mergedMenTeamMembers = team.menTeamMemberDetails.map((member, memberIndex) => {
@@ -2321,7 +2333,9 @@ useEffect(() => {
                                                 });
                                             }
     
-                                            // Zlúčenie šoférov - žien
+                                            // ============================================================
+                                            // 🆕 UPRAVENÉ: Šoférky (ženy) - BEZ spread operátora
+                                            // ============================================================
                                             let mergedDriverDetailsFemale = [];
                                             if (team.driverDetailsFemale) {
                                                 mergedDriverDetailsFemale = team.driverDetailsFemale.map((driver, driverIndex) => {
@@ -2347,6 +2361,9 @@ useEffect(() => {
                                                 });
                                             }
     
+                                            // ============================================================
+                                            // 🆕 UPRAVENÉ: Šoféri (muži) - BEZ spread operátora
+                                            // ============================================================
                                             let mergedDriverDetailsMale = [];
                                             if (team.driverDetailsMale) {
                                                 mergedDriverDetailsMale = team.driverDetailsMale.map((driver, driverIndex) => {
