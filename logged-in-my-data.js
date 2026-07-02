@@ -1,3 +1,4 @@
+// Importy pre Firebase funkcie
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -235,7 +236,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                     )
                 ),
                 userProfileData.selectedDates && userProfileData.selectedDates.length > 0 && (() => {
-                    // Zoradenie dátumov od najskoršieho po najneskorší
                     const sortedDates = [...userProfileData.selectedDates].sort((a, b) => {
                         const dateA = new Date(a);
                         const dateB = new Date(b);
@@ -261,7 +261,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     // Upravená časť ProfileSection - zobrazenie fakturačných údajov z usersprivate
     let billingContent = null;
     if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && userProfileData.role !== 'referee' && userProfileData.role !== 'volunteer') {
-        // Získame fakturačnú adresu z usersprivate (address) - ZMENENÉ
         const address = userProfileData.address || {};
         
         billingContent = React.createElement(
@@ -297,7 +296,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
                     React.createElement('div', { className: 'font-normal' },
-                        // POUŽÍVAME ADDRESS NAMIESTO BILLINGADDRESS
                         `${address.street || '-'} ${address.houseNumber || '-'}, ${address.postalCode ? address.postalCode.slice(0, 3) + ' ' + address.postalCode.slice(3) : '-'} ${address.city || '-'}, ${address.country || '-'}`
                     )
                 ),
@@ -317,7 +315,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         );
     }
 
-    // Zoznam boxov na zobrazenie
     const boxes = [profileContent];
     if (volunteerContent) boxes.push(volunteerContent);
     if (billingContent) boxes.push(billingContent);
@@ -379,6 +376,7 @@ const MyDataApp = ({ userProfileData }) => {
         isCategoriesDataLoaded, 
     } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
     
+    // Načítanie settings registration
     useEffect(() => {
         if (!window.db) {
             return;
@@ -453,10 +451,10 @@ const MyDataApp = ({ userProfileData }) => {
                 return;
             }
             
-            // SPRÁVNA KONVERZIA DÁTUMU
+            // SPRÁVNA KONVERZIA DÁTUMU - najprv skúsime z userProfileData, potom zo settings
             let deadlineDate = null;
             
-            // Najprv skúsime získať dátum z userProfileData
+            // 1. SKÚSIME ZÍSKAŤ DÁTUM Z userProfileData (individuálny deadline)
             if (userProfileData?.dataEditDeadline) {
                 if (typeof userProfileData.dataEditDeadline.toDate === 'function') {
                     deadlineDate = userProfileData.dataEditDeadline.toDate();
@@ -470,9 +468,10 @@ const MyDataApp = ({ userProfileData }) => {
                 else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
+                console.log('updateCanEditStatus: Používam individuálny deadline z userProfileData');
             }
             
-            // Ak nemáme deadline z userProfileData, použijeme z settings
+            // 2. AK NEMÁME INDIVIDUÁLNY DEADLINE, POUŽIJEME GLOBÁLNY ZO SETTINGS
             if (!deadlineDate && settingsRegistrationDates?.dataEditDeadline) {
                 if (typeof settingsRegistrationDates.dataEditDeadline.toDate === 'function') {
                     deadlineDate = settingsRegistrationDates.dataEditDeadline.toDate();
@@ -486,46 +485,49 @@ const MyDataApp = ({ userProfileData }) => {
                 else {
                     deadlineDate = new Date(settingsRegistrationDates.dataEditDeadline);
                 }
+                console.log('updateCanEditStatus: Používam globálny deadline zo settings');
             }
             
-            if (deadlineDate) {
-                console.log('=== DEADLINE CHECK ===');
-                console.log('Deadline date:', deadlineDate);
-                console.log('Deadline timestamp:', deadlineDate.getTime());
-                console.log('Current time:', new Date());
-                console.log('Current timestamp:', Date.now());
-                console.log('Is now <= deadline?', Date.now() <= deadlineDate.getTime());
-                console.log('User role:', userProfileData.role);
+            // 3. AK NEMÁME ŽIADNY DEADLINE, NEPOVOLÍME EDITÁCIU
+            if (!deadlineDate) {
+                console.log('updateCanEditStatus: Žiadny deadline dostupný, editácia zakázaná');
+                setCanEdit(false);
+                setIsPasswordChangeOnlyMode(false);
+                return;
             }
             
-            const deadlineMillis = deadlineDate ? deadlineDate.getTime() : null;
+            console.log('=== DEADLINE CHECK ===');
+            console.log('Deadline date:', deadlineDate);
+            console.log('Deadline timestamp:', deadlineDate.getTime());
+            console.log('Current time:', new Date());
+            console.log('Current timestamp:', Date.now());
+            console.log('Is now <= deadline?', Date.now() <= deadlineDate.getTime());
+            console.log('User role:', userProfileData.role);
             
-            if (deadlineMillis !== null) {
-                const nowMillis = Date.now();
-                if (nowMillis <= deadlineMillis) {
-                    setCanEdit(true);
-                    if (timer) clearTimeout(timer);
-                    if (deadlineMillis - nowMillis > 0) {
-                        timer = setTimeout(() => {
-                            setCanEdit(false);
-                            if (userProfileData.role === 'club') {
-                                setIsPasswordChangeOnlyMode(true);
-                            } else {
-                                setIsPasswordChangeOnlyMode(false);
-                            }
-                        }, deadlineMillis - nowMillis + 100);
-                    }
-                } else {
-                    setCanEdit(false);
-                    if (userProfileData.role === 'club') {
-                        setIsPasswordChangeOnlyMode(true);
-                    } else {
-                        setIsPasswordChangeOnlyMode(false);
-                    }
+            const deadlineMillis = deadlineDate.getTime();
+            const nowMillis = Date.now();
+            
+            if (nowMillis <= deadlineMillis) {
+                setCanEdit(true);
+                // Nastavíme timer na automatické vypnutie po uplynutí deadline
+                if (timer) clearTimeout(timer);
+                if (deadlineMillis - nowMillis > 0) {
+                    timer = setTimeout(() => {
+                        setCanEdit(false);
+                        if (userProfileData.role === 'club') {
+                            setIsPasswordChangeOnlyMode(true);
+                        } else {
+                            setIsPasswordChangeOnlyMode(false);
+                        }
+                    }, deadlineMillis - nowMillis + 100);
                 }
             } else {
                 setCanEdit(false);
-                setIsPasswordChangeOnlyMode(false);
+                if (userProfileData.role === 'club') {
+                    setIsPasswordChangeOnlyMode(true);
+                } else {
+                    setIsPasswordChangeOnlyMode(false);
+                }
             }
         };
         
@@ -605,8 +607,10 @@ let isEmailSyncListenerSetup = false;
 let isDbInitialized = false;
 let pendingUserProfileData = null;
 
+// ============================================================
+// UPRAVENÁ FUNKCIA loadUserPrivateData - načíta aj deadline dáta
+// ============================================================
 const loadUserPrivateData = async (userId) => {
-    // Kontrola, či je window.db inicializované
     if (!window.db) {
         console.warn('loadUserPrivateData: window.db nie je inicializované');
         return {};
@@ -621,7 +625,9 @@ const loadUserPrivateData = async (userId) => {
         const privateDocRef = doc(window.db, 'usersprivate', userId);
         const privateDocSnap = await getDoc(privateDocRef);
         if (privateDocSnap.exists()) {
-            return privateDocSnap.data();
+            const data = privateDocSnap.data();
+            console.log('loadUserPrivateData: Načítané dáta z usersprivate:', data);
+            return data;
         }
         return {};
     } catch (error) {
@@ -645,9 +651,11 @@ const renderMyDataApp = (userProfileData) => {
     }
 };
 
+// ============================================================
+// UPRAVENÁ FUNKCIA processUserData - zabezpečí načítanie deadline
+// ============================================================
 const processUserData = async (userProfileData) => {
     if (!userProfileData) {
-        // Zobrazíme spinner
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
@@ -662,24 +670,21 @@ const processUserData = async (userProfileData) => {
         return;
     }
     
-    // Použijeme id alebo uid (podľa toho, čo je dostupné)
     const userId = userProfileData.id || userProfileData.uid;
     
-    // Ak nemáme userId, nemôžeme načítať private dáta
     if (!userId) {
         console.warn('processUserData: Chýba id/uid v userProfileData', userProfileData);
         renderMyDataApp(userProfileData);
         return;
     }
     
-    // Načítame dáta z usersprivate (iba ak je window.db dostupný)
+    // Načítame dáta z usersprivate
     let privateData = {};
     if (window.db) {
         try {
             privateData = await loadUserPrivateData(userId);
             console.log('processUserData: Načítané private dáta:', privateData);
             
-            // KONTROLA: Či máme adresu v private dátech
             if (privateData.address) {
                 console.log('processUserData: Adresa z private dát:', privateData.address);
             } else {
@@ -694,27 +699,49 @@ const processUserData = async (userProfileData) => {
         return;
     }
     
+    // ============================================================
+    // DÔLEŽITÉ: Získame aktuálne dáta z users pre deadline
+    // ============================================================
+    try {
+        const userDocRef = doc(window.db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            console.log('processUserData: Dáta z users:', userData);
+            
+            // Ak má používateľ dataEditDeadline, použijeme ho
+            if (userData.dataEditDeadline) {
+                console.log('processUserData: Používateľ má individuálny dataEditDeadline');
+                userProfileData.dataEditDeadline = userData.dataEditDeadline;
+            }
+            if (userData.rosterEditDeadline) {
+                console.log('processUserData: Používateľ má individuálny rosterEditDeadline');
+                userProfileData.rosterEditDeadline = userData.rosterEditDeadline;
+            }
+        }
+    } catch (error) {
+        console.error('processUserData: Chyba pri načítaní users dát:', error);
+    }
+    
     // Zlúčime dáta z users a usersprivate
     const mergedData = {
         ...userProfileData,
         uid: userId,
-        // DÔLEŽITÉ: Použijeme address z privateData, ak existuje, inak prázdny objekt
         address: privateData.address || {},
-        billingAddress: privateData.billingAddress || {}, // Pre kompatibilitu
+        billingAddress: privateData.billingAddress || {},
         persons: privateData.persons || {},
     };
     
-    // KONTROLA: Vypíšeme výsledné dáta
     console.log('processUserData: Zlúčené dáta:', {
         address: mergedData.address,
         billing: mergedData.billing,
-        billingAddress: mergedData.billingAddress
+        dataEditDeadline: mergedData.dataEditDeadline,
+        rosterEditDeadline: mergedData.rosterEditDeadline
     });
     
-    // Renderujeme aplikáciu s merged dátami
     renderMyDataApp(mergedData);
     
-    // Nastavíme listener pre email synchronizáciu (iba raz)
+    // Nastavíme listener pre email synchronizáciu
     if (window.auth && window.db && !isEmailSyncListenerSetup) {            
         onAuthStateChanged(window.auth, async (user) => {
             if (user) {
@@ -750,20 +777,16 @@ const handleDataUpdateAndRender = async (event) => {
     const userProfileData = event.detail;
     console.log('handleDataUpdateAndRender: Prijaté dáta:', userProfileData ? 'má dáta' : 'null');
     
-    // Uložíme dáta do globálnej premennej pre prípad, že by prišli neskôr
     if (userProfileData) {
         window.globalUserProfileData = userProfileData;
     }
     
-    // Ak už máme inicializovanú db, spracujeme dáta hneď
     if (isDbInitialized && window.db) {
         await processUserData(userProfileData);
     } else if (userProfileData) {
-        // Ak db ešte nie je inicializovaná, uložíme dáta na neskôr
         console.log('handleDataUpdateAndRender: db ešte nie je inicializovaná, ukladám dáta na neskôr');
         pendingUserProfileData = userProfileData;
     } else {
-        // Žiadne dáta, zobrazíme spinner
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
@@ -778,26 +801,21 @@ const handleDataUpdateAndRender = async (event) => {
     }
 };
 
-// Počúvame na udalosť globalDataUpdated (prichádza z authentication.js)
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Počúvame na udalosť dbInitialized (odosiela sa z authentication.js po inicializácii db)
 window.addEventListener('dbInitialized', async () => {
     console.log('logged-in-my-data: dbInitialized event received');
     isDbInitialized = true;
     
-    // Ak máme čakajúce dáta, spracujeme ich
     if (pendingUserProfileData) {
         console.log('logged-in-my-data: Spracúvam čakajúce dáta po inicializácii db');
         const dataToProcess = pendingUserProfileData;
         pendingUserProfileData = null;
         await processUserData(dataToProcess);
     } else if (window.globalUserProfileData) {
-        // Ak máme globálne dáta, spracujeme ich
         console.log('logged-in-my-data: Spracúvam globálne dáta po inicializácii db');
         await processUserData(window.globalUserProfileData);
     } else {
-        // Žiadne dáta, zobrazíme spinner
         console.log('logged-in-my-data: Žiadne dáta po inicializácii db');
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -813,10 +831,8 @@ window.addEventListener('dbInitialized', async () => {
     }
 });
 
-// Načítanie počiatočných dát
 console.log('logged-in-my-data: Inicializácia...');
 
-// Kontrola, či už je db inicializovaný
 if (window.db) {
     isDbInitialized = true;
     console.log('logged-in-my-data: db už je inicializovaný');
@@ -824,15 +840,11 @@ if (window.db) {
 
 if (window.globalUserProfileData) {
     console.log('logged-in-my-data: Mám globálne dáta');
-    // Ak už máme globalUserProfileData, spracujeme ich
     if (isDbInitialized) {
-        // db je už inicializovaný, spracujeme hneď
         processUserData(window.globalUserProfileData);
     } else {
-        // db ešte nie je inicializovaný, uložíme dáta na neskôr
         console.log('logged-in-my-data: Čakám na inicializáciu db...');
         pendingUserProfileData = window.globalUserProfileData;
-        // Zobrazíme spinner
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
@@ -846,7 +858,6 @@ if (window.globalUserProfileData) {
         }
     }
 } else {
-    // Žiadne dáta, zobrazíme spinner
     console.log('logged-in-my-data: Žiadne globálne dáta');
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
