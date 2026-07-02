@@ -370,7 +370,7 @@ const MyDataApp = ({ userProfileData }) => {
     const [canEdit, setCanEdit] = useState(false);
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
-    const [isDataReady, setIsDataReady] = useState(false); // NOVÝ STAV
+    const [isDataReady, setIsDataReady] = useState(false);
     
     const { 
         isGlobalAuthReady, 
@@ -405,25 +405,7 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
     
-    // NOVÝ EFFECT: Sledujeme, kedy sú všetky dáta pripravené
-    useEffect(() => {
-        const allDataReady = userProfileData && 
-                            isGlobalAuthReady && 
-                            isRegistrationDataLoaded && 
-                            isCategoriesDataLoaded && 
-                            settingsRegistrationDates;
-        
-        console.log('MyDataApp - allDataReady:', allDataReady);
-        console.log('  userProfileData:', !!userProfileData);
-        console.log('  isGlobalAuthReady:', isGlobalAuthReady);
-        console.log('  isRegistrationDataLoaded:', isRegistrationDataLoaded);
-        console.log('  isCategoriesDataLoaded:', isCategoriesDataLoaded);
-        console.log('  settingsRegistrationDates:', !!settingsRegistrationDates);
-        
-        setIsDataReady(allDataReady);
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates]);
-    
-    // Hlavný effect pre kontrolu deadline - spustí sa len keď sú dáta pripravené
+    // HLAVNÝ EFFECT PRE KONTROLU DEADLINE - používa userProfileData priamo
     useEffect(() => {
         let timer;
         
@@ -431,28 +413,26 @@ const MyDataApp = ({ userProfileData }) => {
             console.log('updateCanEditStatus - userProfileData:', userProfileData);
             console.log('updateCanEditStatus - dataEditDeadline:', userProfileData?.dataEditDeadline);
             console.log('updateCanEditStatus - settingsRegistrationDates:', settingsRegistrationDates);
-            console.log('updateCanEditStatus - isGlobalAuthReady:', isGlobalAuthReady);
-            console.log('updateCanEditStatus - isRegistrationDataLoaded:', isRegistrationDataLoaded);
-            console.log('updateCanEditStatus - isCategoriesDataLoaded:', isCategoriesDataLoaded);
             
             // NASTAVÍME PREDVOLENÉ HODNOTY
             setCanEdit(false);
             setIsPasswordChangeOnlyMode(false);
             
-            // KONTROLA: Či sú všetky potrebné dáta načítané
-            if (!isDataReady) {
-                console.log('updateCanEditStatus: Dáta ešte nie sú pripravené, čakám...');
+            // KONTROLA: Či máme userProfileData
+            if (!userProfileData) {
+                console.log('updateCanEditStatus: userProfileData chýba');
                 return;
             }
             
-            // VŠETKY DÁTA SÚ NAČÍTANÉ - POKRAČUJEME KONTROLOU
+            // ADMIN - vždy môže editovať
             const isAdmin = userProfileData.role === 'admin';
             if (isAdmin) {
+                console.log('updateCanEditStatus: Používateľ je admin, povoľujem editáciu');
                 setCanEdit(true);
                 return;
             }
             
-            // SPRÁVNA KONVERZIA DÁTUMU - najprv skúsime z userProfileData, potom zo settings
+            // SPRÁVNA KONVERZIA DÁTUMU - najprv skúsime z userProfileData
             let deadlineDate = null;
             
             // 1. SKÚSIME ZÍSKAŤ DÁTUM Z userProfileData (individuálny deadline)
@@ -509,11 +489,13 @@ const MyDataApp = ({ userProfileData }) => {
             const nowMillis = Date.now();
             
             if (nowMillis <= deadlineMillis) {
+                console.log('updateCanEditStatus: ✅ EDITÁCIA POVOLENÁ (deadline ešte neuplynul)');
                 setCanEdit(true);
                 // Nastavíme timer na automatické vypnutie po uplynutí deadline
                 if (timer) clearTimeout(timer);
                 if (deadlineMillis - nowMillis > 0) {
                     timer = setTimeout(() => {
+                        console.log('updateCanEditStatus: ⏰ DEADLINE UPLYNUL, vypínam editáciu');
                         setCanEdit(false);
                         if (userProfileData.role === 'club') {
                             setIsPasswordChangeOnlyMode(true);
@@ -523,6 +505,7 @@ const MyDataApp = ({ userProfileData }) => {
                     }, deadlineMillis - nowMillis + 100);
                 }
             } else {
+                console.log('updateCanEditStatus: ❌ EDITÁCIA ZAKÁZANÁ (deadline už uplynul)');
                 setCanEdit(false);
                 if (userProfileData.role === 'club') {
                     setIsPasswordChangeOnlyMode(true);
@@ -532,17 +515,15 @@ const MyDataApp = ({ userProfileData }) => {
             }
         };
         
-        // Spustíme kontrolu len keď sú dáta pripravené
-        if (isDataReady) {
-            updateCanEditStatus();
-        }
+        // Spustíme kontrolu vždy, keď sa zmení userProfileData alebo settingsRegistrationDates
+        updateCanEditStatus();
         
         return () => {
             if (timer) {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, isDataReady]);
+    }, [userProfileData, settingsRegistrationDates]); // ODSTRÁNENÉ závislosti na isGlobalAuthReady, atď.
     
     const getRoleColor = (role) => {
         switch (role) {
