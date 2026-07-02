@@ -698,12 +698,36 @@ function UsersManagementApp() {
               return userData;
           }));
 
-        const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
-          id: u.id,
-          name: `${u.firstName} ${u.lastName}`,
-          regSeconds: u.registrationDate?.seconds,
-          regDate: u.registrationDate?.seconds ? new Date(u.registrationDate.seconds * 1000).toLocaleString() : 'bez dátumu'
-        })));
+          // === OPRavená časť - bez chybnej syntaxe ===
+          const adminUsers = usersList.filter(user => user.role === 'admin' && user.approved === true);
+
+          if (adminUsers.length > 0) {
+            const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
+            
+            if (validAdminUsers.length > 0) {
+              validAdminUsers.sort((a, b) => {
+                const dateA = a.registrationDate?.seconds || 0;
+                const dateB = b.registrationDate?.seconds || 0;
+                return dateA - dateB;
+              });
+              setOldestAdminId(validAdminUsers[0].id);
+            } else {
+              setOldestAdminId(adminUsers[0].id);
+            }
+          }
+
+          setUsers(usersList);
+          
+          const hallIds = usersList.map(user => user.hallId).filter(id => id);
+          if (hallIds.length > 0) {
+            fetchHallNames(hallIds);
+          }
+          
+          setLoading(false);
+      }, (error) => {
+        setLoading(false);
+        setNotification({ message: 'Chyba pri načítaní užívateľov.', type: 'error' });
+      });
 
         if (adminUsers.length > 0) {
           const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
