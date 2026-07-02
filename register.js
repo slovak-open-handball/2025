@@ -1048,7 +1048,9 @@ function App() {
   
         // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate' - LEN DÁTUMY A ADRESY
         const privateData = {
-          persons: {}
+            role: 'club', 
+            approved: true,
+            persons: {}
         };
   
         // Pridáme adresu používateľa do privateData
