@@ -2453,7 +2453,22 @@ useEffect(() => {
                   _memberIndex: index,
                   _privateData: team._privateData,
                   _teamIndex: team._teamIndex,
-                  ...player,
+                  // Explicitne definujeme iba povolené polia
+                  firstName: player.firstName || '',
+                  lastName: player.lastName || '',
+                  jerseyNumber: player.jerseyNumber || null,
+                  registrationNumber: player.registrationNumber || null,
+                  // Súkromné dáta oddelene
+                  _dateOfBirth: player._dateOfBirth || '',
+                  _address: player._address || {},
+                  // Ďalšie polia (okrem zakázaných)
+                  ...Object.fromEntries(
+                      Object.entries(player)
+                          .filter(([key]) => 
+                              !['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
+                                '_dateOfBirth', '_address', '_privateData', 'dateOfBirth', 'address'].includes(key)
+                          )
+                  )
               });
           });
       }
@@ -2465,7 +2480,21 @@ useEffect(() => {
                   type: 'Člen realizačného tímu (muž)',
                   _memberIndex: index,
                   _privateData: team._privateData,
-                  ...member,
+                  _teamIndex: team._teamIndex,
+                  // Explicitne definujeme iba povolené polia
+                  firstName: member.firstName || '',
+                  lastName: member.lastName || '',
+                  // Súkromné dáta oddelene
+                  _dateOfBirth: member._dateOfBirth || '',
+                  _address: member._address || {},
+                  // Ďalšie polia (okrem zakázaných)
+                  ...Object.fromEntries(
+                      Object.entries(member)
+                          .filter(([key]) => 
+                              !['firstName', 'lastName', '_dateOfBirth', '_address', '_privateData', 
+                                'dateOfBirth', 'address'].includes(key)
+                          )
+                  )
               });
           });
       }
@@ -2477,7 +2506,21 @@ useEffect(() => {
                   type: 'Člen realizačného tímu (žena)',
                   _memberIndex: index,
                   _privateData: team._privateData,
-                  ...member,
+                  _teamIndex: team._teamIndex,
+                  // Explicitne definujeme iba povolené polia
+                  firstName: member.firstName || '',
+                  lastName: member.lastName || '',
+                  // Súkromné dáta oddelene
+                  _dateOfBirth: member._dateOfBirth || '',
+                  _address: member._address || {},
+                  // Ďalšie polia (okrem zakázaných)
+                  ...Object.fromEntries(
+                      Object.entries(member)
+                          .filter(([key]) => 
+                              !['firstName', 'lastName', '_dateOfBirth', '_address', '_privateData', 
+                                'dateOfBirth', 'address'].includes(key)
+                          )
+                  )
               });
           });
       }
@@ -2489,7 +2532,21 @@ useEffect(() => {
                   type: 'Šofér (žena)',
                   _memberIndex: index,
                   _privateData: team._privateData,
-                  ...driver,
+                  _teamIndex: team._teamIndex,
+                  // Explicitne definujeme iba povolené polia
+                  firstName: driver.firstName || '',
+                  lastName: driver.lastName || '',
+                  // Súkromné dáta oddelene
+                  _dateOfBirth: driver._dateOfBirth || '',
+                  _address: driver._address || {},
+                  // Ďalšie polia (okrem zakázaných)
+                  ...Object.fromEntries(
+                      Object.entries(driver)
+                          .filter(([key]) => 
+                              !['firstName', 'lastName', '_dateOfBirth', '_address', '_privateData', 
+                                'dateOfBirth', 'address'].includes(key)
+                          )
+                  )
               });
           });
       }
@@ -2501,7 +2558,21 @@ useEffect(() => {
                   type: 'Šofér (muž)',
                   _memberIndex: index,
                   _privateData: team._privateData,
-                  ...driver,
+                  _teamIndex: team._teamIndex,
+                  // Explicitne definujeme iba povolené polia
+                  firstName: driver.firstName || '',
+                  lastName: driver.lastName || '',
+                  // Súkromné dáta oddelene
+                  _dateOfBirth: driver._dateOfBirth || '',
+                  _address: driver._address || {},
+                  // Ďalšie polia (okrem zakázaných)
+                  ...Object.fromEntries(
+                      Object.entries(driver)
+                          .filter(([key]) => 
+                              !['firstName', 'lastName', '_dateOfBirth', '_address', '_privateData', 
+                                'dateOfBirth', 'address'].includes(key)
+                          )
+                  )
               });
           });
       }
