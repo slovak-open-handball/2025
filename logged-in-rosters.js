@@ -1026,25 +1026,25 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+    
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
           return;
         }
-
+    
         if (isTshirtCountMismatch) {
           showLocalNotification(`Počet tričiek (${totalTshirtsQuantity}) sa musí rovnať počtu členov v tíme (${totalMembersCount}).`, 'error');
           return;
         }
-
+    
         let finalArrivalTime = '';
         if (editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus') {
             finalArrivalTime = `${editedArrivalHour.padStart(2, '0')}:${editedArrivalMinute.padStart(2, '0')}`;
         }
-
+    
         const filteredTshirtEntries = tshirtEntries.filter(t => t.size && t.quantity && parseInt(t.quantity, 10) > 0)
                                                     .map(t => ({ ...t, quantity: parseInt(t.quantity, 10) }));
-
+    
         const updatedTeamData = {
             ...teamData,
             teamName: editedTeamName,
@@ -1060,6 +1060,35 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
             jerseyHomeColor: editedTeamData.jerseyHomeColor?.trim() || '',
             jerseyAwayColor: editedTeamData.jerseyAwayColor?.trim() || ''
         };
+    
+        // 🔧 OPRAVA: Odstráň _dateOfBirth a _address z členov tímu
+        // Musíme prejsť cez všetky polia s členmi a odstrániť tieto polia
+        const cleanMemberArrays = (arr) => {
+            if (!arr) return arr;
+            return arr.map(item => {
+                const clean = { ...item };
+                delete clean._dateOfBirth;
+                delete clean._address;
+                return clean;
+            });
+        };
+    
+        if (updatedTeamData.playerDetails) {
+            updatedTeamData.playerDetails = cleanMemberArrays(updatedTeamData.playerDetails);
+        }
+        if (updatedTeamData.womenTeamMemberDetails) {
+            updatedTeamData.womenTeamMemberDetails = cleanMemberArrays(updatedTeamData.womenTeamMemberDetails);
+        }
+        if (updatedTeamData.menTeamMemberDetails) {
+            updatedTeamData.menTeamMemberDetails = cleanMemberArrays(updatedTeamData.menTeamMemberDetails);
+        }
+        if (updatedTeamData.driverDetailsFemale) {
+            updatedTeamData.driverDetailsFemale = cleanMemberArrays(updatedTeamData.driverDetailsFemale);
+        }
+        if (updatedTeamData.driverDetailsMale) {
+            updatedTeamData.driverDetailsMale = cleanMemberArrays(updatedTeamData.driverDetailsMale);
+        }
+    
         await onSaveTeam(updatedTeamData);
         setHasChanges(false);
         onClose();
