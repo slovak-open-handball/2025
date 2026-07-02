@@ -7,6 +7,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuIcon = document.querySelector('#menu-toggle-button svg');
     const menuText = document.querySelector('#menu-toggle-button .whitespace-nowrap');
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0');
+
     const addCategoriesLink = document.getElementById('add-categories-link');
     const addGroupsLink = document.getElementById('add-groups-link');
     const tournamentSettingsLink = document.getElementById('tournament-settings-link');
@@ -22,21 +23,21 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const matchesLink = document.getElementById('matches-link');
     const matchesHallLink = document.getElementById('matches-hall-link');
     const cateringLink = document.getElementById('catering-link');
-   
+  
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         return;
     }
+
     let isMenuToggled = userProfileData?.isMenuToggled || false;
-   
+  
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-        
+       
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
 
-            // Odstránenie všetkých farieb
             link.classList.remove(
                 'bg-blue-100', 'dark:bg-blue-900',
                 'text-blue-600', 'dark:text-blue-300',
@@ -78,7 +79,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     icon.classList.add('dark:text-[#1F2937]/90');
                 }
             } else {
-                // Neaktívny riadok - hover na #374151
                 const icon = link.querySelector('svg');
                 if (icon) {
                     icon.style.color = '';
@@ -87,7 +87,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             }
         });
     };
-   
+  
     const getColorForRole = (role) => {
         switch (role) {
             case 'admin': return '#47b3ff';
@@ -98,10 +98,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             default: return '#1D4ED8';
         }
     };
-   
+  
     const applyMenuState = () => {
         const role = userProfileData?.role || 'default';
         const roleColor = getColorForRole(role);
+        
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
@@ -117,20 +118,20 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             if (menuIcon) menuIcon.style.color = '';
             if (menuText) menuText.style.color = '';
         }
+
         menuTexts.forEach(span => {
             span.classList.toggle('opacity-0', !isMenuToggled);
         });
     };
-   
+  
     const updateMenuText = () => {
         const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
         if (myDataLinkSpan) {
             myDataLinkSpan.textContent = userProfileData.role === 'club' ? 'Kontaktná osoba' : 'Moje údaje';
         }
     };
-   
+  
     const showRoleBasedLinks = () => {
-        // ... (zostáva rovnaké ako predtým)
         if (userProfileData.role === 'admin') {
             addCategoriesLink?.classList.remove('hidden');
             addGroupsLink?.classList.remove('hidden');
@@ -189,7 +190,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             cateringLink?.classList.add('hidden');
         }
     };
-   
+  
     const saveMenuState = async () => {
         if (!userId) return;
         const userDocRef = doc(db, 'users', userId);
@@ -199,19 +200,19 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             window.showGlobalNotification?.('Nepodarilo sa uložiť nastavenia menu.', 'error');
         }
     };
-   
+  
     applyMenuState();
     updateMenuText();
     showRoleBasedLinks();
     setTimeout(highlightActiveMenuLinkGray, 100);
-   
+  
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
         setTimeout(highlightActiveMenuLinkGray, 300);
     });
-   
+  
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-16');
@@ -222,7 +223,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
-   
+  
     leftMenu.addEventListener('mouseleave', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-64');
@@ -248,12 +249,12 @@ const addCustomStyles = () => {
             transition: color 200ms ease;
         }
 
-        /* Hover pre NEAKTÍVNE riadky - požadovaná farba */
+        /* HOVER PRE VŠETKY RIADKY (aj aktívne) */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
-        /* Aktívny riadok - zachováva pôvodné farby */
+        /* Aktívny riadok - základný stav */
         #left-menu a.bg-\\[\\#F9FAFB\\],
         #left-menu a.dark\\:bg-gray-800\\/30 {
             background-color: #F9FAFB !important;
@@ -262,7 +263,7 @@ const addCustomStyles = () => {
             background-color: rgba(31, 41, 55, 0.3) !important;
         }
 
-        /* Zvyšok štýlov (zachovaný) */
+        /* Zvyšok štýlov */
         .bg-\\[\\#F9FAFB\\] { background-color: #F9FAFB; }
         .dark .dark\\:bg-gray-800\\/30 { background-color: rgba(31, 41, 55, 0.3); }
 
@@ -276,16 +277,12 @@ const addCustomStyles = () => {
         .dark #left-menu a:hover svg.hover\\:dark\\:text-white {
             color: white !important;
         }
-
-        /* Role farby */
-        .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
-        .dark .dark\\:bg-\\[\\#b06835\\]\\/10 { background-color: rgba(176, 104, 53, 0.1); }
-        /* ... ostatné role farby (zachované) */
     `;
     document.head.appendChild(style);
 };
 
 addCustomStyles();
+
 window.addEventListener('globalDataUpdated', (event) => loadLeftMenu(event.detail));
 if (window.globalUserProfileData) {
     loadLeftMenu(window.globalUserProfileData);
