@@ -2211,9 +2211,22 @@ useEffect(() => {
                                                 mergedPlayerDetails = team.playerDetails.map((player, playerIndex) => {
                                                     const privatePlayer = privateTeamData.players?.[playerIndex] || {};
                                                     return {
-                                                        ...player,
-                                                        dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
-                                                        address: privatePlayer.address || player.address || {
+                                                        // VYBERIEME LEN POVOLENÉ POLIA PRE USERS
+                                                        firstName: player.firstName || '',
+                                                        lastName: player.lastName || '',
+                                                        jerseyNumber: player.jerseyNumber || null,
+                                                        registrationNumber: player.registrationNumber || null,
+                                                        // A akékoľvek ďalšie polia, ktoré nie sú zakázané
+                                                        ...Object.fromEntries(
+                                                            Object.entries(player)
+                                                                .filter(([key]) => 
+                                                                    !['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
+                                                                      'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                                )
+                                                        ),
+                                                        // Súkromné dáta uchovávame oddelene pre zobrazenie
+                                                        _dateOfBirth: privatePlayer.dateOfBirth || player.dateOfBirth || '',
+                                                        _address: privatePlayer.address || player.address || {
                                                             street: '',
                                                             houseNumber: '',
                                                             city: '',
@@ -2229,9 +2242,17 @@ useEffect(() => {
                                                 mergedWomenTeamMembers = team.womenTeamMemberDetails.map((member, memberIndex) => {
                                                     const privateMember = privateTeamData.womenTeamMembers?.[memberIndex] || {};
                                                     return {
-                                                        ...member,
-                                                        dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                                                        address: privateMember.address || member.address || {
+                                                        firstName: member.firstName || '',
+                                                        lastName: member.lastName || '',
+                                                        // RT nemajú jerseyNumber a registrationNumber
+                                                        ...Object.fromEntries(
+                                                            Object.entries(member)
+                                                                .filter(([key]) => 
+                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                                )
+                                                        ),
+                                                        _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                                                        _address: privateMember.address || member.address || {
                                                             street: '',
                                                             houseNumber: '',
                                                             city: '',
@@ -2247,9 +2268,16 @@ useEffect(() => {
                                                 mergedMenTeamMembers = team.menTeamMemberDetails.map((member, memberIndex) => {
                                                     const privateMember = privateTeamData.menTeamMembers?.[memberIndex] || {};
                                                     return {
-                                                        ...member,
-                                                        dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
-                                                        address: privateMember.address || member.address || {
+                                                        firstName: member.firstName || '',
+                                                        lastName: member.lastName || '',
+                                                        ...Object.fromEntries(
+                                                            Object.entries(member)
+                                                                .filter(([key]) => 
+                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                                )
+                                                        ),
+                                                        _dateOfBirth: privateMember.dateOfBirth || member.dateOfBirth || '',
+                                                        _address: privateMember.address || member.address || {
                                                             street: '',
                                                             houseNumber: '',
                                                             city: '',
@@ -2266,9 +2294,16 @@ useEffect(() => {
                                                 mergedDriverDetailsFemale = team.driverDetailsFemale.map((driver, driverIndex) => {
                                                     const privateDriver = privateTeamData.driversFemale?.[driverIndex] || {};
                                                     return {
-                                                        ...driver,
-                                                        dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                                                        address: privateDriver.address || driver.address || {
+                                                        firstName: driver.firstName || '',
+                                                        lastName: driver.lastName || '',
+                                                        ...Object.fromEntries(
+                                                            Object.entries(driver)
+                                                                .filter(([key]) => 
+                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                                )
+                                                        ),
+                                                        _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                                                        _address: privateDriver.address || driver.address || {
                                                             street: '',
                                                             houseNumber: '',
                                                             city: '',
@@ -2284,9 +2319,16 @@ useEffect(() => {
                                                 mergedDriverDetailsMale = team.driverDetailsMale.map((driver, driverIndex) => {
                                                     const privateDriver = privateTeamData.driversMale?.[driverIndex] || {};
                                                     return {
-                                                        ...driver,
-                                                        dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
-                                                        address: privateDriver.address || driver.address || {
+                                                        firstName: driver.firstName || '',
+                                                        lastName: driver.lastName || '',
+                                                        ...Object.fromEntries(
+                                                            Object.entries(driver)
+                                                                .filter(([key]) => 
+                                                                    !['firstName', 'lastName', 'dateOfBirth', 'address', '_privateData'].includes(key)
+                                                                )
+                                                        ),
+                                                        _dateOfBirth: privateDriver.dateOfBirth || driver.dateOfBirth || '',
+                                                        _address: privateDriver.address || driver.address || {
                                                             street: '',
                                                             houseNumber: '',
                                                             city: '',
@@ -2491,16 +2533,12 @@ const handleSaveTeam = async (updatedTeamData) => {
         return;
     }
 
-    // === VYTVORÍME ČISTÉ DÁTA PRE USERS (BEZ DATEOFBIRTH A ADRESY) ===
     const createCleanTeamForUsers = (team) => {
-        // Vytvoríme kópiu tímu
         const cleanTeam = JSON.parse(JSON.stringify(team));
-        
-        // Pre každý typ člena vytvoríme nové pole len so základnými údajmi
+    
         const cleanMemberArray = (arr) => {
             if (!arr) return arr;
             return arr.map(item => {
-                // Vytvoríme nový objekt len s povolenými údajmi
                 const clean = {};
                 // Povolené údaje pre users
                 const allowedKeys = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
@@ -2509,9 +2547,10 @@ const handleSaveTeam = async (updatedTeamData) => {
                         clean[key] = item[key];
                     }
                 });
-                // Pridáme aj ďalšie polia, ktoré nie sú zakázané
+                // Ak máme ďalšie polia (okrem zakázaných)
                 for (const key in item) {
-                    if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData'].includes(key)) {
+                    if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
+                          'dateOfBirth', 'address', '_privateData', '_dateOfBirth', '_address'].includes(key)) {
                         clean[key] = item[key];
                     }
                 }
@@ -3254,15 +3293,16 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     }
 
     // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
+    const originalDateOfBirth = originalMemberData._dateOfBirth || originalMemberData.dateOfBirth || '';
+    const originalAddress = originalMemberData._address || originalMemberData.address || {};
+
     const memberForPrivate = {
-        dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined ? updatedMemberDetails.dateOfBirth : originalMemberData.dateOfBirth || '',
-        address: updatedMemberDetails.address !== undefined ? updatedMemberDetails.address : originalMemberData.address || {
-            street: '',
-            houseNumber: '',
-            city: '',
-            postalCode: '',
-            country: ''
-        }
+        dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined 
+            ? updatedMemberDetails.dateOfBirth 
+            : originalDateOfBirth,
+        address: updatedMemberDetails.address !== undefined 
+            ? updatedMemberDetails.address 
+            : originalAddress
     };
 
     // Aktualizujeme člena v poli (LEN ZÁKLADNÉ ÚDAJE)
@@ -3711,10 +3751,12 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' },
-                                      member.dateOfBirth ? formatDateToDMMYYYY(member.dateOfBirth) : '-'
+                                        member._dateOfBirth ? formatDateToDMMYYYY(member._dateOfBirth) : '-'
                                     ),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.registrationNumber || '-'),
-                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, formatAddress(member.address)),
+                                    shouldShowAddressColumn && React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, 
+                                        formatAddress(member._address)
+                                    ),
                                   ].filter(Boolean)
                                 );
                               })
