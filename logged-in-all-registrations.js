@@ -1350,7 +1350,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
         'registrationDate', 'passwordLastChanged', 'teams', 'categories', 'timestamp',
-        'note'
+        'note', '_dateOfBirth', '_address'
     ]);
 
     const ignoredPathPatterns = new Set([
@@ -3602,31 +3602,32 @@ function AllRegistrationsApp() {
   // Nové stavy pre modálne okno na pridanie tímu
   // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
 
-  const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
-      // Odstrániť citlivé alebo irelevantné kľúče
-      const cleanedData = { ...data };
-      delete cleanedData.password;
-      delete cleanedData.emailVerified;
-      delete cleanedData.id;
-  
-      // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov (ak existujú)
-      if (cleanedData._dateOfBirth) {
-          cleanedData.dateOfBirth = cleanedData._dateOfBirth;
-          // cleanedData._dateOfBirth môžeme ponechať, nebude prekážať
-      }
-      if (cleanedData._address) {
-          // Zlúčime _address do existujúceho address, alebo vytvoríme nový
-          cleanedData.address = { ...(cleanedData.address || {}), ...cleanedData._address };
-          // cleanedData._address môžeme ponechať
-      }
-  
-      setEditingData(cleanedData);
-      setEditModalTitle(title);
-      setEditingDocRef(targetDocRef);
-      setEditingDataPath(originalDataPath);
-      setIsNewEntry(newEntryFlag);
-      setIsEditModalOpen(true);
-  };
+ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
+    // Odstrániť citlivé alebo irelevantné kľúče
+    const cleanedData = { ...data };
+    delete cleanedData.password;
+    delete cleanedData.emailVerified;
+    delete cleanedData.id;
+
+    // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov (ak existujú)
+    if (cleanedData._dateOfBirth) {
+        cleanedData.dateOfBirth = cleanedData._dateOfBirth;
+    }
+    if (cleanedData._address) {
+        // Zlúčime _address do existujúceho address, alebo vytvoríme nový
+        cleanedData.address = { ...(cleanedData.address || {}), ...cleanedData._address };
+    }
+    // Odstránime _dateOfBirth a _address, aby neovplyvňovali notifikácie
+    delete cleanedData._dateOfBirth;
+    delete cleanedData._address;
+
+    setEditingData(cleanedData);
+    setEditModalTitle(title);
+    setEditingDocRef(targetDocRef);
+    setEditingDataPath(originalDataPath);
+    setIsNewEntry(newEntryFlag);
+    setIsEditModalOpen(true);
+};
 
   const closeEditModal = () => {
       setIsEditModalOpen(false);
