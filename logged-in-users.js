@@ -1061,7 +1061,7 @@ function UsersManagementApp() {
 
       // Log changes s pôvodnou a novou hodnotou
       const dateTypeString = dateType === 'dataEditDeadline' ? 'údajov' : 'súpisiek';
-      const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate}' na '${formattedNewDate}'`;
+      const change = `Aktualizácia dátumu pre úpravu ${dateTypeString} pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${formattedOldDate} hod.' na '${formattedNewDate} hod.'`;
       await logChanges([change]);
     } catch (error) {
       setNotification({ message: 'Nepodarilo sa aktualizovať dátum.', type: 'error' });
