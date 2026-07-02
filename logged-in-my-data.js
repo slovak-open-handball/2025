@@ -407,6 +407,10 @@ const MyDataApp = ({ userProfileData }) => {
     useEffect(() => {
         let timer;         
         const updateCanEditStatus = () => {
+            console.log('updateCanEditStatus - userProfileData:', userProfileData);
+            console.log('updateCanEditStatus - dataEditDeadline:', userProfileData?.dataEditDeadline);
+            console.log('updateCanEditStatus - settingsRegistrationDates:', settingsRegistrationDates);
+            
             setCanEdit(false); 
             setIsPasswordChangeOnlyMode(false);
             if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !settingsRegistrationDates) {
@@ -423,15 +427,20 @@ const MyDataApp = ({ userProfileData }) => {
             
             // Najprv skúsime získať dátum z userProfileData
             if (userProfileData?.dataEditDeadline) {
+                // Ak je to Timestamp z Firestore (má toDate metódu)
                 if (typeof userProfileData.dataEditDeadline.toDate === 'function') {
                     deadlineDate = userProfileData.dataEditDeadline.toDate();
                 } 
+                // Ak je to už Date objekt
                 else if (userProfileData.dataEditDeadline instanceof Date) {
                     deadlineDate = userProfileData.dataEditDeadline;
                 } 
+                // Ak je to objekt s seconds (Timestamp)
                 else if (userProfileData.dataEditDeadline.seconds !== undefined) {
+                    // Konvertujeme seconds na milisekundy
                     deadlineDate = new Date(userProfileData.dataEditDeadline.seconds * 1000);
                 } 
+                // Ak je to reťazec alebo číslo
                 else {
                     deadlineDate = new Date(userProfileData.dataEditDeadline);
                 }
