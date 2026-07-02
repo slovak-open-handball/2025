@@ -651,8 +651,18 @@ const handleDataUpdateAndRender = async (event) => {
 
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
+// Upravená časť na konci súboru - načítanie počiatočných dát
 if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    (async () => {
+        const privateData = await loadUserPrivateData(window.globalUserProfileData.uid);
+        const mergedData = {
+            ...window.globalUserProfileData,
+            billingAddress: privateData.billingAddress || {},
+            address: privateData.address || {},
+            persons: privateData.persons || {},
+        };
+        handleDataUpdateAndRender({ detail: mergedData });
+    })();
 } else {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
