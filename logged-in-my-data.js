@@ -363,14 +363,17 @@ const globalDataStore = (() => {
     return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
 })();
 
-const MyDataApp = ({ userProfileData }) => {
+// ============================================================
+// HLAVNÁ KOMPONENTA MyDataApp S REAL-TIME LISTENEROM
+// ============================================================
+const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [showVolunteerModal, setShowVolunteerModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
-    const [isDataReady, setIsDataReady] = useState(false);
+    const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
     
     const { 
         isGlobalAuthReady, 
@@ -395,7 +398,71 @@ const MyDataApp = ({ userProfileData }) => {
             setSettingsRegistrationDates(null);
         });
         return () => unsubscribe();
-    }, [window.db]); 
+    }, [window.db]);
+    
+    // ============================================================
+    // REAL-TIME LISTENER PRE SLEDOVANIE ZMIEN V DOKUMENTE POUŽÍVATEĽA
+    // ============================================================
+    useEffect(() => {
+        if (!window.db || !userProfileData?.id) {
+            return;
+        }
+        
+        const userId = userProfileData.id;
+        const userDocRef = doc(window.db, 'users', userId);
+        
+        console.log('MyDataApp: Nastavujem real-time listener pre používateľa:', userId);
+        
+        const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+                const updatedUserData = docSnap.data();
+                console.log('MyDataApp: 🔄 Zmena v dokumente používateľa:', updatedUserData);
+                
+                // Načítame aj private dáta pri zmene
+                let privateData = {};
+                try {
+                    const privateDocRef = doc(window.db, 'usersprivate', userId);
+                    const privateDocSnap = await getDoc(privateDocRef);
+                    if (privateDocSnap.exists()) {
+                        privateData = privateDocSnap.data();
+                    }
+                } catch (error) {
+                    console.error('MyDataApp: Chyba pri načítaní private dát:', error);
+                }
+                
+                // Zlúčime dáta
+                const mergedData = {
+                    ...updatedUserData,
+                    id: userId,
+                    uid: userId,
+                    address: privateData.address || {},
+                    billingAddress: privateData.billingAddress || {},
+                    persons: privateData.persons || {},
+                };
+                
+                console.log('MyDataApp: 📦 Aktualizované dáta:', {
+                    dataEditDeadline: mergedData.dataEditDeadline,
+                    rosterEditDeadline: mergedData.rosterEditDeadline,
+                    firstName: mergedData.firstName,
+                    lastName: mergedData.lastName,
+                    email: mergedData.email
+                });
+                
+                // Aktualizujeme stav
+                setUserProfileData(mergedData);
+                
+            } else {
+                console.warn('MyDataApp: Dokument používateľa neexistuje');
+            }
+        }, (error) => {
+            console.error('MyDataApp: Chyba pri listenri:', error);
+        });
+        
+        return () => {
+            console.log('MyDataApp: Odpájam real-time listener');
+            unsubscribe();
+        };
+    }, [userProfileData?.id]); // Znovu sa spustí len ak sa zmení ID používateľa
     
     useEffect(() => {
         if (userProfileData) {
@@ -523,7 +590,7 @@ const MyDataApp = ({ userProfileData }) => {
                 clearTimeout(timer);
             }
         };
-    }, [userProfileData, settingsRegistrationDates]); // ODSTRÁNENÉ závislosti na isGlobalAuthReady, atď.
+    }, [userProfileData, settingsRegistrationDates]);
     
     const getRoleColor = (role) => {
         switch (role) {
