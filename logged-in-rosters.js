@@ -2491,17 +2491,30 @@ const handleSaveTeam = async (updatedTeamData) => {
         return;
     }
 
-    // === VYČISTÍME DÁTA PRE KOLEKCIU USERS (ODSTRÁNIME DATEOFBIRTH A ADRESU) ===
-    const cleanTeamForUsers = (team) => {
+    // === VYTVORÍME ČISTÉ DÁTA PRE USERS (BEZ DATEOFBIRTH A ADRESY) ===
+    const createCleanTeamForUsers = (team) => {
+        // Vytvoríme kópiu tímu
         const cleanTeam = JSON.parse(JSON.stringify(team));
         
+        // Pre každý typ člena vytvoríme nové pole len so základnými údajmi
         const cleanMemberArray = (arr) => {
             if (!arr) return arr;
             return arr.map(item => {
-                const clean = { ...item };
-                delete clean.dateOfBirth;
-                delete clean.address;
-                delete clean._privateData;
+                // Vytvoríme nový objekt len s povolenými údajmi
+                const clean = {};
+                // Povolené údaje pre users
+                const allowedKeys = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
+                allowedKeys.forEach(key => {
+                    if (item[key] !== undefined) {
+                        clean[key] = item[key];
+                    }
+                });
+                // Pridáme aj ďalšie polia, ktoré nie sú zakázané
+                for (const key in item) {
+                    if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData'].includes(key)) {
+                        clean[key] = item[key];
+                    }
+                }
                 return clean;
             });
         };
@@ -2515,15 +2528,15 @@ const handleSaveTeam = async (updatedTeamData) => {
         return cleanTeam;
     };
 
-    const cleanTeam = cleanTeamForUsers(updatedTeamData);
+    const cleanTeamForUsers = createCleanTeamForUsers(updatedTeamData);
     const currentTeams = { ...teamsData };
-    currentTeams[teamCategory][teamIndex] = cleanTeam;
+    currentTeams[teamCategory][teamIndex] = cleanTeamForUsers;
 
     try {
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { teams: currentTeams });
 
-        // === AKTUALIZUJEME PRIVATE DÁTA - DATEOFBIRTH A ADRESU DO USERSPRIVATE ===
+        // === UKLADÁME DATEOFBIRTH A ADRESU DO USERSPRIVATE ===
         const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
         
         let privateData = {};
@@ -2847,13 +2860,19 @@ const handleSaveNewMember = async (newMemberDetails) => {
 
     const teamToUpdate = { ...currentTeams[teamCategory][teamIndex] };
 
-    // === PRIPRAVÍME DÁTA PRE USERS (BEZ DATEOFBIRTH A ADRESY) ===
+    // === VYTVORÍME ČISTÝ OBJEKT PRE USERS (LEN POVOLENÉ ÚDAJE) ===
     const memberForUsers = {
         firstName: newMemberDetails.firstName || '',
         lastName: newMemberDetails.lastName || '',
-        jerseyNumber: newMemberDetails.jerseyNumber || null,
-        registrationNumber: newMemberDetails.registrationNumber || null,
     };
+    
+    // Pridáme len ak existujú a sú povolené
+    if (newMemberDetails.jerseyNumber !== undefined && newMemberDetails.jerseyNumber !== null) {
+        memberForUsers.jerseyNumber = newMemberDetails.jerseyNumber;
+    }
+    if (newMemberDetails.registrationNumber !== undefined && newMemberDetails.registrationNumber !== null) {
+        memberForUsers.registrationNumber = newMemberDetails.registrationNumber;
+    }
 
     // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
     const memberForPrivate = {
@@ -2867,6 +2886,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
         }
     };
 
+    // Pridáme člena do tímu (iba základné údaje)
     let arrayName;
     switch (memberTypeToAdd) {
         case 'player':
@@ -2905,7 +2925,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
-        // === 1. ULOŽÍME DO USERS (BEZ DATEOFBIRTH A ADRESY) ===
+        // === 1. ULOŽÍME DO USERS (LEN ZÁKLADNÉ ÚDAJE, BEZ DATEOFBIRTH A ADRESY) ===
         await updateDoc(userDocRef, { teams: currentTeams });
 
         // === 2. ULOŽÍME DO USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
@@ -2938,6 +2958,7 @@ const handleSaveNewMember = async (newMemberDetails) => {
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
+        // === 3. NOTIFIKÁCIA ===
         if (userEmail) {
             const changes = [
                 `Pridaný nový ${memberTypeLabel}: ${memberName}`,
@@ -3179,6 +3200,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         return;
     }
 
+    // Vytvoríme hlbokú kópiu tímu
     const teamToUpdate = JSON.parse(JSON.stringify(currentTeams[teamCategory][teamIndex]));
     let memberArrayName;
     switch (memberToEdit.originalType) {
@@ -3205,14 +3227,26 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
     const originalMemberData = memberArray[memberIndex];
     
-    // === PRIPRAVÍME DÁTA PRE USERS (BEZ DATEOFBIRTH A ADRESY) ===
+    // === VYTVORÍME ČISTÝ OBJEKT PRE USERS (LEN POVOLENÉ ÚDAJE) ===
     const memberForUsers = {
         firstName: updatedMemberDetails.firstName !== undefined ? updatedMemberDetails.firstName : originalMemberData.firstName || '',
         lastName: updatedMemberDetails.lastName !== undefined ? updatedMemberDetails.lastName : originalMemberData.lastName || '',
-        jerseyNumber: updatedMemberDetails.jerseyNumber !== undefined ? updatedMemberDetails.jerseyNumber : originalMemberData.jerseyNumber || null,
-        registrationNumber: updatedMemberDetails.registrationNumber !== undefined ? updatedMemberDetails.registrationNumber : originalMemberData.registrationNumber || null,
     };
     
+    // Pridáme len ak existujú a sú povolené
+    if (updatedMemberDetails.jerseyNumber !== undefined && updatedMemberDetails.jerseyNumber !== null) {
+        memberForUsers.jerseyNumber = updatedMemberDetails.jerseyNumber;
+    } else if (originalMemberData.jerseyNumber !== undefined && originalMemberData.jerseyNumber !== null) {
+        memberForUsers.jerseyNumber = originalMemberData.jerseyNumber;
+    }
+    
+    if (updatedMemberDetails.registrationNumber !== undefined && updatedMemberDetails.registrationNumber !== null) {
+        memberForUsers.registrationNumber = updatedMemberDetails.registrationNumber;
+    } else if (originalMemberData.registrationNumber !== undefined && originalMemberData.registrationNumber !== null) {
+        memberForUsers.registrationNumber = originalMemberData.registrationNumber;
+    }
+    
+    // Pridáme aj ďalšie polia, ktoré nie sú zakázané
     for (const key in originalMemberData) {
         if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData'].includes(key)) {
             memberForUsers[key] = originalMemberData[key];
@@ -3231,12 +3265,12 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         }
     };
 
-    // Aktualizujeme člena v poli (BEZ DATEOFBIRTH A ADRESY)
+    // Aktualizujeme člena v poli (LEN ZÁKLADNÉ ÚDAJE)
     memberArray[memberIndex] = memberForUsers;
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
     try {
-        // === 1. ULOŽÍME DO USERS (BEZ DATEOFBIRTH A ADRESY) ===
+        // === 1. ULOŽÍME DO USERS (LEN ZÁKLADNÉ ÚDAJE, BEZ DATEOFBIRTH A ADRESY) ===
         await updateDoc(userDocRef, { teams: currentTeams });
 
         // === 2. ULOŽÍME DO USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
@@ -3268,6 +3302,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
+        // === 3. NOTIFIKÁCIA ===
         const changes = getChangesForNotification(
             { 
                 firstName: originalMemberData.firstName, 
