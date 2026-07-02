@@ -35,11 +35,11 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     // Načítanie počiatočných hodnôt z `userProfileData` do ref a vyčistenie formulára
     useEffect(() => {
         if (show && userProfileData) {
-            // Získame billing adresu z usersprivate (billingAddress)
-            const billingAddress = userProfileData.billingAddress || {};
+            // Získame adresu z usersprivate (address) - ZMENENÉ
+            const address = userProfileData.address || {};
         
             console.log('ChangeBillingModal - Načítavam dáta:', {
-                billingAddress: billingAddress,
+                address: address,  // ZMENENÉ
                 billing: userProfileData.billing,
                 userProfileData: userProfileData
             });
@@ -47,29 +47,28 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             // Uložíme pôvodné dáta do ref pre neskoršie porovnanie
             originalDataRef.current = {
                 clubName: userProfileData.billing?.clubName || '',
-                street: billingAddress.street || '',
-                houseNumber: billingAddress.houseNumber || '',
-                city: billingAddress.city || '',
-                postalCode: billingAddress.postalCode || '',
-                country: billingAddress.country || '',
+                street: address.street || '',  // ZMENENÉ
+                houseNumber: address.houseNumber || '',  // ZMENENÉ
+                city: address.city || '',  // ZMENENÉ
+                postalCode: address.postalCode || '',  // ZMENENÉ
+                country: address.country || '',  // ZMENENÉ
                 ico: userProfileData.billing?.ico || '',
                 dic: userProfileData.billing?.dic || '',
                 icdph: userProfileData.billing?.icdph || ''
             };
         
-            // NAČÍTAME HODNOTY DO FORMULÁRA - dôležitá zmena!
+            // NAČÍTAME HODNOTY DO FORMULÁRA
             setClubName(userProfileData.billing?.clubName || '');
-            setStreet(billingAddress.street || '');
-            setHouseNumber(billingAddress.houseNumber || '');
-            setCity(billingAddress.city || '');
-            setPostalCode(billingAddress.postalCode || '');
-            setCountry(billingAddress.country || '');
+            setStreet(address.street || '');  // ZMENENÉ
+            setHouseNumber(address.houseNumber || '');  // ZMENENÉ
+            setCity(address.city || '');  // ZMENENÉ
+            setPostalCode(address.postalCode || '');  // ZMENENÉ
+            setCountry(address.country || '');  // ZMENENÉ
             setIco(userProfileData.billing?.ico || '');
             setDic(userProfileData.billing?.dic || '');
             setIcdph(userProfileData.billing?.icdph || '');
             setError(null);
         
-            // Nastavíme, že sa jedná o počiatočné načítanie.
             isInitialLoad.current = true;
         }
     }, [show, userProfileData]);
@@ -149,14 +148,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
            
            // Dáta pre kolekciu 'usersprivate' - IBA fakturačná adresa
            const privateData = {
-               billingAddress: {
-                   street: street !== '' ? street : (userProfileData.billingAddress?.street || ''),
-                   houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.billingAddress?.houseNumber || ''),
-                   city: city !== '' ? city : (userProfileData.billingAddress?.city || ''),
-                   postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.billingAddress?.postalCode || ''),
-                   country: country !== '' ? country : (userProfileData.billingAddress?.country || '')
-               }
-           };
+                address: { 
+                    street: street !== '' ? street : (userProfileData.address?.street || ''),
+                    houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.address?.houseNumber || ''), 
+                    city: city !== '' ? city : (userProfileData.address?.city || ''), 
+                    postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.address?.postalCode || ''), 
+                    country: country !== '' ? country : (userProfileData.address?.country || '')
+                }
+            };
            
            // Logika pre vytvorenie záznamu o zmene v databáze
            const originalBillingData = originalDataRef.current;
@@ -168,11 +167,11 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                'billing.ico': 'IČO',
                'billing.dic': 'DIČ',
                'billing.icdph': 'IČ DPH',
-               'billingAddress.street': 'Ulica',
-               'billingAddress.houseNumber': 'Číslo domu',
-               'billingAddress.city': 'Mesto',
-               'billingAddress.postalCode': 'PSČ',
-               'billingAddress.country': 'Krajina',
+               'address.street': 'Ulica',
+               'address.houseNumber': 'Číslo domu',
+               'address.city': 'Mesto',
+               'address.postalCode': 'PSČ',
+               'adress.country': 'Krajina',
            };
    
            const changes = {
@@ -195,7 +194,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                if (key.startsWith('billing.')) {
                    const fieldKey = key.substring(8); // odstránime 'billing.'
                    originalValue = originalBillingData[fieldKey];
-               } else if (key.startsWith('billingAddress.')) {
+               } else if (key.startsWith('address.')) {
                    const fieldKey = key.substring(15); // odstránime 'billingAddress.'
                    originalValue = originalBillingData[fieldKey];
                } else {
