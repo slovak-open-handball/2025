@@ -3129,18 +3129,26 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         return;
     }
 
-    // === PRIPRAVÍME DÁTA PRE USERS (LEN ZÁKLADNÉ ÚDAJE) ===
+    // === PRIPRAVÍME DÁTA PRE USERS (LEN ZÁKLADNÉ ÚDAJE - ZACHOVÁME VŠETKY PÔVODNÉ) ===
+    const originalMemberData = memberArray[memberIndex];
     const memberForUsers = {
-        firstName: updatedMemberDetails.firstName || memberToEdit.firstName || '',
-        lastName: updatedMemberDetails.lastName || memberToEdit.lastName || '',
-        jerseyNumber: updatedMemberDetails.jerseyNumber !== undefined ? updatedMemberDetails.jerseyNumber : memberToEdit.jerseyNumber || null,
-        registrationNumber: updatedMemberDetails.registrationNumber !== undefined ? updatedMemberDetails.registrationNumber : memberToEdit.registrationNumber || null,
+        // Zachováme všetky pôvodné údaje
+        ...originalMemberData,
+        // Aktualizujeme len tie, ktoré sa zmenili
+        firstName: updatedMemberDetails.firstName !== undefined ? updatedMemberDetails.firstName : originalMemberData.firstName || '',
+        lastName: updatedMemberDetails.lastName !== undefined ? updatedMemberDetails.lastName : originalMemberData.lastName || '',
+        jerseyNumber: updatedMemberDetails.jerseyNumber !== undefined ? updatedMemberDetails.jerseyNumber : originalMemberData.jerseyNumber || null,
+        registrationNumber: updatedMemberDetails.registrationNumber !== undefined ? updatedMemberDetails.registrationNumber : originalMemberData.registrationNumber || null,
     };
+    // Odstránime dateOfBirth a address z users (ak náhodou existujú)
+    delete memberForUsers.dateOfBirth;
+    delete memberForUsers.address;
 
     // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S ADRESOU A DÁTUMOM) ===
+    // Zachováme existujúce private dáta a aktualizujeme len zmenené
     const memberForPrivate = {
-        dateOfBirth: updatedMemberDetails.dateOfBirth || memberToEdit.dateOfBirth || '',
-        address: updatedMemberDetails.address || memberToEdit.address || {
+        dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined ? updatedMemberDetails.dateOfBirth : originalMemberData.dateOfBirth || '',
+        address: updatedMemberDetails.address !== undefined ? updatedMemberDetails.address : originalMemberData.address || {
             street: '',
             houseNumber: '',
             city: '',
@@ -3149,7 +3157,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         }
     };
 
-    // Uložíme do users (bez citlivých údajov)
+    // Uložíme do users (zachováme všetky údaje okrem dateOfBirth a address)
     memberArray[memberIndex] = memberForUsers;
     currentTeams[teamCategory][teamIndex] = teamToUpdate;
 
@@ -3168,6 +3176,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
             // Dokument ešte neexistuje
         }
 
+        // Zabezpečíme štruktúru
         if (!privateData.persons) privateData.persons = {};
         const teamKey = `${teamCategory}_team${teamIndex + 1}`;
         if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
@@ -3182,6 +3191,9 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         if (!privateData.persons[teamKey][privateArrayName]) {
             privateData.persons[teamKey][privateArrayName] = [];
         }
+        
+        // Zachováme existujúce private dáta pre ostatných členov
+        // Aktualizujeme len toho konkrétneho člena
         privateData.persons[teamKey][privateArrayName][memberIndex] = memberForPrivate;
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
@@ -3189,12 +3201,12 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         // === NOTIFIKÁCIA ===
         const changes = getChangesForNotification(
             { 
-                firstName: memberToEdit.firstName, 
-                lastName: memberToEdit.lastName,
-                jerseyNumber: memberToEdit.jerseyNumber,
-                registrationNumber: memberToEdit.registrationNumber,
-                dateOfBirth: memberToEdit.dateOfBirth,
-                address: memberToEdit.address 
+                firstName: originalMemberData.firstName, 
+                lastName: originalMemberData.lastName,
+                jerseyNumber: originalMemberData.jerseyNumber,
+                registrationNumber: originalMemberData.registrationNumber,
+                dateOfBirth: originalMemberData.dateOfBirth,
+                address: originalMemberData.address 
             },
             { 
                 firstName: memberForUsers.firstName,
@@ -3221,6 +3233,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
         showLocalNotification('Údaje člena tímu boli aktualizované!', 'success');
         setMemberToEdit(null);
         setTeamOfMemberToEdit(null);
+        setShowMemberDetailsModal(false);
     } catch (error) {
         console.error("Chyba pri aktualizácii člena tímu:", error);
         showLocalNotification('Nastala chyba pri aktualizácii údajov člena tímu.', 'error');
