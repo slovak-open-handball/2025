@@ -962,13 +962,6 @@ const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote
           street: formData.street || '',
           houseNumber: formData.houseNumber || ''
         },
-        billingAddress: {
-          street: formData.street || '',
-          houseNumber: formData.houseNumber || '',
-          city: formData.city || '',
-          postalCode: formData.postalCode || '',
-          country: formData.country || ''
-        },
         persons: {}
       };
 
