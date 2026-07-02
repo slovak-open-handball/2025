@@ -706,7 +706,6 @@ function UsersManagementApp() {
         })));
 
         if (adminUsers.length > 0) {
-          // 🔧 Ignorovať adminov s registrationDate = 0 alebo undefined
           const validAdminUsers = adminUsers.filter(u => u.registrationDate?.seconds && u.registrationDate.seconds > 0);
           
           if (validAdminUsers.length > 0) {
@@ -717,7 +716,6 @@ function UsersManagementApp() {
             });
             setOldestAdminId(validAdminUsers[0].id);
           } else {
-            // Fallback: ak všetci majú chybný dátum, zober prvého
             setOldestAdminId(adminUsers[0].id);
           }
         }
