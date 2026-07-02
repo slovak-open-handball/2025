@@ -2537,6 +2537,32 @@ const handleSaveTeam = async (updatedTeamData) => {
         return;
     }
 
+    // === NAJPRV EXTRAHUJ SÚKROMNÉ DÁTA Z PÔVODNÝCH DÁT ===
+    // Predtým než vytvoríme čisté dáta pre users
+    const extractPrivateData = (members) => {
+        if (!members) return [];
+        return members.map(member => ({
+            dateOfBirth: member._dateOfBirth || member.dateOfBirth || '',
+            address: member._address || member.address || {
+                street: '',
+                houseNumber: '',
+                city: '',
+                postalCode: '',
+                country: ''
+            }
+        }));
+    };
+
+    // Extrahujeme súkromné dáta z aktuálnych dát (pred očistením)
+    const privateDataForTeam = {
+        players: extractPrivateData(updatedTeamData.playerDetails || []),
+        womenTeamMembers: extractPrivateData(updatedTeamData.womenTeamMemberDetails || []),
+        menTeamMembers: extractPrivateData(updatedTeamData.menTeamMemberDetails || []),
+        driversFemale: extractPrivateData(updatedTeamData.driverDetailsFemale || []),
+        driversMale: extractPrivateData(updatedTeamData.driverDetailsMale || [])
+    };
+
+    // === TERAZ VYTVORÍME ČISTÉ DÁTA PRE USERS ===
     const createCleanTeamForUsers = (team) => {
         const cleanTeam = JSON.parse(JSON.stringify(team));
     
@@ -2576,10 +2602,11 @@ const handleSaveTeam = async (updatedTeamData) => {
     currentTeams[teamCategory][teamIndex] = cleanTeamForUsers;
 
     try {
+        // === 1. ULOŽÍME DO USERS (LEN ČISTÉ DÁTA, BEZ DATEOFBIRTH A ADRESY) ===
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { teams: currentTeams });
 
-        // === UKLADÁME DATEOFBIRTH A ADRESU DO USERSPRIVATE ===
+        // === 2. ULOŽÍME DO USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
         const userPrivateDocRef = doc(db, 'usersprivate', user.uid);
         
         let privateData = {};
@@ -2597,38 +2624,16 @@ const handleSaveTeam = async (updatedTeamData) => {
         const teamKey = `${teamCategory}_team${teamIndex + 1}`;
         if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
 
-        const extractPrivateData = (members) => {
-            if (!members) return [];
-            return members.map(member => ({
-                dateOfBirth: member.dateOfBirth || '',
-                address: member.address || {
-                    street: '',
-                    houseNumber: '',
-                    city: '',
-                    postalCode: '',
-                    country: ''
-                }
-            }));
-        };
-
-        if (updatedTeamData.playerDetails) {
-            privateData.persons[teamKey].players = extractPrivateData(updatedTeamData.playerDetails);
-        }
-        if (updatedTeamData.womenTeamMemberDetails) {
-            privateData.persons[teamKey].womenTeamMembers = extractPrivateData(updatedTeamData.womenTeamMemberDetails);
-        }
-        if (updatedTeamData.menTeamMemberDetails) {
-            privateData.persons[teamKey].menTeamMembers = extractPrivateData(updatedTeamData.menTeamMemberDetails);
-        }
-        if (updatedTeamData.driverDetailsFemale) {
-            privateData.persons[teamKey].driversFemale = extractPrivateData(updatedTeamData.driverDetailsFemale);
-        }
-        if (updatedTeamData.driverDetailsMale) {
-            privateData.persons[teamKey].driversMale = extractPrivateData(updatedTeamData.driverDetailsMale);
-        }
+        // Použijeme už extrahované súkromné dáta
+        privateData.persons[teamKey].players = privateDataForTeam.players;
+        privateData.persons[teamKey].womenTeamMembers = privateDataForTeam.womenTeamMembers;
+        privateData.persons[teamKey].menTeamMembers = privateDataForTeam.menTeamMembers;
+        privateData.persons[teamKey].driversFemale = privateDataForTeam.driversFemale;
+        privateData.persons[teamKey].driversMale = privateDataForTeam.driversMale;
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
+        // === 3. NOTIFIKÁCIA ===
         const changes = getChangesForNotification(originalTeam, updatedTeamData, formatDateToDMMYYYY);
         if (changes.length > 0 && userEmail) {
             const prefixed = changes.map(ch => `Tím "${teamName}" (${category}): ${ch}`);
@@ -3185,15 +3190,14 @@ const handleDeleteMember = async (team, member) => {
                 `Odstránený člen: ${memberName} (${memberTypeLabel})`,
                 `Tím: ${teamName} (${category})`
             ];
-            // Pridáme aj informáciu o dátume narodenia ak existuje
-            if (member.dateOfBirth) {
-                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(member.dateOfBirth)}`);
+            // Pridáme aj informáciu o dátume narodenia ak existuje (použijeme _dateOfBirth)
+            const dateOfBirth = member._dateOfBirth || member.dateOfBirth;
+            if (dateOfBirth) {
+                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(dateOfBirth)}`);
             }
-            // Pridáme aj informáciu o čísle dresu ak existuje (pre hráčov)
             if (member.jerseyNumber) {
                 changes.push(`Číslo dresu: ${member.jerseyNumber}`);
             }
-            // Pridáme aj informáciu o registračnom čísle ak existuje (pre hráčov)
             if (member.registrationNumber) {
                 changes.push(`Registračné číslo: ${member.registrationNumber}`);
             }
@@ -3270,6 +3274,19 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
     const originalMemberData = memberArray[memberIndex];
     
+    // === PRIPRAVÍME SÚKROMNÉ DÁTA PRE USERSPRIVATE ===
+    const originalDateOfBirth = originalMemberData._dateOfBirth || originalMemberData.dateOfBirth || '';
+    const originalAddress = originalMemberData._address || originalMemberData.address || {};
+
+    const memberForPrivate = {
+        dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined 
+            ? updatedMemberDetails.dateOfBirth 
+            : originalDateOfBirth,
+        address: updatedMemberDetails.address !== undefined 
+            ? updatedMemberDetails.address 
+            : originalAddress
+    };
+
     // === VYTVORÍME ČISTÝ OBJEKT PRE USERS (LEN POVOLENÉ ÚDAJE) ===
     const memberForUsers = {
         firstName: updatedMemberDetails.firstName !== undefined ? updatedMemberDetails.firstName : originalMemberData.firstName || '',
@@ -3291,23 +3308,10 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
     
     // Pridáme aj ďalšie polia, ktoré nie sú zakázané
     for (const key in originalMemberData) {
-        if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData'].includes(key)) {
+        if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData', '_dateOfBirth', '_address'].includes(key)) {
             memberForUsers[key] = originalMemberData[key];
         }
     }
-
-    // === PRIPRAVÍME DÁTA PRE USERSPRIVATE (S DATEOFBIRTH A ADRESOU) ===
-    const originalDateOfBirth = originalMemberData._dateOfBirth || originalMemberData.dateOfBirth || '';
-    const originalAddress = originalMemberData._address || originalMemberData.address || {};
-
-    const memberForPrivate = {
-        dateOfBirth: updatedMemberDetails.dateOfBirth !== undefined 
-            ? updatedMemberDetails.dateOfBirth 
-            : originalDateOfBirth,
-        address: updatedMemberDetails.address !== undefined 
-            ? updatedMemberDetails.address 
-            : originalAddress
-    };
 
     // Aktualizujeme člena v poli (LEN ZÁKLADNÉ ÚDAJE)
     memberArray[memberIndex] = memberForUsers;
@@ -3346,15 +3350,15 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
-        // === 3. NOTIFIKÁCIA ===
+        // === 3. NOTIFIKÁCIA - POUŽIJEME SPRÁVNE DÁTA ===
         const changes = getChangesForNotification(
             { 
                 firstName: originalMemberData.firstName, 
                 lastName: originalMemberData.lastName,
                 jerseyNumber: originalMemberData.jerseyNumber,
                 registrationNumber: originalMemberData.registrationNumber,
-                dateOfBirth: originalMemberData.dateOfBirth,
-                address: originalMemberData.address 
+                dateOfBirth: originalDateOfBirth,  // POUŽIJEME ORIGINÁLNE SÚKROMNÉ DÁTA
+                address: originalAddress            // POUŽIJEME ORIGINÁLNE SÚKROMNÉ DÁTA
             },
             { 
                 firstName: memberForUsers.firstName,
