@@ -258,9 +258,12 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         );
     }
 
-    // Fakturačný box (pre všetkých okrem admin, hall, referee, volunteer)
+    // Upravená časť ProfileSection - zobrazenie fakturačných údajov z usersprivate
     let billingContent = null;
     if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && userProfileData.role !== 'referee' && userProfileData.role !== 'volunteer') {
+        // Získame fakturačnú adresu z usersprivate (billingAddress)
+        const billingAddress = userProfileData.billingAddress || {};
+        
         billingContent = React.createElement(
             'div',
             { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
@@ -294,7 +297,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
                     React.createElement('div', { className: 'font-normal' },
-                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                        `${billingAddress.street || '-'} ${billingAddress.houseNumber || '-'}, ${billingAddress.postalCode ? billingAddress.postalCode.slice(0, 3) + ' ' + billingAddress.postalCode.slice(3) : '-'} ${billingAddress.city || '-'}, ${billingAddress.country || '-'}`
                     )
                 ),
                 React.createElement('div', null,
