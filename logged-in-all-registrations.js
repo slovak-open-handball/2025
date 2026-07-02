@@ -3428,11 +3428,9 @@ const recalculateTeamCounts = (teamToUpdate) => {
     return teamToUpdate;
 };
 
-// Pomocná funkcia na vyčistenie tímu pred uložením do kolekcie users
 const cleanTeamForUsers = (team) => {
     if (!team) return team;
 
-    // Rekurzívne odstránenie address a dateOfBirth z každého člena v poliach
     const cleanMemberArray = (arr) => {
         if (!Array.isArray(arr)) return arr;
         return arr.map(member => {
@@ -3440,15 +3438,14 @@ const cleanTeamForUsers = (team) => {
             const cleaned = { ...member };
             delete cleaned.address;
             delete cleaned.dateOfBirth;
-            // Odstránime aj prípadné vnorené _privateData (ak by sa sem dostali)
+            delete cleaned._address;
+            delete cleaned._dateOfBirth;
             delete cleaned._privateData;
             return cleaned;
         });
     };
 
     const cleanedTeam = { ...team };
-
-    // Vyčisti všetky polia s členmi
     const memberArrays = [
         'playerDetails',
         'menTeamMemberDetails',
@@ -3462,9 +3459,10 @@ const cleanTeamForUsers = (team) => {
         }
     });
 
-    // Odstráň adresu a dátum narodenia aj z hlavného objektu tímu (ak by tam náhodou boli)
     delete cleanedTeam.address;
     delete cleanedTeam.dateOfBirth;
+    delete cleanedTeam._address;
+    delete cleanedTeam._dateOfBirth;
     delete cleanedTeam._privateData;
 
     return cleanedTeam;
