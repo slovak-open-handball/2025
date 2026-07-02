@@ -568,6 +568,8 @@ const MyDataApp = ({ userProfileData }) => {
 };
 
 let isEmailSyncListenerSetup = false;
+let isDbInitialized = false;
+let pendingUserProfileData = null;
 
 const loadUserPrivateData = async (uid) => {
     // Kontrola, či je window.db inicializované
@@ -589,14 +591,25 @@ const loadUserPrivateData = async (uid) => {
     }
 };
 
-let privateDataLoaded = false;
-
-const handleDataUpdateAndRender = async (event) => {
-    const userProfileData = event.detail;
+const renderMyDataApp = (userProfileData) => {
     const rootElement = document.getElementById('root');
-    
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        try {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(MyDataApp, { userProfileData }));
+            console.log('renderMyDataApp: Aplikácia vykreslená');
+        } catch (error) {
+            console.error('renderMyDataApp: Chyba pri vykresľovaní:', error);
+        }
+    } else {
+        console.warn('renderMyDataApp: rootElement alebo ReactDOM nie je dostupný');
+    }
+};
+
+const processUserData = async (userProfileData) => {
     if (!userProfileData) {
         // Zobrazíme spinner
+        const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -612,9 +625,8 @@ const handleDataUpdateAndRender = async (event) => {
     
     // Ak nemáme uid, nemôžeme načítať private dáta
     if (!userProfileData.uid) {
-        console.warn('handleDataUpdateAndRender: Chýba uid v userProfileData');
-        // Zobrazíme dáta bez private dát
-        renderMyDataApp(userProfileData, {});
+        console.warn('processUserData: Chýba uid v userProfileData');
+        renderMyDataApp(userProfileData);
         return;
     }
     
@@ -623,12 +635,15 @@ const handleDataUpdateAndRender = async (event) => {
     if (window.db) {
         try {
             privateData = await loadUserPrivateData(userProfileData.uid);
-            console.log('handleDataUpdateAndRender: Načítané private dáta:', privateData);
+            console.log('processUserData: Načítané private dáta:', privateData);
         } catch (error) {
-            console.error('handleDataUpdateAndRender: Chyba pri načítaní private dát:', error);
+            console.error('processUserData: Chyba pri načítaní private dát:', error);
         }
     } else {
-        console.warn('handleDataUpdateAndRender: window.db nie je dostupný, private dáta sa nenačítajú');
+        console.warn('processUserData: window.db nie je dostupný, private dáta sa nenačítajú');
+        // Ak db nie je dostupný, uložíme dáta na neskôr
+        pendingUserProfileData = userProfileData;
+        return;
     }
     
     // Zlúčime dáta z users a usersprivate
@@ -637,12 +652,10 @@ const handleDataUpdateAndRender = async (event) => {
         billingAddress: privateData.billingAddress || {},
         address: privateData.address || {},
         persons: privateData.persons || {},
-        // Zachováme aj pôvodné polia pre prípad, že by tam boli
-        ...privateData
     };
     
     // Renderujeme aplikáciu s merged dátami
-    renderMyDataApp(mergedData, privateData);
+    renderMyDataApp(mergedData);
     
     // Nastavíme listener pre email synchronizáciu (iba raz)
     if (window.auth && window.db && !isEmailSyncListenerSetup) {            
@@ -676,31 +689,92 @@ const handleDataUpdateAndRender = async (event) => {
     }
 };
 
-const renderMyDataApp = (userProfileData, privateData) => {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData }));
+const handleDataUpdateAndRender = async (event) => {
+    const userProfileData = event.detail;
+    console.log('handleDataUpdateAndRender: Prijaté dáta:', userProfileData ? 'má dáta' : 'null');
+    
+    // Uložíme dáta do globálnej premennej pre prípad, že by prišli neskôr
+    if (userProfileData) {
+        window.globalUserProfileData = userProfileData;
+    }
+    
+    // Ak už máme inicializovanú db, spracujeme dáta hneď
+    if (isDbInitialized && window.db) {
+        await processUserData(userProfileData);
+    } else if (userProfileData) {
+        // Ak db ešte nie je inicializovaná, uložíme dáta na neskôr
+        console.log('handleDataUpdateAndRender: db ešte nie je inicializovaná, ukladám dáta na neskôr');
+        pendingUserProfileData = userProfileData;
+    } else {
+        // Žiadne dáta, zobrazíme spinner
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center items-center h-full pt-16' },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                )
+            );
+        }
     }
 };
 
+// Počúvame na udalosť globalDataUpdated (prichádza z authentication.js)
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+// Počúvame na udalosť dbInitialized (odosiela sa z authentication.js po inicializácii db)
 window.addEventListener('dbInitialized', async () => {
     console.log('logged-in-my-data: dbInitialized event received');
-    // Ak už máme globalUserProfileData, načítame private dáta
-    if (window.globalUserProfileData) {
-        await handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    isDbInitialized = true;
+    
+    // Ak máme čakajúce dáta, spracujeme ich
+    if (pendingUserProfileData) {
+        console.log('logged-in-my-data: Spracúvam čakajúce dáta po inicializácii db');
+        const dataToProcess = pendingUserProfileData;
+        pendingUserProfileData = null;
+        await processUserData(dataToProcess);
+    } else if (window.globalUserProfileData) {
+        // Ak máme globálne dáta, spracujeme ich
+        console.log('logged-in-my-data: Spracúvam globálne dáta po inicializácii db');
+        await processUserData(window.globalUserProfileData);
+    } else {
+        // Žiadne dáta, zobrazíme spinner
+        console.log('logged-in-my-data: Žiadne dáta po inicializácii db');
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center items-center h-full pt-16' },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+                )
+            );
+        }
     }
 });
 
 // Načítanie počiatočných dát
+console.log('logged-in-my-data: Inicializácia...');
+
+// Kontrola, či už je db inicializovaný
+if (window.db) {
+    isDbInitialized = true;
+    console.log('logged-in-my-data: db už je inicializovaný');
+}
+
 if (window.globalUserProfileData) {
-    // Ak už máme globalUserProfileData, načítame private dáta
-    // Počkáme ale na inicializáciu db
-    if (window.db) {
-        handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    console.log('logged-in-my-data: Mám globálne dáta');
+    // Ak už máme globalUserProfileData, spracujeme ich
+    if (isDbInitialized) {
+        // db je už inicializovaný, spracujeme hneď
+        processUserData(window.globalUserProfileData);
     } else {
-        // Počkáme na udalosť dbInitialized
+        // db ešte nie je inicializovaný, uložíme dáta na neskôr
         console.log('logged-in-my-data: Čakám na inicializáciu db...');
+        pendingUserProfileData = window.globalUserProfileData;
         // Zobrazíme spinner
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -716,6 +790,7 @@ if (window.globalUserProfileData) {
     }
 } else {
     // Žiadne dáta, zobrazíme spinner
+    console.log('logged-in-my-data: Žiadne globálne dáta');
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
