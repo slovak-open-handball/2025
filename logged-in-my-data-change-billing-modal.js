@@ -171,7 +171,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                'address.houseNumber': 'Číslo domu',
                'address.city': 'Mesto',
                'address.postalCode': 'PSČ',
-               'adress.country': 'Krajina',
+               'address.country': 'Krajina',
            };
    
            const changes = {
