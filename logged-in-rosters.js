@@ -961,6 +961,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     const [editedArrivalMinute, setEditedArrivalMinute] = useState('');
     const [tshirtEntries, setTshirtEntries] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
+    const [totalMembersCount, setTotalMembersCount] = useState(0);
 
     useEffect(() => {
       if (teamData) {
@@ -983,6 +984,15 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
           jerseyHomeColor: teamData.jerseyHomeColor || '',
           jerseyAwayColor: teamData.jerseyAwayColor || ''
         });
+        
+        // Výpočet celkového počtu členov v tíme
+        const players = teamData.playerDetails?.length || 0;
+        const menTeamMembers = teamData.menTeamMemberDetails?.length || 0;
+        const womenTeamMembers = teamData.womenTeamMemberDetails?.length || 0;
+        const driverFemale = teamData.driverDetailsFemale?.length || 0;
+        const driverMale = teamData.driverDetailsMale?.length || 0;
+        setTotalMembersCount(players + menTeamMembers + womenTeamMembers + driverFemale + driverMale);
+        
         setHasChanges(false);
       }
     }, [teamData]);
@@ -991,34 +1001,35 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
-    const totalMembersInTeam = useMemo(() => {
-        if (!teamData) return 0;
-        const players = teamData.playerDetails?.length || 0;
-        const menTeamMembers = teamData.menTeamMemberDetails?.length || 0;
-        const womenTeamMembers = teamData.womenTeamMemberDetails?.length || 0;
-        const driverFemale = teamData.driverDetailsFemale?.length || 0;
-        const driverMale = teamData.driverDetailsMale?.length || 0;
-        return players + menTeamMembers + womenTeamMembers + driverFemale + driverMale;
-    }, [teamData]);
-
+    // Prepočet celkového počtu tričiek
     const totalTshirtsQuantity = useMemo(() => {
         return tshirtEntries.reduce((sum, entry) => sum + (parseInt(entry.quantity, 10) || 0), 0);
     }, [tshirtEntries]);
 
+    // Kontrola, či je počet tričiek presne rovnaký ako počet členov
+    const isTshirtCountMismatch = totalTshirtsQuantity !== totalMembersCount;
+
+    // Kontrola, či sú vybrané všetky veľkosti
     const allTshirtSizesSelected = useMemo(() => {
-        if (tshirtEntries.length === 0) return true;
+        if (tshirtEntries.length === 0) return totalMembersCount === 0;
         return tshirtEntries.every(tshirt => tshirt.size !== '');
-    }, [tshirtEntries]);
+    }, [tshirtEntries, totalMembersCount]);
 
-    const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges;
+    const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges || isTshirtCountMismatch || !allTshirtSizesSelected;
 
-    const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity === totalMembersInTeam;
+    // Kontrola, či je možné pridať ďalšie tričko (celkový počet už nie je väčší ako počet členov)
+    const isAddTshirtButtonDisabled = isDataEditDeadlinePassed || totalTshirtsQuantity >= totalMembersCount;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (isDataEditDeadlinePassed) {
           showLocalNotification('Termín na úpravu údajov už vypršal.', 'error');
+          return;
+        }
+
+        if (isTshirtCountMismatch) {
+          showLocalNotification(`Počet tričiek (${totalTshirtsQuantity}) sa musí rovnať počtu členov v tíme (${totalMembersCount}).`, 'error');
           return;
         }
 
@@ -1075,15 +1086,24 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const showArrivalTimeInputs = editedArrivalType === 'verejná doprava - vlak' || editedArrivalType === 'verejná doprava - autobus';
 
-    const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-    const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-
     const handleAddTshirtEntry = () => {
-        setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
-        setHasChanges(true);
+        if (totalTshirtsQuantity < totalMembersCount) {
+            setTshirtEntries([...tshirtEntries, { size: '', quantity: 1 }]);
+            setHasChanges(true);
+        }
     };
 
     const handleRemoveTshirtEntry = (index) => {
+        const entryToRemove = tshirtEntries[index];
+        const quantityToRemove = parseInt(entryToRemove.quantity, 10) || 0;
+        const newTotal = totalTshirtsQuantity - quantityToRemove;
+        
+        // Ak by odstránenie spôsobilo, že počet tričiek by bol menší ako počet členov, nedovolí to
+        if (newTotal < totalMembersCount) {
+            showLocalNotification(`Nie je možné odstrániť tričká, pretože by ich bolo menej (${newTotal}) ako členov v tíme (${totalMembersCount}).`, 'error');
+            return;
+        }
+        
         setTshirtEntries(tshirtEntries.filter((_, i) => i !== index));
         setHasChanges(true);
     };
@@ -1096,8 +1116,19 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
     };
 
     const handleTshirtQuantityChange = (index, newQuantity) => {
+        const oldQuantity = parseInt(tshirtEntries[index].quantity, 10) || 0;
+        const newQuantityInt = Math.max(1, parseInt(newQuantity, 10) || 1);
+        const otherEntriesTotal = totalTshirtsQuantity - oldQuantity;
+        const newTotal = otherEntriesTotal + newQuantityInt;
+        
+        // Kontrola, či nový celkový počet nepresiahne počet členov
+        if (newTotal > totalMembersCount) {
+            showLocalNotification(`Celkový počet tričiek (${newTotal}) by presiahol počet členov v tíme (${totalMembersCount}). Maximálny povolený počet je ${totalMembersCount - otherEntriesTotal}.`, 'error');
+            return;
+        }
+        
         const updatedEntries = [...tshirtEntries];
-        updatedEntries[index].quantity = Math.max(1, parseInt(newQuantity, 10) || 1);
+        updatedEntries[index].quantity = newQuantityInt;
         setTshirtEntries(updatedEntries);
         setHasChanges(true);
     };
@@ -1114,7 +1145,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
 
     const addTshirtButtonClasses = `flex items-center justify-center w-8 h-8 rounded-full transition-colors focus:outline-none focus:ring-2
         ${isAddTshirtButtonDisabled
-            ? 'bg-white border border-solid'
+            ? 'bg-white border border-solid cursor-not-allowed'
             : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500'
         }`;
     const addTshirtButtonStyles = {
@@ -1483,6 +1514,10 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
     const clubName = userProfileData?.billing?.clubName?.trim() || 'Neznámy klub';
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
+    // Nový tím má vždy 0 členov, takže tričká by mali byť 0
+    const totalMembersCount = 0;
+    const totalTshirtsQuantity = 0; // Nový tím nemá žiadne tričká
+
     useEffect(() => {
         if (show) {
             setSelectedCategory('');
@@ -1516,12 +1551,10 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
     }, [selectedCategory, clubName, teamsData]);
 
+    // Nový tím má 0 členov, takže tričká musia byť 0
     const isSaveButtonDisabled = isDataEditDeadlinePassed || !hasChanges || !selectedCategory;
 
     const showArrivalTimeInputs = arrivalType === 'verejná doprava - vlak' || arrivalType === 'verejná doprava - autobus';
-
-    const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-    const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1532,7 +1565,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
         }
 
         if (isSaveButtonDisabled) {
-            showLocalNotification('Prosím, vyplňte kategóriu a názov tímu.', 'error');
+            showLocalNotification('Prosím, vyplňte kategóriu.', 'error');
             return;
         }
 
@@ -1541,6 +1574,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             finalArrivalTime = `${arrivalHour.padStart(2, '0')}:${arrivalMinute.padStart(2, '0')}`;
         }
 
+        // Nový tím má 0 členov, takže tričká sú prázdne pole
         const filteredTshirtEntries = [];
 
         let packageDetails = {};
@@ -1579,7 +1613,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
             arrival: { type: arrivalType, time: finalArrivalTime },
             accommodation: { type: accommodationType },
             packageDetails: packageDetails,
-            tshirts: filteredTshirtEntries,
+            tshirts: filteredTshirtEntries, // Prázdne pole pre nový tím
         };
         await onAddTeam(newTeamData);
         setHasChanges(false);
