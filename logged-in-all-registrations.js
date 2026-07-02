@@ -4992,7 +4992,19 @@ const clearFilter = (column) => {
                 
                     currentMemberArray[memberArrayIndex] = updatedMember;
                 
-                    const changes = getChangesForNotification(originalMember, updatedMember, formatDateToDMMYYYY);
+                    const originalMemberForCompare = {
+                        ...originalMember,
+                        address: existingPrivateMember.address || {},
+                        dateOfBirth: existingPrivateMember.dateOfBirth || ''
+                    };
+
+                    const updatedMemberForCompare = {
+                        ...updatedMember,
+                        address: updatedDataFromModal.address || {},
+                        dateOfBirth: updatedDataFromModal.dateOfBirth || ''
+                    };
+                    
+                    const changes = getChangesForNotification(originalMemberForCompare, updatedMemberForCompare, formatDateToDMMYYYY);
                     if (changes.length > 0) {
                         const memberName = `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() || 'bez mena';
                         const userEmail = window.auth.currentUser?.email;
