@@ -2490,32 +2490,40 @@ const handleDeleteTeam = async (teamToDelete) => {
         return;
     }
 
+    // ✅ SPRÁVNY CONFIRM DIALOG PRE TÍM
     const confirmDelete = await new Promise(resolve => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-[1002] flex justify-center items-center p-4';
         modal.innerHTML = `
             <div class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-lg">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">Odstrániť člena tímu</h3>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Potvrdiť vymazanie tímu</h3>
                 <p class="mb-6 text-gray-700">
-                    Naozaj chcete odstrániť člena 
-                    <strong>${member.firstName || ''} ${member.lastName || ''}</strong> 
-                    (${member.type || 'člen'}) z tímu 
-                    <strong>${team.teamName || 'Neznámy tím'}</strong>?
+                    Naozaj chcete vymazať tím 
+                    <strong>${teamToDelete.teamName}</strong> 
+                    (${teamToDelete.categoryName || 'Neznáma kategória'})?
+                    <br><br>
+                    <span class="text-red-600 font-semibold">Táto akcia je nevratná.</span>
                 </p>
                 <div class="flex justify-end space-x-3">
                     <button id="cancel" class="px-5 py-2.5 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition">
                         Zrušiť
                     </button>
                     <button id="confirm" class="px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
-                        Áno, odstrániť
+                        Áno, vymazať
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
-        modal.querySelector('#cancel').onclick = () => { document.body.removeChild(modal); resolve(false); };
-        modal.querySelector('#confirm').onclick = () => { document.body.removeChild(modal); resolve(true); };
+        modal.querySelector('#cancel').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(false);
+        };
+        modal.querySelector('#confirm').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(true);
+        };
     });
 
     if (!confirmDelete) return;
@@ -2564,9 +2572,12 @@ const handleDeleteTeam = async (teamToDelete) => {
     try {
         await updateDoc(userDocRef, { teams: currentTeamsCopy });
 
+        // Notifikácia o vymazaní tímu
         if (userEmail) {
-            const changes = [`Tím "${teamName}" (${category}) bol vymazaný`];
-
+            const changes = [
+                `Tím "${teamName}" (${category}) bol vymazaný`,
+                `Počet zostávajúcich tímov v kategórii: ${currentTeamsCopy[cat]?.length || 0}`
+            ];
             const notificationsRef = collection(db, 'notifications');
             await addDoc(notificationsRef, {
                 userEmail,
@@ -2579,6 +2590,7 @@ const handleDeleteTeam = async (teamToDelete) => {
         setShowEditTeamModal(false);
         setSelectedTeam(null);
     } catch (error) {
+        console.error('Chyba pri mazaní tímu:', error);
         showLocalNotification('Nastala chyba pri mazaní tímu.', 'error');
     }
 };
