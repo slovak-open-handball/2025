@@ -752,54 +752,46 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     };
 
     const formatAddress = (member) => {
-      if (!member) return '-';
+        if (!member) return '-';
     
-      // Skúsime načítať adresu z privateData ak je dostupná
-      let addressData = null;
-      
-      // Ak máme _privateData a vieme identifikovať člena
-      if (member._userId && member._category !== undefined && member._teamIndex !== undefined) {
-        const privateData = member._privateData;
-        if (privateData?.persons) {
-          const teamKey = `${member._category}_team${member._teamIndex + 1}`;
-          const teamPrivateData = privateData.persons[teamKey];
-          if (teamPrivateData) {
-            // Zistíme typ člena podľa originalArray
-            const memberType = member.originalArray;
-            const memberIndex = member.originalIndex;
-            if (memberType && memberIndex !== undefined && teamPrivateData[memberType] && teamPrivateData[memberType][memberIndex]) {
-              const privateMember = teamPrivateData[memberType][memberIndex];
-              if (privateMember?.address) {
-                addressData = privateMember.address;
-              }
+        // Pokúsime sa načítať adresu z privateData
+        let addressData = null;
+        if (member._userId && member._category !== undefined && member._teamIndex !== undefined) {
+            const privateData = member._privateData;
+            if (privateData?.persons) {
+                const teamKey = `${member._category}_team${member._teamIndex + 1}`;
+                const teamPrivateData = privateData.persons[teamKey];
+                if (teamPrivateData) {
+                    const memberType = member.originalArray;
+                    const memberIndex = member.originalIndex;
+                    if (memberType && memberIndex !== undefined && teamPrivateData[memberType] && teamPrivateData[memberType][memberIndex]) {
+                        const privateMember = teamPrivateData[memberType][memberIndex];
+                        if (privateMember?.address) {
+                            addressData = privateMember.address;
+                        }
+                    }
+                }
             }
-          }
         }
-      }
     
-      // Ak sme nenašli v privateData, použijeme adresu z member objektu
-      if (!addressData) {
-        if (member.address && typeof member.address === 'object') {
-          addressData = member.address;
-        } else {
-          // Ak nie je adresa, vrátime pomlčku
-          return '-';
+        // Ak sa adresa nenašla, vrátime pomlčku (žiaden fallback na member.address)
+        if (!addressData) {
+            return '-';
         }
-      }
     
-      const street = addressData.street || '';
-      const houseNumber = addressData.houseNumber || '';
-      const postalCode = formatPostalCodeForDisplay(addressData.postalCode);
-      const city = addressData.city || '';
-      const country = addressData.country || '';
+        const street = addressData.street || '';
+        const houseNumber = addressData.houseNumber || '';
+        const postalCode = formatPostalCodeForDisplay(addressData.postalCode);
+        const city = addressData.city || '';
+        const country = addressData.country || '';
     
-      const parts = [
-        `${street} ${houseNumber}`.trim(),
-        `${postalCode} ${city}`.trim(),
-        country.trim()
-      ].filter(p => p !== '');
+        const parts = [
+            `${street} ${houseNumber}`.trim(),
+            `${postalCode} ${city}`.trim(),
+            country.trim()
+        ].filter(p => p !== '');
     
-      return parts.join(', ') || '-';
+        return parts.join(', ') || '-';
     };
 
     const handleAccommodationToggle = async (member, isChecked) => {
@@ -2366,112 +2358,112 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     };
 
     const renderMemberFields = () => {
-      const memberElements = [];
-      const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
-      let memberFieldsOrder = [
-        'firstName', 'lastName', 'dateOfBirth',
-        'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-      ];
-      if (isPlayer) {
-        memberFieldsOrder = [
-          'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
-          'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+        const memberElements = [];
+        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
+        let memberFieldsOrder = [
+            'firstName', 'lastName', 'dateOfBirth',
+            'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
         ];
-      }
+        if (isPlayer) {
+            memberFieldsOrder = [
+                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+            ];
+        }
     
-      memberFieldsOrder.forEach(path => {
-        // Špeciálne spracovanie pre adresy - načítame z privateData
-        let value;
-        if (path.startsWith('address.')) {
-          // Skúsime načítať z privateData ak je dostupné
-          if (localEditedData._privateData) {
-            const addressField = path.split('.')[1];
-            // Nájdenie príslušného člena v privateData podľa originalArray a originalIndex
-            const memberArrayType = localEditedData.originalArray;
-            const memberIndex = localEditedData.originalIndex;
-            
-            if (memberArrayType && memberIndex !== undefined && localEditedData._privateData?.persons) {
-              // Pre každú kategóriu skúsime nájsť tím
-              for (const categoryKey in localEditedData._privateData.persons) {
-                const teamData = localEditedData._privateData.persons[categoryKey];
-                if (teamData && teamData[memberArrayType] && teamData[memberArrayType][memberIndex]) {
-                  const privateMember = teamData[memberArrayType][memberIndex];
-                  if (privateMember.address && privateMember.address[addressField] !== undefined) {
-                    value = privateMember.address[addressField];
-                    break;
-                  }
+        memberFieldsOrder.forEach(path => {
+            let value;
+            // Špeciálne spracovanie pre adresy – načítame výhradne z _privateData
+            if (path.startsWith('address.')) {
+                const addressField = path.split('.')[1];
+                // Skúsime získať adresu z privateData
+                const privateData = localEditedData._privateData;
+                if (privateData?.persons) {
+                    const memberArrayType = localEditedData.originalArray;
+                    const memberIndex = localEditedData.originalIndex;
+                    if (memberArrayType && memberIndex !== undefined) {
+                        // Prejdeme všetky kategórie, aby sme našli správny tím
+                        for (const categoryKey in privateData.persons) {
+                            const teamData = privateData.persons[categoryKey];
+                            if (teamData && teamData[memberArrayType] && teamData[memberArrayType][memberIndex]) {
+                                const privateMember = teamData[memberArrayType][memberIndex];
+                                if (privateMember.address && privateMember.address[addressField] !== undefined) {
+                                    value = privateMember.address[addressField];
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
-              }
+                // Ak sa hodnota nenašla, nastavíme prázdny reťazec (žiaden fallback)
+                if (value === undefined) {
+                    value = '';
+                }
+            } else {
+                // Pre ostatné polia (firstName, lastName, atď.) použijeme localEditedData
+                value = getNestedValue(localEditedData, path);
             }
-          }
-          // Ak sme nenašli v privateData, použijeme hodnotu z localEditedData
-          if (value === undefined) {
-            value = getNestedValue(localEditedData, path);
-          }
-        } else {
-          value = getNestedValue(localEditedData, path);
-        }
     
-        const inputValue = value === undefined || value === null ? '' : value;
-        const labelText = formatLabel(path);
-        let inputType = 'text';
-        let isCheckbox = false;
-        let customProps = {};
+            const inputValue = value === undefined || value === null ? '' : value;
+            const labelText = formatLabel(path);
+            let inputType = 'text';
+            let isCheckbox = false;
+            let customProps = {};
     
-        if (typeof inputValue === 'boolean') {
-          isCheckbox = true;
-        } else if (path.includes('dateOfBirth')) {
-          inputType = 'date';
-        } else if (path.includes('jerseyNumber')) {
-          customProps = {
-            onChange: (e) => handleNumericInput(e, path),
-            inputMode: 'numeric',
-            pattern: '[0-9]*',
-            maxLength: 3
-          };
-        } else if (path.includes('registrationNumber')) {
-          customProps = {
-            onChange: (e) => handleChange(path, e.target.value),
-            maxLength: 20
-          };
-        } else if (path.includes('postalCode')) {
-          customProps = {
-            onChange: (e) => handlePostalCodeChange(e, path),
-            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-            inputMode: 'numeric',
-            pattern: '[0-9 ]*',
-            maxLength: 6,
-            value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-            readOnly: !isSavable
-          };
-        }
+            if (typeof inputValue === 'boolean') {
+                isCheckbox = true;
+            } else if (path.includes('dateOfBirth')) {
+                inputType = 'date';
+            } else if (path.includes('jerseyNumber')) {
+                customProps = {
+                    onChange: (e) => handleNumericInput(e, path),
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: 3
+                };
+            } else if (path.includes('registrationNumber')) {
+                customProps = {
+                    onChange: (e) => handleChange(path, e.target.value),
+                    maxLength: 20
+                };
+            } else if (path.includes('postalCode')) {
+                customProps = {
+                    onChange: (e) => handlePostalCodeChange(e, path),
+                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                    inputMode: 'numeric',
+                    pattern: '[0-9 ]*',
+                    maxLength: 6,
+                    value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
+                    readOnly: !isSavable
+                };
+            }
     
-        memberElements.push(React.createElement(
-          'div',
-          { key: path, className: 'mb-4' },
-          React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-          isCheckbox ? (
-            React.createElement('input', {
-              type: 'checkbox',
-              className: `form-checkbox h-5 w-5 text-blue-600`,
-              checked: getNestedValue(localEditedData, path) === true,
-              onChange: (e) => handleChange(path, e.target.checked),
-              disabled: !isSavable
-            })
-          ) : (
-            React.createElement('input', {
-              ref: el => inputRefs.current[path] = el,
-              type: inputType,
-              className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-              value: formatDisplayValue(inputValue, path),
-              onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-              readOnly: !isSavable,
-              ...customProps
-            })
-          )
-        ));
-      });
-      return memberElements.filter(Boolean);
+            memberElements.push(React.createElement(
+                'div',
+                { key: path, className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                isCheckbox ? (
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        className: `form-checkbox h-5 w-5 text-blue-600`,
+                        checked: getNestedValue(localEditedData, path) === true,
+                        onChange: (e) => handleChange(path, e.target.checked),
+                        disabled: !isSavable
+                    })
+                ) : (
+                    React.createElement('input', {
+                        ref: el => inputRefs.current[path] = el,
+                        type: inputType,
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+                        value: formatDisplayValue(inputValue, path),
+                        onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
+                        readOnly: !isSavable,
+                        ...customProps
+                    })
+                )
+            ));
+        });
+        return memberElements.filter(Boolean);
     };
 
     const renderDataFields = (obj, currentPath = '') => {
@@ -3516,6 +3508,48 @@ const recalculateTeamCounts = (teamToUpdate) => {
     // No need to explicitly update `players`, `menTeamMembersCount` etc. here,
     // as they are derived properties in `allTeamsFlattened` based on the array lengths.
     return teamToUpdate;
+};
+
+// Pomocná funkcia na vyčistenie tímu pred uložením do kolekcie users
+const cleanTeamForUsers = (team) => {
+    if (!team) return team;
+
+    // Rekurzívne odstránenie address a dateOfBirth z každého člena v poliach
+    const cleanMemberArray = (arr) => {
+        if (!Array.isArray(arr)) return arr;
+        return arr.map(member => {
+            if (!member) return member;
+            const cleaned = { ...member };
+            delete cleaned.address;
+            delete cleaned.dateOfBirth;
+            // Odstránime aj prípadné vnorené _privateData (ak by sa sem dostali)
+            delete cleaned._privateData;
+            return cleaned;
+        });
+    };
+
+    const cleanedTeam = { ...team };
+
+    // Vyčisti všetky polia s členmi
+    const memberArrays = [
+        'playerDetails',
+        'menTeamMemberDetails',
+        'womenTeamMemberDetails',
+        'driverDetailsMale',
+        'driverDetailsFemale'
+    ];
+    memberArrays.forEach(key => {
+        if (cleanedTeam[key]) {
+            cleanedTeam[key] = cleanMemberArray(cleanedTeam[key]);
+        }
+    });
+
+    // Odstráň adresu a dátum narodenia aj z hlavného objektu tímu (ak by tam náhodou boli)
+    delete cleanedTeam.address;
+    delete cleanedTeam.dateOfBirth;
+    delete cleanedTeam._privateData;
+
+    return cleanedTeam;
 };
 
 const translateRole = (role) => {
