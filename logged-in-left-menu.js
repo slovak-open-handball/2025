@@ -7,14 +7,12 @@ const loadLeftMenu = async (userProfileData) => {
         try {
             const response = await fetch('logged-in-left-menu.html');
             if (!response.ok) throw new Error(`HTTP chyba! Stav: ${response.status}`);
-            
+           
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
-
             const db = window.db;
             const userId = userProfileData.id;
             setupMenuListeners(userProfileData, db, userId);
-
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
@@ -57,12 +55,12 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-      
+     
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
 
-            // Odstránenie všetkých farebných tried
+            // Odstránenie všetkých farebných tried (vrátane role-based)
             link.classList.remove(
                 'bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300',
                 'bg-[#b06835]/20', 'dark:bg-[#b06835]/10', 'text-[#b06835]', 'dark:text-[#b06835]/80',
@@ -129,7 +127,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     };
 
     const showRoleBasedLinks = () => {
-        // ... (vaša pôvodná logika zostáva rovnaká)
         if (userProfileData.role === 'admin') {
             addCategoriesLink?.classList.remove('hidden');
             addGroupsLink?.classList.remove('hidden');
@@ -244,12 +241,12 @@ const addCustomStyles = () => {
             transition: color 200ms ease;
         }
 
-        /* Hover pre VŠETKY riadky → rovnaká farba */
+        /* Hover pre VŠETKY riadky (všetky roly) */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
-        /* Zabráni zmene farby textu pri hover */
+        /* Zachovanie farby textu a ikony pri hover */
         #left-menu a:hover,
         #left-menu a:hover .whitespace-nowrap,
         #left-menu a:hover svg {
