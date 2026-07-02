@@ -107,135 +107,135 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         );
     };
 
-    const handleUpdateBilling = async (event) => {
-        event.preventDefault();
-        setLoading(true);
-        setError(null);
-
-        const user = window.auth.currentUser;
-        if (!user) {
-            window.showGlobalNotification('Používateľ nie je prihlásený.', 'error');
+   const handleUpdateBilling = async (event) => {
+       event.preventDefault();
+       setLoading(true);
+       setError(null);
+   
+       const user = window.auth.currentUser;
+       if (!user) {
+           window.showGlobalNotification('Používateľ nie je prihlásený.', 'error');
+           setLoading(false);
+           return;
+       }
+   
+       if (!isFormChanged()) {
+            window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
             setLoading(false);
-            return;
-        }
-
-        if (!isFormChanged()) {
-             window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
-             setLoading(false);
-             onClose();
-             return;
-        }
-
-        // Validácia IČ DPH pred odoslaním
-        if (icdph && !/^[A-Z]{2}\d+$/.test(icdph) && icdph !== originalDataRef.current.icdph) {
-            setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
-            setLoading(false);
-            return;
-        }
-        
-        try {
-            // Normalizujeme PSČ (odstránime medzery)
-            const normalizedPostalCode = postalCode.replace(/\s/g, '');
-            
-            // Dáta pre kolekciu 'users' (billing a základné údaje)
-            const userData = {
-                billing: {
-                    clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
-                    ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
-                    dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
-                    icdph: icdph !== '' ? icdph : userProfileData.billing?.icdph || ''
-                }
-            };
-            
-            // Dáta pre kolekciu 'usersprivate' (fakturačná adresa)
-            const privateData = {
-                billingAddress: {
-                    street: street !== '' ? street : (userProfileData.billingAddress?.street || ''),
-                    houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.billingAddress?.houseNumber || ''),
-                    city: city !== '' ? city : (userProfileData.billingAddress?.city || ''),
-                    postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.billingAddress?.postalCode || ''),
-                    country: country !== '' ? country : (userProfileData.billingAddress?.country || '')
-                }
-            };
-            
-            // Logika pre vytvorenie záznamu o zmene v databáze
-            const originalBillingData = originalDataRef.current;
-            const changeMessages = [];
-
-            // Mapovanie pre názvy polí
-            const fieldNames = {
-                'billing.clubName': 'Názov klubu',
-                'billing.ico': 'IČO',
-                'billing.dic': 'DIČ',
-                'billing.icdph': 'IČ DPH',
-                'billingAddress.street': 'Ulica (fakturačná)',
-                'billingAddress.houseNumber': 'Číslo domu (fakturačné)',
-                'billingAddress.city': 'Mesto (fakturačné)',
-                'billingAddress.postalCode': 'PSČ (fakturačné)',
-                'billingAddress.country': 'Krajina (fakturačná)',
-            };
-
-            const changes = {
-                'billing.clubName': clubName,
-                'billing.ico': ico,
-                'billing.dic': dic,
-                'billing.icdph': icdph,
-                'billingAddress.street': street,
-                'billingAddress.houseNumber': houseNumber,
-                'billingAddress.city': city,
-                'billingAddress.postalCode': normalizedPostalCode,
-                'billingAddress.country': country,
-            };
-
-            for (const key in changes) {
-                const newValue = changes[key];
-                let originalValue;
-                
-                // Získame pôvodnú hodnotu podľa kľúča
-                if (key.startsWith('billing.')) {
-                    const fieldKey = key.substring(8); // odstránime 'billing.'
-                    originalValue = originalBillingData[fieldKey];
-                } else if (key.startsWith('billingAddress.')) {
-                    const fieldKey = key.substring(15); // odstránime 'billingAddress.'
-                    originalValue = originalBillingData[fieldKey];
-                } else {
-                    originalValue = originalBillingData[key];
-                }
-
-                if (newValue !== '' && getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
-                    const fieldName = fieldNames[key] || key;
-                    const oldVal = originalValue || 'prázdne';
-                    const newVal = newValue || 'prázdne';
-                    changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
-                }
-            }
-
-            // Uložíme zmeny do notifikácií
-            if (changeMessages.length > 0) {
-                await addDoc(collection(db, 'notifications'), {
-                    userEmail: user.email,
-                    changes: changeMessages,
-                    timestamp: new Date().toISOString(),
-                });
-            }
-            
-            // AKTUALIZÁCIA KOLEKCIE 'users'
-            await updateDoc(doc(db, "users", user.uid), userData);
-            
-            // AKTUALIZÁCIA KOLEKCIE 'usersprivate'
-            await updateDoc(doc(db, "usersprivate", user.uid), privateData);
-            
-            window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
             onClose();
-
-        } catch (e) {
-            console.error("Chyba pri aktualizácii fakturačných údajov:", e);
-            setError('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.');
-            window.showGlobalNotification('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+            return;
+       }
+   
+       // Validácia IČ DPH pred odoslaním
+       if (icdph && !/^[A-Z]{2}\d+$/.test(icdph) && icdph !== originalDataRef.current.icdph) {
+           setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
+           setLoading(false);
+           return;
+       }
+       
+       try {
+           // Normalizujeme PSČ (odstránime medzery)
+           const normalizedPostalCode = postalCode.replace(/\s/g, '');
+           
+           // Dáta pre kolekciu 'users' - IBA billing údaje (clubName, ico, dic, icdph)
+           const userData = {
+               billing: {
+                   clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
+                   ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
+                   dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
+                   icdph: icdph !== '' ? icdph : userProfileData.billing?.icdph || ''
+               }
+           };
+           
+           // Dáta pre kolekciu 'usersprivate' - IBA fakturačná adresa
+           const privateData = {
+               billingAddress: {
+                   street: street !== '' ? street : (userProfileData.billingAddress?.street || ''),
+                   houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.billingAddress?.houseNumber || ''),
+                   city: city !== '' ? city : (userProfileData.billingAddress?.city || ''),
+                   postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.billingAddress?.postalCode || ''),
+                   country: country !== '' ? country : (userProfileData.billingAddress?.country || '')
+               }
+           };
+           
+           // Logika pre vytvorenie záznamu o zmene v databáze
+           const originalBillingData = originalDataRef.current;
+           const changeMessages = [];
+   
+           // Mapovanie pre názvy polí
+           const fieldNames = {
+               'billing.clubName': 'Názov klubu',
+               'billing.ico': 'IČO',
+               'billing.dic': 'DIČ',
+               'billing.icdph': 'IČ DPH',
+               'billingAddress.street': 'Ulica (fakturačná)',
+               'billingAddress.houseNumber': 'Číslo domu (fakturačné)',
+               'billingAddress.city': 'Mesto (fakturačné)',
+               'billingAddress.postalCode': 'PSČ (fakturačné)',
+               'billingAddress.country': 'Krajina (fakturačná)',
+           };
+   
+           const changes = {
+               'billing.clubName': clubName,
+               'billing.ico': ico,
+               'billing.dic': dic,
+               'billing.icdph': icdph,
+               'billingAddress.street': street,
+               'billingAddress.houseNumber': houseNumber,
+               'billingAddress.city': city,
+               'billingAddress.postalCode': normalizedPostalCode,
+               'billingAddress.country': country,
+           };
+   
+           for (const key in changes) {
+               const newValue = changes[key];
+               let originalValue;
+               
+               // Získame pôvodnú hodnotu podľa kľúča
+               if (key.startsWith('billing.')) {
+                   const fieldKey = key.substring(8); // odstránime 'billing.'
+                   originalValue = originalBillingData[fieldKey];
+               } else if (key.startsWith('billingAddress.')) {
+                   const fieldKey = key.substring(15); // odstránime 'billingAddress.'
+                   originalValue = originalBillingData[fieldKey];
+               } else {
+                   originalValue = originalBillingData[key];
+               }
+   
+               if (newValue !== '' && getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                   const fieldName = fieldNames[key] || key;
+                   const oldVal = originalValue || 'prázdne';
+                   const newVal = newValue || 'prázdne';
+                   changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
+               }
+           }
+   
+           // Uložíme zmeny do notifikácií
+           if (changeMessages.length > 0) {
+               await addDoc(collection(db, 'notifications'), {
+                   userEmail: user.email,
+                   changes: changeMessages,
+                   timestamp: new Date().toISOString(),
+               });
+           }
+           
+           // ✅ AKTUALIZÁCIA KOLEKCIE 'users' - IBA billing údaje
+           await updateDoc(doc(db, "users", user.uid), userData);
+           
+           // ✅ AKTUALIZÁCIA KOLEKCIE 'usersprivate' - IBA fakturačná adresa
+           await updateDoc(doc(db, "usersprivate", user.uid), privateData);
+           
+           window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
+           onClose();
+   
+       } catch (e) {
+           console.error("Chyba pri aktualizácii fakturačných údajov:", e);
+           setError('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.');
+           window.showGlobalNotification('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.', 'error');
+       } finally {
+           setLoading(false);
+       }
+   };
 
     // Funkcia na formátovanie PSČ do formátu "XXX XX"
     const formatPostalCodeDisplay = (code) => {
