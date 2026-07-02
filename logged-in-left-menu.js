@@ -1,5 +1,40 @@
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+const loadLeftMenu = async (userProfileData) => {
+    if (userProfileData && userProfileData.id) {
+        const menuPlaceholder = document.getElementById('menu-placeholder');
+        if (!menuPlaceholder) return;
+
+        try {
+            const response = await fetch('logged-in-left-menu.html');
+            if (!response.ok) {
+                throw new Error(`HTTP chyba! Stav: ${response.status}`);
+            }
+            const menuHtml = await response.text();
+            menuPlaceholder.innerHTML = menuHtml;
+
+            const db = window.db;
+            const userId = userProfileData.id;
+            setupMenuListeners(userProfileData, db, userId);
+
+            const leftMenuElement = document.getElementById('left-menu');
+            if (leftMenuElement) {
+                leftMenuElement.classList.remove('hidden');
+            }
+
+            // Podpora pre späť v histórii
+            window.addEventListener('popstate', () => {
+                setTimeout(highlightActiveMenuLinkGray, 100);
+            });
+        } catch (error) {
+            console.error('Chyba pri načítaní menu:', error);
+        }
+    } else {
+        const leftMenuElement = document.getElementById('left-menu');
+        if (leftMenuElement) leftMenuElement.classList.add('hidden');
+    }
+};
+
 const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
@@ -23,13 +58,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const matchesLink = document.getElementById('matches-link');
     const matchesHallLink = document.getElementById('matches-hall-link');
     const cateringLink = document.getElementById('catering-link');
-  
+
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         return;
     }
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
-  
+
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
@@ -39,20 +74,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             if (!href) return;
 
             link.classList.remove(
-                'bg-blue-100', 'dark:bg-blue-900',
-                'text-blue-600', 'dark:text-blue-300',
-                'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
-                'text-[#b06835]', 'dark:text-[#b06835]/80',
-                'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
-                'text-[#9333EA]', 'dark:text-[#9333EA]/80',
-                'bg-[#007800]/20', 'dark:bg-[#007800]/10',
-                'text-[#007800]', 'dark:text-[#007800]/80',
-                'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
-                'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
-                'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
-                'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
-                'text-[#1F2937]', 'dark:text-[#1F2937]/90',
-                'text-white', 'dark:text-white',
+                'bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300',
+                'bg-[#b06835]/20', 'dark:bg-[#b06835]/10', 'text-[#b06835]', 'dark:text-[#b06835]/80',
+                'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10', 'text-[#9333EA]', 'dark:text-[#9333EA]/80',
+                'bg-[#007800]/20', 'dark:bg-[#007800]/10', 'text-[#007800]', 'dark:text-[#007800]/80',
+                'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10', 'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
+                'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10', 'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
+                'text-[#1F2937]', 'dark:text-[#1F2937]/90', 'text-white', 'dark:text-white',
                 'hover:text-white', 'hover:dark:text-white'
             );
 
@@ -78,16 +106,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     icon.style.color = '#1F2937';
                     icon.classList.add('dark:text-[#1F2937]/90');
                 }
-            } else {
-                const icon = link.querySelector('svg');
-                if (icon) {
-                    icon.style.color = '';
-                    icon.classList.remove('dark:text-[#1F2937]/90');
-                }
             }
         });
     };
-  
+
     const getColorForRole = (role) => {
         switch (role) {
             case 'admin': return '#47b3ff';
@@ -98,23 +120,19 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             default: return '#1D4ED8';
         }
     };
-  
+
     const applyMenuState = () => {
         const role = userProfileData?.role || 'default';
         const roleColor = getColorForRole(role);
-        
+
         if (isMenuToggled) {
-            leftMenu.classList.remove('w-16');
-            leftMenu.classList.add('w-64');
-            menuSpacer.classList.remove('w-16');
-            menuSpacer.classList.add('w-64');
+            leftMenu.classList.remove('w-16'); leftMenu.classList.add('w-64');
+            menuSpacer.classList.remove('w-16'); menuSpacer.classList.add('w-64');
             if (menuIcon) menuIcon.style.color = roleColor;
             if (menuText) menuText.style.color = roleColor;
         } else {
-            leftMenu.classList.remove('w-64');
-            leftMenu.classList.add('w-16');
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
+            leftMenu.classList.remove('w-64'); leftMenu.classList.add('w-16');
+            menuSpacer.classList.remove('w-64'); menuSpacer.classList.add('w-16');
             if (menuIcon) menuIcon.style.color = '';
             if (menuText) menuText.style.color = '';
         }
@@ -123,14 +141,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             span.classList.toggle('opacity-0', !isMenuToggled);
         });
     };
-  
+
     const updateMenuText = () => {
         const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
         if (myDataLinkSpan) {
             myDataLinkSpan.textContent = userProfileData.role === 'club' ? 'Kontaktná osoba' : 'Moje údaje';
         }
     };
-  
+
     const showRoleBasedLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink?.classList.remove('hidden');
@@ -175,6 +193,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             matchesHallLink?.classList.remove('hidden');
             cateringLink?.classList.add('hidden');
         } else {
+            // ostatné role
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -190,7 +209,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             cateringLink?.classList.add('hidden');
         }
     };
-  
+
     const saveMenuState = async () => {
         if (!userId) return;
         const userDocRef = doc(db, 'users', userId);
@@ -200,19 +219,21 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             window.showGlobalNotification?.('Nepodarilo sa uložiť nastavenia menu.', 'error');
         }
     };
-  
+
+    // Inicializácia
     applyMenuState();
     updateMenuText();
     showRoleBasedLinks();
     setTimeout(highlightActiveMenuLinkGray, 100);
-  
+
+    // Event listeners
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
         setTimeout(highlightActiveMenuLinkGray, 300);
     });
-  
+
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-16');
@@ -223,7 +244,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
-  
+
     leftMenu.addEventListener('mouseleave', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-64');
@@ -244,17 +265,16 @@ const addCustomStyles = () => {
         #left-menu a {
             transition: background-color 200ms ease, color 200ms ease;
         }
-        
         #left-menu a svg {
             transition: color 200ms ease;
         }
 
-        /* HOVER PRE VŠETKY RIADKY (aj aktívne) */
+        /* Hover pre VŠETKY riadky (aj aktívny) */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
-        /* Aktívny riadok - základný stav */
+        /* Aktívny riadok bez hoveru */
         #left-menu a.bg-\\[\\#F9FAFB\\],
         #left-menu a.dark\\:bg-gray-800\\/30 {
             background-color: #F9FAFB !important;
@@ -262,27 +282,13 @@ const addCustomStyles = () => {
         .dark #left-menu a.dark\\:bg-gray-800\\/30 {
             background-color: rgba(31, 41, 55, 0.3) !important;
         }
-
-        /* Zvyšok štýlov */
-        .bg-\\[\\#F9FAFB\\] { background-color: #F9FAFB; }
-        .dark .dark\\:bg-gray-800\\/30 { background-color: rgba(31, 41, 55, 0.3); }
-
-        .text-\\[\\#1F2937\\] { color: #1F2937; }
-        .dark .dark\\:text-\\[\\#1F2937\\]\\/90 { color: rgba(31, 41, 55, 0.9); }
-
-        .hover\\:text-white:hover { color: white; }
-        .dark .hover\\:dark\\:text-white:hover { color: white; }
-
-        #left-menu a:hover svg.hover\\:text-white,
-        .dark #left-menu a:hover svg.hover\\:dark\\:text-white {
-            color: white !important;
-        }
     `;
     document.head.appendChild(style);
 };
 
 addCustomStyles();
 
+// === Globálne volania ===
 window.addEventListener('globalDataUpdated', (event) => loadLeftMenu(event.detail));
 if (window.globalUserProfileData) {
     loadLeftMenu(window.globalUserProfileData);
