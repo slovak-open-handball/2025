@@ -684,7 +684,7 @@ const renderMyDataApp = (userProfileData, privateData) => {
     }
 };
 
-indow.addEventListener('dbInitialized', async () => {
+window.addEventListener('dbInitialized', async () => {
     console.log('logged-in-my-data: dbInitialized event received');
     // Ak už máme globalUserProfileData, načítame private dáta
     if (window.globalUserProfileData) {
