@@ -2678,6 +2678,8 @@ const handleSaveTeam = async (updatedTeamData) => {
             const clean = { ...item };
             delete clean._dateOfBirth;
             delete clean._address;
+            delete clean.dateOfBirth;
+            delete clean.address;
             return clean;
         });
     };
