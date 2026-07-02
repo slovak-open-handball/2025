@@ -235,6 +235,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     
     const showRoleBasedLinks = () => {
         if (userProfileData.role === 'admin') {
+            // Admin odkazy - vždy viditeľné
             addCategoriesLink?.classList.remove('hidden');
             addGroupsLink?.classList.remove('hidden');
             tournamentSettingsLink?.classList.remove('hidden');    
@@ -243,11 +244,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             notificationsLink?.classList.remove('hidden');
             teamRostersLink?.classList.add('hidden');
             
+            // 🔥 TEAMS-IN-GROUPS - pre admina VŽDY viditeľné
             if (teamsInGroupsLink) {
                 teamsInGroupsLink.classList.remove('hidden');
                 teamsInGroupsLink.style.display = '';
             }
             
+            // 🔥 MAPA - pre admina VŽDY viditeľná
             if (mapLink) {
                 mapLink.classList.remove('hidden');
                 mapLink.style.display = '';
@@ -293,6 +296,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else if (userProfileData.role === 'hall') {
+            // Pre hall - skryjeme všetky admin odkazy
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -314,6 +318,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else {
+            // Ostatné roly - skryjeme všetky admin odkazy
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -512,23 +517,6 @@ const addCustomStyles = () => {
                 color: white !important;
             }
             
-            /* --- JEDNOTNÝ HOVER EFEKT PRE NEAKTÍVNE STRÁNKY (ADMIN MODRÁ) --- */
-            #left-menu a:not(.bg-\\[\\#F9FAFB\\]):hover {
-                background-color: #dbeafe !important; /* bg-blue-100 */
-                color: #2563eb !important; /* text-blue-600 */
-            }
-            .dark #left-menu a:not(.dark\\:bg-gray-800\\/30):hover {
-                background-color: rgba(30, 58, 138, 0.3) !important; /* dark:bg-blue-900/30 */
-                color: #60a5fa !important; /* dark:text-blue-400 */
-            }
-            #left-menu a:not(.bg-\\[\\#F9FAFB\\]):hover svg {
-                color: #2563eb !important;
-            }
-            .dark #left-menu a:not(.dark\\:bg-gray-800\\/30):hover svg {
-                color: #60a5fa !important;
-            }
-            /* ---------------------------------------------------------------- */
-
             /* Bledšie farby pozadia pre rôzne roly */
             .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
             .dark .dark\\:bg-\\[\\#b06835\\]\\/10 { background-color: rgba(176, 104, 53, 0.1); }
