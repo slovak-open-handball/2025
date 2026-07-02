@@ -35,14 +35,17 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     // Načítanie počiatočných hodnôt z `userProfileData` do ref a vyčistenie formulára
     useEffect(() => {
         if (show && userProfileData) {
+            // Získame billing adresu z usersprivate (billingAddress)
+            const billingAddress = userProfileData.billingAddress || {};
+            
             // Uložíme pôvodné dáta do ref pre neskoršie porovnanie
             originalDataRef.current = {
                 clubName: userProfileData.billing?.clubName || '',
-                street: userProfileData.street || '',
-                houseNumber: userProfileData.houseNumber || '',
-                city: userProfileData.city || '',
-                postalCode: userProfileData.postalCode || '',
-                country: userProfileData.country || '',
+                street: billingAddress.street || '',
+                houseNumber: billingAddress.houseNumber || '',
+                city: billingAddress.city || '',
+                postalCode: billingAddress.postalCode || '',
+                country: billingAddress.country || '',
                 ico: userProfileData.billing?.ico || '',
                 dic: userProfileData.billing?.dic || '',
                 icdph: userProfileData.billing?.icdph || ''
@@ -126,18 +129,28 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
         
         try {
-            const updatedData = {
+            // Normalizujeme PSČ (odstránime medzery)
+            const normalizedPostalCode = postalCode.replace(/\s/g, '');
+            
+            // Dáta pre kolekciu 'users' (billing a základné údaje)
+            const userData = {
                 billing: {
                     clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
                     ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
                     dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
                     icdph: icdph !== '' ? icdph : userProfileData.billing?.icdph || ''
-                },
-                street: street !== '' ? street : userProfileData.street || '',
-                houseNumber: houseNumber !== '' ? houseNumber : userProfileData.houseNumber || '',
-                city: city !== '' ? city : userProfileData.city || '',
-                postalCode: postalCode !== '' ? postalCode.replace(/\s/g, '') : userProfileData.postalCode || '',
-                country: country !== '' ? country : userProfileData.country || ''
+                }
+            };
+            
+            // Dáta pre kolekciu 'usersprivate' (fakturačná adresa)
+            const privateData = {
+                billingAddress: {
+                    street: street !== '' ? street : (userProfileData.billingAddress?.street || ''),
+                    houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.billingAddress?.houseNumber || ''),
+                    city: city !== '' ? city : (userProfileData.billingAddress?.city || ''),
+                    postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.billingAddress?.postalCode || ''),
+                    country: country !== '' ? country : (userProfileData.billingAddress?.country || '')
+                }
             };
             
             // Logika pre vytvorenie záznamu o zmene v databáze
@@ -150,11 +163,11 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 'billing.ico': 'IČO',
                 'billing.dic': 'DIČ',
                 'billing.icdph': 'IČ DPH',
-                'street': 'Ulica',
-                'houseNumber': 'Číslo domu',
-                'city': 'Mesto',
-                'postalCode': 'PSČ',
-                'country': 'Krajina',
+                'billingAddress.street': 'Ulica (fakturačná)',
+                'billingAddress.houseNumber': 'Číslo domu (fakturačné)',
+                'billingAddress.city': 'Mesto (fakturačné)',
+                'billingAddress.postalCode': 'PSČ (fakturačné)',
+                'billingAddress.country': 'Krajina (fakturačná)',
             };
 
             const changes = {
@@ -162,16 +175,27 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 'billing.ico': ico,
                 'billing.dic': dic,
                 'billing.icdph': icdph,
-                'street': street,
-                'houseNumber': houseNumber,
-                'city': city,
-                'postalCode': postalCode.replace(/\s/g, ''),
-                'country': country,
+                'billingAddress.street': street,
+                'billingAddress.houseNumber': houseNumber,
+                'billingAddress.city': city,
+                'billingAddress.postalCode': normalizedPostalCode,
+                'billingAddress.country': country,
             };
 
             for (const key in changes) {
                 const newValue = changes[key];
-                const originalValue = key.startsWith('billing.') ? originalBillingData[key.substring(8)] : originalBillingData[key];
+                let originalValue;
+                
+                // Získame pôvodnú hodnotu podľa kľúča
+                if (key.startsWith('billing.')) {
+                    const fieldKey = key.substring(8); // odstránime 'billing.'
+                    originalValue = originalBillingData[fieldKey];
+                } else if (key.startsWith('billingAddress.')) {
+                    const fieldKey = key.substring(15); // odstránime 'billingAddress.'
+                    originalValue = originalBillingData[fieldKey];
+                } else {
+                    originalValue = originalBillingData[key];
+                }
 
                 if (newValue !== '' && getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
                     const fieldName = fieldNames[key] || key;
@@ -181,15 +205,21 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 }
             }
 
+            // Uložíme zmeny do notifikácií
             if (changeMessages.length > 0) {
-                 await addDoc(collection(db, 'notifications'), {
+                await addDoc(collection(db, 'notifications'), {
                     userEmail: user.email,
                     changes: changeMessages,
                     timestamp: new Date().toISOString(),
                 });
             }
             
-            await updateDoc(doc(db, "users", user.uid), updatedData);
+            // AKTUALIZÁCIA KOLEKCIE 'users'
+            await updateDoc(doc(db, "users", user.uid), userData);
+            
+            // AKTUALIZÁCIA KOLEKCIE 'usersprivate'
+            await updateDoc(doc(db, "usersprivate", user.uid), privateData);
+            
             window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
             onClose();
 
@@ -335,14 +365,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' },
-                        'Ulica'
+                        'Ulica (fakturačná)'
                     ),
                     React.createElement('input', {
                         type: 'text',
                         id: 'street',
                         value: street,
                         onChange: (e) => handleValueChange(setStreet, e.target.value),
-                        placeholder: userProfileData.street || '-',
+                        placeholder: userProfileData.billingAddress?.street || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -353,14 +383,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Číslo domu'
+                        'Číslo domu (fakturačné)'
                     ),
                     React.createElement('input', {
                         type: 'text',
                         id: 'houseNumber',
                         value: houseNumber,
                         onChange: (e) => handleValueChange(setHouseNumber, e.target.value),
-                        placeholder: userProfileData.houseNumber || '-',
+                        placeholder: userProfileData.billingAddress?.houseNumber || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -375,14 +405,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' },
-                        'Mesto'
+                        'Mesto (fakturačné)'
                     ),
                     React.createElement('input', {
                         type: 'text',
                         id: 'city',
                         value: city,
                         onChange: (e) => handleValueChange(setCity, e.target.value),
-                        placeholder: userProfileData.city || '-',
+                        placeholder: userProfileData.billingAddress?.city || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -393,7 +423,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' },
-                        'PSČ'
+                        'PSČ (fakturačné)'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -402,8 +432,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         // Použitie novej funkcie pre formátovanie
                         onChange: handlePostalCodeChange,
                         // Ak PSČ neexistuje, zobrazí sa pomlčka
-                        placeholder: userProfileData.postalCode
-                            ? formatPostalCodeDisplay(userProfileData.postalCode)
+                        placeholder: userProfileData.billingAddress?.postalCode
+                            ? formatPostalCodeDisplay(userProfileData.billingAddress.postalCode)
                             : '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -416,14 +446,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' },
-                    'Krajina'
+                    'Krajina (fakturačná)'
                 ),
                 React.createElement('input', {
                     type: 'text',
                     id: 'country',
                     value: country,
                     onChange: (e) => handleValueChange(setCountry, e.target.value),
-                    placeholder: userProfileData.country || '-',
+                    placeholder: userProfileData.billingAddress?.country || '-',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
                 })
@@ -489,7 +519,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     })
                 )
             ),
-             React.createElement(
+            React.createElement(
                 'div',
                 { className: 'flex justify-end mt-6' },
                 React.createElement(
