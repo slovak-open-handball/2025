@@ -2990,13 +2990,32 @@ const handleDeleteMember = async (team, member) => {
 
         await setDoc(userPrivateDocRef, privateData, { merge: true });
 
-        // Notifikácia
+        // === 3. NOTIFIKÁCIA DO FIRESTORE ===
         if (userEmail) {
-            await addDoc(collection(db, 'notifications'), {
+            const changes = [
+                `Odstránený člen: ${memberName} (${memberTypeLabel})`,
+                `Tím: ${teamName} (${category})`
+            ];
+            // Pridáme aj informáciu o dátume narodenia ak existuje
+            if (member.dateOfBirth) {
+                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(member.dateOfBirth)}`);
+            }
+            // Pridáme aj informáciu o čísle dresu ak existuje (pre hráčov)
+            if (member.jerseyNumber) {
+                changes.push(`Číslo dresu: ${member.jerseyNumber}`);
+            }
+            // Pridáme aj informáciu o registračnom čísle ak existuje (pre hráčov)
+            if (member.registrationNumber) {
+                changes.push(`Registračné číslo: ${member.registrationNumber}`);
+            }
+            
+            const notificationsRef = collection(db, 'notifications');
+            await addDoc(notificationsRef, {
                 userEmail,
-                changes: [`Odstránený člen: ${memberName} (${memberTypeLabel})`, `Tím: ${teamName} (${category})`],
+                changes,
                 timestamp: serverTimestamp()
             });
+            console.log('Notifikácia o odstránení člena uložená do Firestore.');
         }
 
         showLocalNotification('Člen bol odstránený.', 'success');
