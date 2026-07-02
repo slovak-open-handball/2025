@@ -4,12 +4,10 @@ const loadLeftMenu = async (userProfileData) => {
     if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) return;
-
         try {
             const response = await fetch('logged-in-left-menu.html');
-            if (!response.ok) {
-                throw new Error(`HTTP chyba! Stav: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP chyba! Stav: ${response.status}`);
+            
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
 
@@ -18,14 +16,7 @@ const loadLeftMenu = async (userProfileData) => {
             setupMenuListeners(userProfileData, db, userId);
 
             const leftMenuElement = document.getElementById('left-menu');
-            if (leftMenuElement) {
-                leftMenuElement.classList.remove('hidden');
-            }
-
-            // Podpora pre späť v histórii
-            window.addEventListener('popstate', () => {
-                setTimeout(highlightActiveMenuLinkGray, 100);
-            });
+            if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
             console.error('Chyba pri načítaní menu:', error);
         }
@@ -59,20 +50,19 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const matchesHallLink = document.getElementById('matches-hall-link');
     const cateringLink = document.getElementById('catering-link');
 
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        return;
-    }
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) return;
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
 
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
-       
+      
         menuLinks.forEach(link => {
             const href = link.getAttribute('href');
             if (!href) return;
 
+            // Odstránenie všetkých farebných tried
             link.classList.remove(
                 'bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300',
                 'bg-[#b06835]/20', 'dark:bg-[#b06835]/10', 'text-[#b06835]', 'dark:text-[#b06835]/80',
@@ -99,13 +89,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
             if (isActive) {
                 link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
-                link.classList.add('hover:text-white', 'hover:dark:text-white');
-                
-                const icon = link.querySelector('svg');
-                if (icon) {
-                    icon.style.color = '#1F2937';
-                    icon.classList.add('dark:text-[#1F2937]/90');
-                }
             }
         });
     };
@@ -124,7 +107,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const applyMenuState = () => {
         const role = userProfileData?.role || 'default';
         const roleColor = getColorForRole(role);
-
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16'); leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16'); menuSpacer.classList.add('w-64');
@@ -136,10 +118,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             if (menuIcon) menuIcon.style.color = '';
             if (menuText) menuText.style.color = '';
         }
-
-        menuTexts.forEach(span => {
-            span.classList.toggle('opacity-0', !isMenuToggled);
-        });
+        menuTexts.forEach(span => span.classList.toggle('opacity-0', !isMenuToggled));
     };
 
     const updateMenuText = () => {
@@ -150,6 +129,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     };
 
     const showRoleBasedLinks = () => {
+        // ... (vaša pôvodná logika zostáva rovnaká)
         if (userProfileData.role === 'admin') {
             addCategoriesLink?.classList.remove('hidden');
             addGroupsLink?.classList.remove('hidden');
@@ -193,7 +173,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             matchesHallLink?.classList.remove('hidden');
             cateringLink?.classList.add('hidden');
         } else {
-            // ostatné role
             addCategoriesLink?.classList.add('hidden');
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
@@ -236,10 +215,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
-            leftMenu.classList.remove('w-16');
-            leftMenu.classList.add('w-64');
-            menuSpacer.classList.remove('w-16');
-            menuSpacer.classList.add('w-64');
+            leftMenu.classList.remove('w-16'); leftMenu.classList.add('w-64');
+            menuSpacer.classList.remove('w-16'); menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
@@ -247,10 +224,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     leftMenu.addEventListener('mouseleave', () => {
         if (!isMenuToggled) {
-            leftMenu.classList.remove('w-64');
-            leftMenu.classList.add('w-16');
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
+            leftMenu.classList.remove('w-64'); leftMenu.classList.add('w-16');
+            menuSpacer.classList.remove('w-64'); menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
         }
     });
@@ -269,18 +244,16 @@ const addCustomStyles = () => {
             transition: color 200ms ease;
         }
 
-        /* Hover pre VŠETKY riadky (aj aktívny) */
+        /* Hover pre VŠETKY riadky → rovnaká farba */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
-        /* Aktívny riadok bez hoveru */
-        #left-menu a.bg-\\[\\#F9FAFB\\],
-        #left-menu a.dark\\:bg-gray-800\\/30 {
-            background-color: #F9FAFB !important;
-        }
-        .dark #left-menu a.dark\\:bg-gray-800\\/30 {
-            background-color: rgba(31, 41, 55, 0.3) !important;
+        /* Zabráni zmene farby textu pri hover */
+        #left-menu a:hover,
+        #left-menu a:hover .whitespace-nowrap,
+        #left-menu a:hover svg {
+            color: inherit !important;
         }
     `;
     document.head.appendChild(style);
@@ -288,7 +261,7 @@ const addCustomStyles = () => {
 
 addCustomStyles();
 
-// === Globálne volania ===
+// Globálne volania
 window.addEventListener('globalDataUpdated', (event) => loadLeftMenu(event.detail));
 if (window.globalUserProfileData) {
     loadLeftMenu(window.globalUserProfileData);
