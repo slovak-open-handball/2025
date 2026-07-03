@@ -12,19 +12,19 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
 
     const removeFields = (obj) => {
         if (!obj || typeof obj !== 'object') return;
+        
         // Odstránime priamo v objekte (aj podčiarknuté verzie)
-        delete obj.dateOfBirth;
-        delete obj.address;
-        delete obj._dateOfBirth;
-        delete obj._address;
-        delete obj._privateData;
-        delete obj.birthDate;
-        delete obj.gender;
-        delete obj.street;
-        delete obj.houseNumber;
-        delete obj.city;
-        delete obj.postalCode;
-        delete obj.country;
+        const keysToRemove = [
+            'dateOfBirth', 'address', '_dateOfBirth', '_address', 
+            '_privateData', 'birthDate', 'gender', 
+            'street', 'houseNumber', 'city', 'postalCode', 'country',
+            'address.street', 'address.houseNumber', 'address.city', 
+            'address.postalCode', 'address.country',
+            'date_of_birth', 'dob'
+        ];
+        keysToRemove.forEach(key => {
+            delete obj[key];
+        });
         
         // Rekurzívne prejdeme všetky vnorené polia
         Object.keys(obj).forEach(key => {
@@ -4725,6 +4725,7 @@ const clearFilter = (column) => {
                 
                 // AK EXISTUJÚ TÍMY - VYČISTÍME ICH OD OSOBNÝCH ÚDAJOV
                 if (finalDataToSave.teams) {
+                    // 🔧 DÔLEŽITÉ: Najprv vyčistíme existujúce tímy
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
                 
@@ -4752,7 +4753,7 @@ const clearFilter = (column) => {
                         // Tieto polia patria do users (nie sú osobné)
                         finalDataToSave[key] = value;
                     } else if (key === 'teams') {
-                        // Tímy už máme vyčistené vyššie, ale ak prišli z modálu, vyčistíme ich znova
+                        // 🔧 DÔLEŽITÉ: Vyčistíme tímy aj z updatedDataFromModal
                         if (value) {
                             const cleanedTeams = removeSensitiveFieldsFromTeams(value);
                             finalDataToSave[key] = cleanedTeams;
@@ -4768,6 +4769,11 @@ const clearFilter = (column) => {
                     } else {
                         finalDataToSave[key] = value;
                     }
+                }
+                
+                // 🔧 DÔLEŽITÉ: Ešte raz vyčistíme celý objekt pre istotu
+                if (finalDataToSave.teams) {
+                    finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
                 
                 // ----- ULOŽENIE DO USERSPRIVATE -----
