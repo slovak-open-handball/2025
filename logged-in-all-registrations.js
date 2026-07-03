@@ -1421,16 +1421,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     return changes;
 };
 
-// Pomocná funkcia na formátovanie PSČ
-const formatPostalCodeForDisplay = (postalCode) => {
-    if (!postalCode) return '-';
-    const cleaned = String(postalCode).replace(/\D/g, '');
-    if (cleaned.length === 5) {
-        return `${cleaned.slice(0,3)} ${cleaned.slice(3)}`;
-    }
-    return cleaned || '-';
-};
-
 // Pomocná funkcia na formátovanie názvov polí
 const formatLabel = (key) => {
     const labels = {
