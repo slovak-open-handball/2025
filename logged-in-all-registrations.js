@@ -5175,6 +5175,7 @@ const clearFilter = (column) => {
                             });
                         }
                     }
+                }
     
                 // ----- Uloženie do users a usersprivate -----
                 teamToUpdate[memberArrayPath] = currentMemberArray;
@@ -5207,15 +5208,15 @@ const clearFilter = (column) => {
             if (!docSnapshotForUpdate.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
-            const docDataForUpdate = docSnapshotForUpdate.data(); // Použijeme iný názov premennej
-            
+            const docDataForUpdate = docSnapshotForUpdate.data();
+    
             const { updatedObject, topLevelField } = updateNestedObjectByPath(docDataForUpdate, originalDataPath, updatedDataFromModal);
-            
+    
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
             updates['_privateData'] = deleteField();
             await updateDoc(targetDocRef, updates);
-            
+    
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal();
     
