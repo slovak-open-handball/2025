@@ -1379,33 +1379,38 @@ const formatLabel = (key) => {
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
+    // Kľúče, ktoré sa úplne ignorujú (nikdy sa nesledujú)
     const universallyIgnoredKeys = new Set([
         '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
         '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
         'registrationDate', 'passwordLastChanged', 'teams', 'categories', 'timestamp',
-        'note', '_dateOfBirth', '_address'
+        'note', '_dateOfBirth', '_address', '_privateData', // pridané _privateData
+        'birthDate', 'gender', 'street', 'houseNumber', 'city', 'postalCode', 'country' // tieto patria do private
     ]);
 
+    // Cesty, ktoré sa ignorujú (vrátane všetkých podciest)
     const ignoredPathPatterns = new Set([
         'meals',
         'packageDetails.meals',
         'packageDetails.createdAt',
         'packageDetails.updatedAt',
         'packageDetails.accommodationTypes',
-        'accommodationTypes'
+        'accommodationTypes',
+        'billing.address', // PRIDANÉ: ignorujeme celú fakturačnú adresu
+        'address',         // PRIDANÉ: ignorujeme adresu na úrovni tímu
+        '_privateData'     // PRIDANÉ: ignorujeme celé _privateData
     ]);
 
-    const getBetterLabel = (path, originalLabel) => {
-        if (path === 'packageDetails.price') {
-            return 'Cena balíka';
-        }
-        return originalLabel;
-    };
-
+    // Normalizácia hodnoty pre porovnanie (aby sme porovnávali len zmenené polia)
     const normalizeValueForComparison = (value, path) => {
         if (value === null || value === undefined) return '';
+
+        // Špeciálne ošetrenie pre polia, ktoré by mali byť ignorované
+        if (path.includes('billing.address') || path === 'address') {
+            return ''; // vrátime prázdny reťazec, aby sa nezaznamenali zmeny
+        }
 
         if (path === 'selectedDates' && Array.isArray(value)) {
             return value.map(dateStr => {
@@ -1444,6 +1449,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             if (path === 'packageDetails.accommodationTypes' && Array.isArray(value)) {
                 return value.join(', ');
             }
+            // Ak ide o billing objekt, ignorujeme ho (vrátime prázdny reťazec)
+            if (path === 'billing' || path.startsWith('billing.')) {
+                return '';
+            }
             try {
                 return JSON.stringify(value);
             } catch (e) {
@@ -1465,26 +1474,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         return false;
     };
 
-    // Pomocná funkcia na porovnanie adresy ako samostatných polí
+    // Pomocná funkcia na porovnanie adresy ako samostatných polí (ale ignorujeme ju)
     const compareAddress = (origAddr, updAddr, prefix = '') => {
-        const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
-        addrFields.forEach(field => {
-            const origVal = origAddr?.[field] || '';
-            const updVal = updAddr?.[field] || '';
-            if (origVal !== updVal) {
-                const label = formatLabel(`address.${field}`);
-                const displayOrig = origVal || '-';
-                const displayUpd = updVal || '-';
-                // Pre PSČ formátovať s medzerou
-                let finalUpd = displayUpd;
-                let finalOrig = displayOrig;
-                if (field === 'postalCode') {
-                    finalOrig = formatPostalCodeForDisplay(origVal);
-                    finalUpd = formatPostalCodeForDisplay(updVal);
-                }
-                changes.push(`Zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
-            }
-        });
+        // Táto funkcia sa už nevolá, lebo adresy ignorujeme cez ignorePath
+        return;
     };
 
     const compareObjects = (origObj, updObj, pathPrefix = '') => {
@@ -1492,6 +1485,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         for (const key of nestedKeys) {
             const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
+            // Ignorujeme zakázané kľúče na úrovni objektu
             if (universallyIgnoredKeys.has(key)) continue;
             if (shouldIgnorePath(currentPath)) continue;
 
@@ -1507,11 +1501,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                 continue;
             }
 
-            // Špeciálne spracovanie pre address – rozložíme na jednotlivé polia
-            if (key === 'address') {
-                const origAddr = origObj?.address || {};
-                const updAddr = updObj?.address || {};
-                compareAddress(origAddr, updAddr, currentPath);
+            // Ak ide o adresu, preskočíme ju (už je ignorovaná cez shouldIgnorePath)
+            if (key === 'address' || key === 'billing') {
                 continue;
             }
 
@@ -1562,10 +1553,11 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
             const valueA = normalizeValueForComparison(origValue, currentPath);
             const valueB = normalizeValueForComparison(updValue, currentPath);
 
-            if (valueA !== valueB) {
+            if (valueA !== valueB && valueA !== '' && valueB !== '') {
                 const originalLabel = formatLabel(currentPath);
                 const betterLabel = getBetterLabel(currentPath, originalLabel);
                 let changeDescription = `Zmena ${betterLabel}: z '${valueA || '-'}' na '${valueB || '-'}'`;
+                // Overíme, či už táto zmena neexistuje
                 if (!changes.includes(changeDescription)) {
                     changes.push(changeDescription);
                 }
@@ -1583,7 +1575,10 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         changes.push(`Zmena dopravy: z '${originalArrival}' na '${updatedArrival}'`);
     }
 
-    return changes;
+    // Odstránime duplicitné zmeny (napr. ak sa zmenilo telefónne číslo, nechceme záznam o zmene kontaktPhoneNumber aj phoneNumber)
+    const uniqueChanges = [...new Set(changes)];
+
+    return uniqueChanges;
 };
 
 // Helper to format values for display in input fields
@@ -3324,6 +3319,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
+
+                                    delete originalDataForCompare._privateData;
+                                    delete modifiedDataForCompare._privateData;
+                                    if (originalDataForCompare.billing) delete originalDataForCompare.billing.address;
+                                    if (modifiedDataForCompare.billing) delete modifiedDataForCompare.billing.address;
                         
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
