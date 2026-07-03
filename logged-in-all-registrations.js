@@ -4374,8 +4374,8 @@ const clearFilter = (column) => {
                 // Skontrolujeme, či sa názov klubu naozaj zmenil
                 // Ak updatedClubName je undefined, znamená to, že sa pole nezmenilo
                 if (updatedClubName !== undefined && originalClubName !== updatedClubName) {
-                    const displayOriginal = originalClubName || 'prázdne';
-                    const displayUpdated = updatedClubName || 'prázdne';
+                    const displayOriginal = originalClubName || '-';
+                    const displayUpdated = updatedClubName || '-';
                     allChanges.push(`Zmena názvu klubu: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
     
@@ -4383,8 +4383,8 @@ const clearFilter = (column) => {
                 const originalIco = currentDocData.billing?.ico || '';
                 const updatedIco = finalDataToSave['billing.ico'];
                 if (updatedIco !== undefined && originalIco !== updatedIco) {
-                    const displayOriginal = originalIco || 'prázdne';
-                    const displayUpdated = updatedIco || 'prázdne';
+                    const displayOriginal = originalIco || '-';
+                    const displayUpdated = updatedIco || '-';
                     allChanges.push(`Zmena IČO: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
 
@@ -4392,8 +4392,8 @@ const clearFilter = (column) => {
                 const originalDic = currentDocData.billing?.dic || '';
                 const updatedDic = finalDataToSave['billing.dic'];
                 if (updatedDic !== undefined && originalDic !== updatedDic) {
-                    const displayOriginal = originalDic || 'prázdne';
-                    const displayUpdated = updatedDic || 'prázdne';
+                    const displayOriginal = originalDic || '-';
+                    const displayUpdated = updatedDic || '-';
                     allChanges.push(`Zmena DIČ: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
 
@@ -4401,8 +4401,8 @@ const clearFilter = (column) => {
                 const originalIcDph = currentDocData.billing?.icDph || '';
                 const updatedIcDph = finalDataToSave['billing.icDph'];
                 if (updatedIcDph !== undefined && originalIcDph !== updatedIcDph) {
-                    const displayOriginal = originalIcDph || 'prázdne';
-                    const displayUpdated = updatedIcDph || 'prázdne';
+                    const displayOriginal = originalIcDph || '-';
+                    const displayUpdated = updatedIcDph || '-';
                     allChanges.push(`Zmena IČ DPH: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
     
