@@ -4179,54 +4179,51 @@ const clearFilter = (column) => {
                 
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
-                        // OPRAVA: Ak je hodnota prázdny reťazec, použijeme deleteField()
-                        const billingUpdate = {};
+                        // OPRAVA: Používame dotovú notáciu pre deleteField()
                         
-                        // ClubName - ak je prázdny, odstránime ho
+                        // ClubName
                         if (value.clubName !== undefined) {
                             if (value.clubName === '') {
-                                billingUpdate.clubName = deleteField();
+                                finalDataToSave['billing.clubName'] = deleteField();
                             } else {
-                                billingUpdate.clubName = value.clubName;
+                                finalDataToSave['billing.clubName'] = value.clubName;
                             }
                         } else if (currentDocData.billing?.clubName !== undefined) {
-                            billingUpdate.clubName = currentDocData.billing.clubName;
+                            finalDataToSave['billing.clubName'] = currentDocData.billing.clubName;
                         }
                         
                         // IČO
                         if (value.ico !== undefined) {
                             if (value.ico === '') {
-                                billingUpdate.ico = deleteField();
+                                finalDataToSave['billing.ico'] = deleteField();
                             } else {
-                                billingUpdate.ico = value.ico;
+                                finalDataToSave['billing.ico'] = value.ico;
                             }
                         } else if (currentDocData.billing?.ico !== undefined) {
-                            billingUpdate.ico = currentDocData.billing.ico;
+                            finalDataToSave['billing.ico'] = currentDocData.billing.ico;
                         }
                         
                         // DIČ
                         if (value.dic !== undefined) {
                             if (value.dic === '') {
-                                billingUpdate.dic = deleteField();
+                                finalDataToSave['billing.dic'] = deleteField();
                             } else {
-                                billingUpdate.dic = value.dic;
+                                finalDataToSave['billing.dic'] = value.dic;
                             }
                         } else if (currentDocData.billing?.dic !== undefined) {
-                            billingUpdate.dic = currentDocData.billing.dic;
+                            finalDataToSave['billing.dic'] = currentDocData.billing.dic;
                         }
                         
                         // IČ DPH
                         if (value.icDph !== undefined) {
                             if (value.icDph === '') {
-                                billingUpdate.icDph = deleteField();
+                                finalDataToSave['billing.icDph'] = deleteField();
                             } else {
-                                billingUpdate.icDph = value.icDph;
+                                finalDataToSave['billing.icDph'] = value.icDph;
                             }
                         } else if (currentDocData.billing?.icDph !== undefined) {
-                            billingUpdate.icDph = currentDocData.billing.icDph;
+                            finalDataToSave['billing.icDph'] = currentDocData.billing.icDph;
                         }
-                        
-                        finalDataToSave.billing = billingUpdate;
                         
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         finalDataToSave[key] = value;
