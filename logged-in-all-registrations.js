@@ -4835,6 +4835,7 @@ const clearFilter = (column) => {
     
                     const updates = {};
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
+                    updates['_privateData'] = deleteField(); // PRIDANÉ: odstránime _privateData z dokumentu
                     await updateDoc(targetDocRef, updates);
     
                     setUserNotificationMessage("Nový tím bol pridaný.", 'success');
@@ -4870,6 +4871,7 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
+                updates['_privateData'] = deleteField(); // PRIDANÉ: odstránime _privateData z dokumentu
                 await updateDoc(targetDocRef, updates);
     
                 setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
@@ -5103,6 +5105,7 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${category}`] = cleanedTeamsForCategory;
+                updates['_privateData'] = deleteField(); // PRIDANÉ: odstránime _privateData z dokumentu
                 await updateDoc(targetDocRef, updates);
     
                 // Uložíme usersprivate
@@ -5129,6 +5132,7 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
+            updates['_privateData'] = deleteField(); // PRIDANÉ: odstránime _privateData z dokumentu
             await updateDoc(targetDocRef, updates);
     
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
