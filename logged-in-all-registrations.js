@@ -4308,36 +4308,73 @@ const clearFilter = (column) => {
             
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
             
-                const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
-                const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
+                // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY POUŽÍVATEĽA
+                const userEmail = window.auth.currentUser?.email;
+                const targetUserEmail = currentDocData.email || 'Neznámy email';
+                const userName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
                 
+                // Získanie zmien pomocou getChangesForNotification
                 const baseChanges = getChangesForNotification(
                     currentDocData,
                     finalDataToSave,
                     formatDateToDMMYYYY
                 );
                 
-                const changesWithClubName = baseChanges.map(change => {
-                    if (change.includes('Zmena Názov klubu')) {
-                        return `Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`;
+                // Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
+                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
+                additionalFields.forEach(field => {
+                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
+                        ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
+                        : '';
+                    const updatedVal = finalDataToSave[field] !== undefined && finalDataToSave[field] !== null 
+                        ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
+                        : '';
+                    if (originalVal !== updatedVal) {
+                        const label = formatLabel(field);
+                        baseChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
                     }
-                    return `Klub ${updatedClubName}: ${change}`;
                 });
                 
-                if (baseChanges.length === 0 && originalClubName !== updatedClubName) {
-                    changesWithClubName.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
+                // Kontrola zmeny názvu klubu
+                const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
+                const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
+                if (originalClubName !== updatedClubName) {
+                    baseChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
                 }
                 
-                if (changesWithClubName.length > 0) {
-                    const userEmail = window.auth.currentUser?.email;
-                    if (userEmail) {
-                        const notificationsCollectionRef = collection(db, 'notifications');
-                        await addDoc(notificationsCollectionRef, {
-                            userEmail,
-                            changes: changesWithClubName,
-                            timestamp: serverTimestamp()
-                        });
+                // Kontrola zmeny roly
+                const originalRole = currentDocData.role || 'Neznáma rola';
+                const updatedRole = finalDataToSave.role || 'Neznáma rola';
+                if (originalRole !== updatedRole) {
+                    baseChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
+                }
+                
+                // Kontrola zmeny schválenia
+                if (currentDocData.approved !== undefined && finalDataToSave.approved !== undefined) {
+                    const originalApproved = currentDocData.approved ? 'Áno' : 'Nie';
+                    const updatedApproved = finalDataToSave.approved ? 'Áno' : 'Nie';
+                    if (originalApproved !== updatedApproved) {
+                        baseChanges.push(`Zmena schválenia: z '${originalApproved}' na '${updatedApproved}'`);
                     }
+                }
+                
+                // Ak existujú zmeny, uložíme ich do notifikácií
+                if (baseChanges.length > 0 && userEmail) {
+                    // Pridáme informáciu o tom, kto vykonal zmenu
+                    const changesWithContext = baseChanges.map(change => 
+                        `Používateľ ${userName} (${targetUserEmail}): ${change}`
+                    );
+                    
+                    // Pridáme aj informáciu, že zmenu vykonal admin/prihlasený používateľ
+                    const adminName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy admin';
+                    changesWithContext.push(`Zmenu vykonal: ${adminName} (${userEmail})`);
+                    
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail: targetUserEmail,
+                        changes: changesWithContext,
+                        timestamp: serverTimestamp()
+                    });
                 }
             
                 await updateDoc(targetDocRef, finalDataToSave);
