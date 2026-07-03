@@ -6,48 +6,41 @@ import { countryDialCodes } from './countryDialCodes.js';
 // ============================================================
 const removeSensitiveFieldsFromTeams = (teamsObj) => {
     if (!teamsObj) return teamsObj;
-    
-    // Hlboká kópia, aby sme nemenili pôvodné dáta
     const clean = JSON.parse(JSON.stringify(teamsObj));
+    const forbiddenKeys = new Set([
+        'dateOfBirth', 'address', '_dateOfBirth', '_address',
+        '_privateData', 'birthDate', 'gender',
+        'street', 'houseNumber', 'city', 'postalCode', 'country',
+        'date_of_birth', 'dob'
+    ]);
 
-    const removeFields = (obj) => {
+    const traverse = (obj) => {
         if (!obj || typeof obj !== 'object') return;
-        
-        // Odstránime priamo v objekte (aj podčiarknuté verzie)
-        const keysToRemove = [
-            'dateOfBirth', 'address', '_dateOfBirth', '_address', 
-            '_privateData', 'birthDate', 'gender', 
-            'street', 'houseNumber', 'city', 'postalCode', 'country',
-            'address.street', 'address.houseNumber', 'address.city', 
-            'address.postalCode', 'address.country',
-            'date_of_birth', 'dob'
-        ];
-        keysToRemove.forEach(key => {
-            delete obj[key];
-        });
-        
-        // Rekurzívne prejdeme všetky vnorené polia
-        Object.keys(obj).forEach(key => {
-            const val = obj[key];
-            if (Array.isArray(val)) {
-                val.forEach(item => removeFields(item));
-            } else if (val && typeof val === 'object') {
-                removeFields(val);
+        // Odstránime zakázané kľúče na tejto úrovni
+        for (const key of Object.keys(obj)) {
+            if (forbiddenKeys.has(key)) {
+                delete obj[key];
+            } else {
+                const val = obj[key];
+                if (Array.isArray(val)) {
+                    val.forEach(item => traverse(item));
+                } else if (val && typeof val === 'object') {
+                    traverse(val);
+                }
             }
-        });
+        }
     };
 
-    // Prejdeme všetky kategórie a tímy
-    if (Array.isArray(teamsObj)) {
-        teamsObj.forEach(team => removeFields(team));
+    // Pre každú kategóriu a tím
+    if (Array.isArray(clean)) {
+        clean.forEach(team => traverse(team));
     } else {
-        Object.values(teamsObj).forEach(teams => {
+        Object.values(clean).forEach(teams => {
             if (Array.isArray(teams)) {
-                teams.forEach(team => removeFields(team));
+                teams.forEach(team => traverse(team));
             }
         });
     }
-
     return clean;
 };
 
