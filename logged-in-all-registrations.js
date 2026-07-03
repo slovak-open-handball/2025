@@ -5297,7 +5297,14 @@ const clearFilter = (column) => {
                                                 onClick: toggleAllRows,
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                             },
-                                            allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
+                                            (() => {
+                                                const allUserIds = filteredUsers.map(user => user.id);
+                                                const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
+                                                const allUsersExpanded = allUserIds.length > 0 && allUserIds.every(id => expandedRows[id]);
+                                                const allTeamsExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
+                                                const allExpanded = allUsersExpanded && allTeamsExpanded;
+                                                return allExpanded ? '▲' : '▼';
+                                            })()
                                             )
                                         ),
                                         React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Kategória'),
