@@ -1350,6 +1350,20 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         changes.push(`Zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
     }
     
+    // PRIDAJTE KONTROLU TELEFÓNNEHO ČÍSLA
+    const originalPhone = original.contactPhoneNumber || '';
+    const updatedPhone = updated.contactPhoneNumber || '';
+    if (originalPhone !== updatedPhone) {
+        // Naformátujeme telefónne číslo pre lepšie zobrazenie
+        const formatPhone = (phone) => {
+            if (!phone) return '-';
+            const { dialCode, numberWithoutDialCode } = parsePhoneNumber(phone, countryDialCodes);
+            const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+            return `${dialCode} ${formattedNumber}`.trim();
+        };
+        changes.push(`Zmena Telefónneho čísla: z '${formatPhone(originalPhone)}' na '${formatPhone(updatedPhone)}'`);
+    }
+    
     const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
     addrFields.forEach(field => {
         const origVal = original.address?.[field] || '';
@@ -4321,7 +4335,7 @@ const clearFilter = (column) => {
                 );
                 
                 // Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
-                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
+                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
                         ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
@@ -4331,7 +4345,18 @@ const clearFilter = (column) => {
                         : '';
                     if (originalVal !== updatedVal) {
                         const label = formatLabel(field);
-                        baseChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        // Špeciálne formátovanie pre telefónne číslo
+                        if (field === 'contactPhoneNumber') {
+                            const formatPhone = (phone) => {
+                                if (!phone) return '-';
+                                const { dialCode, numberWithoutDialCode } = parsePhoneNumber(phone, countryDialCodes);
+                                const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+                                return `${dialCode} ${formattedNumber}`.trim();
+                            };
+                            baseChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                        } else {
+                            baseChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        }
                     }
                 });
                 
