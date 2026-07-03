@@ -4266,6 +4266,9 @@ const clearFilter = (column) => {
                         if (value) {
                             finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
                         }
+                    } else if (key === 'contactPhoneNumber') {
+                        // Pridáme telefónne číslo do finalDataToSave, aby ho getChangesForNotification našlo
+                        finalDataToSave[key] = value;
                     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                         if (key !== 'address' && key !== 'billing') {
                             finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
