@@ -4368,31 +4368,42 @@ const clearFilter = (column) => {
                 });
     
                 // 4. Kontrola zmeny názvu klubu
-                const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
-                const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
-                if (originalClubName !== updatedClubName) {
-                    allChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
+                const originalClubName = currentDocData.billing?.clubName || '';
+                const updatedClubName = finalDataToSave['billing.clubName'];
+
+                // Skontrolujeme, či sa názov klubu naozaj zmenil
+                // Ak updatedClubName je undefined, znamená to, že sa pole nezmenilo
+                if (updatedClubName !== undefined && originalClubName !== updatedClubName) {
+                    const displayOriginal = originalClubName || 'prázdne';
+                    const displayUpdated = updatedClubName || 'prázdne';
+                    allChanges.push(`Zmena názvu klubu: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
     
                 // 5. Kontrola zmeny IČO
                 const originalIco = currentDocData.billing?.ico || '';
-                const updatedIco = finalDataToSave.billing?.ico || '';
-                if (originalIco !== updatedIco) {
-                    allChanges.push(`Zmena IČO: z '${originalIco || '-'}' na '${updatedIco || '-'}'`);
+                const updatedIco = finalDataToSave['billing.ico'];
+                if (updatedIco !== undefined && originalIco !== updatedIco) {
+                    const displayOriginal = originalIco || 'prázdne';
+                    const displayUpdated = updatedIco || 'prázdne';
+                    allChanges.push(`Zmena IČO: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
-    
+
                 // 6. Kontrola zmeny DIČ
                 const originalDic = currentDocData.billing?.dic || '';
-                const updatedDic = finalDataToSave.billing?.dic || '';
-                if (originalDic !== updatedDic) {
-                    allChanges.push(`Zmena DIČ: z '${originalDic || '-'}' na '${updatedDic || '-'}'`);
+                const updatedDic = finalDataToSave['billing.dic'];
+                if (updatedDic !== undefined && originalDic !== updatedDic) {
+                    const displayOriginal = originalDic || 'prázdne';
+                    const displayUpdated = updatedDic || 'prázdne';
+                    allChanges.push(`Zmena DIČ: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
-    
+
                 // 7. Kontrola zmeny IČ DPH
                 const originalIcDph = currentDocData.billing?.icDph || '';
-                const updatedIcDph = finalDataToSave.billing?.icDph || '';
-                if (originalIcDph !== updatedIcDph) {
-                    allChanges.push(`Zmena IČ DPH: z '${originalIcDph || '-'}' na '${updatedIcDph || '-'}'`);
+                const updatedIcDph = finalDataToSave['billing.icDph'];
+                if (updatedIcDph !== undefined && originalIcDph !== updatedIcDph) {
+                    const displayOriginal = originalIcDph || 'prázdne';
+                    const displayUpdated = updatedIcDph || 'prázdne';
+                    allChanges.push(`Zmena IČ DPH: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
     
                 // 8. Kontrola zmeny roly
