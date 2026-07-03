@@ -4239,21 +4239,9 @@ const clearFilter = (column) => {
                         }
                     } else {
                         finalDataToSave[key] = value;
-                    } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
-                        finalDataToSave[key] = value;
-                    } else if (key === 'teams') {
-                        if (value) {
-                            finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
-                        }
-                    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                        if (key !== 'address' && key !== 'billing') {
-                            finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
-                        }
-                    } else {
-                        finalDataToSave[key] = value;
                     }
                 }
-            
+                            
                 if (finalDataToSave.teams) {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
