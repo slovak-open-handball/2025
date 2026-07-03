@@ -3157,7 +3157,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 });
                         
-                                const isAddingNewMember = isNewEntryFlag && (
+                                const isAddingNewMember = isNewEntry && (
                                     editModalTitle.toLowerCase().includes('pridať nový hráč') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (muž)') ||
