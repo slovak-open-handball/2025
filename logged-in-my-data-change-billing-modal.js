@@ -106,8 +106,9 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         );
     };
 
-    // Pomocná funkcia na vytvorenie objektu pre updateDoc - ak je hodnota prázdna, použije deleteField()
-    const createUpdateObject = (data, originalData) => {
+    // OPRAVENÁ: Pomocná funkcia na vytvorenie objektu pre updateDoc
+    // Teraz vracia objekt s dotovou notáciou pre deleteField()
+    const createUpdateObject = (data, originalData, prefix) => {
         const updateObj = {};
         
         for (const [key, value] of Object.entries(data)) {
@@ -116,11 +117,12 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             
             // Ak sa hodnota zmenila
             if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                const path = prefix ? `${prefix}.${key}` : key;
                 if (newValue === '') {
                     // Ak je nová hodnota prázdna, použijeme deleteField() na odstránenie z databázy
-                    updateObj[key] = deleteField();
+                    updateObj[path] = deleteField();
                 } else {
-                    updateObj[key] = newValue;
+                    updateObj[path] = newValue;
                 }
             }
         }
@@ -169,22 +171,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 icDph: icDph
             };
             
-            // Vytvoríme update objekt pre billing - prázdne polia sa odstránia
-            const billingUpdate = createUpdateObject(billingData, {
+            // Vytvoríme update objekt pre billing s prefixom 'billing'
+            // Prázdne polia sa odstránia pomocou deleteField() s dotovou notáciou
+            const userUpdate = createUpdateObject(billingData, {
                 clubName: originalData.clubName,
                 ico: originalData.ico,
                 dic: originalData.dic,
                 icDph: originalData.icDph
-            });
-            
-            // Ak sú nejaké zmeny v billing, pripravíme update pre users kolekciu
-            let userUpdate = {};
-            if (Object.keys(billingUpdate).length > 0) {
-                // Zabalíme do billing objektu
-                userUpdate = {
-                    billing: billingUpdate
-                };
-            }
+            }, 'billing');
             
             // ----- PRÍPRAVA DÁT PRE KOLEKCIU 'usersprivate' (ADRESA) -----
             const addressData = {
@@ -195,25 +189,17 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 country: country
             };
             
-            // Vytvoríme update objekt pre adresu - prázdne polia sa odstránia
-            const addressUpdate = createUpdateObject(addressData, {
+            // Vytvoríme update objekt pre adresu s prefixom 'address'
+            // Prázdne polia sa odstránia pomocou deleteField() s dotovou notáciou
+            const privateUpdate = createUpdateObject(addressData, {
                 street: originalData.street,
                 houseNumber: originalData.houseNumber,
                 city: originalData.city,
                 postalCode: originalData.postalCode,
                 country: originalData.country
-            });
-            
-            // Ak sú nejaké zmeny v adrese, pripravíme update pre usersprivate kolekciu
-            let privateUpdate = {};
-            if (Object.keys(addressUpdate).length > 0) {
-                privateUpdate = {
-                    address: addressUpdate
-                };
-            }
+            }, 'address');
             
             // ----- ZMENA: ZISTÍME, ČI NAOZAJ DOŠLO K ZMENÁM -----
-            // Kontrola, či máme čo ukladať
             if (Object.keys(userUpdate).length === 0 && Object.keys(privateUpdate).length === 0) {
                 window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
                 setLoading(false);
