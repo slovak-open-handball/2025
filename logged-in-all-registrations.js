@@ -4289,12 +4289,28 @@ const clearFilter = (column) => {
             
                 if (!privateData || typeof privateData !== 'object') privateData = {};
             
+                // NAČÍTANIE PÔVODNÝCH HODNÔT Z PRIVATE DATA PRE NOTIFIKÁCIE
+                const originalPrivateAddress = privateData.address || {};
+                const originalStreet = originalPrivateAddress.street || '';
+                const originalHouseNumber = originalPrivateAddress.houseNumber || '';
+                const originalCity = originalPrivateAddress.city || '';
+                const originalPostalCode = originalPrivateAddress.postalCode || '';
+                const originalCountry = originalPrivateAddress.country || '';
+            
+                // AKTUÁLNE HODNOTY Z MODÁLU
+                const updatedStreet = updatedDataFromModal.street !== undefined ? updatedDataFromModal.street : currentDocData.street || '';
+                const updatedHouseNumber = updatedDataFromModal.houseNumber !== undefined ? updatedDataFromModal.houseNumber : currentDocData.houseNumber || '';
+                const updatedCity = updatedDataFromModal.city !== undefined ? updatedDataFromModal.city : currentDocData.city || '';
+                const updatedPostalCode = updatedDataFromModal.postalCode !== undefined ? updatedDataFromModal.postalCode : currentDocData.postalCode || '';
+                const updatedCountry = updatedDataFromModal.country !== undefined ? updatedDataFromModal.country : currentDocData.country || '';
+            
+                // ULOŽENIE DO PRIVATE DATA
                 privateData.address = {
-                    street: updatedDataFromModal.street || currentDocData.street || '',
-                    houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
-                    city: updatedDataFromModal.city || currentDocData.city || '',
-                    postalCode: updatedDataFromModal.postalCode || currentDocData.postalCode || '',
-                    country: updatedDataFromModal.country || currentDocData.country || ''
+                    street: updatedStreet,
+                    houseNumber: updatedHouseNumber,
+                    city: updatedCity,
+                    postalCode: updatedPostalCode,
+                    country: updatedCountry
                 };
             
                 if (updatedDataFromModal.birthDate) {
@@ -4302,11 +4318,11 @@ const clearFilter = (column) => {
                 }
             
                 privateData.billingAddress = {
-                    street: updatedDataFromModal.street || currentDocData.street || '',
-                    houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
-                    city: updatedDataFromModal.city || currentDocData.city || '',
-                    postalCode: updatedDataFromModal.postalCode || currentDocData.postalCode || '',
-                    country: updatedDataFromModal.country || currentDocData.country || ''
+                    street: updatedStreet,
+                    houseNumber: updatedHouseNumber,
+                    city: updatedCity,
+                    postalCode: updatedPostalCode,
+                    country: updatedCountry
                 };
             
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
@@ -4317,23 +4333,43 @@ const clearFilter = (column) => {
                 
                 // EMAIL ADMINA (prihlaseného používateľa)
                 const adminEmail = window.auth.currentUser?.email;
-                // EMAIL UPRAVOVANÉHO POUŽÍVATEĽA
-                const targetUserEmail = currentDocData.email || 'Neznámy email';
                 const targetUserName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
-                const targetClubName = currentDocData.billing?.clubName || 'Neznámy klub';  // <--- PRIDANÉ
+                const targetClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 
-                // Získanie zmien pomocou getChangesForNotification
                 let allChanges = [];
-                
-                // 1. Zmeny z getChangesForNotification
+            
+                // 1. Zmeny z getChangesForNotification (pre polia, ktoré sú v finalDataToSave)
                 const baseChanges = getChangesForNotification(
                     currentDocData,
                     finalDataToSave,
                     formatDateToDMMYYYY
                 );
                 allChanges = [...baseChanges];
-                
-                // 2. Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
+            
+                // 2. PRIDANÉ: Kontrola zmien adresy (street, houseNumber, city, postalCode, country)
+                const addressFields = [
+                    { key: 'street', label: 'Ulica', orig: originalStreet, upd: updatedStreet },
+                    { key: 'houseNumber', label: 'Popisné číslo', orig: originalHouseNumber, upd: updatedHouseNumber },
+                    { key: 'city', label: 'Mesto/obec', orig: originalCity, upd: updatedCity },
+                    { key: 'postalCode', label: 'PSČ', orig: originalPostalCode, upd: updatedPostalCode },
+                    { key: 'country', label: 'Krajina', orig: originalCountry, upd: updatedCountry }
+                ];
+            
+                addressFields.forEach(({ key, label, orig, upd }) => {
+                    const origVal = orig || '';
+                    const updVal = upd || '';
+                    if (origVal !== updVal) {
+                        let displayOrig = origVal || '-';
+                        let displayUpd = updVal || '-';
+                        if (key === 'postalCode') {
+                            displayOrig = formatPostalCodeForDisplay(origVal);
+                            displayUpd = formatPostalCodeForDisplay(updVal);
+                        }
+                        allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
+                    }
+                });
+            
+                // 3. Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
                 const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
@@ -4357,22 +4393,22 @@ const clearFilter = (column) => {
                         }
                     }
                 });
-                
-                // 3. Kontrola zmeny názvu klubu
+            
+                // 4. Kontrola zmeny názvu klubu
                 const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
                 if (originalClubName !== updatedClubName) {
                     allChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
                 }
-                
-                // 4. Kontrola zmeny roly
+            
+                // 5. Kontrola zmeny roly
                 const originalRole = currentDocData.role || 'Neznáma rola';
                 const updatedRole = finalDataToSave.role || 'Neznáma rola';
                 if (originalRole !== updatedRole) {
                     allChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
                 }
-                
-                // 5. Kontrola zmeny schválenia
+            
+                // 6. Kontrola zmeny schválenia
                 if (currentDocData.approved !== undefined && finalDataToSave.approved !== undefined) {
                     const originalApproved = currentDocData.approved ? 'Áno' : 'Nie';
                     const updatedApproved = finalDataToSave.approved ? 'Áno' : 'Nie';
@@ -4380,11 +4416,9 @@ const clearFilter = (column) => {
                         allChanges.push(`Zmena schválenia: z '${originalApproved}' na '${updatedApproved}'`);
                     }
                 }
-                
-                // 6. Uloženie notifikácií - POUŽÍVAME EMAIL ADMINA, NIE UPRAVOVANÉHO POUŽÍVATEĽA
+            
+                // 7. Uloženie notifikácií
                 if (allChanges.length > 0 && adminEmail) {
-                    // Kontextové informácie o tom, kto bol upravený a kto vykonal zmenu
-                    // PRIDANÉ: Názov klubu do každej zmeny
                     const changesWithContext = allChanges.map(change => 
                         `Používateľ ${targetUserName} (Klub: ${targetClubName}): ${change}`
                     );
@@ -4395,8 +4429,9 @@ const clearFilter = (column) => {
                         changes: changesWithContext,
                         timestamp: serverTimestamp()
                     });
-                }            
-                // 7. Uloženie zmien do databázy
+                }
+            
+                // 8. Uloženie zmien do databázy
                 await updateDoc(targetDocRef, finalDataToSave);
             
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
