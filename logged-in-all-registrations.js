@@ -4317,10 +4317,11 @@ const clearFilter = (column) => {
                 // EMAIL UPRAVOVANÉHO POUŽÍVATEĽA
                 const targetUserEmail = currentDocData.email || 'Neznámy email';
                 const targetUserName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
-            
+                const targetClubName = currentDocData.billing?.clubName || 'Neznámy klub';  // <--- PRIDANÉ
+                
                 // Získanie zmien pomocou getChangesForNotification
                 let allChanges = [];
-            
+                
                 // 1. Zmeny z getChangesForNotification
                 const baseChanges = getChangesForNotification(
                     currentDocData,
@@ -4328,7 +4329,7 @@ const clearFilter = (column) => {
                     formatDateToDMMYYYY
                 );
                 allChanges = [...baseChanges];
-            
+                
                 // 2. Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
                 const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
@@ -4340,7 +4341,6 @@ const clearFilter = (column) => {
                         : '';
                     if (originalVal !== updatedVal) {
                         const label = formatLabel(field);
-                        // Špeciálne formátovanie pre telefónne číslo
                         if (field === 'contactPhoneNumber') {
                             const formatPhone = (phone) => {
                                 if (!phone) return '-';
@@ -4354,21 +4354,21 @@ const clearFilter = (column) => {
                         }
                     }
                 });
-            
+                
                 // 3. Kontrola zmeny názvu klubu
                 const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
                 if (originalClubName !== updatedClubName) {
                     allChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
                 }
-            
+                
                 // 4. Kontrola zmeny roly
                 const originalRole = currentDocData.role || 'Neznáma rola';
                 const updatedRole = finalDataToSave.role || 'Neznáma rola';
                 if (originalRole !== updatedRole) {
                     allChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
                 }
-            
+                
                 // 5. Kontrola zmeny schválenia
                 if (currentDocData.approved !== undefined && finalDataToSave.approved !== undefined) {
                     const originalApproved = currentDocData.approved ? 'Áno' : 'Nie';
@@ -4377,13 +4377,14 @@ const clearFilter = (column) => {
                         allChanges.push(`Zmena schválenia: z '${originalApproved}' na '${updatedApproved}'`);
                     }
                 }
-            
+                
                 // 6. Uloženie notifikácií - POUŽÍVAME EMAIL ADMINA, NIE UPRAVOVANÉHO POUŽÍVATEĽA
                 if (allChanges.length > 0 && adminEmail) {
                     // Kontextové informácie o tom, kto bol upravený a kto vykonal zmenu
+                    // PRIDANÉ: Názov klubu do každej zmeny
                     const changesWithContext = allChanges.map(change => 
-                        `Používateľ ${targetUserName}: ${change}`
-                    );                    
+                        `Používateľ ${targetUserName} (Klub: ${targetClubName}): ${change}`
+                    );
                     
                     const notificationsCollectionRef = collection(db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
@@ -4391,8 +4392,7 @@ const clearFilter = (column) => {
                         changes: changesWithContext,
                         timestamp: serverTimestamp()
                     });
-                }
-            
+                }            
                 // 7. Uloženie zmien do databázy
                 await updateDoc(targetDocRef, finalDataToSave);
             
@@ -4644,6 +4644,7 @@ const clearFilter = (column) => {
     
                     const teamName = teamToUpdate.teamName || 'Bez názvu';
                     const memberName = `${cleanNewMember.firstName || ''} ${cleanNewMember.lastName || ''}`.trim() || 'bez mena';
+                    const clubName = currentDocData.billing?.clubName || 'Neznámy klub'; // <--- PRIDANÉ
     
                     let memberType = 'Člen tímu';
                     if (memberArrayPath === 'playerDetails') memberType = 'Hráč';
@@ -4652,7 +4653,7 @@ const clearFilter = (column) => {
                     else if (memberArrayPath === 'driverDetailsFemale') memberType = 'Šofér – žena';
                     else if (memberArrayPath === 'driverDetailsMale') memberType = 'Šofér – muž';
     
-                    const notificationMessage = `Nový ${memberType} pridaný: ${memberName} (${category}, tím: ${teamName})`;
+                    const notificationMessage = `Nový ${memberType} pridaný: ${memberName} (Klub: ${clubName}, ${category}, tím: ${teamName})`;
     
                     const userEmail = window.auth.currentUser?.email;
                     if (userEmail) {
@@ -4716,13 +4717,15 @@ const clearFilter = (column) => {
                     
                     const teamName = teamToUpdate.teamName || 'Bez názvu';
                     const memberName = `${existingMember.firstName || ''} ${existingMember.lastName || ''}`.trim() || 'bez mena';
+                    const clubName = currentDocData.billing?.clubName || 'Neznámy klub';
                     
                     const memberChanges = getMemberChangesForNotification(
                         originalMemberFromDoc,
                         updatedDataFromModal,
                         memberName,
                         teamName,
-                        category
+                        category,
+                        clubName
                     );
                     
                     if (memberChanges.length > 0) {
