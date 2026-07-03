@@ -3707,22 +3707,32 @@ function AllRegistrationsApp() {
   // Nové stavy pre modálne okno na pridanie tímu
   // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
 
- const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
+const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
     // Odstrániť citlivé alebo irelevantné kľúče
     const cleanedData = { ...data };
     delete cleanedData.password;
     delete cleanedData.emailVerified;
     delete cleanedData.id;
 
-    // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov (ak existujú)
-    if (cleanedData._dateOfBirth) {
-        cleanedData.dateOfBirth = cleanedData._dateOfBirth;
+    // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov LEN PRE ČLENOV TÍMU
+    const isMemberEdit = originalDataPath && (
+        originalDataPath.includes('playerDetails') ||
+        originalDataPath.includes('menTeamMemberDetails') ||
+        originalDataPath.includes('womenTeamMemberDetails') ||
+        originalDataPath.includes('driverDetailsMale') ||
+        originalDataPath.includes('driverDetailsFemale')
+    );
+
+    if (isMemberEdit) {
+        if (cleanedData._dateOfBirth) {
+            cleanedData.dateOfBirth = cleanedData._dateOfBirth;
+        }
+        if (cleanedData._address) {
+            cleanedData.address = { ...(cleanedData.address || {}), ...cleanedData._address };
+        }
     }
-    if (cleanedData._address) {
-        // Zlúčime _address do existujúceho address, alebo vytvoríme nový
-        cleanedData.address = { ...(cleanedData.address || {}), ...cleanedData._address };
-    }
-    // Odstránime _dateOfBirth a _address, aby neovplyvňovali notifikácie
+
+    // Odstránime _dateOfBirth a _address vždy (aby neovplyvňovali notifikácie)
     delete cleanedData._dateOfBirth;
     delete cleanedData._address;
 
@@ -4852,6 +4862,20 @@ const clearFilter = (column) => {
                         oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
                     }
                 }
+
+                delete updatedDataFromModal.dateOfBirth;
+                delete updatedDataFromModal.address;
+                delete updatedDataFromModal._dateOfBirth;
+                delete updatedDataFromModal._address;
+                // Rovnako vyčistiť polia členov (ak by obsahovali dateOfBirth/address)
+                ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].forEach(arrName => {
+                    if (Array.isArray(updatedDataFromModal[arrName])) {
+                        updatedDataFromModal[arrName] = updatedDataFromModal[arrName].map(member => {
+                            const { dateOfBirth, address, _dateOfBirth, _address, ...rest } = member;
+                            return rest;
+                        });
+                    }
+                });
             
                 const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
             
@@ -5351,82 +5375,102 @@ const clearFilter = (column) => {
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError]);
     
-  // Nová funkcia na odstránenie tímu
-  const handleDeleteTeam = React.useCallback(async (targetDocRef, originalDataPath) => {
-    if (!targetDocRef || !originalDataPath) {
-        console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu.");
-        setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu. Zmeny neboli uložené.", 'error');
-        return;
-    }
-
-    try {
-        window.showGlobalLoader();
-
-        const pathParts = originalDataPath.split('.');
-        if (pathParts.length !== 2) { // Očakávame formát 'teams.Category[index]'
-            throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+    const handleDeleteTeam = React.useCallback(async (targetDocRef, originalDataPath) => {
+        if (!targetDocRef || !originalDataPath) {
+            console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu.");
+            setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu. Zmeny neboli uložené.", 'error');
+            return;
         }
-
-        const categoryAndIndexPart = pathParts[1];
-        const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-
-        if (!categoryMatch) {
-            throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
-        }
-
-        const category = categoryMatch[1];
-        const teamIndex = parseInt(categoryMatch[2]);
-
-        const docSnapshot = await getDoc(targetDocRef);
-        if (!docSnapshot.exists()) {
-            throw new Error("Dokument používateľa sa nenašiel pre odstránenie tímu.");
-        }
-        const currentDocData = docSnapshot.data();
-
-        const teamsInCategory = currentDocData.teams?.[category] || [];
-        
-        if (teamIndex >= 0 && teamIndex < teamsInCategory.length) {
-            const teamToRemove = teamsInCategory[teamIndex];
-            const teamName = teamToRemove.teamName || 'Bez názvu';
-
-            const updatedTeamsInCategory = [...teamsInCategory];
-            updatedTeamsInCategory.splice(teamIndex, 1); // Odstráni tím z poľa
-
-            const updates = {};
-            // Ak je kategória po odstránení tímu prázdna, môžeme ju odstrániť úplne.
-            if (updatedTeamsInCategory.length === 0) {
-                updates[`teams.${category}`] = deleteField(); // Použiť deleteField pre odstránenie poľa
-            } else {
-                updates[`teams.${category}`] = updatedTeamsInCategory;
+    
+        try {
+            window.showGlobalLoader();
+    
+            const pathParts = originalDataPath.split('.');
+            if (pathParts.length !== 2) {
+                throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
             }
+    
+            const categoryAndIndexPart = pathParts[1];
+            const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+    
+            if (!categoryMatch) {
+                throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
+            }
+    
+            const category = categoryMatch[1];
+            const teamIndex = parseInt(categoryMatch[2]);
+    
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument používateľa sa nenašiel pre odstránenie tímu.");
+            }
+            const currentDocData = docSnapshot.data();
+    
+            const teamsInCategory = currentDocData.teams?.[category] || [];
             
-            await updateDoc(targetDocRef, updates);
-
-            // Zaznamenať notifikáciu
-            const userEmail = window.auth.currentUser?.email;
-            if (userEmail) {
-                const notificationsCollectionRef = collection(db, 'notifications');
-                await addDoc(notificationsCollectionRef, {
-                    userEmail,
-                    changes: [`Tím ${teamName} bol odstránený z kategórie '''${category}'.`],
-                    timestamp: serverTimestamp()
-                });
-                console.log("Notifikácia o odstránení tímu uložená do Firestore.");
+            if (teamIndex >= 0 && teamIndex < teamsInCategory.length) {
+                const teamToRemove = teamsInCategory[teamIndex];
+                const teamName = teamToRemove.teamName || 'Bez názvu';
+    
+                // Odstránime tím z users
+                const updatedTeamsInCategory = [...teamsInCategory];
+                updatedTeamsInCategory.splice(teamIndex, 1);
+    
+                const updates = {};
+                if (updatedTeamsInCategory.length === 0) {
+                    updates[`teams.${category}`] = deleteField();
+                } else {
+                    updates[`teams.${category}`] = updatedTeamsInCategory;
+                }
+                
+                await updateDoc(targetDocRef, updates);
+    
+                // Odstránime osobné údaje členov tímu z usersprivate
+                const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                let privateData = {};
+                try {
+                    const privateDocSnapshot = await getDoc(userPrivateDocRef);
+                    if (privateDocSnapshot.exists()) {
+                        privateData = privateDocSnapshot.data();
+                    }
+                } catch (e) {
+                    // Dokument neexistuje, nič nerobíme
+                }
+    
+                if (privateData.persons) {
+                    const teamKey = `${category}_team${teamIndex + 1}`;
+                    delete privateData.persons[teamKey];
+                    // Ak už nie sú žiadne osoby, odstránime celý persons objekt
+                    if (Object.keys(privateData.persons).length === 0) {
+                        delete privateData.persons;
+                    }
+                    await setDoc(userPrivateDocRef, privateData, { merge: true });
+                }
+    
+                // Zaznamenať notifikáciu
+                const userEmail = window.auth.currentUser?.email;
+                if (userEmail) {
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail,
+                        changes: [`Tím ${teamName} bol odstránený z kategórie '''${category}'.`],
+                        timestamp: serverTimestamp()
+                    });
+                }
+    
+                setUserNotificationMessage(`Tím ${teamName} bol odstránený.`, 'success');
+                closeEditModal();
+            } else {
+                throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
             }
-
-            setUserNotificationMessage(`Tím ${teamName} bol odstránený.`, 'success');
-            closeEditModal();
-        } else {
-            throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
+        } catch (e) {
+            console.error("Chyba pri odstraňovaní tímu z Firestore:", e);
+            setError(`Chyba pri odstraňovaní tímu: ${e.message}`);
+            setUserNotificationMessage(`Chyba pri odstraňovaní tímu: ${e.message}`, 'error');
+        } finally {
+            window.hideGlobalLoader();
         }
-    } catch (e) {
-        console.error("Chyba pri odstraňovaní tímu z Firestore:", e);
-        setError(`Chyba pri odstraňovaní tímu: ${e.message}`);
-        setUserNotificationMessage(`Chyba pri odstraňovaní tímu: ${e.message}`, 'error');
-    } finally {
-        window.hideGlobalLoader();
-    }
-  }, [db, closeEditModal, setUserNotificationMessage, setError]);
+    }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
 
     // Handler pre otvorenie modálneho okna na pridanie tímu
