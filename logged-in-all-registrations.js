@@ -4630,18 +4630,23 @@ const clearFilter = (column) => {
                 
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                 
+                // Začneme s kópiou existujúcich dát
                 let finalDataToSave = { ...currentDocData };
                 
+                // Zoznam polí, ktoré patria do usersprivate a NESMÚ byť v users
                 const addressFieldsToRemove = ['street', 'houseNumber', 'city', 'postalCode', 'country'];
                 addressFieldsToRemove.forEach(field => {
                     delete finalDataToSave[field];
                 });
                 
+                // Odstránime aj billing.address z users
                 if (finalDataToSave.billing) {
                     delete finalDataToSave.billing.address;
                 }
                 
+                // Aktualizujeme ostatné polia (okrem adresových)
                 for (const key in updatedDataFromModal) {
+                    // Preskočíme adresové polia
                     if (addressFieldsToRemove.includes(key)) {
                         continue;
                     }
@@ -4652,6 +4657,7 @@ const clearFilter = (column) => {
                     }
                     
                     if (key === 'billing') {
+                        // Pre billing uložíme len neadresové polia
                         finalDataToSave[key] = {
                             clubName: value.clubName || currentDocData.billing?.clubName || '',
                             ico: value.ico || currentDocData.billing?.ico || '',
@@ -4668,6 +4674,7 @@ const clearFilter = (column) => {
                     }
                 }
                 
+                // ----- ULOŽENIE DO USERSPRIVATE -----
                 let privateData = {};
                 try {
                     const privateDocSnapshot = await getDoc(userPrivateDocRef);
@@ -4682,6 +4689,7 @@ const clearFilter = (column) => {
                     privateData = {};
                 }
                 
+                // Aktualizujeme adresu v privateData
                 privateData.address = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4690,6 +4698,7 @@ const clearFilter = (column) => {
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
                 
+                // Aktualizujeme fakturačnú adresu v privateData
                 privateData.billingAddress = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4698,7 +4707,10 @@ const clearFilter = (column) => {
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
                 
+                // Uložíme do usersprivate
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
+                
+                // Uložíme do users (už bez adresových polí)
                 await updateDoc(targetDocRef, finalDataToSave);
                 
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
@@ -4742,7 +4754,7 @@ const clearFilter = (column) => {
                         registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim(),
                         accommodation: updatedDataFromModal.accommodation || { type: '' }
                     };
-                    // ✅ Vyčistíme tím pred uložením do users
+                    // ✅ Vyčistíme tím pred uložením do users (odstránime osobné údaje)
                     const cleanedTeam = cleanTeamForUsers(updatedTeam);
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams.push(cleanedTeam);
@@ -4787,7 +4799,7 @@ const clearFilter = (column) => {
                         }
                     }
                     
-                    // ✅ Vyčistíme tím pred uložením do users
+                    // ✅ Vyčistíme tím pred uložením do users (odstránime osobné údaje)
                     const cleanedTeam = cleanTeamForUsers(updatedTeam);
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams[oldTeamIndex] = cleanedTeam;
@@ -4891,10 +4903,13 @@ const clearFilter = (column) => {
                         address: updatedDataFromModal.address || {}
                     };
             
+                    // Člen pre users (bez osobných údajov)
                     const memberForUsers = { ...newMember };
                     delete memberForUsers.address;
                     delete memberForUsers.dateOfBirth;
                     delete memberForUsers._privateData;
+                    delete memberForUsers._address;
+                    delete memberForUsers._dateOfBirth;
                 
                     currentMemberArray.push(memberForUsers);
                 
@@ -4949,8 +4964,9 @@ const clearFilter = (column) => {
                     const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
                     let updatedMember = { ...originalMember };
                 
+                    // Aktualizujeme len neosobné polia (preskočíme address a dateOfBirth)
                     for (const key in updatedDataFromModal) {
-                        if (key !== 'address' && key !== 'dateOfBirth' && key !== '_privateData') {
+                        if (key !== 'address' && key !== 'dateOfBirth' && key !== '_privateData' && key !== '_address' && key !== '_dateOfBirth') {
                             const value = updatedDataFromModal[key];
                             if (value !== undefined) {
                                 updatedMember[key] = value;
@@ -4971,6 +4987,7 @@ const clearFilter = (column) => {
                 
                     const existingPrivateMember = privateData.persons[teamKey][privateArrayName][memberArrayIndex] || {};
                 
+                    // Aktualizujeme privateData
                     privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
                         dateOfBirth: updatedDataFromModal.dateOfBirth !== undefined 
                             ? updatedDataFromModal.dateOfBirth 
@@ -4986,9 +5003,12 @@ const clearFilter = (column) => {
                             }
                     };
                 
+                    // Odstránime osobné údaje z člena pre users
                     delete updatedMember.address;
                     delete updatedMember.dateOfBirth;
                     delete updatedMember._privateData;
+                    delete updatedMember._address;
+                    delete updatedMember._dateOfBirth;
                 
                     currentMemberArray[memberArrayIndex] = updatedMember;
                 
@@ -5026,7 +5046,7 @@ const clearFilter = (column) => {
                 teamToUpdate[memberArrayPath] = currentMemberArray;
                 const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
             
-                // ✅ Vyčistíme tím pred uložením do users
+                // ✅ Vyčistíme tím pred uložením do users (odstránime všetky osobné údaje)
                 const cleanedTeam = cleanTeamForUsers(finalUpdatedTeam);
                 const updatedTeamsForCategory = [...teamsInCategory];
                 updatedTeamsForCategory[teamIndex] = cleanedTeam;
