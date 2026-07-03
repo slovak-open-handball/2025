@@ -4451,31 +4451,31 @@ const clearFilter = (column) => {
     
                 // 5. Kontrola zmeny IČO
                 const originalIco = currentDocData.billing?.ico || '';
-                const updatedIco = finalDataToSave['billing.ico'];
+                const updatedIco = finalDataToSave['billing.ico'] !== undefined ? finalDataToSave['billing.ico'] : currentDocData.billing?.ico;
                 if (updatedIco !== undefined && originalIco !== updatedIco) {
                     const displayOriginal = originalIco || '-';
                     const displayUpdated = updatedIco || '-';
                     allChanges.push(`Zmena IČO: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
-
+                
                 // 6. Kontrola zmeny DIČ
                 const originalDic = currentDocData.billing?.dic || '';
-                const updatedDic = finalDataToSave['billing.dic'];
+                const updatedDic = finalDataToSave['billing.dic'] !== undefined ? finalDataToSave['billing.dic'] : currentDocData.billing?.dic;
                 if (updatedDic !== undefined && originalDic !== updatedDic) {
                     const displayOriginal = originalDic || '-';
                     const displayUpdated = updatedDic || '-';
                     allChanges.push(`Zmena DIČ: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
-
+                
                 // 7. Kontrola zmeny IČ DPH
                 const originalIcDph = currentDocData.billing?.icDph || '';
-                const updatedIcDph = finalDataToSave['billing.icDph'];
+                const updatedIcDph = finalDataToSave['billing.icDph'] !== undefined ? finalDataToSave['billing.icDph'] : currentDocData.billing?.icDph;
                 if (updatedIcDph !== undefined && originalIcDph !== updatedIcDph) {
                     const displayOriginal = originalIcDph || '-';
                     const displayUpdated = updatedIcDph || '-';
                     allChanges.push(`Zmena IČ DPH: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
-    
+                    
                 // 8. Kontrola zmeny roly
                 const originalRole = currentDocData.role || 'Neznáma rola';
                 const updatedRole = finalDataToSave.role || 'Neznáma rola';
