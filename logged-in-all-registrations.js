@@ -4179,13 +4179,55 @@ const clearFilter = (column) => {
                 
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
-                        // OPRAVA: Používame !== undefined aby sme vedeli rozlíšiť medzi prázdnym reťazcom a undefined
-                        finalDataToSave[key] = {
-                            clubName: value.clubName !== undefined ? value.clubName : (currentDocData.billing?.clubName || ''),
-                            ico: value.ico !== undefined ? value.ico : (currentDocData.billing?.ico || ''),
-                            dic: value.dic !== undefined ? value.dic : (currentDocData.billing?.dic || ''),
-                            icDph: value.icDph !== undefined ? value.icDph : (currentDocData.billing?.icDph || '')
-                        };
+                        // OPRAVA: Ak je hodnota prázdny reťazec, použijeme deleteField()
+                        const billingUpdate = {};
+                        
+                        // ClubName - ak je prázdny, odstránime ho
+                        if (value.clubName !== undefined) {
+                            if (value.clubName === '') {
+                                billingUpdate.clubName = deleteField();
+                            } else {
+                                billingUpdate.clubName = value.clubName;
+                            }
+                        } else if (currentDocData.billing?.clubName !== undefined) {
+                            billingUpdate.clubName = currentDocData.billing.clubName;
+                        }
+                        
+                        // IČO
+                        if (value.ico !== undefined) {
+                            if (value.ico === '') {
+                                billingUpdate.ico = deleteField();
+                            } else {
+                                billingUpdate.ico = value.ico;
+                            }
+                        } else if (currentDocData.billing?.ico !== undefined) {
+                            billingUpdate.ico = currentDocData.billing.ico;
+                        }
+                        
+                        // DIČ
+                        if (value.dic !== undefined) {
+                            if (value.dic === '') {
+                                billingUpdate.dic = deleteField();
+                            } else {
+                                billingUpdate.dic = value.dic;
+                            }
+                        } else if (currentDocData.billing?.dic !== undefined) {
+                            billingUpdate.dic = currentDocData.billing.dic;
+                        }
+                        
+                        // IČ DPH
+                        if (value.icDph !== undefined) {
+                            if (value.icDph === '') {
+                                billingUpdate.icDph = deleteField();
+                            } else {
+                                billingUpdate.icDph = value.icDph;
+                            }
+                        } else if (currentDocData.billing?.icDph !== undefined) {
+                            billingUpdate.icDph = currentDocData.billing.icDph;
+                        }
+                        
+                        finalDataToSave.billing = billingUpdate;
+                        
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         finalDataToSave[key] = value;
                     } else if (key === 'teams') {
