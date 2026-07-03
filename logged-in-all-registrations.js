@@ -3233,7 +3233,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
                                 
-                                    if (isTargetUserAdminFromModal || isTargetUserHallFromModal) {
+                                    if (isTargetUserAdmin || isTargetUserHall) {
                                         delete originalDataForCompare.address;
                                         delete originalDataForCompare.billing;
                                         delete modifiedDataForCompare.address;
@@ -4533,7 +4533,7 @@ const clearFilter = (column) => {
     };
   }, [handleLogout]);
 
-    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdminFromModal, isTargetUserHallFromModal) => {
+    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdmin, isTargetUserHall) => {
         if (!targetDocRef) {
             console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
             setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
