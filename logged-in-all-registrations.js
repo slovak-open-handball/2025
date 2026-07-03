@@ -2286,7 +2286,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     pattern: '[0-9 ]*',
                     maxLength: 6,
                     value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                    readOnly: !isSavable
                 };
             }
     
@@ -2309,7 +2308,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                         value: formatDisplayValue(inputValue, path),
                         onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                        readOnly: !isSavable,
                         ...customProps
                     })
                 )
@@ -2646,7 +2644,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             pattern: '[0-9 ]*',
                             maxLength: 6,
                             value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                            readOnly: !isSavable
                         };
                     } else if (path === 'contactPhoneNumber') {
                         if (isUserBeingEditedAdminOrHall) return null;
@@ -2665,7 +2662,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: displayPhoneNumber,
                                     onChange: handleContactPhoneNumberChange,
-                                    readOnly: !isSavable,
                                     inputMode: 'tel',
                                     placeholder: 'Zadajte telefónne číslo',
                                     maxLength: 15
@@ -2691,7 +2687,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                                 value: formatDisplayValue(getNestedDataForInput(localEditedData, path), path),
                                 onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                                readOnly: !isSavable,
                                 ...customProps
                             })
                         )
@@ -2769,7 +2764,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                             value: localEditedData.teamName || '',
                             onChange: (e) => handleChange('teamName', e.target.value),
-                            readOnly: !isSavable
                         })
                     )
                 );
@@ -2801,8 +2795,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     onChange: (e) => {
                                         setArrivalTime(e.target.value);
                                         handleChange('arrival.time', e.target.value);
-                                    },
-                                    readOnly: !isSavable
+                                    }
                                 })
                             )
                     )
@@ -2947,7 +2940,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         className: `mt-1 block flex-grow rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                         value: tshirtEntry.quantity,
                                         onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'quantity', e.target.value),
-                                        readOnly: !isSavable
                                     }),
                                     React.createElement('button', {
                                         type: 'button',
@@ -3058,7 +3050,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
                                 value: formatDisplayValue(getNestedDataForInput(localEditedData, fullKeyPath), fullKeyPath),
                                 onChange: (e) => (customProps.onChange ? customProps.onChange(e, fullKeyPath) : handleChange(fullKeyPath, e.target.value)),
-                                readOnly: !isSavable,
                                 ...customProps
                             })
                         )
