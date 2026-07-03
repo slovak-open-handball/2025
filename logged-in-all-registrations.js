@@ -2496,19 +2496,19 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         isCheckbox = true;
                     } else if (path.toLowerCase().includes('password')) {
                         inputType = 'password';
-                   } else if (path === 'billing.ico' || path === 'billing.dic') {
-                       customProps = {
-                           onChange: (e) => handleNumericInput(e, path),
-                           inputMode: 'numeric',
-                           pattern: '[0-9]*',
-                           maxLength: 10
-                       };
-                   } else if (path === 'billing.icDph') {
-                       customProps = {
-                           onChange: (e) => handleIcDphChange(e, path),
-                           maxLength: 12
-                       };
-                   } else if (path.includes('postalCode')) {
+                    } else if (path === 'billing.ico' || path === 'billing.dic') {
+                        customProps = {
+                            onChange: (e) => handleNumericInput(e, path),
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                            maxLength: 10
+                        };
+                    } else if (path === 'billing.icDph') {
+                        customProps = {
+                            onChange: (e) => handleIcDphChange(e, path),
+                            maxLength: 12
+                        };
+                    } else if (path.includes('postalCode')) {
                         customProps = {
                             onChange: (e) => handlePostalCodeChange(e, path),
                             onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
@@ -4180,10 +4180,10 @@ const clearFilter = (column) => {
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
                         finalDataToSave[key] = {
-                            clubName: value.clubName !== undefined ? value.clubName : (currentDocData.billing?.clubName || ''),
-                            ico: value.ico !== undefined ? value.ico : (currentDocData.billing?.ico || ''),
-                            dic: value.dic !== undefined ? value.dic : (currentDocData.billing?.dic || ''),
-                            icDph: value.icDph !== undefined ? value.icDph : (currentDocData.billing?.icDph || '')
+                            clubName: value.clubName || currentDocData.billing?.clubName || '',
+                            ico: value.ico || currentDocData.billing?.ico || '',
+                            dic: value.dic || currentDocData.billing?.dic || '',
+                            icDph: value.icDph || currentDocData.billing?.icDph || ''
                         };
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         finalDataToSave[key] = value;
