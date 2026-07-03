@@ -5037,40 +5037,37 @@ const clearFilter = (column) => {
                     }
                 }
                 // ============================================================
-                // ÚPRAVA EXISTUJÚCEHO ČLENA
+                // ÚPRAVA EXISTUJÚCEHO ČLENA - MODIFIKUJEME NA MIESTE
                 // ============================================================
                 else {
                     if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
                         throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
                     }
             
-                    const originalMember = JSON.parse(JSON.stringify(currentMemberArray[memberArrayIndex]));
+                    // ✅ ZÍSKAME EXISTUJÚCEHO ČLENA a MODIFIKUJEME HO NA MIESTE
+                    const existingMember = currentMemberArray[memberArrayIndex];
                     
-                    // ✅ Vytvoríme NOVÝ čistý objekt pre člena (iba verejné polia)
-                    const cleanUpdatedMember = {
-                        firstName: updatedDataFromModal.firstName || originalMember.firstName || '',
-                        lastName: updatedDataFromModal.lastName || originalMember.lastName || '',
-                        isRegistered: updatedDataFromModal.isRegistered !== undefined ? updatedDataFromModal.isRegistered : (originalMember.isRegistered || false)
-                    };
-                    
-                    // Pridáme polia podľa typu člena
-                    if (memberArrayPath === 'playerDetails') {
-                        cleanUpdatedMember.jerseyNumber = updatedDataFromModal.jerseyNumber || originalMember.jerseyNumber || '';
-                        cleanUpdatedMember.registrationNumber = updatedDataFromModal.registrationNumber || originalMember.registrationNumber || '';
-                    } else {
-                        // Pre ostatné typy členov (RT, šoféri)
-                        if (updatedDataFromModal.jerseyNumber !== undefined) {
-                            cleanUpdatedMember.jerseyNumber = updatedDataFromModal.jerseyNumber || '';
-                        } else if (originalMember.jerseyNumber !== undefined) {
-                            cleanUpdatedMember.jerseyNumber = originalMember.jerseyNumber || '';
-                        }
-                        
-                        if (updatedDataFromModal.registrationNumber !== undefined) {
-                            cleanUpdatedMember.registrationNumber = updatedDataFromModal.registrationNumber || '';
-                        } else if (originalMember.registrationNumber !== undefined) {
-                            cleanUpdatedMember.registrationNumber = originalMember.registrationNumber || '';
-                        }
+                    // ✅ Aktualizujeme iba polia, ktoré boli zmenené (a nie sú osobné)
+                    // Zachováme všetky existujúce polia, ktoré nie sú v updatedDataFromModal
+                    if (updatedDataFromModal.firstName !== undefined) {
+                        existingMember.firstName = updatedDataFromModal.firstName;
                     }
+                    if (updatedDataFromModal.lastName !== undefined) {
+                        existingMember.lastName = updatedDataFromModal.lastName;
+                    }
+                    if (updatedDataFromModal.jerseyNumber !== undefined) {
+                        existingMember.jerseyNumber = updatedDataFromModal.jerseyNumber;
+                    }
+                    if (updatedDataFromModal.registrationNumber !== undefined) {
+                        existingMember.registrationNumber = updatedDataFromModal.registrationNumber;
+                    }
+                    if (updatedDataFromModal.isRegistered !== undefined) {
+                        existingMember.isRegistered = updatedDataFromModal.isRegistered;
+                    }
+                    
+                    // ✅ ZACHOVÁME existujúce polia, ktoré nie sú v updatedDataFromModal
+                    // (napr. type, originalArray, originalIndex, atď.)
+                    // Tieto polia už existujú v existingMember, takže ich netreba nič robiť
             
                     let privateArrayName = memberArrayPath;
                     if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
@@ -5085,45 +5082,49 @@ const clearFilter = (column) => {
             
                     const existingPrivateMember = privateData.persons[teamKey][privateArrayName][memberArrayIndex] || {};
             
-                    // ✅ Aktualizujeme usersprivate - OSOBNÉ ÚDAJE
-                    privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
-                        dateOfBirth: updatedDataFromModal.dateOfBirth !== undefined 
-                            ? updatedDataFromModal.dateOfBirth 
-                            : existingPrivateMember.dateOfBirth || '',
-                        address: updatedDataFromModal.address !== undefined 
-                            ? updatedDataFromModal.address 
-                            : existingPrivateMember.address || {
-                                street: '',
-                                houseNumber: '',
-                                city: '',
-                                postalCode: '',
-                                country: ''
-                            }
-                    };
+                    // ✅ Aktualizujeme usersprivate - OSOBNÉ ÚDAJE (na mieste)
+                    if (updatedDataFromModal.dateOfBirth !== undefined) {
+                        privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
+                            ...existingPrivateMember,
+                            dateOfBirth: updatedDataFromModal.dateOfBirth
+                        };
+                    }
+                    if (updatedDataFromModal.address !== undefined) {
+                        privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
+                            ...existingPrivateMember,
+                            address: updatedDataFromModal.address
+                        };
+                    }
             
-                    // ✅ Nahradíme člena v poli čistým objektom (bez osobných údajov)
-                    currentMemberArray[memberArrayIndex] = cleanUpdatedMember;
+                    // ✅ Ak neboli aktualizované osobné údaje, zachováme existujúce
+                    if (updatedDataFromModal.dateOfBirth === undefined && updatedDataFromModal.address === undefined) {
+                        // Nič nemeníme, existingPrivateMember zostáva
+                    }
             
-                    // Generovanie zmien pre notifikácie (porovnávame iba verejné polia)
-                    const originalMemberForCompare = {
-                        firstName: originalMember.firstName || '',
-                        lastName: originalMember.lastName || '',
-                        jerseyNumber: originalMember.jerseyNumber || '',
-                        registrationNumber: originalMember.registrationNumber || '',
-                        isRegistered: originalMember.isRegistered || false
-                    };
-            
-                    const updatedMemberForCompare = {
-                        firstName: cleanUpdatedMember.firstName || '',
-                        lastName: cleanUpdatedMember.lastName || '',
-                        jerseyNumber: cleanUpdatedMember.jerseyNumber || '',
-                        registrationNumber: cleanUpdatedMember.registrationNumber || '',
-                        isRegistered: cleanUpdatedMember.isRegistered || false
-                    };
+                    // Generovanie zmien pre notifikácie (porovnávame iba zmenené polia)
+                    const changes = [];
                     
-                    const changes = getChangesForNotification(originalMemberForCompare, updatedMemberForCompare, formatDateToDMMYYYY);
+                    // Porovnáme zmeny v neosobných poliach
+                    const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'isRegistered'];
+                    memberFields.forEach(field => {
+                        const oldValue = existingMember[field] !== undefined ? existingMember[field] : '';
+                        // Potrebujeme pôvodnú hodnotu pred zmenou - tú máme v pôvodnom členovi
+                        // Ale keďže modifikujeme priamo, musíme si zapamätať pôvodné hodnoty
+                        // Pre jednoduchosť použijeme pôvodný člen z docSnapshot
+                        const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
+                        const newValue = existingMember[field] !== undefined ? existingMember[field] : '';
+                        
+                        // Porovnáme s pôvodnou hodnotou (pred zmenou)
+                        const originalValue = originalMemberFromDoc[field] !== undefined ? originalMemberFromDoc[field] : '';
+                        
+                        if (originalValue !== newValue) {
+                            const label = formatLabel(field);
+                            changes.push(`Zmena ${label}: z '${originalValue || '-'}' na '${newValue || '-'}'`);
+                        }
+                    });
+            
                     if (changes.length > 0) {
-                        const memberName = `${cleanUpdatedMember.firstName || ''} ${cleanUpdatedMember.lastName || ''}`.trim() || 'bez mena';
+                        const memberName = `${existingMember.firstName || ''} ${existingMember.lastName || ''}`.trim() || 'bez mena';
                         const userEmail = window.auth.currentUser?.email;
                         if (userEmail) {
                             const notificationsCollectionRef = collection(db, 'notifications');
