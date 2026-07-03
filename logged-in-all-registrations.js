@@ -5064,7 +5064,7 @@ const clearFilter = (column) => {
     }
 
     const shouldShowExpander = (u) => {
-        return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
+        return u.role === 'club' && showTeams && u.teams && Object.keys(u.teams).length > 0;
     };
 
     const formatTableCellValue = (value, columnId, userObject) => {
@@ -5497,28 +5497,28 @@ const clearFilter = (column) => {
                                                     className: 'py-3 px-2 text-center min-w-max flex items-center justify-center',
                                                 },
                                                     shouldShowExpander(u)
-                                                        ? React.createElement('button', {
+                                                            ? React.createElement('button', {
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleRowExpansion(u.id);
+                                                                },
+                                                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
+                                                            }, expandedRows[u.id] ? '▲' : '▼')
+                                                            : React.createElement('span', { className: 'mr-1' }, '-'),
+                                                        React.createElement('button', {
                                                             onClick: (e) => {
                                                                 e.stopPropagation();
-                                                                toggleRowExpansion(u.id);
+                                                                openEditModal(
+                                                                    u,
+                                                                    `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
+                                                                    doc(db, 'users', u.id),
+                                                                    '',
+                                                                    false
+                                                                );
                                                             },
-                                                            className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
-                                                        }, expandedRows[u.id] ? '▲' : '▼')
-                                                        : React.createElement('span', { className: 'mr-1' }, '-'),
-                                                    React.createElement('button', {
-                                                        onClick: (e) => {
-                                                            e.stopPropagation();
-                                                            openEditModal(
-                                                                u,
-                                                                `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
-                                                                doc(db, 'users', u.id),
-                                                                '',
-                                                                false
-                                                            );
-                                                        },
-                                                        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                                    }, '✏️')
-                                                ),
+                                                            className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                                        }, '✏️')
+                                                    ),
                                                 columnOrder.map(col => (
                                                     React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
                                                         formatTableCellValue(getNestedValue(u, col.id), col.id, u)
@@ -5529,7 +5529,8 @@ const clearFilter = (column) => {
                                                 'tr',
                                                 { key: `${u.id}-details`, className: 'bg-gray-100' },
                                                 React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                                    showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
+                                                    // ZMENA: Tlačidlo + sa zobrazuje IBA pre používateľov s rolou 'club'
+                                                    u.role === 'club' && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
                                                         React.createElement('button', {
                                                             className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                                                             onClick: (e) => {
