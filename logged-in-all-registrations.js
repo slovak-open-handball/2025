@@ -1305,7 +1305,6 @@ const formatLabel = (key) => {
     if (key === 'city') return 'Mesto/obec';
     if (key === 'postalCode') return 'PSČ';
     if (key === 'country') return 'Krajina';
-    if (key === 'approved') return 'Schválený';
     if (key === 'email') return 'E-mail';
     if (key === 'gender') return 'Pohlavie';
     if (key === 'birthDate') return 'Dátum narodenia';
@@ -2496,7 +2495,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     renderedFields.add(path);
             
                     const key = path.split('.').pop();
-                    if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
+                    if (['passwordLastChanged', 'registrationDate', 'email', 'role'].includes(key)) {
                         return null;
                     }
             
@@ -3229,7 +3228,6 @@ function AllRegistrationsApp() {
     
   const defaultColumnOrder = [
     { id: 'role', label: 'Rola', type: 'string', visible: true },
-    { id: 'approved', label: 'Schválený', type: 'boolean', visible: true },
     { id: 'registrationDate', label: 'Dátum registrácie', type: 'date', visible: true },
     { id: 'firstName', label: 'Meno', type: 'string', visible: true },
     { id: 'lastName', label: 'Priezvisko', type: 'string', visible: true },
@@ -5022,10 +5020,6 @@ const clearFilter = (column) => {
           } catch (e) {
             return '[Chyba Dátumu]';
           }
-        }
-      
-        if (columnId === 'approved') {
-          return value ? 'Áno' : 'Nie';
         }
       
         if (columnId === 'postalCode') {
