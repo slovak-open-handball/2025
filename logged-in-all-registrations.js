@@ -3501,28 +3501,35 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       }));
   };
 
-  const toggleAllRows = () => {
-    if (!showUsers && showTeams) {
+    const toggleAllRows = () => {
+        // Získame všetky ID pre používateľov (kluby)
+        const allUserIds = filteredUsers.map(user => user.id);
+        
+        // Získame všetky ID pre tímy
         const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
-
-        const allCurrentlyExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
-        const newExpandedState = { ...expandedTeamRows };
-
+        
+        // Zistíme, či sú všetky položky aktuálne rozbalené
+        const allUsersExpanded = allUserIds.length > 0 && allUserIds.every(id => expandedRows[id]);
+        const allTeamsExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
+    
+        // Ak sú všetky rozbalené, zbalíme všetky, inak rozbalíme všetky
+        const shouldExpand = !(allUsersExpanded && allTeamsExpanded);
+        
+        // Nové stavy pre používateľov
+        const newExpandedRows = { ...expandedRows };
+        allUserIds.forEach(id => {
+            newExpandedRows[id] = shouldExpand;
+        });
+        
+        // Nové stavy pre tímy
+        const newExpandedTeamRows = { ...expandedTeamRows };
         allTeamIds.forEach(id => {
-            newExpandedState[id] = !allCurrentlyExpanded;
+            newExpandedTeamRows[id] = shouldExpand;
         });
-        setExpandedTeamRows(newExpandedState);
-
-    } else {
-        const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
-        const newExpandedState = { ...expandedRows };
-
-        filteredUsers.forEach(user => {
-            newExpandedState[user.id] = !allCurrentlyExpanded;
-        });
-        setExpandedRows(newExpandedState);
-    }
-  };
+        
+        setExpandedRows(newExpandedRows);
+        setExpandedTeamRows(newExpandedTeamRows);
+    };
 
   React.useEffect(() => {
       if (!db) return;
