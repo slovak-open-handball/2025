@@ -1371,7 +1371,7 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     return changes;
 };
 
-const getMemberChangesForNotification = (original, updated, memberName, teamName, category) => {
+const getMemberChangesForNotification = (original, updated, memberName, teamName, category, clubName = 'Neznámy klub') => {
     const changes = [];
     
     const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
@@ -1381,14 +1381,16 @@ const getMemberChangesForNotification = (original, updated, memberName, teamName
         const updatedValue = updated[field] !== undefined && updated[field] !== null ? String(updated[field]) : '';
         if (originalValue !== updatedValue) {
             const label = formatLabel(field);
-            changes.push(`${memberName} (${category}, tím: ${teamName}) – zmena ${label}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
+            // PRIDANÝ NÁZOV KLUBU
+            changes.push(`${memberName} (Klub: ${clubName}, ${category}, tím: ${teamName}) – zmena ${label}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
         }
     });
     
     const originalDate = original.dateOfBirth ? formatDateToDMMYYYY(original.dateOfBirth) : '-';
     const updatedDate = updated.dateOfBirth ? formatDateToDMMYYYY(updated.dateOfBirth) : '-';
     if (originalDate !== updatedDate) {
-        changes.push(`${memberName} (${category}, tím: ${teamName}) – zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
+        // PRIDANÝ NÁZOV KLUBU
+        changes.push(`${memberName} (Klub: ${clubName}, ${category}, tím: ${teamName}) – zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
     }
     
     const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
@@ -1405,7 +1407,8 @@ const getMemberChangesForNotification = (original, updated, memberName, teamName
                 finalOrig = formatPostalCodeForDisplay(origVal);
                 finalUpd = formatPostalCodeForDisplay(updVal);
             }
-            changes.push(`${memberName} (${category}, tím: ${teamName}) – zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
+            // PRIDANÝ NÁZOV KLUBU
+            changes.push(`${memberName} (Klub: ${clubName}, ${category}, tím: ${teamName}) – zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
         }
     });
     
@@ -4839,6 +4842,7 @@ const clearFilter = (column) => {
     
             const memberToRemove = currentMemberArray[memberArrayIndex];
             const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim() || 'bez mena';
+            const clubName = currentDocData.billing?.clubName || 'Neznámy klub';
     
             currentMemberArray.splice(memberArrayIndex, 1);
             teamToUpdate[memberArrayPath] = currentMemberArray;
@@ -4939,6 +4943,7 @@ const clearFilter = (column) => {
     
             const teamToRemove = teamsInCategory[teamIndex];
             const teamName = teamToRemove.teamName || 'Bez názvu';
+            const clubName = currentDocData.billing?.clubName || 'Neznámy klub';
     
             const updatedTeamsInCategory = [...teamsInCategory];
             updatedTeamsInCategory.splice(teamIndex, 1);
@@ -4976,7 +4981,7 @@ const clearFilter = (column) => {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
                     userEmail,
-                    changes: [`Tím ${teamName} bol odstránený z kategórie '${category}'.`],
+                    changes: [`Tím ${teamName} (Klub: ${clubName}) bol odstránený z kategórie '${category}'.`],
                     timestamp: serverTimestamp()
                 });
             }
