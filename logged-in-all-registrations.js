@@ -1330,9 +1330,6 @@ const formatLabel = (key) => {
     return label;
 };
 
-// ============================================================
-// OPRAVENÁ FUNKCIA getChangesForNotification
-// ============================================================
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
@@ -4266,9 +4263,6 @@ const clearFilter = (column) => {
                         if (value) {
                             finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
                         }
-                    } else if (key === 'contactPhoneNumber') {
-                        // Pridáme telefónne číslo do finalDataToSave, aby ho getChangesForNotification našlo
-                        finalDataToSave[key] = value;
                     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                         if (key !== 'address' && key !== 'billing') {
                             finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
@@ -4336,7 +4330,7 @@ const clearFilter = (column) => {
                 allChanges = [...baseChanges];
             
                 // 2. Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
-                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
+                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
                         ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
@@ -4346,7 +4340,18 @@ const clearFilter = (column) => {
                         : '';
                     if (originalVal !== updatedVal) {
                         const label = formatLabel(field);
-                        allChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        // Špeciálne formátovanie pre telefónne číslo
+                        if (field === 'contactPhoneNumber') {
+                            const formatPhone = (phone) => {
+                                if (!phone) return '-';
+                                const { dialCode, numberWithoutDialCode } = parsePhoneNumber(phone, countryDialCodes);
+                                const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+                                return `${dialCode} ${formattedNumber}`.trim();
+                            };
+                            allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                        } else {
+                            allChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        }
                     }
                 });
             
