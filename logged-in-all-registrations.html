@@ -178,7 +178,7 @@
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
-
+    
                     const headerScript = document.createElement('script');
                     headerScript.src = 'header.js';
                     headerScript.type = 'module';
@@ -194,29 +194,38 @@
                 }
             }
         }
-
+    
         // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
         const checkReadyAndRender = () => {
-            // Kontrola, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                console.error("Chyba: React alebo ReactDOM nie sú načítané.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Kontrola, či je komponent AllRegistrationsApp definovaný
+            
             if (typeof window.AllRegistrationsApp === 'undefined') {
-                console.log("logged-in-all-registrations.html: Čakám na definíciu AllRegistrationsApp...");
-                setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
+                console.log("Čakám na definíciu AllRegistrationsApp...");
+                setTimeout(checkReadyAndRender, 100);
                 return;
             }
+            
+            if (!window.isGlobalAuthReady) {
+                console.log("Čakám na pripravenosť autentifikácie...");
+                setTimeout(checkReadyAndRender, 100);
+                return;
+            }
+            
+            console.log("Vykresľujem AllRegistrationsApp...");
+            const rootElement = document.getElementById('root');
+            rootElement.innerHTML = ''; // Vymažeme HTML koliesko
+            
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(window.AllRegistrationsApp, null));
         };
-
-        // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
+    
         document.addEventListener('DOMContentLoaded', async () => {
-            await loadHeader(); // Načítajte hlavičku
-            // checkReadyAndRender sa volá priamo po loadHeader,
-            // pretože logika prispôsobenia obsahu je teraz v logged-in-left-menu.js
-            checkReadyAndRender(); 
+            await loadHeader();
+            checkReadyAndRender();
         });
     </script>
 </body>
