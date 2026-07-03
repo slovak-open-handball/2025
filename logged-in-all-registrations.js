@@ -1421,23 +1421,6 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     return changes;
 };
 
-// Pomocná funkcia na formátovanie názvov polí
-const formatLabel = (key) => {
-    const labels = {
-        'firstName': 'Meno',
-        'lastName': 'Priezvisko',
-        'jerseyNumber': 'Číslo dresu',
-        'registrationNumber': 'Registračné číslo',
-        'address.street': 'Ulica',
-        'address.houseNumber': 'Popisné číslo',
-        'address.postalCode': 'PSČ',
-        'address.city': 'Mesto/obec',
-        'address.country': 'Krajina',
-        'dateOfBirth': 'Dátum narodenia'
-    };
-    return labels[key] || key;
-};
-
 // ============================================================
 // UPRAVENÁ FUNKCIA PRE NOTIFIKÁCIE PRE ČLENA TÍMU
 // ============================================================
