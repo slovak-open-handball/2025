@@ -2298,8 +2298,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         type: 'checkbox',
                         className: `form-checkbox h-5 w-5 text-blue-600`,
                         checked: getNestedValue(localEditedData, path) === true,
-                        onChange: (e) => handleChange(path, e.target.checked),
-                        disabled: !isSavable
+                        onChange: (e) => handleChange(path, e.target.checked)
                     })
                 ) : (
                     React.createElement('input', {
@@ -2396,8 +2395,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                                             : selectedDatesArray.filter(d => d !== dateString);
                                                         handleChange(path, newDates);
                                                     },
-                                                    className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
-                                                    disabled: !isSavable                                                }),
+                                                    className: 'form-checkbox h-4 w-4 text-blue-600 rounded'
+                                                }),
                                                 React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, displayDate)
                                             );
                                         })
@@ -2430,8 +2429,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                                         : selectedRoles.filter(r => r !== option);
                                                     handleChange(path, newRoles);
                                                 },
-                                                className: 'form-checkbox h-4 w-4 text-blue-600 rounded',
-                                                disabled: !isSavable
+                                                className: 'form-checkbox h-4 w-4 text-blue-600 rounded'
                                             }),
                                             React.createElement('span', { className: 'ml-2 text-gray-700 text-sm' }, option)
                                         );
@@ -2450,8 +2448,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 React.createElement('select', {
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
-                                    onChange: (e) => handleChange(path, e.target.value),
-                                    disabled: !isSavable
+                                    onChange: (e) => handleChange(path, e.target.value)
                                 },
                                     React.createElement('option', { value: '', disabled: true }, 'Vyberte...'),
                                     React.createElement('option', { value: 'male' }, 'Muž'),
@@ -2471,8 +2468,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 React.createElement('select', {
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
-                                    onChange: (e) => handleChange(path, e.target.value),
-                                    disabled: !isSavable
+                                    onChange: (e) => handleChange(path, e.target.value)
                                 },
                                     React.createElement('option', { value: '', disabled: true }, 'Vyberte veľkosť...'),
                                     tshirtSizes.map(size => React.createElement('option', { key: size, value: size }, size))
@@ -2491,8 +2487,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     type: 'date',
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
-                                    onChange: (e) => handleChange(path, e.target.value),
-                                    disabled: !isSavable
+                                    onChange: (e) => handleChange(path, e.target.value)
                                 })
                             )
                         );
@@ -2511,8 +2506,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     onChange: (e) => handlePostalCodeChange(e, path),
                                     onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
                                     placeholder: 'xxx xx',
-                                    maxLength: 6,
-                                    disabled: !isSavable
+                                    maxLength: 6
                                 })
                             )
                         );
@@ -2528,8 +2522,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     React.createElement('button', {
                                         type: 'button',
                                         className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                                        onClick: () => setIsDialCodeModalOpen(true),
-                                        disabled: !isSavable
+                                        onClick: () => setIsDialCodeModalOpen(true)
                                     }, displayDialCode || 'Vybrať predvoľbu'),
                                     React.createElement('input', {
                                         ref: el => inputRefs.current[path] = el,
@@ -2557,8 +2550,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
                                     onChange: (e) => handleChange(path, e.target.value),
-                                    rows: 3,
-                                    disabled: !isSavable,
+                                    rows: 3
                                     placeholder: 'Sem môžete napísať dodatočné informácie...'
                                 })
                             )
@@ -2574,8 +2566,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 type: 'text',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                 value: value || '',
-                                onChange: (e) => handleChange(path, e.target.value),
-                                disabled: !isSavable
+                                onChange: (e) => handleChange(path, e.target.value)
                             })
                         )
                     );
@@ -2653,8 +2644,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 React.createElement('button', {
                                     type: 'button',
                                     className: 'flex-shrink-0 inline-flex items-center justify-center px-4 py-2 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-700 text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                                    onClick: () => setIsDialCodeModalOpen(true),
-                                    disabled: !isSavable
+                                    onClick: () => setIsDialCodeModalOpen(true)
                                 }, displayDialCode || 'Vybrať predvoľbu'),
                                 React.createElement('input', {
                                     ref: el => inputRefs.current[path] = el,
@@ -2677,8 +2667,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 type: 'checkbox',
                                 className: `form-checkbox h-5 w-5 text-blue-600`,
                                 checked: getNestedValue(localEditedData, path) === true,
-                                onChange: (e) => handleChange(path, e.target.checked),
-                                disabled: !isSavable
+                                onChange: (e) => handleChange(path, e.target.checked)
                             })
                         ) : (
                             React.createElement('input', {
@@ -2745,8 +2734,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 setSelectedCategory(e.target.value);
                                 handleChange('_category', e.target.value);
                                 handleChange('category', e.target.value);
-                            },
-                            disabled: !isSavable
+                            }
                         },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte kategóriu'),
                             selectedCategory && !categories.includes(selectedCategory) &&
@@ -2777,8 +2765,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             onChange: (e) => {
                                 setSelectedArrivalType(e.target.value);
                                 handleChange('arrival.type', e.target.value);
-                            },
-                            disabled: !isSavable
+                            }
                         },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ dopravy'),
                             selectedArrivalType && !arrivalOptions.includes(selectedArrivalType) &&
@@ -2833,8 +2820,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     setSelectedPackageName('');
                                     handleChange('packageDetails', null);
                                 }
-                            },
-                            disabled: !isSavable
+                            }
                         },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
                             selectedAccommodationType && !accommodationOptionsWithNone.includes(selectedAccommodationType) &&
@@ -2860,8 +2846,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 } else {
                                     handleChange('packageDetails', null);
                                 }
-                            },
-                            disabled: !isSavable
+                            }
                         },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
                             (() => {
@@ -2892,8 +2877,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
                                     value: localEditedData.jerseyHomeColor || '',
                                     onChange: (e) => handleChange('jerseyHomeColor', e.target.value),
-                                    placeholder: 'Zadajte farbu',
-                                    disabled: !isSavable
+                                    placeholder: 'Zadajte farbu'
                                 })
                             ),
                             React.createElement('div', null,
@@ -2903,8 +2887,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
                                     value: localEditedData.jerseyAwayColor || '',
                                     onChange: (e) => handleChange('jerseyAwayColor', e.target.value),
-                                    placeholder: 'Zadajte farbu',
-                                    disabled: !isSavable
+                                    placeholder: 'Zadajte farbu'
                                 })
                             )
                         )
@@ -2921,8 +2904,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     React.createElement('select', {
                                         className: `mt-1 block w-32 rounded-md border-gray-300 shadow-sm bg-white p-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                         value: tshirtEntry.size,
-                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value),
-                                        disabled: !isSavable
+                                        onChange: (e) => handleTshirtEntryChange(tshirtEntry.tempId, 'size', e.target.value)
                                     },
                                         availableTshirtSizes.includes(tshirtEntry.size) ?
                                             React.createElement('option', { key: tshirtEntry.size, value: tshirtEntry.size }, tshirtEntry.size)
@@ -2955,7 +2937,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     onClick: addTshirtEntry,
                                     className: 'flex-shrink-0 flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none text-xl leading-none',
                                     style: { lineHeight: '10px' },
-                                    disabled: !isSavable || teamTshirts.length >= availableTshirtSizes.length
+                                    disabled: teamTshirts.length >= availableTshirtSizes.length
                                 }, '+')
                             )
                         )
@@ -3040,8 +3022,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 type: 'checkbox',
                                 className: `form-checkbox h-5 w-5 text-blue-600`,
                                 checked: getNestedValue(localEditedData, fullKeyPath) === true,
-                                onChange: (e) => handleChange(fullKeyPath, e.target.checked),
-                                disabled: !isSavable
+                                onChange: (e) => handleChange(fullKeyPath, e.target.checked)
                             })
                         ) : (
                             React.createElement('input', {
@@ -3079,16 +3060,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 { className: 'flex justify-between items-center mt-4' },
                 (!isNewEntry && isEditingMember) && React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
-                    onClick: handleDeleteMemberClick,
-                    disabled: !isSavable
+                    onClick: handleDeleteMemberClick
                 }, 'Odstrániť člena'),
                 (!isNewEntry && (title.includes('Upraviť tím'))) && React.createElement('button', {
                     className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
                     onClick: () => {
                         setDeleteTeamConfirmMessage(`Naozaj chcete odstrániť tím "${localEditedData.teamName || 'Bez názvu'}" z kategórie "${localEditedData._category || 'Neznámá'}"? Túto akciu nie je možné vrátiť späť.`);
                         setIsConfirmDeleteTeamOpen(true);
-                    },
-                    disabled: !isSavable
+                    }
                 }, 'Odstrániť tím'),
                 React.createElement(
                     'div',
