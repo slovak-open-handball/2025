@@ -4162,7 +4162,7 @@ const clearFilter = (column) => {
                 
                 // Odstránime billing.address z finalDataToSave (patrí do usersprivate)
                 if (finalDataToSave.billing) {
-                    delete finalDataToSave.billing.address;
+                    finalDataToSave['billing.address'] = deleteField();
                 }
             
                 if (finalDataToSave.teams) {
@@ -4179,7 +4179,7 @@ const clearFilter = (column) => {
                 
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
-                        // OPRAVA: Používame dotovú notáciu pre deleteField()
+                        // OPRAVA: Používame dotovú notáciu pre deleteField() - rovnako ako v ChangeBillingModal
                         
                         // ClubName
                         if (value.clubName !== undefined) {
@@ -4189,8 +4189,10 @@ const clearFilter = (column) => {
                                 finalDataToSave['billing.clubName'] = value.clubName;
                             }
                         } else if (currentDocData.billing?.clubName !== undefined) {
+                            // Ak sa pole nezmenilo, zachováme pôvodnú hodnotu (iba ak existuje)
                             finalDataToSave['billing.clubName'] = currentDocData.billing.clubName;
                         }
+                        // Ak pole neexistovalo a ani sa nezmenilo, nič neukladáme
                         
                         // IČO
                         if (value.ico !== undefined) {
@@ -4225,6 +4227,18 @@ const clearFilter = (column) => {
                             finalDataToSave['billing.icDph'] = currentDocData.billing.icDph;
                         }
                         
+                    } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
+                        finalDataToSave[key] = value;
+                    } else if (key === 'teams') {
+                        if (value) {
+                            finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
+                        }
+                    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        if (key !== 'address' && key !== 'billing') {
+                            finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
+                        }
+                    } else {
+                        finalDataToSave[key] = value;
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         finalDataToSave[key] = value;
                     } else if (key === 'teams') {
