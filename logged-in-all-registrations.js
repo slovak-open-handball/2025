@@ -4288,15 +4288,19 @@ const clearFilter = (column) => {
                     
                     const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                     
-                    // POUŽIJEME updateDoc NAMIESTO setDoc - to vyžaduje update oprávnenie, ktoré admin má
-                    // Najprv skontrolujeme, či dokument existuje
+                    // Skontrolujeme, či dokument existuje
                     const privateDocSnap = await getDoc(privateDocRef);
                     if (privateDocSnap.exists()) {
                         // Ak existuje, použijeme updateDoc
                         await updateDoc(privateDocRef, privateData);
                     } else {
-                        // Ak neexistuje, použijeme setDoc
-                        await setDoc(privateDocRef, privateData);
+                        // Ak neexistuje, použijeme setDoc s role = 'volunteer' a approved = true
+                        // aby sme splnili podmienky canCreateVolunteer
+                        await setDoc(privateDocRef, {
+                            ...privateData,
+                            role: 'volunteer',
+                            approved: true
+                        }, { merge: true });
                     }
                     
                     // 2. Uloženie ostatných polí do users
@@ -4318,7 +4322,6 @@ const clearFilter = (column) => {
                         }
                     });
                     
-                    // Použijeme updateDoc pre users - admin má oprávnenie
                     await updateDoc(targetDocRef, userData);
                     
                     setUserNotificationMessage("Zmeny boli uložené.", 'success');
