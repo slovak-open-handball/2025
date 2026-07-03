@@ -5203,11 +5203,12 @@ const clearFilter = (column) => {
             if (!originalDataPath) {
                 throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu.");
             }
-            const docSnapshotForUpdate = await getDoc(targetDocRef); // Použijeme iný názov premennej
+            const docSnapshotForUpdate = await getDoc(targetDocRef);
             if (!docSnapshotForUpdate.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
-    
+
+            const currentDocData = docSnapshotForUpdate.data(); 
             const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
     
             const updates = {};
