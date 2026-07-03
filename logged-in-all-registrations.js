@@ -4771,6 +4771,8 @@ const clearFilter = (column) => {
     
                 // Uložíme do usersprivate (merge)
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
+
+                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
     
                 // Uložíme do users (už bez súkromných polí)
                 await updateDoc(targetDocRef, finalDataToSave);
@@ -4879,6 +4881,7 @@ const clearFilter = (column) => {
     
                     const updates = {};
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
+                    console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                     await updateDoc(targetDocRef, updates);
     
                     setUserNotificationMessage("Nový tím bol pridaný.", 'success');
@@ -4914,6 +4917,7 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
+                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                 await updateDoc(targetDocRef, updates);
     
                 setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
@@ -5144,6 +5148,7 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${category}`] = cleanedTeamsForCategory;
+                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                 await updateDoc(targetDocRef, updates);
     
                 // Uložíme usersprivate
@@ -5170,6 +5175,7 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
+            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
             await updateDoc(targetDocRef, updates);
     
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
@@ -5245,6 +5251,8 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
+
+            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
     
             // Uložíme do users (vyčistené)
             await updateDoc(targetDocRef, updates);
@@ -5346,7 +5354,8 @@ const clearFilter = (column) => {
             } else {
                 updates[`teams.${category}`] = updatedTeamsInCategory;
             }
-    
+
+            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
             await updateDoc(targetDocRef, updates);
     
             // Odstránime aj príslušné osobné údaje z usersprivate
