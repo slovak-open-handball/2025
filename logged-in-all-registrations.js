@@ -5203,8 +5203,8 @@ const clearFilter = (column) => {
             if (!originalDataPath) {
                 throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu.");
             }
-            const docSnapshot = await getDoc(targetDocRef); 
-            if (!docSnapshot.exists()) {
+            const docSnapshotForUpdate = await getDoc(targetDocRef); // Použijeme iný názov premennej
+            if (!docSnapshotForUpdate.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
     
