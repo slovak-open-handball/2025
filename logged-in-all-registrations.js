@@ -5299,7 +5299,7 @@ const clearFilter = (column) => {
                                 ) : (
                                     React.createElement(React.Fragment, null,
                                         React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center min-w-max' },
-                                            showUsers && showTeams && React.createElement('button', {
+                                            (showUsers || showTeams) && React.createElement('button', {
                                                 onClick: toggleAllRows,
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                             },
