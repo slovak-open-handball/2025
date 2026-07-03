@@ -68,6 +68,16 @@ const formatPhoneNumber = (phoneNumber) => {
     }
 };
 
+// Pridaná pomocná funkcia pre formátovanie PSČ
+const formatPostalCodeForDisplay = (postalCode) => {
+    if (!postalCode) return '-';
+    const cleaned = String(postalCode).replace(/\s/g, '');
+    if (cleaned.length === 5) {
+        return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+    }
+    return cleaned || '-';
+};
+
 const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, onOpenVolunteerModal, canEdit, isPasswordChangeOnlyMode }) => {
     const getRoleColor = (role) => {
         switch (role) {
@@ -210,7 +220,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa trvalého bydliska'),
                     React.createElement('div', { className: 'font-normal' },
-                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${formatPostalCodeForDisplay(userProfileData.postalCode)} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
                     )
                 ),
                 React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
@@ -259,6 +269,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     }
 
     // Upravená časť ProfileSection - zobrazenie fakturačných údajov z usersprivate
+    // OPRAVENÉ: icDph namiesto icdph
     let billingContent = null;
     if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && userProfileData.role !== 'referee' && userProfileData.role !== 'volunteer') {
         const address = userProfileData.address || {};
@@ -296,7 +307,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
                     React.createElement('div', { className: 'font-normal' },
-                        `${address.street || '-'} ${address.houseNumber || '-'}, ${address.postalCode ? address.postalCode.slice(0, 3) + ' ' + address.postalCode.slice(3) : '-'} ${address.city || '-'}, ${address.country || '-'}`
+                        `${address.street || '-'} ${address.houseNumber || '-'}, ${formatPostalCodeForDisplay(address.postalCode)} ${address.city || '-'}, ${address.country || '-'}`
                     )
                 ),
                 React.createElement('div', null,
@@ -309,7 +320,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 ),
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
-                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icdph || '-')
+                    // OPRAVENÉ: icDph namiesto icdph
+                    React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icDph || '-')
                 )
             )
         );
