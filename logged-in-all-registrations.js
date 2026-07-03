@@ -5208,6 +5208,8 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
+
+            updates['_privateData'] = deleteField();
     
             // Uložíme do users (vyčistené)
             await updateDoc(targetDocRef, updates);
@@ -5309,6 +5311,8 @@ const clearFilter = (column) => {
             } else {
                 updates[`teams.${category}`] = updatedTeamsInCategory;
             }
+
+            updates['_privateData'] = deleteField();
 
             await updateDoc(targetDocRef, updates);
     
