@@ -3531,34 +3531,13 @@ const cleanTeamForUsers = (team) => {
         return arr.map(member => {
             if (!member) return member;
             const cleaned = { ...member };
-            // Odstránime VŠETKY osobné údaje - vrátane tých, čo sú priamo v objekte
+            // Odstránime osobné polia
             const privateKeys = [
-                'address', 'dateOfBirth', '_address', '_dateOfBirth', 
-                '_privateData', 'birthDate', 'gender', 
-                'street', 'houseNumber', 'city', 'postalCode', 'country',
-                // Ďalšie možné varianty
-                'address.street', 'address.houseNumber', 'address.city', 
-                'address.postalCode', 'address.country',
-                'date_of_birth', 'dob'
+                'address', 'dateOfBirth', '_address', '_dateOfBirth',
+                '_privateData', 'birthDate', 'gender',
+                'street', 'houseNumber', 'city', 'postalCode', 'country'
             ];
-            privateKeys.forEach(key => {
-                delete cleaned[key];
-                // Odstránime aj vnorené polia (ak existujú)
-                if (key.includes('.')) {
-                    const parts = key.split('.');
-                    let current = cleaned;
-                    for (let i = 0; i < parts.length - 1; i++) {
-                        if (current && current[parts[i]]) {
-                            current = current[parts[i]];
-                        } else {
-                            break;
-                        }
-                    }
-                    if (current && current[parts[parts.length - 1]]) {
-                        delete current[parts[parts.length - 1]];
-                    }
-                }
-            });
+            privateKeys.forEach(key => delete cleaned[key]);
             return cleaned;
         });
     };
@@ -3577,15 +3556,13 @@ const cleanTeamForUsers = (team) => {
         }
     });
 
-    // Odstránime aj osobné údaje na úrovni tímu
+    // Odstránime aj osobné polia na úrovni tímu
     const privateKeys = [
-        'address', 'dateOfBirth', '_address', '_dateOfBirth', 
-        '_privateData', 'birthDate', 'gender', 
+        'address', 'dateOfBirth', '_address', '_dateOfBirth',
+        '_privateData', 'birthDate', 'gender',
         'street', 'houseNumber', 'city', 'postalCode', 'country'
     ];
-    privateKeys.forEach(key => {
-        delete cleanedTeam[key];
-    });
+    privateKeys.forEach(key => delete cleanedTeam[key]);
 
     return cleanedTeam;
 };
@@ -4701,58 +4678,44 @@ const clearFilter = (column) => {
             setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
             return;
         }
-        
+    
         try {
             window.showGlobalLoader();
-            
-            // ============================================================
-            // PRÍPAD 1: ÚPRAVA POUŽÍVATEĽA NA NAJVYŠŠEJ ÚROVNI
-            // ============================================================
+    
+            // ------------------------------------------------------------------
+            // 1. PRÍPAD: ÚPRAVA POUŽÍVATEĽA (hlavný profil)
+            // ------------------------------------------------------------------
             if (originalDataPath === '') {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
                     throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu.");
                 }
                 const currentDocData = docSnapshot.data();
-                
+    
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-                
-                // Zoznam polí, ktoré patria do usersprivate a NESMÚ byť v users
+    
+                // Polia, ktoré patria výhradne do usersprivate
                 const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
-                
-                // Začneme s kópiou existujúcich dát
+    
+                // 1a) Pripravíme dáta pre users (odstránime súkromné polia)
                 let finalDataToSave = { ...currentDocData };
-                
-                // Odstránime všetky polia, ktoré patria do usersprivate
-                privateFields.forEach(field => {
-                    delete finalDataToSave[field];
-                });
-                
-                // Odstránime aj billing.address z users
+                privateFields.forEach(field => delete finalDataToSave[field]);
                 if (finalDataToSave.billing) {
-                    delete finalDataToSave.billing.address;
+                    delete finalDataToSave.billing.address;   // fakturačná adresa tiež do private
                 }
-                
-                // AK EXISTUJÚ TÍMY - VYČISTÍME ICH OD OSOBNÝCH ÚDAJOV
+    
+                // Vyčistíme existujúce tímy (ak nejaké sú)
                 if (finalDataToSave.teams) {
-                    // 🔧 DÔLEŽITÉ: Najprv vyčistíme existujúce tímy
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
-                
-                // Aktualizujeme ostatné polia (okrem súkromných)
+    
+                // Prepíšeme ostatné polia z formulára (okrem súkromných)
                 for (const key in updatedDataFromModal) {
-                    // Preskočíme súkromné polia
-                    if (privateFields.includes(key)) {
-                        continue;
-                    }
-                    
+                    if (privateFields.includes(key)) continue;
                     const value = updatedDataFromModal[key];
-                    if (value === undefined) {
-                        continue;
-                    }
-                    
+                    if (value === undefined) continue;
+    
                     if (key === 'billing') {
-                        // Pre billing uložíme len neadresové polia
                         finalDataToSave[key] = {
                             clubName: value.clubName || currentDocData.billing?.clubName || '',
                             ico: value.ico || currentDocData.billing?.ico || '',
@@ -4760,48 +4723,37 @@ const clearFilter = (column) => {
                             icDph: value.icDph || currentDocData.billing?.icDph || ''
                         };
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
-                        // Tieto polia patria do users (nie sú osobné)
                         finalDataToSave[key] = value;
                     } else if (key === 'teams') {
-                        // 🔧 DÔLEŽITÉ: Vyčistíme tímy aj z updatedDataFromModal
                         if (value) {
-                            const cleanedTeams = removeSensitiveFieldsFromTeams(value);
-                            finalDataToSave[key] = cleanedTeams;
+                            finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
                         }
                     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                        // Pre ostatné objekty (okrem tých, čo sme už spracovali)
                         if (key !== 'address' && key !== 'billing') {
-                            finalDataToSave[key] = {
-                                ...(currentDocData[key] || {}),
-                                ...value
-                            };
+                            finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
                         }
                     } else {
                         finalDataToSave[key] = value;
                     }
                 }
-                
-                // 🔧 DÔLEŽITÉ: Ešte raz vyčistíme celý objekt pre istotu
+    
+                // Znova vyčistíme tímy pre istotu
                 if (finalDataToSave.teams) {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
-                
-                // ----- ULOŽENIE DO USERSPRIVATE -----
+    
+                // 1b) Pripravíme dáta pre usersprivate
                 let privateData = {};
                 try {
                     const privateDocSnapshot = await getDoc(userPrivateDocRef);
                     if (privateDocSnapshot.exists()) {
                         privateData = privateDocSnapshot.data();
                     }
-                } catch (e) {
-                    console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
-                }
-                
-                if (!privateData || typeof privateData !== 'object') {
-                    privateData = {};
-                }
-                
-                // Aktualizujeme adresu v privateData
+                } catch (e) { /* dokument zatiaľ neexistuje */ }
+    
+                if (!privateData || typeof privateData !== 'object') privateData = {};
+    
+                // Adresa klubu
                 privateData.address = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4809,13 +4761,12 @@ const clearFilter = (column) => {
                     postalCode: updatedDataFromModal.postalCode || currentDocData.postalCode || '',
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
-                
-                // Ak existuje birthDate (pre dobrovoľníka), uložíme ho do privateData
+    
                 if (updatedDataFromModal.birthDate) {
                     privateData.birthDate = updatedDataFromModal.birthDate;
                 }
-                
-                // Aktualizujeme fakturačnú adresu v privateData
+    
+                // Fakturačná adresa
                 privateData.billingAddress = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4823,51 +4774,54 @@ const clearFilter = (column) => {
                     postalCode: updatedDataFromModal.postalCode || currentDocData.postalCode || '',
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
-                
-                // Uložíme do usersprivate
+    
+                // Uložíme do usersprivate (merge)
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
-                
+    
                 // Uložíme do users (už bez súkromných polí)
                 await updateDoc(targetDocRef, finalDataToSave);
-                
+    
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
                 return;
             }
-            
-            // ============================================================
-            // PRÍPAD 2: ÚPRAVA TÍMU ALEBO PRIDANIE NOVÉHO TÍMU
-            // ============================================================
-            else if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) {
+    
+            // ------------------------------------------------------------------
+            // 2. PRÍPAD: ÚPRAVA / PRIDANIE TÍMU
+            // ------------------------------------------------------------------
+            if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
                     throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
                 }
                 const currentDocData = docSnapshot.data();
-            
+    
                 let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category;
                 if (!actualCategory) {
                     throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
                 }
                 const currentCategoryTeams = Array.isArray(currentDocData.teams?.[actualCategory]) ? currentDocData.teams[actualCategory] : [];
-            
+    
+                // Zistíme pôvodnú kategóriu a index (ak ide o úpravu)
                 let oldCategory = null;
                 let oldTeamIndex = -1;
                 const pathPartsFromOriginal = originalDataPath.split('.');
                 if (pathPartsFromOriginal.length > 1) {
-                    const categoryAndIndexPartFromOriginal = pathPartsFromOriginal[1];
-                    const categoryMatchFromOriginal = categoryAndIndexPartFromOriginal.match(/^(.*?)\[(\d+)\]$/);
-                    if (categoryMatchFromOriginal) {
-                        oldCategory = categoryMatchFromOriginal[1];
-                        oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
+                    const categoryAndIndexPart = pathPartsFromOriginal[1];
+                    const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
+                    if (categoryMatch) {
+                        oldCategory = categoryMatch[1];
+                        oldTeamIndex = parseInt(categoryMatch[2]);
                     }
                 }
-
+    
+                // Odstráňme z údajov akékoľvek osobné polia, ktoré by sa mohli nachádzať na úrovni tímu
                 delete updatedDataFromModal.dateOfBirth;
                 delete updatedDataFromModal.address;
                 delete updatedDataFromModal._dateOfBirth;
                 delete updatedDataFromModal._address;
-                // Rovnako vyčistiť polia členov (ak by obsahovali dateOfBirth/address)
+    
+                // Vyčistíme aj polia členov (ak by náhodou obsahovali osobné údaje)
                 ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].forEach(arrName => {
                     if (Array.isArray(updatedDataFromModal[arrName])) {
                         updatedDataFromModal[arrName] = updatedDataFromModal[arrName].map(member => {
@@ -4876,28 +4830,22 @@ const clearFilter = (column) => {
                         });
                     }
                 });
-            
+    
                 const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
-            
-                // VYTVORÍME NOVÝ ČISTÝ TÍM - NEPOUŽÍVAME EXISTUJÚCI
+    
+                // Pomocná funkcia na vytvorenie „čistého“ tímu (len verejné polia)
                 const createCleanTeam = (data) => {
                     const cleanTeam = {};
-                    
-                    // Povolené polia pre tím (iba verejné)
                     const allowedTeamFields = [
-                        'teamName', 'category', '_category', 'arrival', 'accommodation', 
+                        'teamName', 'category', '_category', 'arrival', 'accommodation',
                         'packageDetails', 'packageId', 'tshirts', 'jerseyHomeColor', 'jerseyAwayColor',
-                        'players', 'menTeamMembers', 'womenTeamMembers', 'menTeamMembersCount', 
+                        'players', 'menTeamMembers', 'womenTeamMembers', 'menTeamMembersCount',
                         'womenTeamMembersCount', 'playersCount', 'registeredBy', 'clubName'
                     ];
-                    
-                    // Kopírujeme len povolené polia
                     allowedTeamFields.forEach(field => {
-                        if (data[field] !== undefined) {
-                            cleanTeam[field] = data[field];
-                        }
+                        if (data[field] !== undefined) cleanTeam[field] = data[field];
                     });
-                    
+    
                     // Čisté polia pre členov (prázdne polia)
                     const memberArrays = [
                         'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails',
@@ -4907,15 +4855,12 @@ const clearFilter = (column) => {
                         if (data[arrName] && Array.isArray(data[arrName])) {
                             cleanTeam[arrName] = data[arrName].map(member => {
                                 const cleanMember = {};
-                                // Povolené polia pre člena (bez osobných údajov)
                                 const allowedMemberFields = [
                                     'firstName', 'lastName', 'jerseyNumber', 'registrationNumber',
                                     'isRegistered', 'type', 'originalArray', 'originalIndex'
                                 ];
                                 allowedMemberFields.forEach(field => {
-                                    if (member[field] !== undefined) {
-                                        cleanMember[field] = member[field];
-                                    }
+                                    if (member[field] !== undefined) cleanMember[field] = member[field];
                                 });
                                 return cleanMember;
                             });
@@ -4923,100 +4868,92 @@ const clearFilter = (column) => {
                             cleanTeam[arrName] = [];
                         }
                     });
-                    
                     return cleanTeam;
                 };
-            
+    
+                // 2a) Pridanie nového tímu
                 if (isNewTeam) {
-                    // Vytvoríme čistý tím z údajov
                     const cleanTeam = createCleanTeam(updatedDataFromModal);
                     cleanTeam.registeredBy = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim();
                     cleanTeam.accommodation = updatedDataFromModal.accommodation || { type: '' };
-                    
+    
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams.push(cleanTeam);
-            
-                    // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM
+    
+                    // Vyčistíme celú kategóriu (odstránime osobné údaje)
                     const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
-                    
+    
                     const updates = {};
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
-                    
                     await updateDoc(targetDocRef, updates);
-                    console.log("DEBUG: Nový tím pridaný do kategórie", actualCategory);
-                } else {
-                    if (!oldCategory || oldTeamIndex < 0) {
-                        throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
-                    }
-            
-                    // VYTVORÍME NOVÝ ČISTÝ TÍM - NEPOUŽÍVAME EXISTUJÚCI
-                    const cleanTeam = createCleanTeam(updatedDataFromModal);
-                    
-                    // Pre existujúci tím potrebujeme zachovať niektoré polia (napr. packageId)
-                    const existingTeam = currentCategoryTeams[oldTeamIndex] || {};
-                    if (existingTeam.packageId) {
-                        cleanTeam.packageId = existingTeam.packageId;
-                    }
-                    
-                    // Zachováme aj ostatné neosobné polia, ktoré nie sú v updatedDataFromModal
-                    const preservedFields = ['packageId', 'players', 'menTeamMembers', 'womenTeamMembers'];
-                    preservedFields.forEach(field => {
-                        if (existingTeam[field] !== undefined && cleanTeam[field] === undefined) {
-                            cleanTeam[field] = existingTeam[field];
-                        }
-                    });
-                    
-                    // Uistíme sa, že accommodation je nastavené
-                    if (!cleanTeam.accommodation) {
-                        cleanTeam.accommodation = { type: '' };
-                    }
-                    
-                    const newCategoryTeams = [...currentCategoryTeams];
-                    newCategoryTeams[oldTeamIndex] = cleanTeam;
-            
-                    // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM
-                    const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
-            
-                    const updates = {};
-                    updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
-                    
-                    await updateDoc(targetDocRef, updates);
-                    console.log("DEBUG: Tím aktualizovaný v kategórii", oldCategory);
+    
+                    setUserNotificationMessage("Nový tím bol pridaný.", 'success');
+                    closeEditModal();
+                    return;
                 }
-            
+    
+                // 2b) Úprava existujúceho tímu
+                if (!oldCategory || oldTeamIndex < 0) {
+                    throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
+                }
+    
+                const existingTeam = currentCategoryTeams[oldTeamIndex] || {};
+                const cleanTeam = createCleanTeam(updatedDataFromModal);
+    
+                // Zachováme niektoré polia, ktoré sa v editácii nemusia objaviť (napr. packageId)
+                const preservedFields = ['packageId', 'players', 'menTeamMembers', 'womenTeamMembers'];
+                preservedFields.forEach(field => {
+                    if (existingTeam[field] !== undefined && cleanTeam[field] === undefined) {
+                        cleanTeam[field] = existingTeam[field];
+                    }
+                });
+    
+                if (!cleanTeam.accommodation) {
+                    cleanTeam.accommodation = { type: '' };
+                }
+    
+                const newCategoryTeams = [...currentCategoryTeams];
+                newCategoryTeams[oldTeamIndex] = cleanTeam;
+    
+                // Vyčistíme celú kategóriu
+                const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
+    
+                const updates = {};
+                updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
+                await updateDoc(targetDocRef, updates);
+    
                 setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
                 closeEditModal();
                 return;
             }
-                        
-            // ============================================================
-            // PRÍPAD 3: ÚPRAVA ČLENA TÍMU (hráč, člen RT, šofér)
-            // ============================================================
-            else if (originalDataPath.includes('playerDetails') ||
-                     originalDataPath.includes('menTeamMemberDetails') ||
-                     originalDataPath.includes('womenTeamMemberDetails') ||
-                     originalDataPath.includes('driverDetailsMale') ||
-                     originalDataPath.includes('driverDetailsFemale')) {
-            
+    
+            // ------------------------------------------------------------------
+            // 3. PRÍPAD: ÚPRAVA / PRIDANIE ČLENA TÍMU (player, člen RT, šofér)
+            // ------------------------------------------------------------------
+            if (originalDataPath.includes('playerDetails') ||
+                originalDataPath.includes('menTeamMemberDetails') ||
+                originalDataPath.includes('womenTeamMemberDetails') ||
+                originalDataPath.includes('driverDetailsMale') ||
+                originalDataPath.includes('driverDetailsFemale')) {
+    
                 const pathParts = originalDataPath.split('.');
                 if (pathParts.length !== 3) {
                     throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty.`);
                 }
-            
+    
                 const categoryAndIndexPart = pathParts[1];
                 const memberArrayAndIndexPart = pathParts[2];
-            
+    
                 const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
                 if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
-            
                 const category = categoryMatch[1];
                 const teamIndex = parseInt(categoryMatch[2]);
-            
+    
                 const isReallyNew = memberArrayAndIndexPart.includes('[-1]');
-            
+    
                 let memberArrayPath;
                 let memberArrayIndex;
-            
+    
                 if (isReallyNew) {
                     const arrayNameMatch = memberArrayAndIndexPart.match(/^(.*?)\[-1\]$/);
                     if (!arrayNameMatch) throw new Error("Neplatný formát [-1]");
@@ -5028,24 +4965,24 @@ const clearFilter = (column) => {
                     memberArrayPath = existingMatch[1];
                     memberArrayIndex = parseInt(existingMatch[2]);
                 }
-            
+    
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
                     throw new Error("Dokument používateľa sa nenašiel.");
                 }
-            
                 const currentDocData = docSnapshot.data();
                 const teamsInCategory = currentDocData.teams?.[category] || [];
                 if (teamIndex < 0 || teamIndex >= teamsInCategory.length) {
                     throw new Error(`Tím s indexom ${teamIndex} v kategórii ${category} neexistuje.`);
                 }
-            
-                // ✅ VYTVORÍME KÓPIU TÍMU BEZ OSOBNÝCH ÚDAJOV
+    
+                // Vytvoríme kópiu tímu (len verejné dáta)
                 const existingTeam = JSON.parse(JSON.stringify(teamsInCategory[teamIndex] || {}));
                 const teamToUpdate = cleanTeamForUsers(existingTeam);
-                
+    
                 let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
-            
+    
+                // Prístup k usersprivate
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                 let privateData = {};
                 try {
@@ -5053,28 +4990,17 @@ const clearFilter = (column) => {
                     if (privateDocSnapshot.exists()) {
                         privateData = privateDocSnapshot.data();
                     }
-                } catch (e) {
-                    console.log("Usersprivate dokument ešte neexistuje, vytvoríme nový.");
-                }
-            
-                if (!privateData || typeof privateData !== 'object') {
-                    privateData = {};
-                }
-            
-                if (!privateData.persons) {
-                    privateData.persons = {};
-                }
-            
+                } catch (e) { /* dokument neexistuje */ }
+    
+                if (!privateData || typeof privateData !== 'object') privateData = {};
+                if (!privateData.persons) privateData.persons = {};
+    
                 const teamKey = `${category}_team${teamIndex + 1}`;
-                if (!privateData.persons[teamKey]) {
-                    privateData.persons[teamKey] = {};
-                }
-            
-                // ============================================================
-                // PRIDANIE NOVÉHO ČLENA
-                // ============================================================
+                if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
+    
+                // ----- 3a) Pridanie nového člena -----
                 if (isReallyNew) {
-                    // Vytvoríme čistý objekt pre nového člena (bez osobných údajov)
+                    // Vytvoríme čistý objekt pre users (žiadne osobné údaje)
                     const cleanNewMember = {
                         firstName: updatedDataFromModal.firstName || '',
                         lastName: updatedDataFromModal.lastName || '',
@@ -5082,28 +5008,27 @@ const clearFilter = (column) => {
                         registrationNumber: updatedDataFromModal.registrationNumber || '',
                         isRegistered: updatedDataFromModal.isRegistered || false
                     };
-                    
-                    // Ak je to hráč, pridáme aj ďalšie polia
                     if (memberArrayPath === 'playerDetails') {
                         cleanNewMember.jerseyNumber = updatedDataFromModal.jerseyNumber || '';
                         cleanNewMember.registrationNumber = updatedDataFromModal.registrationNumber || '';
                     }
-            
+    
                     currentMemberArray.push(cleanNewMember);
-            
+    
                     const memberIndexInPrivate = currentMemberArray.length - 1;
-            
+    
+                    // Určíme názov poľa v usersprivate
                     let privateArrayName = memberArrayPath;
                     if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
                     else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
                     else if (memberArrayPath === 'menTeamMemberDetails') privateArrayName = 'menTeamMembers';
                     else if (memberArrayPath === 'driverDetailsMale') privateArrayName = 'driversMale';
                     else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
-            
+    
                     if (!privateData.persons[teamKey][privateArrayName]) {
                         privateData.persons[teamKey][privateArrayName] = [];
                     }
-                    
+    
                     // Uložíme osobné údaje do usersprivate
                     privateData.persons[teamKey][privateArrayName][memberIndexInPrivate] = {
                         dateOfBirth: updatedDataFromModal.dateOfBirth || '',
@@ -5115,14 +5040,15 @@ const clearFilter = (column) => {
                             country: ''
                         }
                     };
-            
+    
+                    // Notifikácia (voliteľné)
                     const memberName = `${cleanNewMember.firstName || ''} ${cleanNewMember.lastName || ''}`.trim() || 'bez mena';
                     const memberType = editModalTitle.includes('hráč') ? 'Hráč' :
                                         editModalTitle.includes('člen realizačného tímu (žena)') ? 'Člen RT – žena' :
                                         editModalTitle.includes('člen realizačného tímu (muž)') ? 'Člen RT – muž' :
                                         editModalTitle.includes('šofér (žena)') ? 'Šofér – žena' :
                                         editModalTitle.includes('šofér (muž)') ? 'Šofér – muž' : 'Člen tímu';
-            
+    
                     const userEmail = window.auth.currentUser?.email;
                     if (userEmail) {
                         const notificationsCollectionRef = collection(db, 'notifications');
@@ -5132,20 +5058,16 @@ const clearFilter = (column) => {
                             timestamp: serverTimestamp()
                         });
                     }
-                }
-                // ============================================================
-                // ÚPRAVA EXISTUJÚCEHO ČLENA - MODIFIKUJEME NA MIESTE
-                // ============================================================
-                else {
+    
+                } else {
+                    // ----- 3b) Úprava existujúceho člena -----
                     if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
                         throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
                     }
-            
-                    // ✅ ZÍSKAME EXISTUJÚCEHO ČLENA a MODIFIKUJEME HO NA MIESTE
+    
                     const existingMember = currentMemberArray[memberArrayIndex];
-                    
-                    // ✅ Aktualizujeme iba polia, ktoré boli zmenené (a nie sú osobné)
-                    // Zachováme všetky existujúce polia, ktoré nie sú v updatedDataFromModal
+    
+                    // Aktualizujeme verejné polia
                     if (updatedDataFromModal.firstName !== undefined) {
                         existingMember.firstName = updatedDataFromModal.firstName;
                     }
@@ -5161,25 +5083,21 @@ const clearFilter = (column) => {
                     if (updatedDataFromModal.isRegistered !== undefined) {
                         existingMember.isRegistered = updatedDataFromModal.isRegistered;
                     }
-                    
-                    // ✅ ZACHOVÁME existujúce polia, ktoré nie sú v updatedDataFromModal
-                    // (napr. type, originalArray, originalIndex, atď.)
-                    // Tieto polia už existujú v existingMember, takže ich netreba nič robiť
-            
+    
+                    // Aktualizujeme osobné údaje v usersprivate
                     let privateArrayName = memberArrayPath;
                     if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
                     else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
                     else if (memberArrayPath === 'menTeamMemberDetails') privateArrayName = 'menTeamMembers';
                     else if (memberArrayPath === 'driverDetailsMale') privateArrayName = 'driversMale';
                     else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
-            
+    
                     if (!privateData.persons[teamKey][privateArrayName]) {
                         privateData.persons[teamKey][privateArrayName] = [];
                     }
-            
+    
                     const existingPrivateMember = privateData.persons[teamKey][privateArrayName][memberArrayIndex] || {};
-            
-                    // ✅ Aktualizujeme usersprivate - OSOBNÉ ÚDAJE (na mieste)
+    
                     if (updatedDataFromModal.dateOfBirth !== undefined) {
                         privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
                             ...existingPrivateMember,
@@ -5192,34 +5110,20 @@ const clearFilter = (column) => {
                             address: updatedDataFromModal.address
                         };
                     }
-            
-                    // ✅ Ak neboli aktualizované osobné údaje, zachováme existujúce
-                    if (updatedDataFromModal.dateOfBirth === undefined && updatedDataFromModal.address === undefined) {
-                        // Nič nemeníme, existingPrivateMember zostáva
-                    }
-            
-                    // Generovanie zmien pre notifikácie (porovnávame iba zmenené polia)
+    
+                    // Notifikácia o zmenách (voliteľné)
                     const changes = [];
-                    
-                    // Porovnáme zmeny v neosobných poliach
+                    const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
                     const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'isRegistered'];
                     memberFields.forEach(field => {
-                        const oldValue = existingMember[field] !== undefined ? existingMember[field] : '';
-                        // Potrebujeme pôvodnú hodnotu pred zmenou - tú máme v pôvodnom členovi
-                        // Ale keďže modifikujeme priamo, musíme si zapamätať pôvodné hodnoty
-                        // Pre jednoduchosť použijeme pôvodný člen z docSnapshot
-                        const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
-                        const newValue = existingMember[field] !== undefined ? existingMember[field] : '';
-                        
-                        // Porovnáme s pôvodnou hodnotou (pred zmenou)
                         const originalValue = originalMemberFromDoc[field] !== undefined ? originalMemberFromDoc[field] : '';
-                        
+                        const newValue = existingMember[field] !== undefined ? existingMember[field] : '';
                         if (originalValue !== newValue) {
                             const label = formatLabel(field);
                             changes.push(`Zmena ${label}: z '${originalValue || '-'}' na '${newValue || '-'}'`);
                         }
                     });
-            
+    
                     if (changes.length > 0) {
                         const memberName = `${existingMember.firstName || ''} ${existingMember.lastName || ''}`.trim() || 'bez mena';
                         const userEmail = window.auth.currentUser?.email;
@@ -5233,57 +5137,50 @@ const clearFilter = (column) => {
                         }
                     }
                 }
-            
-                // ============================================================
-                // ULOŽENIE DO USERS A USERSPRIVATE
-                // ============================================================
-                
+    
+                // ----- Uloženie do users a usersprivate -----
                 teamToUpdate[memberArrayPath] = currentMemberArray;
                 const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
-                
-                // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM DO USERS
+    
                 const updatedTeamsForCategory = [...teamsInCategory];
                 updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
-                
-                // ✅ POUŽIJEME removeSensitiveFieldsFromTeams NA VYČISTENIE
+    
+                // Vyčistíme celú kategóriu pred uložením do users
                 const cleanedTeamsForCategory = removeSensitiveFieldsFromTeams(updatedTeamsForCategory);
-                
+    
                 const updates = {};
                 updates[`teams.${category}`] = cleanedTeamsForCategory;
                 await updateDoc(targetDocRef, updates);
-                
-                const cleanPrivateData = JSON.parse(JSON.stringify(privateData));
-                await setDoc(userPrivateDocRef, cleanPrivateData, { merge: true });
-                
+    
+                // Uložíme usersprivate
+                await setDoc(userPrivateDocRef, privateData, { merge: true });
+    
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
                 return;
             }
-            
-            // ============================================================
-            // PRÍPAD 4: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA
-            // ============================================================
-            else {
-                if (!originalDataPath) {
-                    throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu. Zmeny neboli uložené.");
-                }
-                const docSnapshot = await getDoc(targetDocRef);
-                if (!docSnapshot.exists()) {
-                    throw new Error("Dokument sa nenašiel pre aktualizáciu.");
-                }
-                const currentDocData = docSnapshot.data();
     
-                const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
-    
-                const updates = {};
-                updates[topLevelField] = updatedObject[topLevelField];
-                
-                await updateDoc(targetDocRef, updates);
-                setUserNotificationMessage("Zmeny boli uložené.", 'success');
-                closeEditModal();
-                return;
+            // ------------------------------------------------------------------
+            // 4. PRÍPAD: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA (napr. iné polia)
+            // ------------------------------------------------------------------
+            if (!originalDataPath) {
+                throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu.");
             }
-            
+            const docSnapshot = await getDoc(targetDocRef);
+            if (!docSnapshot.exists()) {
+                throw new Error("Dokument sa nenašiel pre aktualizáciu.");
+            }
+            const currentDocData = docSnapshot.data();
+    
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
+    
+            const updates = {};
+            updates[topLevelField] = updatedObject[topLevelField];
+            await updateDoc(targetDocRef, updates);
+    
+            setUserNotificationMessage("Zmeny boli uložené.", 'success');
+            closeEditModal();
+    
         } catch (e) {
             console.error("Chyba pri ukladaní dát do Firestore:", e);
             setError(`Chyba pri ukladaní dát: ${e.message}`);
@@ -5291,7 +5188,7 @@ const clearFilter = (column) => {
         } finally {
             window.hideGlobalLoader();
         }
-    }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle, editingData, getChangesForNotification]);
+    }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]);
 
     const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPath) => {
         if (!targetDocRef || !originalDataPath) {
@@ -5313,13 +5210,11 @@ const clearFilter = (column) => {
     
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
             if (!categoryMatch) throw new Error("Neplatný formát kategórie a indexu tímu");
-    
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
     
             const memberArrayMatch = memberArrayAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
             if (!memberArrayMatch) throw new Error("Neplatný formát poľa člena a indexu");
-    
             const memberArrayPath = memberArrayMatch[1];
             const memberArrayIndex = parseInt(memberArrayMatch[2]);
     
@@ -5327,7 +5222,6 @@ const clearFilter = (column) => {
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument používateľa sa nenašiel.");
             }
-    
             const currentDocData = docSnapshot.data();
             const teamsInCategory = currentDocData.teams?.[category] || [];
     
@@ -5336,7 +5230,6 @@ const clearFilter = (column) => {
             }
     
             const teamToUpdate = JSON.parse(JSON.stringify(teamsInCategory[teamIndex]));
-    
             let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
     
             if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
@@ -5346,12 +5239,11 @@ const clearFilter = (column) => {
             const memberToRemove = currentMemberArray[memberArrayIndex];
             const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim() || 'bez mena';
     
+            // Odstránime z poľa
             currentMemberArray.splice(memberArrayIndex, 1);
             teamToUpdate[memberArrayPath] = currentMemberArray;
     
             const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
-    
-            // ✅ Vyčistíme tím pred uložením do users
             const cleanedTeam = cleanTeamForUsers(finalUpdatedTeam);
     
             const updatedTeamsForCategory = [...teamsInCategory];
@@ -5360,9 +5252,47 @@ const clearFilter = (column) => {
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
     
+            // Uložíme do users (vyčistené)
             await updateDoc(targetDocRef, updates);
     
-            // Notifikácia používateľovi
+            // Odstránime aj z usersprivate
+            const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+            let privateData = {};
+            try {
+                const privateDocSnapshot = await getDoc(userPrivateDocRef);
+                if (privateDocSnapshot.exists()) {
+                    privateData = privateDocSnapshot.data();
+                }
+            } catch (e) { /* dokument neexistuje */ }
+    
+            if (privateData.persons) {
+                const teamKey = `${category}_team${teamIndex + 1}`;
+                if (privateData.persons[teamKey]) {
+                    // Zistíme názov poľa v private
+                    let privateArrayName;
+                    if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
+                    else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
+                    else if (memberArrayPath === 'menTeamMemberDetails') privateArrayName = 'menTeamMembers';
+                    else if (memberArrayPath === 'driverDetailsMale') privateArrayName = 'driversMale';
+                    else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
+                    else privateArrayName = null;
+    
+                    if (privateArrayName && privateData.persons[teamKey][privateArrayName]) {
+                        privateData.persons[teamKey][privateArrayName].splice(memberArrayIndex, 1);
+                        if (privateData.persons[teamKey][privateArrayName].length === 0) {
+                            delete privateData.persons[teamKey][privateArrayName];
+                        }
+                    }
+                    if (Object.keys(privateData.persons[teamKey]).length === 0) {
+                        delete privateData.persons[teamKey];
+                    }
+                    if (Object.keys(privateData.persons).length === 0) {
+                        delete privateData.persons;
+                    }
+                    await setDoc(userPrivateDocRef, privateData, { merge: true });
+                }
+            }
+    
             setUserNotificationMessage(`${memberName} bol odstránený z tímu.`, 'success');
             closeEditModal();
     
@@ -5378,7 +5308,7 @@ const clearFilter = (column) => {
     const handleDeleteTeam = React.useCallback(async (targetDocRef, originalDataPath) => {
         if (!targetDocRef || !originalDataPath) {
             console.error("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu.");
-            setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu. Zmeny neboli uložené.", 'error');
+            setUserNotificationMessage("Chyba: Chýba odkaz na dokument alebo cesta pre odstránenie tímu.", 'error');
             return;
         }
     
@@ -5387,16 +5317,14 @@ const clearFilter = (column) => {
     
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 2) {
-                throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}. Original Data Path: ${originalDataPath}`);
+                throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}.`);
             }
     
             const categoryAndIndexPart = pathParts[1];
             const categoryMatch = categoryAndIndexPart.match(/^(.*?)\[(\d+)\]$/);
-    
             if (!categoryMatch) {
                 throw new Error(`Neplatný formát kategórie a indexu tímu: ${categoryAndIndexPart}.`);
             }
-    
             const category = categoryMatch[1];
             const teamIndex = parseInt(categoryMatch[2]);
     
@@ -5407,62 +5335,59 @@ const clearFilter = (column) => {
             const currentDocData = docSnapshot.data();
     
             const teamsInCategory = currentDocData.teams?.[category] || [];
-            
-            if (teamIndex >= 0 && teamIndex < teamsInCategory.length) {
-                const teamToRemove = teamsInCategory[teamIndex];
-                const teamName = teamToRemove.teamName || 'Bez názvu';
-    
-                // Odstránime tím z users
-                const updatedTeamsInCategory = [...teamsInCategory];
-                updatedTeamsInCategory.splice(teamIndex, 1);
-    
-                const updates = {};
-                if (updatedTeamsInCategory.length === 0) {
-                    updates[`teams.${category}`] = deleteField();
-                } else {
-                    updates[`teams.${category}`] = updatedTeamsInCategory;
-                }
-                
-                await updateDoc(targetDocRef, updates);
-    
-                // Odstránime osobné údaje členov tímu z usersprivate
-                const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-                let privateData = {};
-                try {
-                    const privateDocSnapshot = await getDoc(userPrivateDocRef);
-                    if (privateDocSnapshot.exists()) {
-                        privateData = privateDocSnapshot.data();
-                    }
-                } catch (e) {
-                    // Dokument neexistuje, nič nerobíme
-                }
-    
-                if (privateData.persons) {
-                    const teamKey = `${category}_team${teamIndex + 1}`;
-                    delete privateData.persons[teamKey];
-                    // Ak už nie sú žiadne osoby, odstránime celý persons objekt
-                    if (Object.keys(privateData.persons).length === 0) {
-                        delete privateData.persons;
-                    }
-                    await setDoc(userPrivateDocRef, privateData, { merge: true });
-                }
-    
-                // Zaznamenať notifikáciu
-                const userEmail = window.auth.currentUser?.email;
-                if (userEmail) {
-                    const notificationsCollectionRef = collection(db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        userEmail,
-                        changes: [`Tím ${teamName} bol odstránený z kategórie '''${category}'.`],
-                        timestamp: serverTimestamp()
-                    });
-                }
-    
-                setUserNotificationMessage(`Tím ${teamName} bol odstránený.`, 'success');
-                closeEditModal();
-            } else {
+            if (teamIndex < 0 || teamIndex >= teamsInCategory.length) {
                 throw new Error(`Tím na odstránenie sa nenašiel na ceste: ${originalDataPath}.`);
             }
+    
+            const teamToRemove = teamsInCategory[teamIndex];
+            const teamName = teamToRemove.teamName || 'Bez názvu';
+    
+            // Odstránime tím z users
+            const updatedTeamsInCategory = [...teamsInCategory];
+            updatedTeamsInCategory.splice(teamIndex, 1);
+    
+            const updates = {};
+            if (updatedTeamsInCategory.length === 0) {
+                updates[`teams.${category}`] = deleteField();
+            } else {
+                updates[`teams.${category}`] = updatedTeamsInCategory;
+            }
+    
+            await updateDoc(targetDocRef, updates);
+    
+            // Odstránime aj príslušné osobné údaje z usersprivate
+            const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+            let privateData = {};
+            try {
+                const privateDocSnapshot = await getDoc(userPrivateDocRef);
+                if (privateDocSnapshot.exists()) {
+                    privateData = privateDocSnapshot.data();
+                }
+            } catch (e) { /* dokument neexistuje */ }
+    
+            if (privateData.persons) {
+                const teamKey = `${category}_team${teamIndex + 1}`;
+                delete privateData.persons[teamKey];
+                if (Object.keys(privateData.persons).length === 0) {
+                    delete privateData.persons;
+                }
+                await setDoc(userPrivateDocRef, privateData, { merge: true });
+            }
+    
+            // Notifikácia
+            const userEmail = window.auth.currentUser?.email;
+            if (userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes: [`Tím ${teamName} bol odstránený z kategórie '${category}'.`],
+                    timestamp: serverTimestamp()
+                });
+            }
+    
+            setUserNotificationMessage(`Tím ${teamName} bol odstránený.`, 'success');
+            closeEditModal();
+    
         } catch (e) {
             console.error("Chyba pri odstraňovaní tímu z Firestore:", e);
             setError(`Chyba pri odstraňovaní tímu: ${e.message}`);
@@ -5471,7 +5396,6 @@ const clearFilter = (column) => {
             window.hideGlobalLoader();
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError]);
-
 
     // Handler pre otvorenie modálneho okna na pridanie tímu
     const handleOpenAddTeamModal = (userIdForNewTeam) => { // Prijíma userId pre nový tím
