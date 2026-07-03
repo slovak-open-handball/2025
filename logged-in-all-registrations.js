@@ -4775,16 +4775,16 @@ const clearFilter = (column) => {
                         oldTeamIndex = parseInt(categoryMatchFromOriginal[2]);
                     }
                 }
-    
+            
                 const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
-    
+            
                 if (isNewTeam) {
                     const updatedTeam = { 
                         ...updatedDataFromModal, 
                         registeredBy: `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim(),
                         accommodation: updatedDataFromModal.accommodation || { type: '' }
                     };
-                    // ✅ Vyčistíme tím pred uložením do users (odstránime osobné údaje)
+                    // ✅ Vyčistíme tím pred uložením do users
                     const cleanedTeam = cleanTeamForUsers(updatedTeam);
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams.push(cleanedTeam);
@@ -4799,16 +4799,24 @@ const clearFilter = (column) => {
                         throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
                     }
             
+                    // ✅ NAJPRV VYČISTÍME PÔVODNÝ TÍM OD OSOBNÝCH ÚDAJOV
                     const originalTeam = JSON.parse(JSON.stringify(currentCategoryTeams[oldTeamIndex] || {}));
-                    let updatedTeam = { ...originalTeam };
+                    const cleanedOriginalTeam = cleanTeamForUsers(originalTeam);
+                    
+                    let updatedTeam = { ...cleanedOriginalTeam };
                     
                     for (const key in updatedDataFromModal) {
                         const value = updatedDataFromModal[key];
                         if (value === undefined) continue;
                         
-                        if (key === 'address' || key === 'billing') {
+                        // Preskočíme osobné údaje - tie sa nikdy neukladajú do users
+                        if (['address', 'dateOfBirth', '_address', '_dateOfBirth', '_privateData', 'birthDate', 'gender', 'street', 'houseNumber', 'city', 'postalCode', 'country'].includes(key)) {
+                            continue;
+                        }
+                        
+                        if (key === 'billing') {
                             updatedTeam[key] = {
-                                ...(originalTeam[key] || {}),
+                                ...(cleanedOriginalTeam[key] || {}),
                                 ...(value || {})
                             };
                         } else if (key === 'accommodation') {
@@ -4819,9 +4827,11 @@ const clearFilter = (column) => {
                             } else {
                                 delete updatedTeam.packageDetails;
                             }
+                        } else if (key === 'jerseyHomeColor' || key === 'jerseyAwayColor') {
+                            updatedTeam[key] = value || '';
                         } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                             updatedTeam[key] = {
-                                ...(originalTeam[key] || {}),
+                                ...(cleanedOriginalTeam[key] || {}),
                                 ...value
                             };
                         } else {
@@ -4829,7 +4839,7 @@ const clearFilter = (column) => {
                         }
                     }
                     
-                    // ✅ Vyčistíme tím pred uložením do users (odstránime osobné údaje)
+                    // ✅ Ešte raz vyčistíme pre istotu
                     const cleanedTeam = cleanTeamForUsers(updatedTeam);
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams[oldTeamIndex] = cleanedTeam;
@@ -4846,10 +4856,10 @@ const clearFilter = (column) => {
                 return;
             }
             
-            // ============================================================
-            // PRÍPAD 3: ÚPRAVA ČLENA TÍMU (hráč, člen RT, šofér)
-            // ============================================================
-            else if (originalDataPath.includes('playerDetails') ||
+                // ============================================================
+                // PRÍPAD 3: ÚPRAVA ČLENA TÍMU (hráč, člen RT, šofér)
+                // ============================================================
+                else if (originalDataPath.includes('playerDetails') ||
                      originalDataPath.includes('menTeamMemberDetails') ||
                      originalDataPath.includes('womenTeamMemberDetails') ||
                      originalDataPath.includes('driverDetailsMale') ||
@@ -4897,7 +4907,11 @@ const clearFilter = (column) => {
                     throw new Error(`Tím s indexom ${teamIndex} v kategórii ${category} neexistuje.`);
                 }
             
-                const teamToUpdate = JSON.parse(JSON.stringify(teamsInCategory[teamIndex]));
+                // ✅ NAJPRV VYČISTÍME PÔVODNÝ TÍM OD OSOBNÝCH ÚDAJOV
+                const originalTeam = JSON.parse(JSON.stringify(teamsInCategory[teamIndex] || {}));
+                const cleanedOriginalTeam = cleanTeamForUsers(originalTeam);
+                const teamToUpdate = { ...cleanedOriginalTeam };
+                
                 let currentMemberArray = [...(teamToUpdate[memberArrayPath] || [])];
             
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
