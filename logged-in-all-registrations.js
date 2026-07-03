@@ -16,7 +16,6 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
 
     const traverse = (obj) => {
         if (!obj || typeof obj !== 'object') return;
-        // Odstráni zakázané kľúče na tejto úrovni
         for (const key of Object.keys(obj)) {
             if (forbiddenKeys.has(key)) {
                 delete obj[key];
@@ -31,7 +30,6 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
         }
     };
 
-    // Pre každú kategóriu a tím
     if (Array.isArray(clean)) {
         clean.forEach(team => traverse(team));
     } else {
@@ -45,27 +43,19 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
 };
 
 function getSmartCursorPosition(oldDisplay, newDisplay, oldPos) {
-    // 1. Práve sme napísali 3. číslicu → posun za medzeru
     if (oldPos === 3 && newDisplay.length === 4 && newDisplay[3] === ' ') {
         return 4;
     }
-
-    // 2. Mazanie späť cez medzeru
     if (oldDisplay.length > newDisplay.length && oldPos === 4 && oldDisplay[3] === ' ') {
         return 3;
     }
-
-    // 3. Všeobecný prípad – počítame podľa počtu číslic
     let digitCount = 0;
     for (let i = 0; i < newDisplay.length && digitCount < oldPos; i++) {
         if (/\d/.test(newDisplay[i])) digitCount++;
     }
-
-    // Ak sme už za 3. číslicou, pridáme +1 za medzeru
     if (digitCount >= 3 && newDisplay.length > 3) {
         return digitCount + 1;
     }
-
     return digitCount;
 }
 
@@ -78,7 +68,6 @@ const getFormattedPostalCodeForInput = (rawValue) => {
     return digits;
 };
 
-// 2. Pre zobrazenie v tabuľke – s pomlčkou ak je prázdne
 const formatPostalCodeForDisplay = (postalCode) => {
     if (!postalCode) return '-';
     const cleaned = String(postalCode).replace(/\D/g, '');
@@ -138,13 +127,12 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   );
 }
 
-// ConfirmationModal Component - Nové modálne okno pre potvrdenie
 function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
     if (!isOpen) return null;
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1001] p-4' }, // Z-index vyšší ako DataEditModal
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1001] p-4' },
         React.createElement(
             'div',
             { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
@@ -161,8 +149,6 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
                     className: 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700',
                     onClick: () => {
                         onConfirm();
-                        // Po potvrdení sa modal zatvorí v callbacku onConfirm, ak je to potrebné,
-                        // alebo tu po dokončení operácie. Pre jednoduchosť to môže zatvoriť DataEditModal.
                     }
                 }, 'Potvrdiť')
             )
@@ -170,7 +156,6 @@ function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }) {
     );
 }
 
-// AddMemberTypeSelectionModal Component - Nové modálne okno pre výber typu člena tímu
 function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
     const [selectedType, setSelectedType] = React.useState('');
 
@@ -180,13 +165,13 @@ function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
         if (selectedType) {
             onSelectType(selectedType);
             onClose();
-            setSelectedType(''); // Resetovať pre ďalšie použitie
+            setSelectedType('');
         }
     };
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1002] p-4' }, // Vyšší z-index
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-[1002] p-4' },
         React.createElement(
             'div',
             { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
@@ -194,7 +179,7 @@ function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
             React.createElement(
                 'select',
                 {
-                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 mb-4 focus:outline-none focus:ring-2 focus:focus:ring-blue-500',
+                    className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
                     value: selectedType,
                     onChange: (e) => setSelectedType(e.target.value)
                 },
@@ -222,8 +207,6 @@ function AddMemberTypeSelectionModal({ isOpen, onClose, onSelectType }) {
     );
 }
 
-
-// DialCodeSelectionModal Component - Nové modálne okno pre výber predvoľby
 function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDialCode }) {
     const [searchTerm, setSearchTerm] = React.useState('');
     const modalRef = React.useRef(null);
@@ -259,7 +242,7 @@ function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDial
             {
                 ref: modalRef,
                 className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto',
-                onClick: (e) => e.stopPropagation() // Zastaví bublanie udalosti
+                onClick: (e) => e.stopPropagation()
             },
             React.createElement(
                 'div',
@@ -295,11 +278,9 @@ function DialCodeSelectionModal({ isOpen, onClose, onSelectDialCode, currentDial
     );
 }
 
-// FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
 function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues, allUsers }) {
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
     
-    // Vypočítať počet výskytov pre každú hodnotu
     const getValueCounts = React.useMemo(() => {
         if (!allUsers || !columnName) return new Map();
         
@@ -393,7 +374,6 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                 'div',
                 { className: 'max-h-60 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
                 uniqueColumnValues.map((item, index) => {
-                    // Získanie hodnoty a zobrazenia
                     let valueToUse, displayText;
                     let count = 0;
                     
@@ -455,7 +435,6 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     );
 }
 
-// CollapsibleSection Component - pre rozbaľovacie sekcie
 function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, defaultOpen = false, noOuterStyles = false, actionElement = null }) {
   const isControlled = isOpenProp !== undefined;
   const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
@@ -470,7 +449,6 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
   };
 
   const outerDivClasses = noOuterStyles ? '' : 'border border-gray-200 rounded-lg mb-2';
-  // ZMENA: Triedy pre hlavičku už nie sú pre tlačidlo
   const headerClasses = noOuterStyles ?
     'flex justify-between items-center w-full px-4 py-2 text-left bg-transparent' :
     'flex justify-between items-center w-full px-4 py-2 text-left bg-gray-50 rounded-t-lg';
@@ -480,17 +458,16 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
     'div',
     { className: outerDivClasses },
     React.createElement(
-      'div', // ZMENA: Zmenené z 'button' na 'div'
+      'div',
       {
-        className: headerClasses, // Použitie nových tried hlavičky
+        className: headerClasses,
       },
-      // ZMENA: Šípka je teraz jediný klikateľný element na prepínanie
       React.createElement('span', {
-        className: 'text-gray-500 mr-2 cursor-pointer p-1 rounded-full hover:bg-gray-200 focus:outline-none', // Pridaný cursor-pointer a štýly pre interaktivitu
-        onClick: handleToggle // Iba tento element spracúva prepínanie
+        className: 'text-gray-500 mr-2 cursor-pointer p-1 rounded-full hover:bg-gray-200 focus:outline-none',
+        onClick: handleToggle
       }, currentIsOpen ? '▲' : '▼'),
-      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement), // Editovacie tlačidlo tímu, už má stopPropagation
-      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title) // Názov je len na zobrazenie
+      actionElement && React.createElement('div', { className: 'flex-shrink-0 mr-2' }, actionElement),
+      typeof title === 'string' ? React.createElement('span', { className: 'font-semibold text-gray-700 flex-grow' }, title) : React.createElement('div', { className: 'flex-grow' }, title)
     )
     ,
     currentIsOpen && React.createElement(
@@ -501,13 +478,12 @@ function CollapsibleSection({ title, children, isOpen: isOpenProp, onToggle, def
   );
 }
 
-// Helper function to get nested values from an object
 const getNestedValue = (obj, path) => {
     const pathParts = path.split('.');
     let current = obj;
     for (const part of pathParts) {
         if (current === undefined || current === null) {
-            return undefined; // Just return undefined if any part is null/undefined
+            return undefined;
         }
         const arrayMatch = part.match(/^(.*?)\[(\d+)\]$/);
         if (arrayMatch) {
@@ -520,10 +496,9 @@ const getNestedValue = (obj, path) => {
         }
         if (current === undefined) break;
     }
-    return current; // Return the raw value, let caller normalize
+    return current;
 };
 
-// Helper function to get tshirt spans
 const getTshirtSpans = (team, tshirtSizeOrder) => {
     const teamTshirtsMap = team._teamTshirtsMap || new Map();
     return (tshirtSizeOrder && tshirtSizeOrder.length > 0 ? tshirtSizeOrder : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
@@ -541,7 +516,6 @@ const formatArrivalTime = (type, time) => {
     }
     return '-';
 };
-
 
 const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
     const menTeamMembersCount = team._menTeamMembersCount !== undefined ? team._menTeamMembersCount : 0;
@@ -600,16 +574,12 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
     );
 };
 
-
-// Pomocná funkcia na overenie, či je kľúč vo formáte dátumu YYYY-MM-DD
 const isDateKey = (key) => {
     return /^\d{4}-\d{2}-\d{2}$/.test(key);
 };
 
-// Formátovanie dátumu na DD. MM. RRRR
 const formatDateToDMMYYYY = (dateString) => {
     if (!dateString) return '-';
-    // Handle Firebase Timestamp objects
     if (dateString && typeof dateString.toDate === 'function') {
         const date = dateString.toDate();
         const year = date.getFullYear();
@@ -617,7 +587,6 @@ const formatDateToDMMYYYY = (dateString) => {
         const day = date.getDate().toString().padStart(2, '0');
         return `${day}. ${month}. ${year}`;
     }
-    // Handle plain date strings (e.g., YYYY-MM-DD)
     const [year, month, day] = dateString.split('-');
     if (year && month && day) {
         return `${day}. ${month}. ${year}`;
@@ -625,19 +594,16 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
-// TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
 function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember, allTeamsData }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
 
-    // Získanie všetkých registračných čísel zo všetkých tímov
     const getAllRegistrationNumbers = React.useMemo(() => {
-        const registrationNumbers = new Map(); // Mapa: registračné číslo -> { count, firstOccurrence }
+        const registrationNumbers = new Map();
         
         if (allTeamsData) {
             allTeamsData.forEach(t => {
-                // Prehľadávanie hráčov
                 if (t.playerDetails) {
                     t.playerDetails.forEach(player => {
                         if (player.registrationNumber) {
@@ -657,7 +623,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     });
                 }
                 
-                // Prehľadávanie ostatných členov (pre prípad, že by mali registračné čísla)
                 ['menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].forEach(arrName => {
                     if (t[arrName]) {
                         t[arrName].forEach(member => {
@@ -714,7 +679,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     const allConsolidatedMembers = [];
 
     const createMember = (member, type, originalArray, originalIndex) => {
-        // Vylúčime pôvodné dateOfBirth a address
         const { dateOfBirth, address, ...rest } = member;
         return {
             ...rest,
@@ -722,7 +686,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             originalArray: originalArray,
             originalIndex: originalIndex,
             uniqueId: `${team.teamName}-${originalArray}-${member.firstName || ''}-${member.lastName || ''}-${originalIndex}`,
-            // Použijeme _dateOfBirth a _address (z privateData)
             _dateOfBirth: member._dateOfBirth || '',
             _address: member._address || {}
         };
@@ -754,7 +717,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         });
     }
 
-    // Filtrujeme kľúče, aby sme sa uistili, že sú to platné dátumy jedál
     const mealDates = (team.packageDetails && team.packageDetails.meals && typeof team.packageDetails.meals === 'object' 
         ? Object.keys(team.packageDetails.meals).sort() 
         : [])
@@ -809,7 +771,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const memberArrayType = member.originalArray;
             const memberIndex = member.originalIndex;
 
-            // Deep clone relevant parts
             const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
             const teamToUpdate = updatedCategoryTeams[teamIndex];
 
@@ -825,7 +786,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
             const memberToUpdate = memberArrayToUpdate[memberIndex];
 
-            // --- Notification Logic ---
             const userEmail = window.auth.currentUser?.email;
             const changes = [];
             
@@ -1115,7 +1075,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
                         : 'px-4 py-2 whitespace-nowrap min-w-max';
                     
-                    // 🆕 3. Kontrola duplicity čísla dresu (platí len pre hráčov)
                     const isJerseyDuplicate = member.type === 'Hráč' && isJerseyNumberDuplicate(member.jerseyNumber);
                     const jerseyNumberCellClass = isJerseyDuplicate 
                         ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
@@ -1156,7 +1115,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, 
                             member._dateOfBirth ? formatDateToDMMYYYY(member._dateOfBirth) : '-'
                         ),
-
                         React.createElement('td', { className: jerseyNumberCellClass }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
                             member.registrationNumber || '-'
@@ -1201,7 +1159,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                         return React.createElement('input', {
                                             key: `${member.uniqueId}-${date}-${type}-checkbox`,
                                             type: 'checkbox',
-                                            checked: isChecked || false, // Zabezpečiť, že checked je vždy boolean
+                                            checked: isChecked || false,
                                             onChange: (e) => handleMealChange(member, date, type, e.target.checked),
                                             className: 'form-checkbox h-4 w-4 text-blue-600'
                                         });
@@ -1273,12 +1231,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     }
 }
 
-// Pomocné funkcie pre spracovanie telefónneho čísla
 const parsePhoneNumber = (fullPhoneNumber, dialCodes) => {
     let bestMatchDialCode = '';
-    let numberWithoutDialCode = String(fullPhoneNumber || '').replace(/\D/g, ''); // Odstrániť nečíselné znaky
+    let numberWithoutDialCode = String(fullPhoneNumber || '').replace(/\D/g, '');
 
-    // Zoradiť predvoľby zostupne podľa dĺžky pre správne priradenie najdlhšej zhody
     const sortedDialCodes = [...dialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
 
     for (const country of sortedDialCodes) {
@@ -1300,7 +1256,7 @@ const parsePhoneNumber = (fullPhoneNumber, dialCodes) => {
 
 const formatNumberGroups = (numberString) => {
     if (!numberString) return '';
-    return numberString.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 '); // Odstrániť nečíselné a rozdeliť
+    return numberString.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
 };
 
 const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
@@ -1314,7 +1270,6 @@ const combinePhoneNumber = (dialCode, numberWithoutDialCode) => {
     return '';
 };
 
-// Helper to format keys for labels
 const formatLabel = (key) => {
     let label = key
         .replace(/([A-Z])/g, ' $1')
@@ -1379,10 +1334,8 @@ const formatLabel = (key) => {
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
-    // Polia, ktoré sa majú porovnávať pre člena tímu
     const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
     
-    // Porovnanie základných polí
     memberFields.forEach(field => {
         const originalValue = original[field] !== undefined && original[field] !== null ? String(original[field]) : '';
         const updatedValue = updated[field] !== undefined && updated[field] !== null ? String(updated[field]) : '';
@@ -1392,14 +1345,12 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         }
     });
     
-    // Porovnanie dátumu narodenia - LEN AK SA ZMENIL
     const originalDate = original.dateOfBirth ? formatDateFn(original.dateOfBirth) : '-';
     const updatedDate = updated.dateOfBirth ? formatDateFn(updated.dateOfBirth) : '-';
     if (originalDate !== updatedDate) {
         changes.push(`Zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
     }
     
-    // Porovnanie adresy - LEN POLIA, KTORÉ SA ZMENILI
     const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
     addrFields.forEach(field => {
         const origVal = original.address?.[field] || '';
@@ -1421,13 +1372,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
     return changes;
 };
 
-// ============================================================
-// UPRAVENÁ FUNKCIA PRE NOTIFIKÁCIE PRE ČLENA TÍMU
-// ============================================================
 const getMemberChangesForNotification = (original, updated, memberName, teamName, category) => {
     const changes = [];
     
-    // Sledované polia pre člena
     const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
     
     memberFields.forEach(field => {
@@ -1439,14 +1386,12 @@ const getMemberChangesForNotification = (original, updated, memberName, teamName
         }
     });
     
-    // Dátum narodenia - POROVNÁVAME IBA AK SA ZMENIL
     const originalDate = original.dateOfBirth ? formatDateToDMMYYYY(original.dateOfBirth) : '-';
     const updatedDate = updated.dateOfBirth ? formatDateToDMMYYYY(updated.dateOfBirth) : '-';
     if (originalDate !== updatedDate) {
         changes.push(`${memberName} (${category}, tím: ${teamName}) – zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
     }
     
-    // Adresa - POROVNÁVAME IBA POLIA, KTORÉ SA ZMENILI
     const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
     addrFields.forEach(field => {
         const origVal = original.address?.[field] || '';
@@ -1468,13 +1413,11 @@ const getMemberChangesForNotification = (original, updated, memberName, teamName
     return changes;
 };
 
-// Helper to format values for display in input fields
 const formatDisplayValue = (value, path) => { 
     if (value === null || value === undefined) return '';
     if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
     
     let date;
-    // Ak je to dátum narodenia (firstName, lastName, dateOfBirth atď. sú v core data), vráti YYYY-MM-DD formát
     if (path.toLowerCase().includes('dateofbirth') && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
         return value; 
     }
@@ -1503,18 +1446,11 @@ const formatDisplayValue = (value, path) => {
     if (Array.isArray(value)) {
         return value.map(item => {
             if (typeof item === 'object' && item !== null) {
-                try {
-                    // Special handling for t-shirt objects
-                    if (item.size && item.quantity !== undefined) {
-                        return `${item.size}: ${item.quantity}`;
-                    }
-                    // For other complex objects in arrays, provide a simplified representation
-                    if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-                    return JSON.stringify(item);
-                } catch (e) {
-                    console.error("Chyba pri prevode objektu poľa na reťazec:", item, e);
-                    return '[Chyba objektu]';
+                if (item.size && item.quantity !== undefined) {
+                    return `${item.size}: ${item.quantity}`;
                 }
+                if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+                return JSON.stringify(item);
             }
             return String(item);
         }).join(', ');
@@ -1535,15 +1471,13 @@ const formatDisplayValue = (value, path) => {
     return String(value); 
 };
 
-
-// Generic DataEditModal Component pre zobrazovanie/úpravu JSON dát
+// ============================================================
+// UPRAVENÝ DATAEDITMODAL - BEZ PODMIENOK PRE ÚPRAVU
+// ============================================================
 function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) {
     const modalRef = React.useRef(null);
     const db = window.db;
     const [localEditedData, setLocalEditedData] = React.useState(data);
-    const [userRole, setUserRole] = React.useState('');
-    const [isTargetUserAdmin, setIsTargetUserAdmin] = React.useState(false);
-    const [isTargetUserHall, setIsTargetUserHall] = React.useState(false);
     const [privateData, setPrivateData] = React.useState(null);
     const inputRefs = React.useRef({});
 
@@ -1629,7 +1563,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     React.useEffect(() => {
         const fetchTeamDataForSelects = async () => {
             if (db && (title.includes('Upraviť tím') || title.includes('Pridať nový tím'))) {
-                // Načítanie kategórií
                 try {
                     const categoriesDocRef = doc(db, 'settings', 'categories');
                     const docSnapshot = await getDoc(categoriesDocRef);
@@ -1647,7 +1580,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     console.error("Chyba pri načítaní kategórií:", error);
                 }
 
-                // Načítanie typov ubytovania
                 try {
                     const accommodationDocRef = doc(db, 'settings', 'accommodation');
                     const docSnapshot = await getDoc(accommodationDocRef);
@@ -1668,7 +1600,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     console.error("Chyba pri načítaní typov ubytovania:", error);
                 }
 
-                // Načítanie balíkov
                 try {
                     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
                     const querySnapshot = await getDocs(packagesCollectionRef);
@@ -1685,7 +1616,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     setPackages([]);
                 }
 
-                // Načítanie veľkostí tričiek
                 try {
                     const sizeTshirtsDocRef = doc(db, 'settings', 'sizeTshirts');
                     const docSnapshot = await getDoc(sizeTshirtsDocRef);
@@ -1731,13 +1661,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         }
     }, [packages, selectedAccommodationType, title]);
 
-    // Funkcia na zlúčenie údajov z usersprivate
     const mergePrivateData = React.useCallback((userData) => {
         if (!privateData) return userData;
         
         const merged = JSON.parse(JSON.stringify(userData || {}));
         
-        // Zlúčenie adries z hlavného formulára
         if (privateData.address) {
             const hasPrivateAddress = privateData.address.street || privateData.address.city || privateData.address.postalCode;
             if (hasPrivateAddress) {
@@ -1747,7 +1675,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 merged.postalCode = privateData.address.postalCode || '';
                 merged.country = privateData.address.country || '';
             } else {
-                // Ak v privateData nie je adresa, nastavíme prázdne (žiaden fallback)
                 merged.street = '';
                 merged.houseNumber = '';
                 merged.city = '';
@@ -1756,7 +1683,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             }
         }
         
-        // Zlúčenie fakturačnej adresy
         if (privateData.billingAddress) {
             const hasBillingAddress = privateData.billingAddress.street || privateData.billingAddress.city;
             if (hasBillingAddress) {
@@ -1770,7 +1696,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     country: privateData.billingAddress.country || ''
                 };
             } else {
-                // Ak nie je fakturačná adresa, odstráňte ju (alebo nechajte prázdnu)
                 if (merged.billing) {
                     merged.billing.address = {
                         street: '',
@@ -1783,7 +1708,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             }
         }
         
-        // Zlúčenie tímových údajov - dátumy narodenia a adresy
         if (merged.teams && privateData.persons) {
             Object.keys(merged.teams).forEach(category => {
                 const teams = merged.teams[category];
@@ -1792,7 +1716,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         const teamKey = `${category}_team${teamIndex + 1}`;
                         const privateTeamData = privateData.persons?.[teamKey] || {};
                         
-                        // Zlúčenie hráčov
                         if (team.playerDetails && privateTeamData.players) {
                             team.playerDetails = team.playerDetails.map((player, index) => {
                                 const privatePlayer = privateTeamData.players[index] || {};
@@ -1817,7 +1740,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             });
                         }
                         
-                        // Zlúčenie žien - členiek tímu
                         if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
                             team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => {
                                 const privateMember = privateTeamData.womenTeamMembers[index] || {};
@@ -1842,7 +1764,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             });
                         }
                         
-                        // Zlúčenie mužov - členov tímu
                         if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
                             team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => {
                                 const privateMember = privateTeamData.menTeamMembers[index] || {};
@@ -1867,7 +1788,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             });
                         }
                         
-                        // Zlúčenie šoférov - mužov
                         if (team.driverDetailsMale && privateTeamData.driversMale) {
                             team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => {
                                 const privateDriver = privateTeamData.driversMale[index] || {};
@@ -1892,7 +1812,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             });
                         }
                         
-                        // Zlúčenie šoférov - žien
                         if (team.driverDetailsFemale && privateTeamData.driversFemale) {
                             team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => {
                                 const privateDriver = privateTeamData.driversFemale[index] || {};
@@ -1925,42 +1844,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     }, [privateData]);
 
     React.useEffect(() => {
-        let currentUserRole = '';
-        if (window.globalUserProfileData && window.globalUserProfileData.role) {
-            currentUserRole = window.globalUserProfileData.role;
-        }
-        setUserRole(currentUserRole);
-
         const safeData = data || {};
         const initialData = JSON.parse(JSON.stringify(safeData));
-
-        const isUserBeingEditedAdmin = initialData.role === 'admin';
-        const isUserBeingEditedHall = initialData.role === 'hall';
-
-        console.log('=== DEBUG DataEditModal ===');
-        console.log('Upravovaný používateľ - údaje:', initialData);
-        console.log('Rola upravovaného používateľa:', initialData.role);
-        console.log('isUserBeingEditedAdmin:', isUserBeingEditedAdmin);
-        console.log('isUserBeingEditedHall:', isUserBeingEditedHall);
-        console.log('Aktuálny admin userRole:', currentUserRole);
-        console.log('=============================');
-
-        setIsTargetUserAdmin(isUserBeingEditedAdmin);
-        setIsTargetUserHall(isUserBeingEditedHall);
-
-        // Ak sa upravuje admin alebo hall používateľ, odstráňte tieto polia
-        if (isUserBeingEditedAdmin || isUserBeingEditedHall) {
-            delete initialData.billing;
-            delete initialData.street;
-            delete initialData.houseNumber;
-            delete initialData.city;
-            delete initialData.postalCode;
-            delete initialData.country;
-            delete initialData.note;
-            delete initialData.contactPhoneNumber;
-            setDisplayDialCode('');
-            setDisplayPhoneNumber('');
-        }
 
         const isEditingMember = title.toLowerCase().includes('upraviť hráča') ||
             title.toLowerCase().includes('upraviť člena realizačného tímu') ||
@@ -1983,7 +1868,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.country === undefined) initialData.country = '';
         }
 
-        if (title.includes('Upraviť používateľa') && !(isUserBeingEditedAdmin || isUserBeingEditedHall)) {
+        // VŽDY inicializujeme všetky polia pre používateľa
+        if (title.includes('Upraviť používateľa')) {
             if (initialData.firstName === undefined) initialData.firstName = '';
             if (initialData.lastName === undefined) initialData.lastName = '';
             if (initialData.contactPhoneNumber === undefined) initialData.contactPhoneNumber = '';
@@ -2037,10 +1923,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             setTeamTshirts(initialTshirts);
         }
 
-        // Aplikácia zlúčenia s usersprivate
         const mergedData = mergePrivateData(initialData);
         setLocalEditedData(mergedData);
-    }, [data, title, window.globalUserProfileData, db, availableTshirtSizes, isNewEntry, accommodationTypes, privateData, mergePrivateData]);
+    }, [data, title, db, availableTshirtSizes, isNewEntry, accommodationTypes, privateData, mergePrivateData]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -2248,81 +2133,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         setIsConfirmDeleteOpen(true);
     };
 
-    const renderMemberFields = () => {
-        const memberElements = [];
-        const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
-        let memberFieldsOrder = [
-            'firstName', 'lastName', 'dateOfBirth',
-            'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-        ];
-        if (isPlayer) {
-            memberFieldsOrder = [
-                'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
-                'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
-            ];
-        }
-    
-        memberFieldsOrder.forEach(path => {
-            const value = getNestedValue(localEditedData, path);
-            const inputValue = value === undefined || value === null ? '' : value;
-            const labelText = formatLabel(path);
-            let inputType = 'text';
-            let isCheckbox = false;
-            let customProps = {};
-    
-            if (typeof inputValue === 'boolean') {
-                isCheckbox = true;
-            } else if (path.includes('dateOfBirth')) {
-                inputType = 'date';
-            } else if (path.includes('jerseyNumber')) {
-                customProps = {
-                    onChange: (e) => handleNumericInput(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
-                    maxLength: 3
-                };
-            } else if (path.includes('registrationNumber')) {
-                customProps = {
-                    onChange: (e) => handleChange(path, e.target.value),
-                    maxLength: 20
-                };
-            } else if (path.includes('postalCode')) {
-                customProps = {
-                    onChange: (e) => handlePostalCodeChange(e, path),
-                    onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
-                    inputMode: 'numeric',
-                    pattern: '[0-9 ]*',
-                    maxLength: 6,
-                    value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
-                };
-            }
-    
-            memberElements.push(React.createElement(
-                'div',
-                { key: path, className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
-                isCheckbox ? (
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        className: `form-checkbox h-5 w-5 text-blue-600`,
-                        checked: getNestedValue(localEditedData, path) === true,
-                        onChange: (e) => handleChange(path, e.target.checked)
-                    })
-                ) : (
-                    React.createElement('input', {
-                        ref: el => inputRefs.current[path] = el,
-                        type: inputType,
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
-                        value: formatDisplayValue(inputValue, path),
-                        onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
-                        ...customProps
-                    })
-                )
-            ));
-        });
-        return memberElements.filter(Boolean);
-    };
-
+    // ============================================================
+    // RENDEROVACIA FUNKCIA - VŠETKY POLIA BEZ PODMIENOK
+    // ============================================================
     const renderDataFields = (obj, currentPath = '') => {
         const isEditingMemberOrNewEntry = title.toLowerCase().includes('upraviť hráč') ||
             title.toLowerCase().includes('upraviť člen realizačného tímu') ||
@@ -2330,12 +2143,13 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && localEditedData?.role === 'volunteer';
 
-        if (title.includes('upraviť používateľa') && currentPath === 'isMenuToggled') {
+        // Preskočíme isMenuToggled vždy
+        if (currentPath === 'isMenuToggled') {
             return null;
         }
 
         if (currentPath === '') {
-            // Úprava dobrovoľníka
+            // ---- ÚPRAVA DOBROVOĽNÍKA ----
             if (isEditingVolunteer) {
                 const volunteerElements = [];
                 const volunteerFieldsOrder = [
@@ -2363,7 +2177,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     const value = getNestedValue(localEditedData, path);
                     const labelText = formatLabel(path);
 
-                    // Vybrané dátumy
                     if (path === 'selectedDates') {
                         const availableDates = window.availableTournamentDates || [];
                         if (availableDates.length === 0) {
@@ -2415,7 +2228,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Dobrovoľnícke roly
                     if (path === 'volunteerRoles') {
                         const selectedRoles = Array.isArray(value) ? value : [];
                         volunteerElements.push(
@@ -2448,7 +2260,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Pohlavie
                     if (path === 'gender') {
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
@@ -2467,7 +2278,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Veľkosť trička
                     if (path === 'tshirtSize') {
                         const tshirtSizes = window.availableTshirtSizes || ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
                         volunteerElements.push(
@@ -2486,7 +2296,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Dátum narodenia
                     if (path === 'birthDate') {
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
@@ -2502,7 +2311,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // PSČ
                     if (path === 'postalCode') {
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
@@ -2521,7 +2329,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Telefónne číslo
                     if (path === 'contactPhoneNumber') {
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
@@ -2549,7 +2356,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Poznámka
                     if (path === 'note') {
                         volunteerElements.push(
                             React.createElement('div', { key: path, className: 'mb-4' },
@@ -2566,7 +2372,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         return;
                     }
 
-                    // Bežné textové polia
                     volunteerElements.push(
                         React.createElement('div', { key: path, className: 'mb-4' },
                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
@@ -2582,12 +2387,83 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 return volunteerElements;
             }
 
-            // Úprava člena tímu
+            // ---- ÚPRAVA ČLENA TÍMU ----
             if (isEditingMemberOrNewEntry && !title.includes('Pridať nový tím')) {
-                return renderMemberFields();
+                const memberElements = [];
+                const isPlayer = title.toLowerCase().includes('upraviť hráč') || title.toLowerCase().includes('pridať nový hráč');
+                let memberFieldsOrder = [
+                    'firstName', 'lastName', 'dateOfBirth',
+                    'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+                ];
+                if (isPlayer) {
+                    memberFieldsOrder = [
+                        'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+                        'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
+                    ];
+                }
+            
+                memberFieldsOrder.forEach(path => {
+                    const value = getNestedValue(localEditedData, path);
+                    const inputValue = value === undefined || value === null ? '' : value;
+                    const labelText = formatLabel(path);
+                    let inputType = 'text';
+                    let isCheckbox = false;
+                    let customProps = {};
+            
+                    if (typeof inputValue === 'boolean') {
+                        isCheckbox = true;
+                    } else if (path.includes('dateOfBirth')) {
+                        inputType = 'date';
+                    } else if (path.includes('jerseyNumber')) {
+                        customProps = {
+                            onChange: (e) => handleNumericInput(e, path),
+                            inputMode: 'numeric',
+                            pattern: '[0-9]*',
+                            maxLength: 3
+                        };
+                    } else if (path.includes('registrationNumber')) {
+                        customProps = {
+                            onChange: (e) => handleChange(path, e.target.value),
+                            maxLength: 20
+                        };
+                    } else if (path.includes('postalCode')) {
+                        customProps = {
+                            onChange: (e) => handlePostalCodeChange(e, path),
+                            onKeyDown: (e) => handlePostalCodeKeyDown(e, path),
+                            inputMode: 'numeric',
+                            pattern: '[0-9 ]*',
+                            maxLength: 6,
+                            value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
+                        };
+                    }
+            
+                    memberElements.push(React.createElement(
+                        'div',
+                        { key: path, className: 'mb-4' },
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
+                        isCheckbox ? (
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                className: `form-checkbox h-5 w-5 text-blue-600`,
+                                checked: getNestedValue(localEditedData, path) === true,
+                                onChange: (e) => handleChange(path, e.target.checked)
+                            })
+                        ) : (
+                            React.createElement('input', {
+                                ref: el => inputRefs.current[path] = el,
+                                type: inputType,
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2`,
+                                value: formatDisplayValue(inputValue, path),
+                                onChange: (e) => (customProps.onChange ? customProps.onChange(e, path) : handleChange(path, e.target.value)),
+                                ...customProps
+                            })
+                        )
+                    ));
+                });
+                return memberElements.filter(Boolean);
             }
 
-            // Úprava používateľa (klub, admin, hall)
+            // ---- ÚPRAVA POUŽÍVATEĽA (KLUB, ADMIN, HALL, DOBROVOĽNÍK) ----
             else if (title.includes('Upraviť používateľa')) {
                 const elements = [];
                 const allUserFields = [
@@ -2596,9 +2472,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     'street', 'houseNumber', 'city', 'postalCode', 'country', 'note'
                 ];
                 let fieldsToRenderForUser = allUserFields;
-                const isCurrentUserAdmin = userRole === 'admin';
-                const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
-
                 const renderedFields = new Set();
 
                 const renderUserField = (path, value) => {
@@ -2641,7 +2514,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             value: getFormattedPostalCodeForInput(getNestedValue(localEditedData, path)),
                         };
                     } else if (path === 'contactPhoneNumber') {
-                        if (isUserBeingEditedAdminOrHall) return null;
                         return React.createElement('div', { key: path, className: 'mb-4' },
                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                             React.createElement('div', { className: 'flex' },
@@ -2690,41 +2562,39 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
                 });
 
-                if (!isUserBeingEditedAdminOrHall) {
-                    const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-                    if (billingFieldsInScope.length > 0) {
-                        elements.push(
-                            React.createElement('div', { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                billingFieldsInScope.map(billingPath => {
-                                    const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                                    return renderUserField(billingPath, billingValue);
-                                })
-                            )
-                        );
-                    }
-
-                    const addressFieldsInScope = allUserFields.filter(p =>
-                        ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
+                const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
+                if (billingFieldsInScope.length > 0) {
+                    elements.push(
+                        React.createElement('div', { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            billingFieldsInScope.map(billingPath => {
+                                const billingValue = getNestedDataForInput(localEditedData, billingPath);
+                                return renderUserField(billingPath, billingValue);
+                            })
+                        )
                     );
-                    if (addressFieldsInScope.length > 0) {
-                        elements.push(
-                            React.createElement('div', { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                                addressFieldsInScope.map(addressPath => {
-                                    const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                                    return renderUserField(addressPath, addressValue);
-                                })
-                            )
-                        );
-                    }
+                }
 
-                    if (fieldsToRenderForUser.includes('note')) {
-                        elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
-                    }
+                const addressFieldsInScope = allUserFields.filter(p =>
+                    ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
+                );
+                if (addressFieldsInScope.length > 0) {
+                    elements.push(
+                        React.createElement('div', { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                            addressFieldsInScope.map(addressPath => {
+                                const addressValue = getNestedDataForInput(localEditedData, addressPath);
+                                return renderUserField(addressPath, addressValue);
+                            })
+                        )
+                    );
+                }
+
+                if (fieldsToRenderForUser.includes('note')) {
+                    elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
                 }
                 return elements.filter(Boolean);
             }
 
-            // Úprava tímu
+            // ---- ÚPRAVA TÍMU ----
             else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
                 const teamElements = [];
 
@@ -3087,10 +2957,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 window.showGlobalLoader();
                                 const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
                         
-                                if (dataToPrepareForSave.contactPhoneNumber !== undefined && !(isTargetUserAdmin || isTargetUserHall)) {
+                                if (dataToPrepareForSave.contactPhoneNumber !== undefined) {
                                     dataToPrepareForSave.contactPhoneNumber = combinePhoneNumber(displayDialCode, displayPhoneNumber);
-                                } else if (isTargetUserAdmin || isTargetUserHall) {
-                                    delete dataToPrepareForSave.contactPhoneNumber;
                                 }
                         
                                 if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
@@ -3132,11 +3000,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 Object.keys(dataToPrepareForSave).forEach(key => {
                                     if (!['id', 'uniqueId', 'type', 'originalArray', 'originalIndex', 'password'].includes(key)) {
                                         const value = dataToPrepareForSave[key];
-                                        if (key === 'billing' && (isTargetUserAdmin || isTargetUserHall)) {
-                                            // Preskočíme billing pre admin/hall
-                                        } else {
-                                            finalDataToSave[key] = value;
-                                        }
+                                        finalDataToSave[key] = value;
                                     }
                                 });
                         
@@ -3161,24 +3025,18 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                      originalDataPath.includes('driverDetailsMale') ||
                                      originalDataPath.includes('driverDetailsFemale'));
                                 
-                                // 🔧 Zistíme, či ide o úpravu tímu
                                 const isEditingTeam = editModalTitle.includes('Upraviť tím');
                                 
                                 let generatedChanges = [];
                                 
-                                // ============================================================
-                                // GENEROVANIE NOTIFIKÁCIÍ
-                                // ============================================================
                                 if (isAddingNewMember) {
                                     // Nový člen - notifikácia sa generuje inde
                                 } else if (isAddingNewTeam) {
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
                                 } else if (isEditingTeam) {
-                                    // 🔧 PRE TÍMY - POROVNÁME PÔVODNÉ A NOVÉ DÁTA
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
                                     
-                                    // Odstránime pomocné polia, ktoré by mohli spôsobiť falošné zmeny
                                     delete originalDataForCompare._teamTshirtsMap;
                                     delete modifiedDataForCompare._teamTshirtsMap;
                                     delete originalDataForCompare._userId;
@@ -3198,30 +3056,20 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     delete originalDataForCompare._players;
                                     delete modifiedDataForCompare._players;
                                     
-                                    // Porovnáme zmeny pre tím
                                     const teamChanges = getChangesForNotification(
                                         originalDataForCompare,
                                         modifiedDataForCompare,
                                         formatDateToDMMYYYY
                                     );
                                     
-                                    // Pridáme kontext tímu
                                     const teamName = modifiedDataForCompare.teamName || 'Bez názvu';
                                     const teamCategory = modifiedDataForCompare._category || modifiedDataForCompare.category || 'Neznáma kategória';
                                     generatedChanges = teamChanges.map(change =>
                                         `Tím ${teamName} (${teamCategory}): ${change}`
                                     );
                                 } else if (!isEditingTeamMember) {
-                                    // Ostatné prípady (používatelia)
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
-                                
-                                    if (isTargetUserAdmin || isTargetUserHall) {
-                                        delete originalDataForCompare.address;
-                                        delete originalDataForCompare.billing;
-                                        delete modifiedDataForCompare.address;
-                                        delete modifiedDataForCompare.billing;
-                                    }
                                 
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
@@ -3244,9 +3092,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 }
                         
-                                // ============================================================
-                                // ULOŽENIE NOTIFIKÁCIÍ (LEN AK NIE SÚ PRÁZDNÉ A NIE JE TO ÚPRAVA ČLENA)
-                                // ============================================================
                                 if (generatedChanges.length > 0 && !isAddingNewMember && !isEditingTeamMember) {
                                     const userEmail = window.auth.currentUser?.email;
                                     if (userEmail) {
@@ -3259,25 +3104,17 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 }
                         
-                                // ============================================================
-                                // SPRÁVA O "ŽIADNE ZMENY" – PRESKOČÍME PRE ÚPRAVU ČLENA
-                                // ============================================================
                                 if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam && !isEditingTeamMember) {
                                     setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
                                     onClose();
                                     return;
                                 }
                         
-                                // ============================================================
-                                // ZAVOLÁME ONSAVE (TAM SA GENERUJÚ NOTIFIKÁCIE S KONTEXTOM PRE ČLENA)
-                                // ============================================================
                                 onSave(
                                     finalDataToSave,
                                     targetDocRef,
                                     originalDataPath,
-                                    isNewEntry,
-                                    isTargetUserAdmin,
-                                    isTargetUserHall
+                                    isNewEntry
                                 );
                         
                             } catch (e) {
@@ -3292,7 +3129,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 )
             )
         ),
-        !(isTargetUserAdmin || isTargetUserHall) && React.createElement(DialCodeSelectionModal, {
+        React.createElement(DialCodeSelectionModal, {
             isOpen: isDialCodeModalOpen,
             onClose: () => setIsDialCodeModalOpen(false),
             onSelectDialCode: handleSelectDialCode,
@@ -3319,13 +3156,11 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     );
 }
 
-// Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenia upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
     if (!path) {
         throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
     }
 
-    // Hlboká kópia objektu na zabezpečenie nemennosti počas modifikácie
     const newObj = JSON.parse(JSON.stringify(obj));
     const pathParts = path.split('.');
     let current = newObj;
@@ -3338,7 +3173,6 @@ const updateNestedObjectByPath = (obj, path, value) => {
             const arrayKey = arrayMatch[1];
             const arrayIndex = parseInt(arrayMatch[2]);
             if (!current[arrayKey]) current[arrayKey] = [];
-            // Rozšíriť pole, ak je index mimo rozsahu
             while (current[arrayKey].length <= arrayIndex) {
                 current[arrayKey].push({});
             }
@@ -3356,7 +3190,6 @@ const updateNestedObjectByPath = (obj, path, value) => {
         const arrayKey = lastArrayMatch[1];
         const arrayIndex = parseInt(lastArrayMatch[2]);
         if (!current[arrayKey]) current[arrayKey] = [];
-        // Rozšíriť pole, ak je index mimo rozsahu
         while (current[arrayKey].length <= arrayIndex) {
             current[arrayKey].push({});
         }
@@ -3365,8 +3198,6 @@ const updateNestedObjectByPath = (obj, path, value) => {
         current[lastPart] = value;
     }
 
-    // Určiť pole najvyššej úrovne, ktoré bolo upravené pre aktualizáciu Firestore
-    // To musí spracovať prípady ako 'teams.Juniors[0]', kde 'teams' je časť najvyššej úrovne.
     const firstPathPart = pathParts[0];
     const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
 
@@ -3380,25 +3211,20 @@ const updateNestedObjectByPath = (obj, path, value) => {
     };
 };
 
-// Simplified recalculateTeamCounts function
 const recalculateTeamCounts = (teamToUpdate) => {
-    // Ensure all member arrays are defined, even if empty
     teamToUpdate.playerDetails = teamToUpdate.playerDetails || [];
     teamToUpdate.menTeamMemberDetails = teamToUpdate.menTeamMemberDetails || [];
     teamToUpdate.womenTeamMemberDetails = teamToUpdate.womenTeamMemberDetails || [];
     teamToUpdate.driverDetailsMale = teamToUpdate.driverDetailsMale || [];
     teamToUpdate.driverDetailsFemale = teamToUpdate.driverDetailsFemale || [];
 
-    // Calculate and set the counts directly on the teamToUpdate object
     teamToUpdate.players = teamToUpdate.playerDetails.length;
     teamToUpdate.menTeamMembersCount = teamToUpdate.menTeamMemberDetails.length;
     teamToUpdate.womenTeamMembersCount = teamToUpdate.womenTeamMemberDetails.length;
-    teamToUpdate.drivers = { // Používame vnorený objekt pre šoférov, ako ste uviedli v popise
+    teamToUpdate.drivers = {
         female: teamToUpdate.driverDetailsFemale.length,
         male: teamToUpdate.driverDetailsMale.length
     };
-    // No need to explicitly update `players`, `menTeamMembersCount` etc. here,
-    // as they are derived properties in `allTeamsFlattened` based on the array lengths.
     return teamToUpdate;
 };
 
@@ -3410,7 +3236,6 @@ const cleanTeamForUsers = (team) => {
         return arr.map(member => {
             if (!member) return member;
             const cleaned = { ...member };
-            // Odstránime osobné polia
             const privateKeys = [
                 'address', 'dateOfBirth', '_address', '_dateOfBirth',
                 '_privateData', 'birthDate', 'gender',
@@ -3435,7 +3260,6 @@ const cleanTeamForUsers = (team) => {
         }
     });
 
-    // Odstránime aj osobné polia na úrovni tímu
     const privateKeys = [
         'address', 'dateOfBirth', '_address', '_dateOfBirth',
         '_privateData', 'birthDate', 'gender',
@@ -3463,8 +3287,9 @@ const translateRole = (role) => {
   }
 };
 
-
-// Hlavný React komponent pre stránku logged-in-all-registrations.html
+// ============================================================
+// HLAVNÝ KOMPONENT ALLREGISTRATIONSAPP
+// ============================================================
 function AllRegistrationsApp() {
   const auth = window.auth;
   const db = window.db;
@@ -3501,16 +3326,14 @@ function AllRegistrationsApp() {
     { id: 'city', label: 'Mesto/obec', type: true },
     { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
     { id: 'country', label: 'Krajina', type: 'string', visible: true },
-
     { id: 'tshirtSize', label: 'Veľkosť trička', type: 'string', visible: true },
     { id: 'selectedDates', label: 'Dni k dispozícii', type: 'string', visible: true },
     { id: 'volunteerRoles', label: 'Môžem byť nápomocný', type: 'string', visible: true },
-    
-    { id: 'note', label: 'Poznámka', type: 'string', visible: true }, // Pridaný stĺpec "Poznámka"
+    { id: 'note', label: 'Poznámka', type: 'string', visible: true },
   ];
-  const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder); // Keep columnOrder for definitions
+  const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
 
-  const [hoveredColumn, setHoveredColumn] = React.useState(null); // Keep for sorting feedback
+  const [hoveredColumn, setHoveredColumn] = React.useState(null);
 
   const [expandedRows, setExpandedRows] = React.useState({});
   const [expandedTeamRows, setExpandedTeamRows] = React.useState({});
@@ -3548,29 +3371,22 @@ function AllRegistrationsApp() {
       }
   };
 
-  // Stavy pre modálne okno na úpravu
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [editingData, setEditingData] = React.useState(null); // Initialized to null
+  const [editingData, setEditingData] = React.useState(null);
   const [editModalTitle, setEditModalTitle] = React.useState('');
-  const [editingDocRef, setEditingDocRef] = React.useState(null); // Initialized to null
-  const [editingDataPath, setEditingDataPath] = React.useState(''); // Cesta v dokumente pre uloženie
-  const [isNewEntry, setIsNewEntry] = React.useState(false); // Nový stav pre indikáciu, či ide o nový záznam
+  const [editingDocRef, setEditingDocRef] = React.useState(null);
+  const [editingDataPath, setEditingDataPath] = React.useState('');
+  const [isNewEntry, setIsNewEntry] = React.useState(false);
 
-  // Nové stavy pre modálne okno na výber typu člena tímu
   const [isAddMemberTypeSelectionModalOpen, setIsAddMemberTypeSelectionModalOpen] = React.useState(false);
-  const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null); // Tím, do ktorého sa pridáva nový člen
-
-  // Nové stavy pre modálne okno na pridanie tímu
-  // const [isAddTeamModalOpen, setIsAddTeamModalOpen] = React.useState(false); // Už nepotrebujeme samostatný stav, použijeme isEditModalOpen
+  const [currentTeamForNewMember, setCurrentTeamForNewMember] = React.useState(null);
 
 const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', newEntryFlag = false) => {
-    // Odstrániť citlivé alebo irelevantné kľúče
     const cleanedData = { ...data };
     delete cleanedData.password;
     delete cleanedData.emailVerified;
     delete cleanedData.id;
 
-    // 🔧 Prenesieme _dateOfBirth a _address do štandardných kľúčov LEN PRE ČLENOV TÍMU
     const isMemberEdit = originalDataPath && (
         originalDataPath.includes('playerDetails') ||
         originalDataPath.includes('menTeamMemberDetails') ||
@@ -3588,7 +3404,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
         }
     }
 
-    // Odstránime _dateOfBirth a _address vždy (aby neovplyvňovali notifikácie)
     delete cleanedData._dateOfBirth;
     delete cleanedData._address;
 
@@ -3606,23 +3421,21 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       setEditModalTitle('');
       setEditingDocRef(null);
       setEditingDataPath('');
-      setIsNewEntry(false); // Resetovať príznak
+      setIsNewEntry(false);
   };
 
-  // Handler pre otvorenie modálneho okna na výber typu člena
   const handleOpenAddMemberTypeModal = (team) => {
       setCurrentTeamForNewMember(team);
       setIsAddMemberTypeSelectionModalOpen(true);
   };
 
-  // Handler po výbere typu člena a kliknutí na "Pridať"
   const handleSelectedMemberTypeAndOpenEdit = React.useCallback((memberType) => {
     if (!currentTeamForNewMember) {
         setUserNotificationMessage("Chyba: Nebol vybraný žiadny tím pre pridanie člena.", 'error');
         return;
     }
 
-    const newMemberData = {}; // Prázdny objekt pre nového člena
+    const newMemberData = {};
     let memberArrayPath = '';
     let resolvedTitle = '';
 
@@ -3652,13 +3465,12 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
             return;
     }
 
-    // Cesta pre uloženie nového člena: použijeme fiktívny index -1 na signalizáciu nového záznamu
     const newMemberPath = `teams.${currentTeamForNewMember._category}[${currentTeamForNewMember._teamIndex}].${memberArrayPath}[-1]`;
     const targetDocRefForNewMember = doc(db, 'users', currentTeamForNewMember._userId);
 
-    openEditModal(newMemberData, resolvedTitle, targetDocRefForNewMember, newMemberPath, true); // Nastaviť isNewEntry na true
-    setIsAddMemberTypeSelectionModalOpen(false); // Zatvoriť modal výberu typu
-    setCurrentTeamForNewMember(null); // Resetovať tím
+    openEditModal(newMemberData, resolvedTitle, targetDocRefForNewMember, newMemberPath, true);
+    setIsAddMemberTypeSelectionModalOpen(false);
+    setCurrentTeamForNewMember(null);
   }, [currentTeamForNewMember, db, openEditModal, setUserNotificationMessage]);
 
   const allTeamsFlattened = React.useMemo(() => {
@@ -3669,7 +3481,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                   Object.entries(u.teams).forEach(([category, teamListRaw]) => {
                       const teamList = Array.isArray(teamListRaw) ? teamListRaw : [];
                       teamList.forEach((team, teamIndex) => {
-                          // Počítame priamo z dát, ktoré už máme zlúčené
                           let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
                           let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
                           let menDriversCount = team.driverDetailsMale?.length || 0; 
@@ -3680,10 +3491,8 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                             (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
                           );
     
-                          // IMPORTANT: Použijeme priamo team objekt, ktorý už má zlúčené dáta z usersprivate
-                          // NIE je potrebné znova zlučovať s _privateData
                           teams.push({
-                              ...team,  // Použijeme priamo team, nie teamWithPrivateData
+                              ...team,
                               _userId: u.id,
                               _category: category,
                               _teamIndex: teamIndex,
@@ -3714,11 +3523,8 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
 
     const calculateVolunteerTshirtSummary = () => {
         const tshirtSizeCounts = new Map();
-        // Predvolené veľkosti tričiek
         const defaultSizes = availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-        // Inicializácia mapy pre všetky veľkosti
         defaultSizes.forEach(size => tshirtSizeCounts.set(size, 0));
-        // Prechádzať len dobrovoľníkov
         filteredUsers
             .filter(user => user.role === 'volunteer')
             .forEach(user => {
@@ -3730,14 +3536,13 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
         return tshirtSizeCounts;
     };
   
-  // Nové useMemo pre výpočty súhrnu, ktoré závisia od allTeamsFlattened
   const teamSummary = React.useMemo(() => {
       let totalPlayers = 0;
       let totalMenTeamMembers = 0;
       let totalWomenTeamMembers = 0;
       let totalMenDrivers = 0; 
       let totalWomenDrivers = 0; 
-      const totalTshirtQuantities = new Map(availableTshirtSizes.map(size => [size, 0])); // Inicializácia mapy pre tričká
+      const totalTshirtQuantities = new Map(availableTshirtSizes.map(size => [size, 0]));
 
       allTeamsFlattened.forEach(team => {
           totalPlayers += team._players;
@@ -3833,7 +3638,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       fetchTournamentDates();
   }, [db]);
   
-  // Načítanie veľkostí tričiek (pre dobrovoľníkov)
   React.useEffect(() => {
       if (!db) return;
       
@@ -3870,12 +3674,9 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
   }, []);
 
   React.useEffect(() => {
-      // Ak sa zmení niektorý z checkboxov → aktualizuj hash
       const newHash = getHashFromState();
 
-      // Len ak sa hash naozaj zmenil → zabránime zbytočným zápisom
       if (window.location.hash !== newHash) {
-        // Použijeme replace, aby sme nezapisovali do histórie (lepšie UX)
         window.history.replaceState(null, '', newHash);
       }
   }, [showUsers, showTeams]);
@@ -3885,7 +3686,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       if (window.isGlobalAuthReady && window.auth && window.db) {
         setIsAuthReady(true);
         setUser(window.auth.currentUser);
-        // Zabezpečiť, aby sa userProfileData nastavili z globálnych dát, ak sú k dispozícii
         if (window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
         }
@@ -4001,7 +3801,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Upravená funkcia pre načítanie používateľov - s debug logmi
   React.useEffect(() => {
     let unsubscribeAllUsers;
     let unsubscribeAllPrivateUsers;
@@ -4015,27 +3814,23 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
         const usersCollectionRef = collection(db, 'users');
         const privateUsersCollectionRef = collection(db, 'usersprivate');
   
-        // Načítanie users
         unsubscribeAllUsers = onSnapshot(usersCollectionRef, usersSnapshot => {
           const usersData = usersSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
   
-          // Načítanie usersprivate
           unsubscribeAllPrivateUsers = onSnapshot(privateUsersCollectionRef, privateSnapshot => {
             const privateDataMap = {};
             privateSnapshot.docs.forEach(doc => {
               privateDataMap[doc.id] = doc.data();
             });  
   
-            // Zlúčenie údajov - z usersprivate preberieme adresy a dátumy narodenia
             const mergedUsersData = usersData.map(user => {
               const privateData = privateDataMap[user.id] || {};
   
               const mergedUser = {
                   ...user,
-                  // Adresy načítame výhradne z privateData (žiaden fallback na user)
                   street: privateData.address?.street || '',
                   houseNumber: privateData.address?.houseNumber || '',
                   city: privateData.address?.city || '',
@@ -4054,7 +3849,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                   _privateData: privateData
               };
   
-              // Zlúčenie tímových údajov - pridanie dátumov narodenia a adries z usersprivate
               if (mergedUser.teams && privateData.persons) {
                   Object.keys(mergedUser.teams).forEach(category => {
                       const teams = mergedUser.teams[category];
@@ -4063,15 +3857,12 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                               const teamKey = `${category}_team${teamIndex + 1}`;
                               const privateTeamData = privateData.persons?.[teamKey] || {};
               
-                              // Zlúčenie hráčov
                               if (team.playerDetails && privateTeamData.players) {
                                   team.playerDetails = team.playerDetails.map((player, index) => {
                                       const privatePlayer = privateTeamData.players[index] || {};
-                                      // Vytvoríme nový objekt bez pôvodných dateOfBirth a address
                                       const { dateOfBirth, address, ...rest } = player;
                                       return {
                                           ...rest,
-                                          // Výhradne z privateData (žiaden fallback)
                                           _dateOfBirth: privatePlayer.dateOfBirth || '',
                                           _address: privatePlayer.address || {
                                               street: '',
@@ -4084,7 +3875,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                                   });
                               }
               
-                              // Zlúčenie žien - členiek tímu
                               if (team.womenTeamMemberDetails && privateTeamData.womenTeamMembers) {
                                   team.womenTeamMemberDetails = team.womenTeamMemberDetails.map((member, index) => {
                                       const privateMember = privateTeamData.womenTeamMembers[index] || {};
@@ -4103,7 +3893,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                                   });
                               }
               
-                              // Zlúčenie mužov - členov tímu
                               if (team.menTeamMemberDetails && privateTeamData.menTeamMembers) {
                                   team.menTeamMemberDetails = team.menTeamMemberDetails.map((member, index) => {
                                       const privateMember = privateTeamData.menTeamMembers[index] || {};
@@ -4122,7 +3911,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                                   });
                               }
               
-                              // Zlúčenie šoférov - mužov
                               if (team.driverDetailsMale && privateTeamData.driversMale) {
                                   team.driverDetailsMale = team.driverDetailsMale.map((driver, index) => {
                                       const privateDriver = privateTeamData.driversMale[index] || {};
@@ -4141,7 +3929,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
                                   });
                               }
               
-                              // Zlúčenie šoférov - žien
                               if (team.driverDetailsFemale && privateTeamData.driversFemale) {
                                   team.driverDetailsFemale = team.driverDetailsFemale.map((driver, index) => {
                                       const privateDriver = privateTeamData.driversFemale[index] || {};
@@ -4259,14 +4046,13 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       setCurrentSort({ column: columnId, direction });
 
       const sorted = [...filteredUsers].sort((a, b) => {
-          const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
+          const columnDef = defaultColumnOrder.find(col => col.id === columnId);
 
           const type = columnDef ? columnDef.type : 'string';
 
           let valA, valB;
 
-          // Access top-level address fields directly
-          if (['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(columnId)) { // Added 'note'
+          if (['street', 'houseNumber', 'city', 'postalCode', 'country', 'note'].includes(columnId)) {
             valA = a[columnId];
             valB = b[columnId];
           }
@@ -4279,14 +4065,13 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
           }
 
           if (type === 'date') {
-              // Ensure we're comparing actual Date objects, handling the {seconds, nanoseconds} map format
               let dateA, dateB;
               if (valA && typeof valA.toDate === 'function') {
                   dateA = valA.toDate();
               } else if (valA && typeof valA === 'object' && valA.seconds !== undefined && valA.nanoseconds !== undefined) {
                   dateA = new Date(valA.seconds * 1000 + valA.nanoseconds / 1000000);
               } else {
-                  dateA = new Date(0); // Fallback to epoch if not a valid date format
+                  dateA = new Date(0);
               }
 
               if (valB && typeof valB.toDate === 'function') {
@@ -4294,7 +4079,7 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
               } else if (valB && typeof valB === 'object' && valB.seconds !== undefined && valB.nanoseconds !== undefined) {
                   dateB = new Date(valB.seconds * 1000 + valB.nanoseconds / 1000000);
               } else {
-                  dateB = new Date(0); // Fallback to epoch if not a valid date format
+                  dateB = new Date(0);
               }
               
               return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
@@ -4315,7 +4100,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
 
 const openFilterModal = (column) => {
     setFilterColumn(column);
-    // Pre stĺpec "role" generujeme zoznam preložených hodnôt, ale filtrovanie bude prebiehať na pôvodných
     if (column === 'role') {
       const roleValues = [
         { value: 'club', label: 'Klub' },
@@ -4326,7 +4110,6 @@ const openFilterModal = (column) => {
       ];
       setUniqueColumnValues(roleValues);
     } else {
-        // Pre ostatné stĺpce ostáva pôvodná logika
         const values = [...new Set(allUsers.map(u => {
             let val;
             if (column === 'registrationDate') {
@@ -4379,7 +4162,7 @@ const openFilterModal = (column) => {
   };
 
 const applyFilter = (column, values) => {
-    setActiveFilters(prev => ({ ...prev, [column]: values })); // Ukladáme pôvodné hodnoty
+    setActiveFilters(prev => ({ ...prev, [column]: values }));
 };
 
 const clearFilter = (column) => {
@@ -4416,10 +4199,9 @@ const clearFilter = (column) => {
                       } else if (registrationDateValue && typeof registrationDateValue === 'object' && registrationDateValue.seconds !== undefined && registrationDateValue.nanoseconds !== undefined) {
                           date = new Date(registrationDateValue.seconds * 1000 + registrationDateValue.nanoseconds / 1000000);
                       } else {
-                          return false; // Filter out if date is not valid
+                          return false;
                       }
 
-                      // Použiť rovnaký formát ako pri získavaní jedinečných hodnôt
                       const options = {
                           day: '2-digit',
                           month: '2-digit',
@@ -4435,14 +4217,12 @@ const clearFilter = (column) => {
                       for (const part of parts) {
                           nestedVal = nestedVal ? nestedVal[part] : undefined;
                       }
-                      // Špeciálne spracovanie pre arrival.type a arrival.time
                       if (column === 'arrival.type') {
                           userValue = formatArrivalTime(nestedVal, getNestedValue(user, 'arrival.time')).toLowerCase();
                       } else {
                           userValue = String(nestedVal || '').toLowerCase();
                       }
                   } else {
-                      // Access top-level address fields directly for filtering
                       userValue = String(user[column] || '').toLowerCase();
                   }
                   if (typeof user[column] === 'boolean') {
@@ -4516,7 +4296,7 @@ const clearFilter = (column) => {
     };
   }, [handleLogout]);
 
-    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdmin, isTargetUserHall) => {
+    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntry) => {
         if (!targetDocRef) {
             console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
             setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -4526,9 +4306,7 @@ const clearFilter = (column) => {
         try {
             window.showGlobalLoader();
     
-            // ------------------------------------------------------------------
-            // 1. PRÍPAD: ÚPRAVA POUŽÍVATEĽA (hlavný profil) - KLUB
-            // ------------------------------------------------------------------
+            // ---- PRÍPAD: ÚPRAVA POUŽÍVATEĽA (hlavný profil) ----
             if (originalDataPath === '') {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
@@ -4538,10 +4316,8 @@ const clearFilter = (column) => {
             
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
             
-                // Polia, ktoré patria výhradne do usersprivate
                 const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
             
-                // 1a) Pripravíme dáta pre users (odstránime súkromné polia)
                 let finalDataToSave = { ...currentDocData };
                 delete finalDataToSave._privateData;
                 privateFields.forEach(field => delete finalDataToSave[field]);
@@ -4549,12 +4325,10 @@ const clearFilter = (column) => {
                     delete finalDataToSave.billing.address;
                 }
             
-                // Vyčistíme existujúce tímy (ak nejaké sú)
                 if (finalDataToSave.teams) {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
             
-                // Prepíšeme ostatné polia z formulára (okrem súkromných a _privateData)
                 for (const key in updatedDataFromModal) {
                     if (privateFields.includes(key) || key === '_privateData') continue;
                     const value = updatedDataFromModal[key];
@@ -4582,23 +4356,20 @@ const clearFilter = (column) => {
                     }
                 }
             
-                // Znova vyčistíme tímy pre istotu
                 if (finalDataToSave.teams) {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
             
-                // 1b) Pripravíme dáta pre usersprivate
                 let privateData = {};
                 try {
                     const privateDocSnapshot = await getDoc(userPrivateDocRef);
                     if (privateDocSnapshot.exists()) {
                         privateData = privateDocSnapshot.data();
                     }
-                } catch (e) { /* dokument zatiaľ neexistuje */ }
+                } catch (e) { }
             
                 if (!privateData || typeof privateData !== 'object') privateData = {};
             
-                // Adresa klubu
                 privateData.address = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4611,7 +4382,6 @@ const clearFilter = (column) => {
                     privateData.birthDate = updatedDataFromModal.birthDate;
                 }
             
-                // Fakturačná adresa
                 privateData.billingAddress = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
                     houseNumber: updatedDataFromModal.houseNumber || currentDocData.houseNumber || '',
@@ -4620,33 +4390,24 @@ const clearFilter = (column) => {
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
             
-                // Uložíme do usersprivate (merge)
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
             
-                // ============================================================
-                // NOTIFIKÁCIE S NÁZVOM KLUBU - OPRAVENÉ
-                // ============================================================
-                // Získame názov klubu z pôvodných aj nových dát
                 const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
                 
-                // Vygenerujeme zmeny
                 const baseChanges = getChangesForNotification(
                     currentDocData,
                     finalDataToSave,
                     formatDateToDMMYYYY
                 );
                 
-                // Pridáme názov klubu ku každej zmene
                 const changesWithClubName = baseChanges.map(change => {
-                    // Ak ide o zmenu názvu klubu, špeciálne spracovanie
                     if (change.includes('Zmena Názov klubu')) {
                         return `Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`;
                     }
                     return `Klub ${updatedClubName}: ${change}`;
                 });
                 
-                // Ak neexistujú žiadne zmeny okrem názvu klubu, ale názov klubu sa zmenil
                 if (baseChanges.length === 0 && originalClubName !== updatedClubName) {
                     changesWithClubName.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
                 }
@@ -4663,7 +4424,6 @@ const clearFilter = (column) => {
                     }
                 }
             
-                // Uložíme do users
                 await updateDoc(targetDocRef, finalDataToSave);
             
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
@@ -4671,9 +4431,7 @@ const clearFilter = (column) => {
                 return;
             }
     
-            // ------------------------------------------------------------------
-            // 2. PRÍPAD: ÚPRAVA / PRIDANIE TÍMU
-            // ------------------------------------------------------------------
+            // ---- PRÍPAD: ÚPRAVA / PRIDANIE TÍMU ----
             if (editModalTitle.includes('Upraviť tím') || editModalTitle.includes('Pridať nový tím')) {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
@@ -4753,7 +4511,6 @@ const clearFilter = (column) => {
                     return cleanTeam;
                 };
     
-                // 2a) Pridanie nového tímu
                 if (isNewTeam) {
                     const cleanTeam = createCleanTeam(updatedDataFromModal);
                     cleanTeam.registeredBy = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim();
@@ -4774,7 +4531,6 @@ const clearFilter = (column) => {
                     return;
                 }
     
-                // 2b) Úprava existujúceho tímu
                 if (!oldCategory || oldTeamIndex < 0) {
                     throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
                 }
@@ -4808,9 +4564,7 @@ const clearFilter = (column) => {
                 return;
             }
     
-            // ------------------------------------------------------------------
-            // 3. PRÍPAD: ÚPRAVA / PRIDANIE ČLENA TÍMU
-            // ------------------------------------------------------------------
+            // ---- PRÍPAD: ÚPRAVA / PRIDANIE ČLENA TÍMU ----
             if (originalDataPath.includes('playerDetails') ||
                 originalDataPath.includes('menTeamMemberDetails') ||
                 originalDataPath.includes('womenTeamMemberDetails') ||
@@ -4871,7 +4625,7 @@ const clearFilter = (column) => {
                     if (privateDocSnapshot.exists()) {
                         privateData = privateDocSnapshot.data();
                     }
-                } catch (e) { /* dokument neexistuje */ }
+                } catch (e) { }
     
                 if (!privateData || typeof privateData !== 'object') privateData = {};
                 if (!privateData.persons) privateData.persons = {};
@@ -4879,7 +4633,6 @@ const clearFilter = (column) => {
                 const teamKey = `${category}_team${teamIndex + 1}`;
                 if (!privateData.persons[teamKey]) privateData.persons[teamKey] = {};
     
-                // ----- 3a) Pridanie nového člena -----
                 if (isReallyNew) {
                     const cleanNewMember = {
                         firstName: updatedDataFromModal.firstName || '',
@@ -4919,9 +4672,6 @@ const clearFilter = (column) => {
                         }
                     };
     
-                    // ============================================================
-                    // NOTIFIKÁCIE PRE NOVÉHO ČLENA TÍMU
-                    // ============================================================
                     const teamName = teamToUpdate.teamName || 'Bez názvu';
                     const memberName = `${cleanNewMember.firstName || ''} ${cleanNewMember.lastName || ''}`.trim() || 'bez mena';
     
@@ -4945,16 +4695,13 @@ const clearFilter = (column) => {
                     }
     
                 } else {
-                    // ----- 3b) Úprava existujúceho člena -----
                     if (memberArrayIndex < 0 || memberArrayIndex >= currentMemberArray.length) {
                         throw new Error(`Člen na indexe ${memberArrayIndex} neexistuje v poli ${memberArrayPath}`);
                     }
                     
                     const existingMember = currentMemberArray[memberArrayIndex];
-                    // Uložíme si pôvodné dáta pre porovnanie
                     const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
                     
-                    // Aktualizujeme polia v existingMember
                     if (updatedDataFromModal.firstName !== undefined) {
                         existingMember.firstName = updatedDataFromModal.firstName;
                     }
@@ -4971,7 +4718,6 @@ const clearFilter = (column) => {
                         existingMember.isRegistered = updatedDataFromModal.isRegistered;
                     }
                     
-                    // Aktualizujeme private dáta
                     let privateArrayName = memberArrayPath;
                     if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
                     else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
@@ -4998,16 +4744,12 @@ const clearFilter = (column) => {
                         };
                     }
                     
-                    // ============================================================
-                    // NOTIFIKÁCIE PRE ÚPRAVU ČLENA TÍMU - OPRAVENÉ
-                    // ============================================================
                     const teamName = teamToUpdate.teamName || 'Bez názvu';
                     const memberName = `${existingMember.firstName || ''} ${existingMember.lastName || ''}`.trim() || 'bez mena';
                     
-                    // Použijeme pôvodné dáta z dokumentu a nové dáta z formulára
                     const memberChanges = getMemberChangesForNotification(
-                        originalMemberFromDoc,  // Pôvodné dáta z dokumentu
-                        updatedDataFromModal,   // Nové dáta z formulára
+                        originalMemberFromDoc,
+                        updatedDataFromModal,
                         memberName,
                         teamName,
                         category
@@ -5026,7 +4768,6 @@ const clearFilter = (column) => {
                     }
                 }
     
-                // ----- Uloženie do users a usersprivate -----
                 teamToUpdate[memberArrayPath] = currentMemberArray;
                 const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
     
@@ -5047,9 +4788,7 @@ const clearFilter = (column) => {
                 return;
             }
     
-            // ------------------------------------------------------------------
-            // 4. PRÍPAD: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA
-            // ------------------------------------------------------------------
+            // ---- PRÍPAD: VŠEOBECNÁ VNORENÁ AKTUALIZÁCIA ----
             if (!originalDataPath) {
                 throw new Error("Cesta na uloženie dát (originalDataPath) je prázdna pre všeobecnú vnorenú aktualizáciu.");
             }
@@ -5127,7 +4866,6 @@ const clearFilter = (column) => {
             const memberToRemove = currentMemberArray[memberArrayIndex];
             const memberName = `${memberToRemove.firstName || ''} ${memberToRemove.lastName || ''}`.trim() || 'bez mena';
     
-            // Odstránime z poľa
             currentMemberArray.splice(memberArrayIndex, 1);
             teamToUpdate[memberArrayPath] = currentMemberArray;
     
@@ -5139,13 +4877,10 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
-
             updates['_privateData'] = deleteField();
     
-            // Uložíme do users (vyčistené)
             await updateDoc(targetDocRef, updates);
     
-            // Odstránime aj z usersprivate
             const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
             let privateData = {};
             try {
@@ -5153,12 +4888,11 @@ const clearFilter = (column) => {
                 if (privateDocSnapshot.exists()) {
                     privateData = privateDocSnapshot.data();
                 }
-            } catch (e) { /* dokument neexistuje */ }
+            } catch (e) { }
     
             if (privateData.persons) {
                 const teamKey = `${category}_team${teamIndex + 1}`;
                 if (privateData.persons[teamKey]) {
-                    // Zistíme názov poľa v private
                     let privateArrayName;
                     if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
                     else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
@@ -5232,7 +4966,6 @@ const clearFilter = (column) => {
             const teamToRemove = teamsInCategory[teamIndex];
             const teamName = teamToRemove.teamName || 'Bez názvu';
     
-            // Odstránime tím z users
             const updatedTeamsInCategory = [...teamsInCategory];
             updatedTeamsInCategory.splice(teamIndex, 1);
     
@@ -5242,12 +4975,10 @@ const clearFilter = (column) => {
             } else {
                 updates[`teams.${category}`] = updatedTeamsInCategory;
             }
-
             updates['_privateData'] = deleteField();
-
+    
             await updateDoc(targetDocRef, updates);
     
-            // Odstránime aj príslušné osobné údaje z usersprivate
             const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
             let privateData = {};
             try {
@@ -5255,7 +4986,7 @@ const clearFilter = (column) => {
                 if (privateDocSnapshot.exists()) {
                     privateData = privateDocSnapshot.data();
                 }
-            } catch (e) { /* dokument neexistuje */ }
+            } catch (e) { }
     
             if (privateData.persons) {
                 const teamKey = `${category}_team${teamIndex + 1}`;
@@ -5266,7 +4997,6 @@ const clearFilter = (column) => {
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
             }
     
-            // Notifikácia
             const userEmail = window.auth.currentUser?.email;
             if (userEmail) {
                 const notificationsCollectionRef = collection(db, 'notifications');
@@ -5289,19 +5019,17 @@ const clearFilter = (column) => {
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
-    // Handler pre otvorenie modálneho okna na pridanie tímu
-    const handleOpenAddTeamModal = (userIdForNewTeam) => { // Prijíma userId pre nový tím
+    const handleOpenAddTeamModal = (userIdForNewTeam) => {
         if (!user || !db || !userProfileData || !userProfileData.role) {
             setUserNotificationMessage("Chyba: Nie ste prihlásený alebo nemáte dostatočné oprávnenia na pridanie tímu.", 'error');
             return;
         }
 
-        // Predvolené dáta pre nový tím (môžu byť prázdne alebo s predvolenými hodnotami)
         const newTeamData = {
             teamName: '',
-            category: '', // Kategória by mala byť vybraná v modálnom okne
-            _category: '', // Taktiež pre konzistentnosť
-            arrival: { type: '', time: '' }, // Inicializovať aj čas príchodu
+            category: '',
+            _category: '',
+            arrival: { type: '', time: '' },
             accommodation: { type: '' },
             packageDetails: { name: '' },
             tshirts: [],
@@ -5312,615 +5040,585 @@ const clearFilter = (column) => {
             driverDetailsFemale: [],
         };
         
-        // Cesta pre uloženie nového tímu: použijeme fiktívny index -1 na signalizáciu nového záznamu
-        // Predpokladajme, že sa pridáva do nejakej default kategórie (napr. 'NewCategory'),
-        // ale skutočná kategória sa vyberie v modálnom okne a prepíše sa.
         const newTeamPath = `teams.NewCategory[-1]`; 
-        // Použijeme userIdForNewTeam, ak je odovzdané, inak userId aktuálneho prihláseného admina
         const targetDocRefForNewTeam = doc(db, 'users', userIdForNewTeam || user.uid);
 
-        openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true); // Nastaviť isNewEntry na true
+        openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true);
     };
 
+    if (!isAuthReady || user === undefined || !userProfileData) {
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        }
+        return null;
+    }
 
-  if (!isAuthReady || user === undefined || !userProfileData) {
-    if (typeof window.showGlobalLoader === 'function') {
-      window.showGlobalLoader();
+    if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
+        setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        }
+        setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
+        window.location.href = 'logged-in-my-data.html';
+        return null;
     }
-    return null;
-  }
 
-  if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-      setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
-      setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
-      window.location.href = 'logged-in-my-data.html';
-      return null;
-  }
+    const shouldShowExpander = (u) => {
+        return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
+    };
 
-  const shouldShowExpander = (u) => {
-      return u.role !== 'admin' && showTeams && u.teams && Object.keys(u.teams).length > 0;
-  };
-
-  // Nová pomocná funkcia na formátovanie hodnôt v bunkách tabuľky
-  const formatTableCellValue = (value, columnId, userObject) => {
-    if (value === null || value === undefined || value === "") return '-';
-  
-    if (columnId === 'role') {
-      switch (value) {
-        case 'club': return 'Klub';
-        case 'hall': return 'Hala';
-        case 'admin': return 'Administrátor';
-        case 'volunteer': return 'Dobrovoľník';
-        case 'referee': return 'Rozhodca';
-        default: return value;
-      }
-    }
-  
-    // Dátum registrácie
-    if (columnId === 'registrationDate') {
-      let date;
-      if (value && typeof value.toDate === 'function') {
-        date = value.toDate();
-      } else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-        date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-      } else {
-        return '-';
-      }
-      try {
-        const options = {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        };
-        return date.toLocaleString('sk-SK', options);
-      } catch (e) {
-        return '[Chyba Dátumu]';
-      }
-    }
-  
-    // Schválený
-    if (columnId === 'approved') {
-      return value ? 'Áno' : 'Nie';
-    }
-  
-    // PSČ - formátovanie s medzerou
-    if (columnId === 'postalCode') {
-      return formatPostalCodeForDisplay(value);
-    }
-  
-    // Telefónne číslo
-    if (columnId === 'contactPhoneNumber') {
-      const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
-      const formattedNumber = formatNumberGroups(numberWithoutDialCode);
-      return `${dialCode} ${formattedNumber}`;
-    }
-  
-    // Adresové polia - načítame výhradne z _privateData
-    if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
-        const privateAddress = userObject._privateData?.address;
-        if (privateAddress) {
-            const mapping = {
-                'street': 'street',
-                'houseNumber': 'houseNumber',
-                'city': 'city',
-                'country': 'country'
+    const formatTableCellValue = (value, columnId, userObject) => {
+        if (value === null || value === undefined || value === "") return '-';
+      
+        if (columnId === 'role') {
+          switch (value) {
+            case 'club': return 'Klub';
+            case 'hall': return 'Hala';
+            case 'admin': return 'Administrátor';
+            case 'volunteer': return 'Dobrovoľník';
+            case 'referee': return 'Rozhodca';
+            default: return value;
+          }
+        }
+      
+        if (columnId === 'registrationDate') {
+          let date;
+          if (value && typeof value.toDate === 'function') {
+            date = value.toDate();
+          } else if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+            date = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
+          } else {
+            return '-';
+          }
+          try {
+            const options = {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
             };
-            const privateValue = privateAddress[mapping[columnId]];
-            if (privateValue) return privateValue;
+            return date.toLocaleString('sk-SK', options);
+          } catch (e) {
+            return '[Chyba Dátumu]';
+          }
         }
-        // Ak v _privateData chýba, vrátime pomlčku (žiaden fallback na user[columnId])
-        return '-';
-    }
-  
-    // Poznámka
-    if (columnId === 'note') {
-      return value || '-';
-    }
-  
-    // Typ dopravy
-    if (columnId === 'arrival.type') {
-      const arrivalType = getNestedValue(userObject, 'arrival.type');
-      const arrivalTime = getNestedValue(userObject, 'arrival.time');
-      return formatArrivalTime(arrivalType, arrivalTime);
-    }
-  
-    // Dobrovoľnícke polia
-    if (columnId === 'tshirtSize') {
-      return value || '-';
-    }
-    if (columnId === 'selectedDates') {
-      if (!value || !Array.isArray(value)) return '-';
-      return value
-        .map(dateStr => {
-          const [year, month, day] = dateStr.split('-');
-          return `${day}. ${month}. ${year}`;
-        })
-        .join(', ');
-    }
-    if (columnId === 'volunteerRoles') {
-      if (!value || !Array.isArray(value)) return '-';
-      return value.join(', ');
-    }
-  
-    // Všeobecné formátovanie
-    if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
-    if (Array.isArray(value)) {
-      return value.map(item => {
-        if (typeof item === 'object' && item !== null) {
-          if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
-          if (item.size) return item.size;
-          return '[Objekt]';
+      
+        if (columnId === 'approved') {
+          return value ? 'Áno' : 'Nie';
         }
-        return String(item);
-      }).join(', ');
-    }
-    if (typeof value === 'object') {
-      if (value.street || value.city) {
-        return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
-      }
-      if (value.name || value.type) {
-        return value.name || value.type;
-      }
-      try {
-        return JSON.stringify(value);
-      } catch (e) {
-        return '[Objekt]';
-      }
-    }
-    return String(value);
-  };
+      
+        if (columnId === 'postalCode') {
+          return formatPostalCodeForDisplay(value);
+        }
+      
+        if (columnId === 'contactPhoneNumber') {
+          const { dialCode, numberWithoutDialCode } = parsePhoneNumber(value, countryDialCodes);
+          const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+          return `${dialCode} ${formattedNumber}`;
+        }
+      
+        if (['street', 'houseNumber', 'city', 'country'].includes(columnId)) {
+            const privateAddress = userObject._privateData?.address;
+            if (privateAddress) {
+                const mapping = {
+                    'street': 'street',
+                    'houseNumber': 'houseNumber',
+                    'city': 'city',
+                    'country': 'country'
+                };
+                const privateValue = privateAddress[mapping[columnId]];
+                if (privateValue) return privateValue;
+            }
+            return '-';
+        }
+      
+        if (columnId === 'note') {
+          return value || '-';
+        }
+      
+        if (columnId === 'arrival.type') {
+          const arrivalType = getNestedValue(userObject, 'arrival.type');
+          const arrivalTime = getNestedValue(userObject, 'arrival.time');
+          return formatArrivalTime(arrivalType, arrivalTime);
+        }
+      
+        if (columnId === 'tshirtSize') {
+          return value || '-';
+        }
+        if (columnId === 'selectedDates') {
+          if (!value || !Array.isArray(value)) return '-';
+          return value
+            .map(dateStr => {
+              const [year, month, day] = dateStr.split('-');
+              return `${day}. ${month}. ${year}`;
+            })
+            .join(', ');
+        }
+        if (columnId === 'volunteerRoles') {
+          if (!value || !Array.isArray(value)) return '-';
+          return value.join(', ');
+        }
+      
+        if (typeof value === 'boolean') return value ? 'Áno' : 'Nie';
+        if (Array.isArray(value)) {
+          return value.map(item => {
+            if (typeof item === 'object' && item !== null) {
+              if (item.firstName && item.lastName) return `${item.firstName} ${item.lastName}`;
+              if (item.size) return item.size;
+              return '[Objekt]';
+            }
+            return String(item);
+          }).join(', ');
+        }
+        if (typeof value === 'object') {
+          if (value.street || value.city) {
+            return `${value.street || ''} ${value.houseNumber || ''}, ${value.postalCode || ''} ${value.city || ''}, ${value.country || ''}`;
+          }
+          if (value.name || value.type) {
+            return value.name || value.type;
+          }
+          try {
+            return JSON.stringify(value);
+          } catch (e) {
+            return '[Objekt]';
+          }
+        }
+        return String(value);
+    };
 
-
-  return React.createElement(
-    'div',
-    { className: 'min-h-screen flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage(''),
-        displayNotificationsEnabled: userProfileData?.displayNotifications
-    }),
-    React.createElement(FilterModal, {
-        isOpen: filterModalOpen,
-        onClose: closeFilterModal,
-        columnName: filterColumn,
-        onApplyFilter: applyFilter,
-        initialFilterValues: activeFilters[filterColumn] || [],
-        onClearFilter: clearFilter,
-        uniqueColumnValues: uniqueColumnValues,
-        allUsers: allUsers
-    }),
-    // Removed ColumnVisibilityModal component rendering
-    React.createElement(DataEditModal, {
-        isOpen: isEditModalOpen,
-        onClose: closeEditModal,
-        title: editModalTitle,
-        data: editingData,
-        onSave: handleSaveEditedData, // Odovzdať handler na uloženie
-        onDeleteMember: handleDeleteMember, // Odovzdať handler pre odstránenie člena
-        onDeleteTeam: handleDeleteTeam, // Odovzdať handler pre odstránenie tímu
-        targetDocRef: editingDocRef,    // Odovzdať referenciu na dokument
-        originalDataPath: editingDataPath, // Odovzdať cestu v dokumente
-        setUserNotificationMessage: setUserNotificationMessage, // Preposielame setter notifikácie
-        setError: setError, // Preposielame setter chýb
-        isNewEntry: isNewEntry, // Odovzdať príznak
-        getChangesForNotification: getChangesForNotification, // Pass the helper function as a prop
-        formatDateToDMMYYYY: formatDateToDMMYYYY, // Pass formatDateToDMMYYYY as a prop
-        currentUserId: user?.uid, // Pass the current user ID to the modal
-        editModalTitle: editModalTitle // Pass editModalTitle as a prop
-    }),
-    // Modálne okno na výber typu člena
-    React.createElement(AddMemberTypeSelectionModal, {
-        isOpen: isAddMemberTypeSelectionModalOpen,
-        onClose: () => setIsAddMemberTypeSelectionModalOpen(false),
-        onSelectType: handleSelectedMemberTypeAndOpenEdit
-    }),
-    React.createElement(
-      'div',
-      { className: 'w-full px-4 mt-20 mb-10' },
-      error && React.createElement(
+    return React.createElement(
         'div',
-        { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
-        error
-      ),
-      React.createElement(
-        'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Všetky registrácie'
-        ),
+        { className: 'min-h-screen flex flex-col items-center font-inter overflow-y-auto' },
+        React.createElement(NotificationModal, {
+            message: userNotificationMessage,
+            onClose: () => setUserNotificationMessage(''),
+            displayNotificationsEnabled: userProfileData?.displayNotifications
+        }),
+        React.createElement(FilterModal, {
+            isOpen: filterModalOpen,
+            onClose: closeFilterModal,
+            columnName: filterColumn,
+            onApplyFilter: applyFilter,
+            initialFilterValues: activeFilters[filterColumn] || [],
+            onClearFilter: clearFilter,
+            uniqueColumnValues: uniqueColumnValues,
+            allUsers: allUsers
+        }),
+        React.createElement(DataEditModal, {
+            isOpen: isEditModalOpen,
+            onClose: closeEditModal,
+            title: editModalTitle,
+            data: editingData,
+            onSave: handleSaveEditedData,
+            onDeleteMember: handleDeleteMember,
+            onDeleteTeam: handleDeleteTeam,
+            targetDocRef: editingDocRef,
+            originalDataPath: editingDataPath,
+            setUserNotificationMessage: setUserNotificationMessage,
+            setError: setError,
+            isNewEntry: isNewEntry,
+            getChangesForNotification: getChangesForNotification,
+            formatDateToDMMYYYY: formatDateToDMMYYYY,
+            currentUserId: user?.uid,
+            editModalTitle: editModalTitle
+        }),
+        React.createElement(AddMemberTypeSelectionModal, {
+            isOpen: isAddMemberTypeSelectionModalOpen,
+            onClose: () => setIsAddMemberTypeSelectionModalOpen(false),
+            onSelectType: handleSelectedMemberTypeAndOpenEdit
+        }),
         React.createElement(
             'div',
-            { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' },
-            React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
-                React.createElement('input', {
-                    type: 'checkbox',
-                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
-                    checked: showUsers,
-                    onChange: (e) => setShowUsers(e.target.checked)
-                }),
-                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť používateľov')
+            { className: 'w-full px-4 mt-20 mb-10' },
+            error && React.createElement(
+                'div',
+                { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+                error
             ),
-            React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
-                React.createElement('input', {
-                    type: 'checkbox',
-                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
-                    checked: showTeams,
-                    onChange: (e) => setShowTeams(e.target.checked)
-                }),
-                React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť tímy')
-            ),
-            // Removed "Upraviť stĺpce" button
-        ),
-        React.createElement(
-            'div',
-            { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
             React.createElement(
-                'table',
-                { className: 'text-sm text-left text-gray-500' },
+                'div',
+                { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+                React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
+                    'Všetky registrácie'
+                ),
                 React.createElement(
-                    'thead',
-                    { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
+                    'div',
+                    { className: 'flex justify-end items-center mb-4 flex-wrap gap-2' },
+                    React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
+                            checked: showUsers,
+                            onChange: (e) => setShowUsers(e.target.checked)
+                        }),
+                        React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť používateľov')
+                    ),
+                    React.createElement('label', { className: 'flex items-center mr-4 cursor-pointer' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md mr-2',
+                            checked: showTeams,
+                            onChange: (e) => setShowTeams(e.target.checked)
+                        }),
+                        React.createElement('span', { className: 'text-gray-700' }, 'Zobraziť tímy')
+                    ),
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
                     React.createElement(
-                        'tr',
-                        null,
-                        (!showUsers && showTeams) ? (
-                            React.createElement(React.Fragment, null,
-                                React.createElement('th', { className: 'py-3 px-2 text-center min-w-max' },
-                                    React.createElement('button', {
-                                        onClick: toggleAllRows,
-                                        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                    },
-                                    allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
+                        'table',
+                        { className: 'text-sm text-left text-gray-500' },
+                        React.createElement(
+                            'thead',
+                            { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
+                            React.createElement(
+                                'tr',
+                                null,
+                                (!showUsers && showTeams) ? (
+                                    React.createElement(React.Fragment, null,
+                                        React.createElement('th', { className: 'py-3 px-2 text-center min-w-max' },
+                                            React.createElement('button', {
+                                                onClick: toggleAllRows,
+                                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                            },
+                                            allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
+                                            )
+                                        ),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Kategória'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Názov tímu'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Spolu'),
+                                        React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farba dresov 1'),
+                                        React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farba dresov 2'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovňa'),
+                                        React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
+                                        (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
+                                            React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                        )
                                     )
-                                ),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Kategória'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Názov tímu'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Hráči'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (ž)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'R. tím (m)'),
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (ž)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Šofér (m)'), 
-                                React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Spolu'),
-                                React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farba dresov 1'),
-                                React.createElement('th', { className: 'py-2 px-3 text-center whitespace-nowrap min-w-max' }, 'Farba dresov 2'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Doprava'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovanie'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Ubytovňa'),
-                                React.createElement('th', { className: 'py-2 px-2 text-left whitespace-nowrap min-w-max' }, 'Balík'),
-                                (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                    React.createElement('th', { key: `tshirt-header-${size}`, className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, `${size.toUpperCase()}`)
+                                ) : (
+                                    React.createElement(React.Fragment, null,
+                                        React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center min-w-max' },
+                                            showUsers && showTeams && React.createElement('button', {
+                                                onClick: toggleAllRows,
+                                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                            },
+                                            filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▲' : '▼'
+                                            )
+                                        ),
+                                        columnOrder.map((col) => (
+                                            React.createElement('th', {
+                                                key: col.id,
+                                                scope: 'col',
+                                                className: `py-3 px-6 relative group whitespace-nowrap min-w-max`,
+                                                onMouseEnter: () => setHoveredColumn(col.id),
+                                                onMouseLeave: () => setHoveredColumn(null)
+                                            },
+                                                React.createElement('div', { className: 'flex items-center justify-center h-full space-x-1' },
+                                                    React.createElement('button', {
+                                                        onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
+                                                        className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
+                                                    }, '⚙️')
+                                                )
+                                                ,
+                                                React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' },
+                                                    col.label,
+                                                    currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                                )
+                                            )
+                                        ))
+                                    )
                                 )
                             )
-                        ) : (
-                            React.createElement(React.Fragment, null,
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-2 text-center min-w-max' },
-                                    showUsers && showTeams && React.createElement('button', {
-                                        onClick: toggleAllRows,
-                                        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                    },
-                                    filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]) ? '▲' : '▼'
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            ((!showUsers && showTeams) && allTeamsFlattened.length === 0) || (showUsers && filteredUsers.length === 0) ? (
+                                React.createElement(
+                                    'tr',
+                                    null,
+                                    React.createElement('td', { colSpan: columnOrder.length + 1, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                                )
+                            ) : (
+                                (!showUsers && showTeams) ? (
+                                    React.createElement(React.Fragment, null,
+                                        allTeamsFlattened.map(team => {
+                                            const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
+                                            return React.createElement(
+                                                React.Fragment,
+                                                { key: teamUniqueId },
+                                                React.createElement(
+                                                    'tr',
+                                                    {
+                                                        className: `bg-white border-b hover:bg-gray-50`,
+                                                    },
+                                                    React.createElement('td', {
+                                                        className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
+                                                    },
+                                                        React.createElement('span', {
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                toggleTeamRowExpansion(teamUniqueId);
+                                                            },
+                                                            className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1 cursor-pointer'
+                                                        }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
+                                                        React.createElement('button', {
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                const targetDocRefForTeam = doc(db, 'users', team._userId);
+                                                                const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
+                                                                const resolvedTitle = `Upraviť tím: ${team.teamName}`;
+                                                                openEditModal(
+                                                                    team,
+                                                                    resolvedTitle,
+                                                                    targetDocRefForTeam,
+                                                                    teamPathForSaving
+                                                                );
+                                                            },
+                                                            className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                                        }, '✏️')
+                                                    ),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Tím`),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyAwayColor || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.name || '-'),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
+                                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
+                                                        React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._teamTshirtsMap.get(size) || '-')
+                                                    )
+                                                ),
+                                                expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement(
+                                                    'tr',
+                                                    { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
+                                                    React.createElement('td', { colSpan: defaultColumnOrder.length + 2, className: 'p-0' },
+                                                        React.createElement(TeamDetailsContent, {
+                                                            team: team,
+                                                            tshirtSizeOrder: availableTshirtSizes,
+                                                            showDetailsAsCollapsible: false,
+                                                            showUsersChecked: showUsers,
+                                                            showTeamsChecked: showTeams,
+                                                            openEditModal: openEditModal,
+                                                            db: db,
+                                                            setUserNotificationMessage: setUserNotificationMessage,
+                                                            onAddMember: handleOpenAddMemberTypeModal,
+                                                            allTeamsData: allTeamsFlattened
+                                                        })
+                                                    )
+                                                )
+                                            );
+                                        }),
+                                        (allTeamsFlattened.length > 0 && !showUsers && showTeams) && (() => {
+                                            const categoryCounts = new Map();
+                                            allTeamsFlattened.forEach(team => {
+                                                const category = team._category || 'Bez kategórie';
+                                                categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+                                            });
+                                            
+                                            const sortedCategories = Array.from(categoryCounts.keys()).sort();
+                                            
+                                            const summaryRows = [];
+                                            
+                                            summaryRows.push(
+                                                React.createElement(
+                                                    'tr',
+                                                    { key: 'summary-header', className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
+                                                    React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Súhrn:'),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet hráčov' }, teamSummary.totalPlayers),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – ženy' }, teamSummary.totalWomenTeamMembers),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – muži' }, teamSummary.totalMenTeamMembers),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – ženy' }, teamSummary.totalWomenDrivers),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – muži' }, teamSummary.totalMenDrivers),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet osôb (hráči + realizačný tím + šoféri)' },
+                                                        teamSummary.totalPlayers +
+                                                        teamSummary.totalWomenTeamMembers +
+                                                        teamSummary.totalMenTeamMembers +
+                                                        teamSummary.totalWomenDrivers +
+                                                        teamSummary.totalMenDrivers
+                                                    ),
+                                                    React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 6 }, 'Tričká:'),
+                                                    (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS','XS','S','M','L','XL','XXL','XXXL']).map(size =>
+                                                        React.createElement('td', {
+                                                            key: `summary-tshirt-${size}`,
+                                                            className: 'py-3 px-2 text-center cursor-default',
+                                                            title: `Celkový počet tričiek veľkosti ${size}`
+                                                        }, teamSummary.totalTshirtQuantities.get(size) || 0)
+                                                    )
+                                                )
+                                            );
+                                            
+                                            sortedCategories.forEach(category => {
+                                                const teamCount = categoryCounts.get(category);
+                                                summaryRows.push(
+                                                    React.createElement(
+                                                        'tr',
+                                                        { key: `summary-category-${category}`, className: 'bg-gray-50 text-gray-700' },
+                                                        React.createElement('td', { className: 'py-2 px-2 text-left', colSpan: 3 }, 
+                                                            React.createElement('span', { className: 'font-medium' }, category)
+                                                        ),
+                                                        React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 1 }, `${teamCount} tímov`),
+                                                        React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 12 }, '')
+                                                    )
+                                                );
+                                            });
+                                            
+                                            return summaryRows;
+                                        })()
                                     )
-                                ),
-                                columnOrder.map((col) => ( // Iterate directly over columnOrder
-                                    React.createElement('th', {
-                                        key: col.id,
-                                        scope: 'col',
-                                        className: `py-3 px-6 relative group whitespace-nowrap min-w-max`,
-                                        onMouseEnter: () => setHoveredColumn(col.id),
-                                        onMouseLeave: () => setHoveredColumn(null)
-                                    },
-                                        React.createElement('div', { className: 'flex items-center justify-center h-full space-x-1' },
-                                            // Removed left/right move buttons
-                                            React.createElement('button', {
-                                                onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
-                                                className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
-                                            }, '⚙️')
-                                            // Removed right move button
+                                ) : (
+                                    filteredUsers.map(u => (
+                                        React.createElement(
+                                            React.Fragment,
+                                            { key: u.id },
+                                            React.createElement(
+                                                'tr',
+                                                {
+                                                    className: `bg-white border-b hover:bg-gray-50`,
+                                                },
+                                                React.createElement('td', {
+                                                    className: 'py-3 px-2 text-center min-w-max flex items-center justify-center',
+                                                },
+                                                    shouldShowExpander(u)
+                                                        ? React.createElement('button', {
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                toggleRowExpansion(u.id);
+                                                            },
+                                                            className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
+                                                        }, expandedRows[u.id] ? '▲' : '▼')
+                                                        : React.createElement('span', { className: 'mr-1' }, '-'),
+                                                    React.createElement('button', {
+                                                        onClick: (e) => {
+                                                            e.stopPropagation();
+                                                            openEditModal(
+                                                                u,
+                                                                `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
+                                                                doc(db, 'users', u.id),
+                                                                '',
+                                                                false
+                                                            );
+                                                        },
+                                                        className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
+                                                    }, '✏️')
+                                                ),
+                                                columnOrder.map(col => (
+                                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
+                                                        formatTableCellValue(getNestedValue(u, col.id), col.id, u)
+                                                    )
+                                                ))
+                                            ),
+                                            expandedRows[u.id] && showTeams && React.createElement(
+                                                'tr',
+                                                { key: `${u.id}-details`, className: 'bg-gray-100' },
+                                                React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
+                                                    showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
+                                                        React.createElement('button', {
+                                                            className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenAddTeamModal(u.id);
+                                                            }
+                                                        }, '+')
+                                                    ),
+                                                    Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
+                                                        (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
+                                                            let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                                                            let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                                                            let menDriversCount = team.driverDetailsMale?.length || 0;
+                                                            let womenDriversCount = team.driverDetailsFemale?.length || 0;
+                                                            let playersCount = team.playerDetails?.length || 0;
+                                                            const teamTshirtsMap = new Map(
+                                                                (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
+                                                            );
+                                                            return React.createElement(TeamDetailsContent, {
+                                                                key: `${u.id}-${category}-${teamIndex}-details-content`,
+                                                                team: {
+                                                                    ...team,
+                                                                    _category: category,
+                                                                    _registeredBy: `${u.firstName} ${u.lastName}`,
+                                                                    _userId: u.id,
+                                                                    _teamIndex: teamIndex,
+                                                                    _menTeamMembersCount: menTeamMembersCount,
+                                                                    _womenTeamMembersCount: womenTeamMembersCount,
+                                                                    _menDriversCount: menDriversCount,
+                                                                    _womenDriversCount: womenDriversCount,
+                                                                    _players: playersCount,
+                                                                    _teamTshirtsMap: teamTshirtsMap
+                                                                },
+                                                                tshirtSizeOrder: availableTshirtSizes,
+                                                                showDetailsAsCollapsible: true,
+                                                                showUsersChecked: showUsers,
+                                                                showTeamsChecked: showTeams,
+                                                                openEditModal: openEditModal,
+                                                                db: db,
+                                                                setUserNotificationMessage: setUserNotificationMessage,
+                                                                onAddMember: handleOpenAddMemberTypeModal,
+                                                                allTeamsData: allTeamsFlattened
+                                                            })
+                                                        })
+                                                    )
+                                                )
+                                            )
                                         )
-                                        ,
-                                        React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center cursor-pointer' },
-                                            col.label,
-                                            currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                    ))
+                                )
+                            ),
+                            showUsers && activeFilters.role && activeFilters.role.includes('volunteer') && (
+                                [
+                                    React.createElement(
+                                        'tr',
+                                        { key: 'volunteer-tshirt-summary-header', className: 'bg-gray-200 font-bold text-gray-800 uppercase' },
+                                        React.createElement(
+                                            'td',
+                                            {
+                                                className: 'py-3 px-4 text-left',
+                                                colSpan: columnOrder.length + 1
+                                            },
+                                            'Súhrn veľkostí tričiek pre dobrovoľníkov:'
                                         )
-                                    )
-                                ))
+                                    ),
+                                    ...(availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
+                                        const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
+                                        const count = volunteerTshirtSummary.get(size) || 0;
+                                        return React.createElement(
+                                            'tr',
+                                            { key: `volunteer-tshirt-summary-${size}`, className: 'bg-gray-100 text-gray-700' },
+                                            React.createElement(
+                                                'td',
+                                                {
+                                                    className: 'py-2 px-4 text-left',
+                                                    colSpan: columnOrder.length + 1
+                                                },
+                                                `${size}: ${count}×`
+                                            )
+                                        );
+                                    })
+                                ]
                             )
                         )
                     )
                 ),
-                React.createElement(
-                    'tbody',
-                    null,
-                    ((!showUsers && showTeams) && allTeamsFlattened.length === 0) || (showUsers && filteredUsers.length === 0) ? (
-                        React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('td', { colSpan: columnOrder.length + 1, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
-                        )
-                    ) : (
-                        (!showUsers && showTeams) ? (
-                            React.createElement(React.Fragment, null,
-                                allTeamsFlattened.map(team => {
-                                    const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
-                                    return React.createElement(
-                                        React.Fragment,
-                                        { key: teamUniqueId },
-                                        React.createElement(
-                                            'tr',
-                                            {
-                                                className: `bg-white border-b hover:bg-gray-50`,
-                                            },
-                                            React.createElement('td', {
-                                                className: 'py-3 px-2 text-center whitespace-nowrap min-w-max flex items-center justify-center',
-                                            },
-                                                React.createElement('span', {
-                                                    onClick: (e) => {
-                                                        e.stopPropagation();
-                                                        toggleTeamRowExpansion(teamUniqueId);
-                                                    },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1 cursor-pointer'
-                                                }, expandedTeamRows[teamUniqueId] ? '▲' : '▼'),
-                                                React.createElement('button', {
-                                                    onClick: (e) => {
-                                                        e.stopPropagation();
-                                                        const targetDocRefForTeam = doc(db, 'users', team._userId);
-                                                        const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
-                                                        const resolvedTitle = `Upraviť tím: ${team.teamName}`;
-                                                        openEditModal(
-                                                            team,
-                                                            resolvedTitle,
-                                                            targetDocRefForTeam,
-                                                            teamPathForSaving
-                                                        );
-                                                    },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                                }, '✏️')
-                                            ),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Tím`),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenDriversCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menDriversCount),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players + team._womenTeamMembersCount + team._menTeamMembersCount + team._womenDriversCount + team._menDriversCount || '-'),
-                                            React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyHomeColor || '-'),
-                                            React.createElement('td', { className: 'py-3 px-3 text-center whitespace-nowrap min-w-max text-sm' }, team.jerseyAwayColor || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, formatArrivalTime(team.arrival?.type, team.arrival?.time)),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.type || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.accommodation?.name || '-'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.packageDetails?.name || '-'),
-                                            (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size =>
-                                                React.createElement('td', { key: `tshirt-data-${teamUniqueId}-${size}`, className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._teamTshirtsMap.get(size) || '-')
-                                            )
-                                        ),
-                                        expandedTeamRows[teamUniqueId] && (!showUsers && showTeams) && React.createElement(
-                                            'tr',
-                                            { key: `${teamUniqueId}-details`, className: 'bg-gray-100' },
-                                            React.createElement('td', { colSpan: defaultColumnOrder.length + 2, className: 'p-0' },
-                                                React.createElement(TeamDetailsContent, {
-                                                    team: team,
-                                                    tshirtSizeOrder: availableTshirtSizes,
-                                                    showDetailsAsCollapsible: false,
-                                                    showUsersChecked: showUsers,
-                                                    showTeamsChecked: showTeams,
-                                                    openEditModal: openEditModal,
-                                                    db: db,
-                                                    setUserNotificationMessage: setUserNotificationMessage,
-                                                    onAddMember: handleOpenAddMemberTypeModal,
-                                                    allTeamsData: allTeamsFlattened
-                                                })
-                                            )
-                                        )
-                                    );
-                                }),
-                                (allTeamsFlattened.length > 0 && !showUsers && showTeams) && (() => {
-                                    // Vypočítať počet tímov na kategóriu
-                                    const categoryCounts = new Map();
-                                    allTeamsFlattened.forEach(team => {
-                                        const category = team._category || 'Bez kategórie';
-                                        categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
-                                    });
-                                    
-                                    // Zoradiť kategórie abecedne
-                                    const sortedCategories = Array.from(categoryCounts.keys()).sort();
-                                    
-                                    // Hlavný riadok súhrnu
-                                    const summaryRows = [];
-                                    
-                                    // Pridať hlavný riadok s nadpisom Súhrn
-                                    summaryRows.push(
-                                        React.createElement(
-                                            'tr',
-                                            { key: 'summary-header', className: 'bg-gray-100 font-bold text-gray-700 uppercase' },
-                                            React.createElement('td', { className: 'py-3 px-2 text-left', colSpan: 3 }, 'Súhrn:'),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet hráčov' }, teamSummary.totalPlayers),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – ženy' }, teamSummary.totalWomenTeamMembers),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet členov realizačného tímu – muži' }, teamSummary.totalMenTeamMembers),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – ženy' }, teamSummary.totalWomenDrivers),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet šoférov – muži' }, teamSummary.totalMenDrivers),
-                                            React.createElement('td', { className: 'py-3 px-2 text-center cursor-default', title: 'Celkový počet osôb (hráči + realizačný tím + šoféri)' },
-                                                teamSummary.totalPlayers +
-                                                teamSummary.totalWomenTeamMembers +
-                                                teamSummary.totalMenTeamMembers +
-                                                teamSummary.totalWomenDrivers +
-                                                teamSummary.totalMenDrivers
-                                            ),
-                                            React.createElement('td', { className: 'py-3 px-2 text-right', colSpan: 6 }, 'Tričká:'),
-                                            (availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS','XS','S','M','L','XL','XXL','XXXL']).map(size =>
-                                                React.createElement('td', {
-                                                    key: `summary-tshirt-${size}`,
-                                                    className: 'py-3 px-2 text-center cursor-default',
-                                                    title: `Celkový počet tričiek veľkosti ${size}`
-                                                }, teamSummary.totalTshirtQuantities.get(size) || 0)
-                                            )
-                                        )
-                                    );
-                                    
-                                    // Pridať riadky pre každú kategóriu
-                                    sortedCategories.forEach(category => {
-                                        const teamCount = categoryCounts.get(category);
-                                        summaryRows.push(
-                                            React.createElement(
-                                                'tr',
-                                                { key: `summary-category-${category}`, className: 'bg-gray-50 text-gray-700' },
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', colSpan: 3 }, 
-                                                    React.createElement('span', { className: 'font-medium' }, category)
-                                                ),
-                                                React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 1 }, `${teamCount} tímov`),
-                                                React.createElement('td', { className: 'py-2 px-2 text-center', colSpan: 12 }, '')
-                                            )
-                                        );
-                                    });
-                                    
-                                    return summaryRows;
-                                })()
-                            )
-                        ) : (
-                            filteredUsers.map(u => (
-                                React.createElement(
-                                    React.Fragment,
-                                    { key: u.id },
-                                    React.createElement(
-                                        'tr',
-                                        {
-                                            className: `bg-white border-b hover:bg-gray-50`,
-                                        },
-                                        React.createElement('td', {
-                                            className: 'py-3 px-2 text-center min-w-max flex items-center justify-center',
-                                        },
-                                            shouldShowExpander(u)
-                                                ? React.createElement('button', {
-                                                    onClick: (e) => {
-                                                        e.stopPropagation();
-                                                        toggleRowExpansion(u.id);
-                                                    },
-                                                    className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
-                                                }, expandedRows[u.id] ? '▲' : '▼')
-                                                : React.createElement('span', { className: 'mr-1' }, '-'),
-                                            React.createElement('button', {
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    openEditModal(
-                                                        u,
-                                                        `Upraviť používateľa: ${u.firstName} ${u.lastName}`,
-                                                        doc(db, 'users', u.id),
-                                                        '',
-                                                        false
-                                                    );
-                                                },
-                                                className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                            }, '✏️')
-                                        ),
-                                        columnOrder.map(col => (
-                                            React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
-                                                formatTableCellValue(getNestedValue(u, col.id), col.id, u)
-                                            )
-                                        ))
-                                    ),
-                                    expandedRows[u.id] && showTeams && React.createElement(
-                                        'tr',
-                                        { key: `${u.id}-details`, className: 'bg-gray-100' },
-                                        React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                            showUsers && showTeams && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
-                                                React.createElement('button', {
-                                                    className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
-                                                    onClick: (e) => {
-                                                        e.stopPropagation();
-                                                        handleOpenAddTeamModal(u.id);
-                                                    }
-                                                }, '+')
-                                            ),
-                                            Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
-                                                (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
-                                                    let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
-                                                    let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
-                                                    let menDriversCount = team.driverDetailsMale?.length || 0;
-                                                    let womenDriversCount = team.driverDetailsFemale?.length || 0;
-                                                    let playersCount = team.playerDetails?.length || 0;
-                                                    const teamTshirtsMap = new Map(
-                                                        (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
-                                                    );
-                                                    return React.createElement(TeamDetailsContent, {
-                                                        key: `${u.id}-${category}-${teamIndex}-details-content`,
-                                                        team: {
-                                                            ...team,
-                                                            _category: category,
-                                                            _registeredBy: `${u.firstName} ${u.lastName}`,
-                                                            _userId: u.id,
-                                                            _teamIndex: teamIndex,
-                                                            _menTeamMembersCount: menTeamMembersCount,
-                                                            _womenTeamMembersCount: womenTeamMembersCount,
-                                                            _menDriversCount: menDriversCount,
-                                                            _womenDriversCount: womenDriversCount,
-                                                            _players: playersCount,
-                                                            _teamTshirtsMap: teamTshirtsMap
-                                                        },
-                                                        tshirtSizeOrder: availableTshirtSizes,
-                                                        showDetailsAsCollapsible: true,
-                                                        showUsersChecked: showUsers,
-                                                        showTeamsChecked: showTeams,
-                                                        openEditModal: openEditModal,
-                                                        db: db,
-                                                        setUserNotificationMessage: setUserNotificationMessage,
-                                                        onAddMember: handleOpenAddMemberTypeModal,
-                                                        allTeamsData: allTeamsFlattened
-                                                    })
-                                                })
-                                            )
-                                        )
-                                    )
-                                )
-                            ))
-                        )
-                    ),
-                    showUsers && activeFilters.role && activeFilters.role.includes('volunteer') && (
-                        [
-                            // Nadpisový riadok
-                            React.createElement(
-                                'tr',
-                                { key: 'volunteer-tshirt-summary-header', className: 'bg-gray-200 font-bold text-gray-800 uppercase' },
-                                React.createElement(
-                                    'td',
-                                    {
-                                        className: 'py-3 px-4 text-left',
-                                        colSpan: columnOrder.length + 1
-                                    },
-                                    'Súhrn veľkostí tričiek pre dobrovoľníkov:'
-                                )
-                            ),
-                            // Riadky s veľkosťami
-                            ...(availableTshirtSizes && availableTshirtSizes.length > 0 ? availableTshirtSizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(size => {
-                                const volunteerTshirtSummary = calculateVolunteerTshirtSummary();
-                                const count = volunteerTshirtSummary.get(size) || 0;
-                                return React.createElement(
-                                    'tr',
-                                    { key: `volunteer-tshirt-summary-${size}`, className: 'bg-gray-100 text-gray-700' },
-                                    React.createElement(
-                                        'td',
-                                        {
-                                            className: 'py-2 px-4 text-left',
-                                            colSpan: columnOrder.length + 1
-                                        },
-                                        `${size}: ${count}×`
-                                    )
-                                );
-                            })
-                        ]
-                    )
-                )
             )
-        ),
-      )
-    )
-  );
+        )
+    );
 }
 
-// Explicitne sprístupniť komponent globálne
 window.AllRegistrationsApp = AllRegistrationsApp;
