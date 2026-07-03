@@ -2466,28 +2466,45 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             // ---- ÚPRAVA POUŽÍVATEĽA (KLUB, ADMIN, HALL, DOBROVOĽNÍK) ----
             else if (title.includes('Upraviť používateľa')) {
                 const elements = [];
-                const allUserFields = [
+                
+                // ZISTENIE TYPU POUŽÍVATEĽA
+                const userRole = localEditedData?.role || '';
+                const isAdminOrHall = userRole === 'admin' || userRole === 'hall';
+                
+                // POLIA PRE ADMINA A HALL - IBA MENO A PRIEZVISKO
+                const adminHallFields = ['firstName', 'lastName'];
+                
+                // POLIA PRE KLUB A DOBROVOĽNÍKA - VŠETKY POLIA
+                const clubVolunteerFields = [
                     'firstName', 'lastName', 'contactPhoneNumber',
                     'billing.clubName', 'billing.ico', 'billing.dic', 'billing.icDph',
                     'street', 'houseNumber', 'city', 'postalCode', 'country', 'note'
                 ];
-                let fieldsToRenderForUser = allUserFields;
+                
+                // VYBERIEME SPRÁVNE POLIA PODĽA ROLY
+                let fieldsToRenderForUser;
+                if (isAdminOrHall) {
+                    fieldsToRenderForUser = adminHallFields;
+                } else {
+                    fieldsToRenderForUser = clubVolunteerFields;
+                }
+                
                 const renderedFields = new Set();
-
+            
                 const renderUserField = (path, value) => {
                     if (renderedFields.has(path)) return null;
                     renderedFields.add(path);
-
+            
                     const key = path.split('.').pop();
                     if (['passwordLastChanged', 'registrationDate', 'email', 'approved', 'role'].includes(key)) {
                         return null;
                     }
-
+            
                     const labelText = formatLabel(path);
                     let inputType = 'text';
                     let isCheckbox = false;
                     let customProps = {};
-
+            
                     if (typeof value === 'boolean') {
                         isCheckbox = true;
                     } else if (path.toLowerCase().includes('password')) {
@@ -2535,7 +2552,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                             )
                         );
                     }
-
+            
                     return React.createElement('div', { key: path, className: 'mb-4' },
                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, labelText),
                         isCheckbox ? (
@@ -2557,40 +2574,45 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         )
                     );
                 };
-
+            
+                // RENDEROVANIE POLÍ PODĽA TYPU POUŽÍVATEĽA
                 fieldsToRenderForUser.forEach(path => {
                     elements.push(renderUserField(path, getNestedDataForInput(localEditedData, path)));
                 });
-
-                const billingFieldsInScope = allUserFields.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
-                if (billingFieldsInScope.length > 0) {
-                    elements.push(
-                        React.createElement('div', { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            billingFieldsInScope.map(billingPath => {
-                                const billingValue = getNestedDataForInput(localEditedData, billingPath);
-                                return renderUserField(billingPath, billingValue);
-                            })
-                        )
+            
+                // PRE KLUB A DOBROVOĽNÍKA - PRIDÁME ŠPECIÁLNE SEKCIE
+                if (!isAdminOrHall) {
+                    const billingFieldsInScope = fieldsToRenderForUser.filter(p => p.startsWith('billing.') && fieldsToRenderForUser.includes(p));
+                    if (billingFieldsInScope.length > 0) {
+                        elements.push(
+                            React.createElement('div', { key: 'billing-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                                billingFieldsInScope.map(billingPath => {
+                                    const billingValue = getNestedDataForInput(localEditedData, billingPath);
+                                    return renderUserField(billingPath, billingValue);
+                                })
+                            )
+                        );
+                    }
+            
+                    const addressFieldsInScope = fieldsToRenderForUser.filter(p =>
+                        ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
                     );
+                    if (addressFieldsInScope.length > 0) {
+                        elements.push(
+                            React.createElement('div', { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
+                                addressFieldsInScope.map(addressPath => {
+                                    const addressValue = getNestedDataForInput(localEditedData, addressPath);
+                                    return renderUserField(addressPath, addressValue);
+                                })
+                            )
+                        );
+                    }
+            
+                    if (fieldsToRenderForUser.includes('note')) {
+                        elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
+                    }
                 }
-
-                const addressFieldsInScope = allUserFields.filter(p =>
-                    ['street', 'houseNumber', 'city', 'postalCode', 'country'].includes(p) && fieldsToRenderForUser.includes(p)
-                );
-                if (addressFieldsInScope.length > 0) {
-                    elements.push(
-                        React.createElement('div', { key: 'address-section', className: 'pl-4 border-l border-gray-200 mb-4' },
-                            addressFieldsInScope.map(addressPath => {
-                                const addressValue = getNestedDataForInput(localEditedData, addressPath);
-                                return renderUserField(addressPath, addressValue);
-                            })
-                        )
-                    );
-                }
-
-                if (fieldsToRenderForUser.includes('note')) {
-                    elements.push(renderUserField('note', getNestedDataForInput(localEditedData, 'note')));
-                }
+                
                 return elements.filter(Boolean);
             }
 
