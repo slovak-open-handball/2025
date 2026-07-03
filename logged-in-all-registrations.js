@@ -1937,6 +1937,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         const isUserBeingEditedAdmin = initialData.role === 'admin';
         const isUserBeingEditedHall = initialData.role === 'hall';
 
+        console.log('=== DEBUG DataEditModal ===');
+        console.log('Upravovaný používateľ - údaje:', initialData);
+        console.log('Rola upravovaného používateľa:', initialData.role);
+        console.log('isUserBeingEditedAdmin:', isUserBeingEditedAdmin);
+        console.log('isUserBeingEditedHall:', isUserBeingEditedHall);
+        console.log('Aktuálny admin userRole:', currentUserRole);
+        console.log('=============================');
+
         setIsTargetUserAdmin(isUserBeingEditedAdmin);
         setIsTargetUserHall(isUserBeingEditedHall);
 
