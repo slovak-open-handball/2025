@@ -3501,35 +3501,28 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       }));
   };
 
-    const toggleAllRows = () => {
-        // Získame všetky ID pre používateľov (kluby)
-        const allUserIds = filteredUsers.map(user => user.id);
-        
-        // Získame všetky ID pre tímy
+  const toggleAllRows = () => {
+    if (!showUsers && showTeams) {
         const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
-        
-        // Zistíme, či sú všetky položky aktuálne rozbalené
-        const allUsersExpanded = allUserIds.length > 0 && allUserIds.every(id => expandedRows[id]);
-        const allTeamsExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
-    
-        // Ak sú všetky rozbalené, zbalíme všetky, inak rozbalíme všetky
-        const shouldExpand = !(allUsersExpanded && allTeamsExpanded);
-        
-        // Nové stavy pre používateľov
-        const newExpandedRows = { ...expandedRows };
-        allUserIds.forEach(id => {
-            newExpandedRows[id] = shouldExpand;
-        });
-        
-        // Nové stavy pre tímy
-        const newExpandedTeamRows = { ...expandedTeamRows };
+
+        const allCurrentlyExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
+        const newExpandedState = { ...expandedTeamRows };
+
         allTeamIds.forEach(id => {
-            newExpandedTeamRows[id] = shouldExpand;
+            newExpandedState[id] = !allCurrentlyExpanded;
         });
-        
-        setExpandedRows(newExpandedRows);
-        setExpandedTeamRows(newExpandedTeamRows);
-    };
+        setExpandedTeamRows(newExpandedState);
+
+    } else {
+        const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
+        const newExpandedState = { ...expandedRows };
+
+        filteredUsers.forEach(user => {
+            newExpandedState[user.id] = !allCurrentlyExpanded;
+        });
+        setExpandedRows(newExpandedState);
+    }
+  };
 
   React.useEffect(() => {
       if (!db) return;
@@ -5297,14 +5290,7 @@ const clearFilter = (column) => {
                                                 onClick: toggleAllRows,
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                             },
-                                            (() => {
-                                                const allUserIds = filteredUsers.map(user => user.id);
-                                                const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
-                                                const allUsersExpanded = allUserIds.length > 0 && allUserIds.every(id => expandedRows[id]);
-                                                const allTeamsExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
-                                                const allExpanded = allUsersExpanded && allTeamsExpanded;
-                                                return allExpanded ? '▲' : '▼';
-                                            })()
+                                            allTeamsFlattened.length > 0 && allTeamsFlattened.every(team => expandedTeamRows[`${team._userId}-${team._category}-${team._teamIndex}`]) ? '▲' : '▼'
                                             )
                                         ),
                                         React.createElement('th', { className: 'py-2 px-2 text-center whitespace-nowrap min-w-max' }, 'Kategória'),
