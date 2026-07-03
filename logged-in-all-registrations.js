@@ -4531,7 +4531,7 @@ const clearFilter = (column) => {
     };
   }, [handleLogout]);
 
-    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntryFlag, isTargetUserAdminFromModal, isTargetUserHallFromModal) => {
+    const handleSaveEditedData = React.useCallback(async (updatedDataFromModal, targetDocRef, originalDataPath, isNewEntry, isTargetUserAdminFromModal, isTargetUserHallFromModal) => {
         if (!targetDocRef) {
             console.error("Chyba: Chýba odkaz na dokument pre uloženie.");
             setUserNotificationMessage("Chyba: Chýba odkaz na dokument pre uloženie. Zmeny neboli uložené.", 'error');
@@ -4730,7 +4730,7 @@ const clearFilter = (column) => {
                     }
                 });
     
-                const isNewTeam = isNewEntryFlag && editModalTitle.includes('Pridať nový tím');
+                const isNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
     
                 const createCleanTeam = (data) => {
                     const cleanTeam = {};
