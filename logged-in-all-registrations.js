@@ -4322,19 +4322,28 @@ const clearFilter = (column) => {
             
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
             
+                // ============================================================
                 // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY POUŽÍVATEĽA
-                const userEmail = window.auth.currentUser?.email;
-                const targetUserEmail = currentDocData.email || 'Neznámy email';
-                const userName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
+                // ============================================================
                 
+                // EMAIL ADMINA (prihlaseného používateľa)
+                const adminEmail = window.auth.currentUser?.email;
+                // EMAIL UPRAVOVANÉHO POUŽÍVATEĽA
+                const targetUserEmail = currentDocData.email || 'Neznámy email';
+                const targetUserName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
+            
                 // Získanie zmien pomocou getChangesForNotification
+                let allChanges = [];
+            
+                // 1. Zmeny z getChangesForNotification
                 const baseChanges = getChangesForNotification(
                     currentDocData,
                     finalDataToSave,
                     formatDateToDMMYYYY
                 );
-                
-                // Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
+                allChanges = [...baseChanges];
+            
+                // 2. Pridanie zmien pre polia, ktoré getChangesForNotification nerieši
                 const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
@@ -4353,55 +4362,52 @@ const clearFilter = (column) => {
                                 const formattedNumber = formatNumberGroups(numberWithoutDialCode);
                                 return `${dialCode} ${formattedNumber}`.trim();
                             };
-                            baseChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                            allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
                         } else {
-                            baseChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                            allChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
                         }
                     }
                 });
-                
-                // Kontrola zmeny názvu klubu
+            
+                // 3. Kontrola zmeny názvu klubu
                 const originalClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 const updatedClubName = finalDataToSave.billing?.clubName || 'Neznámy klub';
                 if (originalClubName !== updatedClubName) {
-                    baseChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
+                    allChanges.push(`Zmena názvu klubu: z '${originalClubName}' na '${updatedClubName}'`);
                 }
-                
-                // Kontrola zmeny roly
+            
+                // 4. Kontrola zmeny roly
                 const originalRole = currentDocData.role || 'Neznáma rola';
                 const updatedRole = finalDataToSave.role || 'Neznáma rola';
                 if (originalRole !== updatedRole) {
-                    baseChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
+                    allChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
                 }
-                
-                // Kontrola zmeny schválenia
+            
+                // 5. Kontrola zmeny schválenia
                 if (currentDocData.approved !== undefined && finalDataToSave.approved !== undefined) {
                     const originalApproved = currentDocData.approved ? 'Áno' : 'Nie';
                     const updatedApproved = finalDataToSave.approved ? 'Áno' : 'Nie';
                     if (originalApproved !== updatedApproved) {
-                        baseChanges.push(`Zmena schválenia: z '${originalApproved}' na '${updatedApproved}'`);
+                        allChanges.push(`Zmena schválenia: z '${originalApproved}' na '${updatedApproved}'`);
                     }
                 }
-                
-                // Ak existujú zmeny, uložíme ich do notifikácií
-                if (baseChanges.length > 0 && userEmail) {
-                    // Pridáme informáciu o tom, kto vykonal zmenu
-                    const changesWithContext = baseChanges.map(change => 
-                        `Používateľ ${userName} (${targetUserEmail}): ${change}`
-                    );
-                    
-                    // Pridáme aj informáciu, že zmenu vykonal admin/prihlasený používateľ
-                    const adminName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy admin';
-                    changesWithContext.push(`Zmenu vykonal: ${adminName} (${userEmail})`);
+            
+                // 6. Uloženie notifikácií - POUŽÍVAME EMAIL ADMINA, NIE UPRAVOVANÉHO POUŽÍVATEĽA
+                if (allChanges.length > 0 && adminEmail) {
+                    // Kontextové informácie o tom, kto bol upravený a kto vykonal zmenu
+                    const changesWithContext = allChanges.map(change => 
+                        `Používateľ ${targetUserName}: ${change}`
+                    );                    
                     
                     const notificationsCollectionRef = collection(db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
-                        userEmail: targetUserEmail,
+                        userEmail: adminEmail,
                         changes: changesWithContext,
                         timestamp: serverTimestamp()
                     });
                 }
             
+                // 7. Uloženie zmien do databázy
                 await updateDoc(targetDocRef, finalDataToSave);
             
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
