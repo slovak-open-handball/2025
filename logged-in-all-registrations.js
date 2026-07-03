@@ -1,6 +1,56 @@
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; 
 
+// ============================================================
+// FUNKCIA NA ODSTRÁNENIE CITLIVÝCH POLÍ Z TÍMOV
+// ============================================================
+const removeSensitiveFieldsFromTeams = (teamsObj) => {
+    if (!teamsObj) return teamsObj;
+    
+    // Hlboká kópia, aby sme nemenili pôvodné dáta
+    const clean = JSON.parse(JSON.stringify(teamsObj));
+
+    const removeFields = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
+        // Odstránime priamo v objekte (aj podčiarknuté verzie)
+        delete obj.dateOfBirth;
+        delete obj.address;
+        delete obj._dateOfBirth;
+        delete obj._address;
+        delete obj._privateData;
+        delete obj.birthDate;
+        delete obj.gender;
+        delete obj.street;
+        delete obj.houseNumber;
+        delete obj.city;
+        delete obj.postalCode;
+        delete obj.country;
+        
+        // Rekurzívne prejdeme všetky vnorené polia
+        Object.keys(obj).forEach(key => {
+            const val = obj[key];
+            if (Array.isArray(val)) {
+                val.forEach(item => removeFields(item));
+            } else if (val && typeof val === 'object') {
+                removeFields(val);
+            }
+        });
+    };
+
+    // Prejdeme všetky kategórie a tímy
+    if (Array.isArray(teamsObj)) {
+        teamsObj.forEach(team => removeFields(team));
+    } else {
+        Object.values(teamsObj).forEach(teams => {
+            if (Array.isArray(teams)) {
+                teams.forEach(team => removeFields(team));
+            }
+        });
+    }
+
+    return clean;
+};
+
 function getSmartCursorPosition(oldDisplay, newDisplay, oldPos) {
     // 1. Práve sme napísali 3. číslicu → posun za medzeru
     if (oldPos === 3 && newDisplay.length === 4 && newDisplay[3] === ' ') {
@@ -4673,6 +4723,11 @@ const clearFilter = (column) => {
                     delete finalDataToSave.billing.address;
                 }
                 
+                // AK EXISTUJÚ TÍMY - VYČISTÍME ICH OD OSOBNÝCH ÚDAJOV
+                if (finalDataToSave.teams) {
+                    finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
+                }
+                
                 // Aktualizujeme ostatné polia (okrem súkromných)
                 for (const key in updatedDataFromModal) {
                     // Preskočíme súkromné polia
@@ -4696,6 +4751,12 @@ const clearFilter = (column) => {
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         // Tieto polia patria do users (nie sú osobné)
                         finalDataToSave[key] = value;
+                    } else if (key === 'teams') {
+                        // Tímy už máme vyčistené vyššie, ale ak prišli z modálu, vyčistíme ich znova
+                        if (value) {
+                            const cleanedTeams = removeSensitiveFieldsFromTeams(value);
+                            finalDataToSave[key] = cleanedTeams;
+                        }
                     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                         // Pre ostatné objekty (okrem tých, čo sme už spracovali)
                         if (key !== 'address' && key !== 'billing') {
@@ -4797,7 +4858,7 @@ const clearFilter = (column) => {
                         'teamName', 'category', '_category', 'arrival', 'accommodation', 
                         'packageDetails', 'packageId', 'tshirts', 'jerseyHomeColor', 'jerseyAwayColor',
                         'players', 'menTeamMembers', 'womenTeamMembers', 'menTeamMembersCount', 
-                        'womenTeamMembersCount', 'playersCount', 'registeredBy'
+                        'womenTeamMembersCount', 'playersCount', 'registeredBy', 'clubName'
                     ];
                     
                     // Kopírujeme len povolené polia
@@ -4845,8 +4906,11 @@ const clearFilter = (column) => {
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams.push(cleanTeam);
             
+                    // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM
+                    const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
+                    
                     const updates = {};
-                    updates[`teams.${actualCategory}`] = newCategoryTeams;
+                    updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
                     
                     await updateDoc(targetDocRef, updates);
                     console.log("DEBUG: Nový tím pridaný do kategórie", actualCategory);
@@ -4880,8 +4944,11 @@ const clearFilter = (column) => {
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams[oldTeamIndex] = cleanTeam;
             
+                    // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM
+                    const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
+            
                     const updates = {};
-                    updates[`teams.${oldCategory}`] = newCategoryTeams;
+                    updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
                     
                     await updateDoc(targetDocRef, updates);
                     console.log("DEBUG: Tím aktualizovaný v kategórii", oldCategory);
@@ -5140,22 +5207,24 @@ const clearFilter = (column) => {
                 // ============================================================
                 // ULOŽENIE DO USERS A USERSPRIVATE
                 // ============================================================
-            
+                
                 teamToUpdate[memberArrayPath] = currentMemberArray;
                 const finalUpdatedTeam = recalculateTeamCounts(teamToUpdate);
-            
-                // ✅ Ešte raz vyčistíme tím pred uložením do users (pre istotu)
-                const cleanedTeam = cleanTeamForUsers(finalUpdatedTeam);
+                
+                // ✅ VYČISTÍME CELÚ KATEGÓRIU PRED ULOŽENÍM DO USERS
                 const updatedTeamsForCategory = [...teamsInCategory];
-                updatedTeamsForCategory[teamIndex] = cleanedTeam;
-            
+                updatedTeamsForCategory[teamIndex] = finalUpdatedTeam;
+                
+                // ✅ POUŽIJEME removeSensitiveFieldsFromTeams NA VYČISTENIE
+                const cleanedTeamsForCategory = removeSensitiveFieldsFromTeams(updatedTeamsForCategory);
+                
                 const updates = {};
-                updates[`teams.${category}`] = updatedTeamsForCategory;
+                updates[`teams.${category}`] = cleanedTeamsForCategory;
                 await updateDoc(targetDocRef, updates);
-            
+                
                 const cleanPrivateData = JSON.parse(JSON.stringify(privateData));
                 await setDoc(userPrivateDocRef, cleanPrivateData, { merge: true });
-            
+                
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
                 return;
