@@ -5042,10 +5042,7 @@ const clearFilter = (column) => {
     };
 
     if (!isAuthReady || user === undefined || !userProfileData) {
-        if (typeof window.showGlobalLoader === 'function') {
-            window.showGlobalLoader();
-        }
-        return null;
+        return React.createElement(React.Fragment, null);
     }
 
     if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
