@@ -5207,15 +5207,15 @@ const clearFilter = (column) => {
             if (!docSnapshotForUpdate.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
-
-            const currentDocData = docSnapshotForUpdate.data(); 
-            const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
-    
+            const docDataForUpdate = docSnapshotForUpdate.data(); // Použijeme iný názov premennej
+            
+            const { updatedObject, topLevelField } = updateNestedObjectByPath(docDataForUpdate, originalDataPath, updatedDataFromModal);
+            
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
             updates['_privateData'] = deleteField();
             await updateDoc(targetDocRef, updates);
-    
+            
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
             closeEditModal();
     
