@@ -3319,11 +3319,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
-
-                                    delete originalDataForCompare._privateData;
-                                    delete modifiedDataForCompare._privateData;
-                                    if (originalDataForCompare.billing) delete originalDataForCompare.billing.address;
-                                    if (modifiedDataForCompare.billing) delete modifiedDataForCompare.billing.address;
                         
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
