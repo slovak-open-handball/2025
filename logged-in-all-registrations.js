@@ -1385,7 +1385,8 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
         '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
         'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
         'registrationDate', 'passwordLastChanged', 'teams', 'categories', 'timestamp',
-        'note', '_dateOfBirth', '_address'
+        'note'
+//        '_dateOfBirth', '_address'
     ]);
 
     const ignoredPathPatterns = new Set([
