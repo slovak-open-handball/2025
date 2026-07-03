@@ -5418,7 +5418,7 @@ const clearFilter = (column) => {
                                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-1'
                                                             }, expandedRows[u.id] ? '▲' : '▼')
                                                             : React.createElement('span', { className: 'mr-1' }, '-'),
-                                                        React.createElement('button', {
+                                                        (u.role === 'club' || u.role === 'volunteer') && React.createElement('button', {
                                                             onClick: (e) => {
                                                                 e.stopPropagation();
                                                                 openEditModal(
