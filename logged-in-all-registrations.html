@@ -209,30 +209,6 @@
                 setTimeout(checkReadyAndRender, 100); // Skúste znova po krátkom oneskorení
                 return;
             }
-            
-            // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
-            // a kým je načítaný aj loader (window.showGlobalLoader existuje)
-            if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && typeof window.showGlobalLoader === 'function') {
-                // Skryjeme globálny loader (ten, ktorý vytvorí loader.js)
-                // Toto sa stane len, ak sa predtým showGlobalLoader() zavolalo z iného miesta
-                if (window.hideGlobalLoader) {
-                    window.hideGlobalLoader();
-                }
-
-                // Odstránime lokálny loader, ktorý je priamo v HTML (v #root)
-                const rootElement = document.getElementById('root');
-                if (rootElement) {
-                    // Pred samotným vykreslením Reactu vyčistíme obsah root elementu
-                    rootElement.innerHTML = ''; 
-                }
-                
-                const root = ReactDOM.createRoot(rootElement);
-                root.render(React.createElement(window.AllRegistrationsApp, null));
-                console.log("logged-in-all-registrations.html: React App vykreslená.");
-            } else {
-                // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
-                setTimeout(checkReadyAndRender, 100);
-            }
         };
 
         // Načítanie hlavičky a spustenie kontroly a renderovania po načítaní DOM
