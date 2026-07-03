@@ -1510,6 +1510,32 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
+    React.useEffect(() => {
+        const loadVolunteerPrivateData = async () => {
+            if (isOpen && data?.role === 'volunteer' && targetDocRef) {
+                try {
+                    const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                    const privateSnap = await getDoc(privateDocRef);
+                    if (privateSnap.exists()) {
+                        const privateData = privateSnap.data();
+                        setLocalEditedData(prev => ({
+                            ...prev,
+                            street: privateData.address?.street || '',
+                            houseNumber: privateData.address?.houseNumber || '',
+                            city: privateData.address?.city || '',
+                            postalCode: privateData.address?.postalCode || '',
+                            country: privateData.address?.country || '',
+                            birthDate: privateData.birthDate || ''
+                        }));
+                    }
+                } catch (error) {
+                    console.error("Chyba pri načítaní private dát:", error);
+                }
+            }
+        };
+        loadVolunteerPrivateData();
+    }, [isOpen, data?.role, targetDocRef, db]);
+
     // Načítanie usersprivate dát pri otvorení modálu
     React.useEffect(() => {
         const loadPrivateData = async () => {
@@ -4245,6 +4271,50 @@ const clearFilter = (column) => {
                     } else {
                         finalDataToSave[key] = value;
                     }
+                }
+
+                if (updatedDataFromModal.role === 'volunteer') {
+                    // 1. Uloženie citlivých údajov do usersprivate
+                    const privateData = {
+                        address: {
+                            street: updatedDataFromModal.street || '',
+                            houseNumber: updatedDataFromModal.houseNumber || '',
+                            city: updatedDataFromModal.city || '',
+                            postalCode: updatedDataFromModal.postalCode || '',
+                            country: updatedDataFromModal.country || ''
+                        },
+                        birthDate: updatedDataFromModal.birthDate || ''
+                    };
+                    
+                    const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                    await setDoc(privateDocRef, privateData, { merge: true });
+                    
+                    // 2. Uloženie ostatných polí do users
+                    const userData = {
+                        firstName: updatedDataFromModal.firstName,
+                        lastName: updatedDataFromModal.lastName,
+                        contactPhoneNumber: updatedDataFromModal.contactPhoneNumber,
+                        volunteerRoles: updatedDataFromModal.volunteerRoles || [],
+                        selectedDates: updatedDataFromModal.selectedDates || [],
+                        tshirtSize: updatedDataFromModal.tshirtSize || '',
+                        gender: updatedDataFromModal.gender || '',
+                        note: updatedDataFromModal.note || ''
+                    };
+                    
+                    // Odstránime prázdne polia
+                    Object.keys(userData).forEach(key => {
+                        if (userData[key] === undefined || userData[key] === null) {
+                            delete userData[key];
+                        }
+                    });
+                    
+                    await updateDoc(targetDocRef, userData);
+                    
+                    // Dôležité: Po uložení dobrovoľníka ukončíme funkciu,
+                    // aby sme nevykonali ďalšie spracovanie
+                    setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                    closeEditModal();
+                    return;
                 }
                             
                 if (finalDataToSave.teams) {
