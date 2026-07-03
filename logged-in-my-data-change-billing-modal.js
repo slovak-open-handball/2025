@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getFirestore, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, updateDoc, collection, addDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -23,7 +23,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     const [country, setCountry] = useState('');
     const [ico, setIco] = useState('');
     const [dic, setDic] = useState('');
-    const [icDph, setIcDph] = useState(''); // OPRAVENÉ: icDph namiesto icdph
+    const [icDph, setIcDph] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -54,7 +54,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 country: address.country || '',
                 ico: userProfileData.billing?.ico || '',
                 dic: userProfileData.billing?.dic || '',
-                icDph: userProfileData.billing?.icDph || '' // OPRAVENÉ: icDph namiesto icdph
+                icDph: userProfileData.billing?.icDph || ''
             };
         
             // NAČÍTAME HODNOTY DO FORMULÁRA
@@ -66,7 +66,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             setCountry(address.country || '');
             setIco(userProfileData.billing?.ico || '');
             setDic(userProfileData.billing?.dic || '');
-            setIcDph(userProfileData.billing?.icDph || ''); // OPRAVENÉ: icDph namiesto icdph
+            setIcDph(userProfileData.billing?.icDph || '');
             setError(null);
         
             isInitialLoad.current = true;
@@ -102,8 +102,30 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             getNormalizedValue(country) !== getNormalizedValue(originalData.country) ||
             getNormalizedValue(ico) !== getNormalizedValue(originalData.ico) ||
             getNormalizedValue(dic) !== getNormalizedValue(originalData.dic) ||
-            getNormalizedValue(icDph) !== getNormalizedValue(originalData.icDph) // OPRAVENÉ: icDph namiesto icdph
+            getNormalizedValue(icDph) !== getNormalizedValue(originalData.icDph)
         );
+    };
+
+    // Pomocná funkcia na vytvorenie objektu pre updateDoc - ak je hodnota prázdna, použije deleteField()
+    const createUpdateObject = (data, originalData) => {
+        const updateObj = {};
+        
+        for (const [key, value] of Object.entries(data)) {
+            const originalValue = originalData[key] || '';
+            const newValue = value || '';
+            
+            // Ak sa hodnota zmenila
+            if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                if (newValue === '') {
+                    // Ak je nová hodnota prázdna, použijeme deleteField() na odstránenie z databázy
+                    updateObj[key] = deleteField();
+                } else {
+                    updateObj[key] = newValue;
+                }
+            }
+        }
+        
+        return updateObj;
     };
 
     const handleUpdateBilling = async (event) => {
@@ -125,8 +147,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             return;
         }
     
-        // Validácia IČ DPH pred odoslaním - OPRAVENÉ: icDph namiesto icdph
-        if (icDph && !/^[A-Z]{2}\d+$/.test(icDph) && icDph !== originalDataRef.current.icDph) {
+        // Validácia IČ DPH pred odoslaním - ak nie je prázdne
+        if (icDph && !/^[A-Z]{2}\d+$/.test(icDph)) {
             setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
             setLoading(false);
             return;
@@ -136,76 +158,102 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             // Normalizujeme PSČ (odstránime medzery)
             const normalizedPostalCode = postalCode.replace(/\s/g, '');
             
-            // Dáta pre kolekciu 'users' - IBA billing údaje (clubName, ico, dic, icDph)
-            const userData = {
-                billing: {
-                    clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
-                    ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
-                    dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
-                    icDph: icDph !== '' ? icDph : userProfileData.billing?.icDph || '' // OPRAVENÉ: icDph namiesto icdph
-                }
+            // Pôvodné dáta pre porovnanie
+            const originalData = originalDataRef.current;
+            
+            // ----- PRÍPRAVA DÁT PRE KOLEKCIU 'users' (BILLING) -----
+            const billingData = {
+                clubName: clubName,
+                ico: ico,
+                dic: dic,
+                icDph: icDph
             };
             
-            // Dáta pre kolekciu 'usersprivate' - IBA adresa
-            const privateData = {
-                address: { 
-                    street: street !== '' ? street : (userProfileData.address?.street || ''),
-                    houseNumber: houseNumber !== '' ? houseNumber : (userProfileData.address?.houseNumber || ''), 
-                    city: city !== '' ? city : (userProfileData.address?.city || ''), 
-                    postalCode: normalizedPostalCode !== '' ? normalizedPostalCode : (userProfileData.address?.postalCode || ''), 
-                    country: country !== '' ? country : (userProfileData.address?.country || '')
-                }
+            // Vytvoríme update objekt pre billing - prázdne polia sa odstránia
+            const billingUpdate = createUpdateObject(billingData, {
+                clubName: originalData.clubName,
+                ico: originalData.ico,
+                dic: originalData.dic,
+                icDph: originalData.icDph
+            });
+            
+            // Ak sú nejaké zmeny v billing, pripravíme update pre users kolekciu
+            let userUpdate = {};
+            if (Object.keys(billingUpdate).length > 0) {
+                // Zabalíme do billing objektu
+                userUpdate = {
+                    billing: billingUpdate
+                };
+            }
+            
+            // ----- PRÍPRAVA DÁT PRE KOLEKCIU 'usersprivate' (ADRESA) -----
+            const addressData = {
+                street: street,
+                houseNumber: houseNumber,
+                city: city,
+                postalCode: normalizedPostalCode,
+                country: country
             };
             
-            // Logika pre vytvorenie záznamu o zmene v databáze
-            const originalBillingData = originalDataRef.current;
+            // Vytvoríme update objekt pre adresu - prázdne polia sa odstránia
+            const addressUpdate = createUpdateObject(addressData, {
+                street: originalData.street,
+                houseNumber: originalData.houseNumber,
+                city: originalData.city,
+                postalCode: originalData.postalCode,
+                country: originalData.country
+            });
+            
+            // Ak sú nejaké zmeny v adrese, pripravíme update pre usersprivate kolekciu
+            let privateUpdate = {};
+            if (Object.keys(addressUpdate).length > 0) {
+                privateUpdate = {
+                    address: addressUpdate
+                };
+            }
+            
+            // ----- ZMENA: ZISTÍME, ČI NAOZAJ DOŠLO K ZMENÁM -----
+            // Kontrola, či máme čo ukladať
+            if (Object.keys(userUpdate).length === 0 && Object.keys(privateUpdate).length === 0) {
+                window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
+                setLoading(false);
+                onClose();
+                return;
+            }
+            
+            // ----- GENEROVANIE NOTIFIKÁCIÍ -----
             const changeMessages = [];
-    
-            // Mapovanie pre názvy polí - OPRAVENÉ: icDph namiesto icdph
             const fieldNames = {
-                'billing.clubName': 'Názov klubu',
-                'billing.ico': 'IČO',
-                'billing.dic': 'DIČ',
-                'billing.icDph': 'IČ DPH',
-                'address.street': 'Ulica',
-                'address.houseNumber': 'Číslo domu',
-                'address.city': 'Mesto',
-                'address.postalCode': 'PSČ',
-                'address.country': 'Krajina',
+                'clubName': 'Názov klubu',
+                'ico': 'IČO',
+                'dic': 'DIČ',
+                'icDph': 'IČ DPH',
+                'street': 'Ulica',
+                'houseNumber': 'Číslo domu',
+                'city': 'Mesto',
+                'postalCode': 'PSČ',
+                'country': 'Krajina',
             };
-    
-            const changes = {
-                'billing.clubName': clubName,
-                'billing.ico': ico,
-                'billing.dic': dic,
-                'billing.icDph': icDph, // OPRAVENÉ: icDph namiesto icdph
-                'address.street': street,
-                'address.houseNumber': houseNumber,
-                'address.city': city,
-                'address.postalCode': normalizedPostalCode,
-                'address.country': country,
-            };
-    
-            for (const key in changes) {
-                const newValue = changes[key];
-                let originalValue;
+
+            // Spracujeme zmeny v billing
+            for (const [key, value] of Object.entries(billingData)) {
+                const originalValue = originalData[key] || '';
+                const newValue = value || '';
                 
-                // Získame pôvodnú hodnotu podľa kľúča
-                if (key.startsWith('billing.')) {
-                    const fieldKey = key.substring(8);
-                    originalValue = originalBillingData[fieldKey];
-                } else if (key.startsWith('address.')) {
-                    const fieldKey = key.substring(8);
-                    originalValue = originalBillingData[fieldKey];
-                } else {
-                    originalValue = originalBillingData[key];
+                if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                    const fieldName = fieldNames[key] || key;
+                    const oldVal = originalValue || 'prázdne';
+                    const newVal = newValue || 'prázdne';
+                    changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
                 }
-    
-                // OPRAVENÉ: Porovnanie aj pre prázdne hodnoty
-                const newValueNormalized = getNormalizedValue(newValue);
-                const originalValueNormalized = getNormalizedValue(originalValue);
+            }
+
+            // Spracujeme zmeny v adrese
+            for (const [key, value] of Object.entries(addressData)) {
+                const originalValue = originalData[key] || '';
+                const newValue = value || '';
                 
-                if (newValueNormalized !== originalValueNormalized) {
+                if (getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
                     const fieldName = fieldNames[key] || key;
                     const oldVal = originalValue || 'prázdne';
                     const newVal = newValue || 'prázdne';
@@ -213,7 +261,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 }
             }
     
-            // Uložíme zmeny do notifikácií s použitím serverTimestamp()
+            // Uložíme zmeny do notifikácií
             if (changeMessages.length > 0) {
                 await addDoc(collection(db, 'notifications'), {
                     userEmail: user.email,
@@ -222,11 +270,15 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 });
             }
             
-            // AKTUALIZÁCIA KOLEKCIE 'users' - IBA billing údaje
-            await updateDoc(doc(db, "users", user.uid), userData);
+            // ----- AKTUALIZÁCIA KOLEKCIE 'users' (BILLING) -----
+            if (Object.keys(userUpdate).length > 0) {
+                await updateDoc(doc(db, "users", user.uid), userUpdate);
+            }
             
-            // AKTUALIZÁCIA KOLEKCIE 'usersprivate' - IBA adresa
-            await updateDoc(doc(db, "usersprivate", user.uid), privateData);
+            // ----- AKTUALIZÁCIA KOLEKCIE 'usersprivate' (ADRESA) -----
+            if (Object.keys(privateUpdate).length > 0) {
+                await updateDoc(doc(db, "usersprivate", user.uid), privateUpdate);
+            }
             
             window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
             onClose();
@@ -274,7 +326,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         setPostalCode(formatted);
     };
 
-    // Funkcia pre formátovanie IČ DPH počas zadávania - OPRAVENÉ: icDph namiesto icdph
+    // Funkcia pre formátovanie IČ DPH počas zadávania
     const handleIcDphChange = (e) => {
         isInitialLoad.current = false;
         const input = e.target.value;
@@ -505,7 +557,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
                 ),
-                // IČ DPH - OPRAVENÉ: icDph namiesto icdph
+                // IČ DPH
                 React.createElement(
                     'div',
                     { className: 'w-1/3' },
