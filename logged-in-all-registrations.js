@@ -3316,7 +3316,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
                                 } else if (!isEditingTeamMember) {
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
-                                    const modifiedDataForCompare = JSON.parse(JSON.stringify(finalDataToSave));
+                                    const modifiedDataForCompare = JSON.parse(JSON.stringify(updatedDataFromModal));
                         
                                     if (isTargetUserAdmin || isTargetUserHall) {
                                         delete originalDataForCompare.address;
