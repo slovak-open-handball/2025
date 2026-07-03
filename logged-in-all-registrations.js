@@ -3481,11 +3481,20 @@ const cleanTeamForUsers = (team) => {
         return arr.map(member => {
             if (!member) return member;
             const cleaned = { ...member };
+            // Odstránime VŠETKY osobné údaje
             delete cleaned.address;
             delete cleaned.dateOfBirth;
             delete cleaned._address;
             delete cleaned._dateOfBirth;
             delete cleaned._privateData;
+            delete cleaned.birthDate;
+            delete cleaned.gender;
+            // Odstránime aj prípadné ďalšie súkromné polia
+            delete cleaned.street;
+            delete cleaned.houseNumber;
+            delete cleaned.city;
+            delete cleaned.postalCode;
+            delete cleaned.country;
             return cleaned;
         });
     };
@@ -3504,11 +3513,19 @@ const cleanTeamForUsers = (team) => {
         }
     });
 
+    // Odstránime aj osobné údaje na úrovni tímu
     delete cleanedTeam.address;
     delete cleanedTeam.dateOfBirth;
     delete cleanedTeam._address;
     delete cleanedTeam._dateOfBirth;
     delete cleanedTeam._privateData;
+    delete cleanedTeam.birthDate;
+    delete cleanedTeam.gender;
+    delete cleanedTeam.street;
+    delete cleanedTeam.houseNumber;
+    delete cleanedTeam.city;
+    delete cleanedTeam.postalCode;
+    delete cleanedTeam.country;
 
     return cleanedTeam;
 };
@@ -4630,12 +4647,14 @@ const clearFilter = (column) => {
                 
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                 
+                // Zoznam polí, ktoré patria do usersprivate a NESMÚ byť v users
+                const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
+                
                 // Začneme s kópiou existujúcich dát
                 let finalDataToSave = { ...currentDocData };
                 
-                // Zoznam polí, ktoré patria do usersprivate a NESMÚ byť v users
-                const addressFieldsToRemove = ['street', 'houseNumber', 'city', 'postalCode', 'country'];
-                addressFieldsToRemove.forEach(field => {
+                // Odstránime všetky polia, ktoré patria do usersprivate
+                privateFields.forEach(field => {
                     delete finalDataToSave[field];
                 });
                 
@@ -4644,10 +4663,10 @@ const clearFilter = (column) => {
                     delete finalDataToSave.billing.address;
                 }
                 
-                // Aktualizujeme ostatné polia (okrem adresových)
+                // Aktualizujeme ostatné polia (okrem súkromných)
                 for (const key in updatedDataFromModal) {
-                    // Preskočíme adresové polia
-                    if (addressFieldsToRemove.includes(key)) {
+                    // Preskočíme súkromné polia
+                    if (privateFields.includes(key)) {
                         continue;
                     }
                     
@@ -4664,11 +4683,17 @@ const clearFilter = (column) => {
                             dic: value.dic || currentDocData.billing?.dic || '',
                             icDph: value.icDph || currentDocData.billing?.icDph || ''
                         };
+                    } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
+                        // Tieto polia patria do users (nie sú osobné)
+                        finalDataToSave[key] = value;
                     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                        finalDataToSave[key] = {
-                            ...(currentDocData[key] || {}),
-                            ...value
-                        };
+                        // Pre ostatné objekty (okrem tých, čo sme už spracovali)
+                        if (key !== 'address' && key !== 'billing') {
+                            finalDataToSave[key] = {
+                                ...(currentDocData[key] || {}),
+                                ...value
+                            };
+                        }
                     } else {
                         finalDataToSave[key] = value;
                     }
@@ -4698,6 +4723,11 @@ const clearFilter = (column) => {
                     country: updatedDataFromModal.country || currentDocData.country || ''
                 };
                 
+                // Ak existuje birthDate (pre dobrovoľníka), uložíme ho do privateData
+                if (updatedDataFromModal.birthDate) {
+                    privateData.birthDate = updatedDataFromModal.birthDate;
+                }
+                
                 // Aktualizujeme fakturačnú adresu v privateData
                 privateData.billingAddress = {
                     street: updatedDataFromModal.street || currentDocData.street || '',
@@ -4710,7 +4740,7 @@ const clearFilter = (column) => {
                 // Uložíme do usersprivate
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
                 
-                // Uložíme do users (už bez adresových polí)
+                // Uložíme do users (už bez súkromných polí)
                 await updateDoc(targetDocRef, finalDataToSave);
                 
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
@@ -4905,11 +4935,10 @@ const clearFilter = (column) => {
             
                     // Člen pre users (bez osobných údajov)
                     const memberForUsers = { ...newMember };
-                    delete memberForUsers.address;
-                    delete memberForUsers.dateOfBirth;
-                    delete memberForUsers._privateData;
-                    delete memberForUsers._address;
-                    delete memberForUsers._dateOfBirth;
+                    const privateKeys = ['address', 'dateOfBirth', '_privateData', '_address', '_dateOfBirth', 'birthDate', 'gender', 'street', 'houseNumber', 'city', 'postalCode', 'country'];
+                    privateKeys.forEach(key => {
+                        delete memberForUsers[key];
+                    });
                 
                     currentMemberArray.push(memberForUsers);
                 
