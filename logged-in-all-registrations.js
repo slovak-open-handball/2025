@@ -752,9 +752,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
             return;
         }
-
-        window.showGlobalLoader();
-
+        
         try {
             const userDocRef = doc(db, 'users', team._userId);
             const docSnapshot = await getDoc(userDocRef);
@@ -799,7 +797,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     changes.push(`Typ ubytovania nastavený na '''${teamToUpdate.accommodation.type}'`);
                 } else {
                     setUserNotificationMessage("Tím nemá nastavené ubytovanie na priradenie.", 'info');
-                    window.hideGlobalLoader();
                     return;
                 }
             } else {
@@ -808,7 +805,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     changes.push(`Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
                 } else {
                     setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
-                    window.hideGlobalLoader();
                     return;
                 }
             }
@@ -851,8 +847,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         } catch (error) {
             console.error("Chyba pri zmene ubytovania v Firestore:", error);
             setUserNotificationMessage(`Chyba pri zmene ubytovania: ${error.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
         }
     };
 
@@ -860,10 +854,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         if (!db || !team._userId) {
             setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
             return;
-        }
-    
-        window.showGlobalLoader();
-    
+        }    
+   
         try {
             const userDocRef = doc(db, 'users', team._userId);
             const docSnapshot = await getDoc(userDocRef);
@@ -908,7 +900,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 changes.push(`Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
             } else {
                 setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
-                window.hideGlobalLoader();
                 return;
             }
     
@@ -937,8 +928,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         } catch (error) {
             console.error("Chyba pri odstraňovaní ubytovania v Firestore:", error);
             setUserNotificationMessage(`Chyba pri odstraňovaní ubytovania: ${error.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
         }
     };
 
@@ -956,8 +945,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
             return;
         }
-
-        window.showGlobalLoader();
 
         try {
             const userDocRef = doc(db, 'users', team._userId);
@@ -1027,8 +1014,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         } catch (error) {
             console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
             setUserNotificationMessage(`Chyba pri aktualizácii stravovania: ${error.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
         }
     };
 
@@ -2958,7 +2943,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                         onClick: async () => {
                             try {
-                                window.showGlobalLoader();
                                 const dataToPrepareForSave = JSON.parse(JSON.stringify(localEditedData));
                         
                                 if (dataToPrepareForSave.contactPhoneNumber !== undefined) {
@@ -3021,9 +3005,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 console.error("Chyba v DataEditModal pri ukladaní:", e);
                                 setError(`Chyba pri ukladaní: ${e.message}`);
                                 setUserNotificationMessage(`Chyba: ${e.message}`, 'error');
-                            } finally {
-                                window.hideGlobalLoader();
-                            }
+                            } 
                         }
                     }, 'Uložiť zmeny')
                 )
@@ -3640,9 +3622,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user) {
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -3652,16 +3631,9 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
 
             setUserProfileData(userData);
             setError('');
-              
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
 
           } else {
             setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
             setUser(null);
             setUserProfileData(null);
           }
@@ -3674,25 +3646,16 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
           } else {
               setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
           }
-          if (typeof window.hideGlobalLoader === 'function') {
-            window.hideGlobalLoader();
-          }
           setUser(null);
           setUserProfileData(null);
         });
       } catch (e) {
         console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
         setUser(null);
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
         window.location.href = 'login.html';
         return;
     }
@@ -3709,9 +3672,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     let unsubscribeAllPrivateUsers;
   
     if (isAuthReady && db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
   
       try {
         const usersCollectionRef = collection(db, 'users');
@@ -3859,42 +3819,24 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
   
             setAllUsers(mergedUsersData);
             setFilteredUsers(mergedUsersData);
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
           }, error => {
             console.error("Chyba pri načítaní usersprivate:", error);
             setAllUsers(usersData);
             setFilteredUsers(usersData);
-            if (typeof window.hideGlobalLoader === 'function') {
-              window.hideGlobalLoader();
-            }
           });
         }, error => {
           console.error("Chyba pri načítaní používateľov:", error);
           setError(`Chyba pri načítaní používateľov: ${error.message}`);
-          if (typeof window.hideGlobalLoader === 'function') {
-            window.hideGlobalLoader();
-          }
         });
       } catch (e) {
         console.error("Chyba pri nastavovaní onSnapshot:", e);
         setError(`Chyba pri načítaní používateľov: ${e.message}`);
-        if (typeof window.hideGlobalLoader === 'function') {
-          window.hideGlobalLoader();
-        }
       }
     } else if (isAuthReady && user === null) {
-      if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
-      }
       window.location.href = 'login.html';
       return;
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
       setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
       window.location.href = 'logged-in-my-data.html';
       return;
     }
@@ -4166,9 +4108,6 @@ const clearFilter = (column) => {
         return;
     }
     try {
-      if (typeof window.showGlobalLoader === 'function') {
-        window.showGlobalLoader();
-      }
       await auth.signOut();
       setUserNotificationMessage("Odhlásený.");
       window.location.href = 'login.html';
@@ -4177,10 +4116,6 @@ const clearFilter = (column) => {
     } catch (e) {
       console.error("AllRegistrationsApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      if (typeof window.hideGlobalLoader === 'function') {
-        window.hideGlobalLoader();
-      }
     }
   }, [auth]);
 
@@ -4203,10 +4138,7 @@ const clearFilter = (column) => {
             return;
         }
     
-        try {
-            window.showGlobalLoader();
-    
-            // ---- PRÍPAD: ÚPRAVA POUŽÍVATEĽA (hlavný profil) ----
+        try {    
             if (originalDataPath === '') {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
@@ -4804,9 +4736,6 @@ const clearFilter = (column) => {
             console.error("Chyba pri ukladaní dát do Firestore:", e);
             setError(`Chyba pri ukladaní dát: ${e.message}`);
             setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
-            // Modál zostáva otvorený pri chybe - NEVOLÁME closeEditModal()
-        } finally {
-            window.hideGlobalLoader();
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError, editModalTitle]);
 
@@ -4817,9 +4746,7 @@ const clearFilter = (column) => {
             return;
         }
     
-        try {
-            window.showGlobalLoader();
-    
+        try {    
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 3) {
                 throw new Error(`Neplatný formát cesty člena. Očakáva sa 3 segmenty, našlo sa ${pathParts.length}.`);
@@ -4918,8 +4845,6 @@ const clearFilter = (column) => {
             console.error("Chyba pri odstraňovaní člena tímu:", e);
             setError(`Chyba pri odstraňovaní člena: ${e.message}`);
             setUserNotificationMessage(`Chyba: ${e.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError]);
     
@@ -4930,9 +4855,7 @@ const clearFilter = (column) => {
             return;
         }
     
-        try {
-            window.showGlobalLoader();
-    
+        try {    
             const pathParts = originalDataPath.split('.');
             if (pathParts.length !== 2) {
                 throw new Error(`Neplatný formát cesty tímu pre odstránenie. Očakáva sa 2 segmenty (teams.category[index]), našlo sa ${pathParts.length}.`);
@@ -5009,8 +4932,6 @@ const clearFilter = (column) => {
             console.error("Chyba pri odstraňovaní tímu z Firestore:", e);
             setError(`Chyba pri odstraňovaní tímu: ${e.message}`);
             setUserNotificationMessage(`Chyba pri odstraňovaní tímu: ${e.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
         }
     }, [db, closeEditModal, setUserNotificationMessage, setError]);
 
@@ -5047,9 +4968,6 @@ const clearFilter = (column) => {
 
     if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-        if (typeof window.showGlobalLoader === 'function') {
-            window.showGlobalLoader();
-        }
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
         window.location.href = 'logged-in-my-data.html';
         return null;
