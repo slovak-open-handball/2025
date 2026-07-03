@@ -5206,7 +5206,6 @@ const clearFilter = (column) => {
             if (!docSnapshot.exists()) {
                 throw new Error("Dokument sa nenašiel pre aktualizáciu.");
             }
-            const currentDocData = docSnapshot.data();
     
             const { updatedObject, topLevelField } = updateNestedObjectByPath(currentDocData, originalDataPath, updatedDataFromModal);
     
