@@ -3673,7 +3673,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
             }
 
           } else {
-            console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
             if (typeof window.hideGlobalLoader === 'function') {
               window.hideGlobalLoader();
@@ -3938,11 +3937,9 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
 
                     setAvailableTshirtSizes(availableSizesFromDb);
                 } else {
-                    console.warn("Firestore settings/sizeTshirts dokument neobsahuje pole 'sizes' alebo má neočakávaný formát. Používam predvolené poradie.");
                     setAvailableTshirtSizes(tshirtSizeOrderFallback);
                 }
             } else {
-                console.warn("Firestore settings/sizeTshirts dokument neexistuje. Používam predvolené poradie.");
                 setAvailableTshirtSizes(tshirtSizeOrderFallback);
             }
         }, error => {
@@ -4161,7 +4158,6 @@ const clearFilter = (column) => {
     const registerLink = document.getElementById('register-link');
 
     if (!authLink || !profileLink || !logoutButton || !registerLink) {
-        console.warn("AllRegistrationsApp: Niektoré navigačné odkazy nie sú k dispozícii v DOM.");
         return;
     }
 
