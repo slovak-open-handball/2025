@@ -1376,216 +1376,76 @@ const formatLabel = (key) => {
     return label;
 };
 
-// ============================================================
-// UPRAVENÁ FUNKCIA PRE GENEROVANIE NOTIFIKÁCIÍ PRE KLUB
-// ============================================================
 const getChangesForNotification = (original, updated, formatDateFn) => {
     const changes = [];
 
-    const universallyIgnoredKeys = new Set([
-        '_userId', '_teamIndex', '_registeredBy', '_menTeamMembersCount',
-        '_womenTeamMembersCount', '_menDriversCount', '_womenDriversCount', '_players',
-        '_teamTshirtsMap', 'id', 'uniqueId', 'type', 'originalArray', 'originalIndex',
-        'password', 'emailVerified', 'isMenuToggled', 'role', 'approved',
-        'registrationDate', 'passwordLastChanged', 'teams', 'categories', 'timestamp',
-        'note', '_dateOfBirth', '_address', '_privateData'
-    ]);
-
-    const ignoredPathPatterns = new Set([
-        'meals',
-        'packageDetails.meals',
-        'packageDetails.createdAt',
-        'packageDetails.updatedAt',
-        'packageDetails.accommodationTypes',
-        'accommodationTypes'
-    ]);
-
-    const getBetterLabel = (path, originalLabel) => {
-        if (path === 'packageDetails.price') {
-            return 'Cena balíka';
+    // Polia, ktoré sa majú porovnávať pre člena tímu
+    const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
+    
+    // Porovnanie základných polí
+    memberFields.forEach(field => {
+        const originalValue = original[field] !== undefined && original[field] !== null ? String(original[field]) : '';
+        const updatedValue = updated[field] !== undefined && updated[field] !== null ? String(updated[field]) : '';
+        if (originalValue !== updatedValue) {
+            const label = formatLabel(field);
+            changes.push(`Zmena ${label}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
         }
-        return originalLabel;
-    };
-
-    const normalizeValueForComparison = (value, path) => {
-        if (value === null || value === undefined) return '';
-
-        if (path === 'selectedDates' && Array.isArray(value)) {
-            return value.map(dateStr => {
-                if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                    return formatDateFn(dateStr);
-                }
-                return dateStr;
-            }).join(', ');
-        }
-
-        const lowerPath = path.toLowerCase();
-        const isDateField =
-            lowerPath.includes('dateofbirth') ||
-            lowerPath.includes('registrationdate') ||
-            lowerPath.includes('date');
-
-        if (isDateField) {
-            if (value && typeof value.toDate === 'function') {
-                return formatDateFn(value.toDate());
-            }
-            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                return formatDateFn(value);
-            }
-            return String(value);
-        }
-
-        if (value && typeof value.toDate === 'function') {
-            return value.toDate().toISOString();
-        }
-        if (typeof value === 'object' && !Array.isArray(value)) {
-            if (path === 'arrival' && value.type) {
-                return formatArrivalTime(value.type, value.time);
-            }
-            if (value.type) return value.type;
-            if (value.name) return value.name;
-            if (path === 'packageDetails.accommodationTypes' && Array.isArray(value)) {
-                return value.join(', ');
-            }
-            try {
-                return JSON.stringify(value);
-            } catch (e) {
-                return '[OBJECT_ERROR]';
-            }
-        }
-        if (Array.isArray(value) && (path === 'packageDetails.accommodationTypes' || path === 'accommodationTypes')) {
-            return value.join(', ');
-        }
-        return String(value);
-    };
-
-    const shouldIgnorePath = (path) => {
-        for (const pattern of ignoredPathPatterns) {
-            if (path.includes(pattern)) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // Pomocná funkcia na porovnanie adresy ako samostatných polí
-    const compareAddress = (origAddr, updAddr, prefix = '') => {
-        const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
-        addrFields.forEach(field => {
-            const origVal = origAddr?.[field] || '';
-            const updVal = updAddr?.[field] || '';
-            if (origVal !== updVal) {
-                const label = formatLabel(`address.${field}`);
-                const displayOrig = origVal || '-';
-                const displayUpd = updVal || '-';
-                let finalUpd = displayUpd;
-                let finalOrig = displayOrig;
-                if (field === 'postalCode') {
-                    finalOrig = formatPostalCodeForDisplay(origVal);
-                    finalUpd = formatPostalCodeForDisplay(updVal);
-                }
-                changes.push(`Zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
-            }
-        });
-    };
-
-    const compareObjects = (origObj, updObj, pathPrefix = '') => {
-        const nestedKeys = new Set([...Object.keys(origObj || {}), ...Object.keys(updObj || {})]);
-        for (const key of nestedKeys) {
-            const currentPath = pathPrefix ? `${pathPrefix}.${key}` : key;
-
-            if (universallyIgnoredKeys.has(key)) continue;
-            if (shouldIgnorePath(currentPath)) continue;
-
-            // Špeciálne spracovanie pre accommodation
-            if (key === 'accommodation') {
-                const origAccommodation = origObj?.accommodation;
-                const updAccommodation = updObj?.accommodation;
-                const origAccType = origAccommodation?.type || 'bez ubytovania';
-                const updAccType = updAccommodation?.type || 'bez ubytovania';
-                if (origAccType !== updAccType) {
-                    changes.push(`Zmena Typ ubytovania: z '${origAccType}' na '${updAccType}'`);
-                }
-                continue;
-            }
-
-            // Špeciálne spracovanie pre address – rozložíme na jednotlivé polia
-            if (key === 'address') {
-                const origAddr = origObj?.address || {};
-                const updAddr = updObj?.address || {};
-                compareAddress(origAddr, updAddr, currentPath);
-                continue;
-            }
-
-            // Špeciálne spracovanie pre selectedDates
-            if (currentPath === 'selectedDates') {
-                const originalDates = Array.isArray(origObj?.[key]) ? origObj[key] : [];
-                const updatedDates = Array.isArray(updObj?.[key]) ? updObj[key] : [];
-                const formattedOriginal = originalDates.map(d => formatDateFn(d)).join(', ');
-                const formattedUpdated = updatedDates.map(d => formatDateFn(d)).join(', ');
-                if (formattedOriginal !== formattedUpdated) {
-                    changes.push(`Zmena ${formatLabel(currentPath)}: z '${formattedOriginal || '-'}' na '${formattedUpdated || '-'}'`);
-                }
-                continue;
-            }
-
-            const origValue = origObj ? origObj[key] : undefined;
-            const updValue = updObj ? updObj[key] : undefined;
-
-            const isOrigObject = typeof origValue === 'object' && origValue !== null && !Array.isArray(origValue) && !(origValue.toDate && typeof origValue.toDate === 'function');
-            const isUpdObject = typeof updValue === 'object' && updValue !== null && !Array.isArray(updValue) && !(updValue.toDate && typeof updValue.toDate === 'function');
-
-            if (isOrigObject && isUpdObject) {
-                compareObjects(origValue, updValue, currentPath);
-                continue;
-            }
-
-            // špeciálne spracovanie tričiek
-            if (currentPath === 'tshirts') {
-                const originalTshirtsMap = new Map((origValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
-                const updatedTshirtsMap = new Map((updValue || []).map(t => [String(t.size).trim(), t.quantity || 0]));
-                const allSizes = new Set([...Array.from(originalTshirtsMap.keys()), ...Array.from(updatedTshirtsMap.keys())]);
-                for (const size of allSizes) {
-                    const oldQ = originalTshirtsMap.get(size) || 0;
-                    const newQ = updatedTshirtsMap.get(size) || 0;
-                    if (oldQ !== newQ) {
-                        if (oldQ === 0) {
-                            changes.push(`Pridané tričko (${size}): ${newQ}`);
-                        } else if (newQ === 0) {
-                            changes.push(`Odstránené tričko (${size}): ${oldQ}`);
-                        } else {
-                            changes.push(`Zmena tričiek: ${size} z '${oldQ}' na '${newQ}'`);
-                        }
-                    }
-                }
-                continue;
-            }
-
-            const valueA = normalizeValueForComparison(origValue, currentPath);
-            const valueB = normalizeValueForComparison(updValue, currentPath);
-
-            if (valueA !== valueB) {
-                const originalLabel = formatLabel(currentPath);
-                const betterLabel = getBetterLabel(currentPath, originalLabel);
-                let changeDescription = `Zmena ${betterLabel}: z '${valueA || '-'}' na '${valueB || '-'}'`;
-                if (!changes.includes(changeDescription)) {
-                    changes.push(changeDescription);
-                }
-            }
-        }
-    };
-
-    compareObjects(original, updated);
-
-    // arrival špeciálne (pôvodná logika)
-    const originalArrival = formatArrivalTime(original?.arrival?.type, original?.arrival?.time);
-    const updatedArrival = formatArrivalTime(updated?.arrival?.type, updated?.arrival?.time);
-
-    if (originalArrival !== updatedArrival) {
-        changes.push(`Zmena dopravy: z '${originalArrival}' na '${updatedArrival}'`);
+    });
+    
+    // Porovnanie dátumu narodenia - LEN AK SA ZMENIL
+    const originalDate = original.dateOfBirth ? formatDateFn(original.dateOfBirth) : '-';
+    const updatedDate = updated.dateOfBirth ? formatDateFn(updated.dateOfBirth) : '-';
+    if (originalDate !== updatedDate) {
+        changes.push(`Zmena Dátumu narodenia: z '${originalDate}' na '${updatedDate}'`);
     }
-
+    
+    // Porovnanie adresy - LEN POLIA, KTORÉ SA ZMENILI
+    const addrFields = ['street', 'houseNumber', 'postalCode', 'city', 'country'];
+    addrFields.forEach(field => {
+        const origVal = original.address?.[field] || '';
+        const updVal = updated.address?.[field] || '';
+        if (origVal !== updVal) {
+            const label = formatLabel(`address.${field}`);
+            const displayOrig = origVal || '-';
+            const displayUpd = updVal || '-';
+            let finalUpd = displayUpd;
+            let finalOrig = displayOrig;
+            if (field === 'postalCode') {
+                finalOrig = formatPostalCodeForDisplay(origVal);
+                finalUpd = formatPostalCodeForDisplay(updVal);
+            }
+            changes.push(`Zmena ${label}: z '${finalOrig}' na '${finalUpd}'`);
+        }
+    });
+    
     return changes;
+};
+
+// Pomocná funkcia na formátovanie PSČ
+const formatPostalCodeForDisplay = (postalCode) => {
+    if (!postalCode) return '-';
+    const cleaned = String(postalCode).replace(/\D/g, '');
+    if (cleaned.length === 5) {
+        return `${cleaned.slice(0,3)} ${cleaned.slice(3)}`;
+    }
+    return cleaned || '-';
+};
+
+// Pomocná funkcia na formátovanie názvov polí
+const formatLabel = (key) => {
+    const labels = {
+        'firstName': 'Meno',
+        'lastName': 'Priezvisko',
+        'jerseyNumber': 'Číslo dresu',
+        'registrationNumber': 'Registračné číslo',
+        'address.street': 'Ulica',
+        'address.houseNumber': 'Popisné číslo',
+        'address.postalCode': 'PSČ',
+        'address.city': 'Mesto/obec',
+        'address.country': 'Krajina',
+        'dateOfBirth': 'Dátum narodenia'
+    };
+    return labels[key] || key;
 };
 
 // ============================================================
