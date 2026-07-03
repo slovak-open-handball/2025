@@ -3502,26 +3502,31 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
   };
 
   const toggleAllRows = () => {
-    if (!showUsers && showTeams) {
-        const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
+    // Získame všetky ID pre používateľov (kluby)
+    const allUserIds = filteredUsers.map(user => user.id);
+    // Získame všetky ID pre tímy
+    const allTeamIds = allTeamsFlattened.map(team => `${team._userId}-${team._category}-${team._teamIndex}`);
 
-        const allCurrentlyExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
-        const newExpandedState = { ...expandedTeamRows };
+    // Zistíme, či sú všetci používatelia (kluby) rozbalení
+    const allUsersExpanded = allUserIds.length > 0 && allUserIds.every(id => expandedRows[id]);
+    // Zistíme, či sú všetky tímy rozbalené
+    const allTeamsExpanded = allTeamIds.length > 0 && allTeamIds.every(id => expandedTeamRows[id]);
 
-        allTeamIds.forEach(id => {
-            newExpandedState[id] = !allCurrentlyExpanded;
-        });
-        setExpandedTeamRows(newExpandedState);
+    // Nový stav pre používateľov (kluby) - ak sú všetci rozbalení, zbalíme ich, inak rozbalíme
+    const newExpandedRows = { ...expandedRows };
+    allUserIds.forEach(id => {
+        newExpandedRows[id] = !allUsersExpanded;
+    });
 
-    } else {
-        const allCurrentlyExpanded = filteredUsers.length > 0 && filteredUsers.every(user => expandedRows[user.id]);
-        const newExpandedState = { ...expandedRows };
+    // Nový stav pre tímy - ak sú všetky rozbalené, zbalíme ich, inak rozbalíme
+    const newExpandedTeamRows = { ...expandedTeamRows };
+    allTeamIds.forEach(id => {
+        newExpandedTeamRows[id] = !allTeamsExpanded;
+    });
 
-        filteredUsers.forEach(user => {
-            newExpandedState[user.id] = !allCurrentlyExpanded;
-        });
-        setExpandedRows(newExpandedState);
-    }
+    // Aplikujeme nové stavy
+    setExpandedRows(newExpandedRows);
+    setExpandedTeamRows(newExpandedTeamRows);
   };
 
   React.useEffect(() => {
