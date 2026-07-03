@@ -2950,7 +2950,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
                         onClick: onClose
                     }, 'Zavrieť'),
-                    isSavable && React.createElement('button', {
+                    React.createElement('button', {
                         className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
                         onClick: async () => {
                             try {
@@ -3004,112 +3004,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 });
                         
-                                const isAddingNewMember = isNewEntry && (
-                                    editModalTitle.toLowerCase().includes('pridať nový hráč') ||
-                                    editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
-                                    editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (muž)') ||
-                                    editModalTitle.toLowerCase().includes('pridať nový šofér (žena)') ||
-                                    editModalTitle.toLowerCase().includes('pridať nový šofér (muž)')
-                                );
-
-                                const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
-                        
-                                const isEditingTeamMember = 
-                                    (editModalTitle.toLowerCase().includes('upraviť hráč') ||
-                                     editModalTitle.toLowerCase().includes('upraviť člen realizačného tímu') ||
-                                     editModalTitle.toLowerCase().includes('upraviť šofér')) &&
-                                    originalDataPath && 
-                                    (originalDataPath.includes('playerDetails') ||
-                                     originalDataPath.includes('menTeamMemberDetails') ||
-                                     originalDataPath.includes('womenTeamMemberDetails') ||
-                                     originalDataPath.includes('driverDetailsMale') ||
-                                     originalDataPath.includes('driverDetailsFemale'));
-                                
-                                const isEditingTeam = editModalTitle.includes('Upraviť tím');
-                                
-                                let generatedChanges = [];
-                                
-                                if (isAddingNewMember) {
-                                    // Nový člen - notifikácia sa generuje inde
-                                } else if (isAddingNewTeam) {
-                                    generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
-                                } else if (isEditingTeam) {
-                                    const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
-                                    const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
-                                    
-                                    delete originalDataForCompare._teamTshirtsMap;
-                                    delete modifiedDataForCompare._teamTshirtsMap;
-                                    delete originalDataForCompare._userId;
-                                    delete modifiedDataForCompare._userId;
-                                    delete originalDataForCompare._teamIndex;
-                                    delete modifiedDataForCompare._teamIndex;
-                                    delete originalDataForCompare._registeredBy;
-                                    delete modifiedDataForCompare._registeredBy;
-                                    delete originalDataForCompare._menTeamMembersCount;
-                                    delete modifiedDataForCompare._menTeamMembersCount;
-                                    delete originalDataForCompare._womenTeamMembersCount;
-                                    delete modifiedDataForCompare._womenTeamMembersCount;
-                                    delete originalDataForCompare._menDriversCount;
-                                    delete modifiedDataForCompare._menDriversCount;
-                                    delete originalDataForCompare._womenDriversCount;
-                                    delete modifiedDataForCompare._womenDriversCount;
-                                    delete originalDataForCompare._players;
-                                    delete modifiedDataForCompare._players;
-                                    
-                                    const teamChanges = getChangesForNotification(
-                                        originalDataForCompare,
-                                        modifiedDataForCompare,
-                                        formatDateToDMMYYYY
-                                    );
-                                    
-                                    const teamName = modifiedDataForCompare.teamName || 'Bez názvu';
-                                    const teamCategory = modifiedDataForCompare._category || modifiedDataForCompare.category || 'Neznáma kategória';
-                                    generatedChanges = teamChanges.map(change =>
-                                        `Tím ${teamName} (${teamCategory}): ${change}`
-                                    );
-                                } else if (!isEditingTeamMember) {
-                                    const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
-                                    const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
-                                
-                                    generatedChanges = getChangesForNotification(
-                                        originalDataForCompare,
-                                        modifiedDataForCompare,
-                                        formatDateToDMMYYYY
-                                    );
-                                
-                                    const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
-                                    const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
-                                    if (originalCategory !== updatedCategory && !generatedChanges.some(c => c.includes('Zmena Kategórie:'))) {
-                                        generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
-                                    }
-                                
-                                    if (finalDataToSave.teamName || finalDataToSave._category) {
-                                        const teamName = finalDataToSave.teamName || 'Bez názvu';
-                                        const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
-                                        generatedChanges = generatedChanges.map(change =>
-                                            `Tím ${teamName} (${teamCategory}): ${change}`
-                                        );
-                                    }
-                                }
-                        
-                                if (generatedChanges.length > 0 && !isAddingNewMember && !isEditingTeamMember) {
-                                    const userEmail = window.auth.currentUser?.email;
-                                    if (userEmail) {
-                                        const notificationsCollectionRef = collection(db, 'notifications');
-                                        await addDoc(notificationsCollectionRef, {
-                                            userEmail,
-                                            changes: generatedChanges,
-                                            timestamp: serverTimestamp()
-                                        });
-                                    }
-                                }
-                        
-                                if (generatedChanges.length === 0 && !isAddingNewMember && !isAddingNewTeam && !isEditingTeamMember) {
-                                    setUserNotificationMessage("Žiadne zmeny na uloženie.", 'info');
-                                    onClose();
-                                    return;
-                                }
-                        
+                                // ODSTRÁNENÁ PODMIENKA, KTORÁ BLOKOVALA UKLADANIE
+                                // Voláme onSave priamo - nech sa o všetko postará handleSaveEditedData
                                 onSave(
                                     finalDataToSave,
                                     targetDocRef,
@@ -4812,6 +4708,7 @@ const clearFilter = (column) => {
             console.error("Chyba pri ukladaní dát do Firestore:", e);
             setError(`Chyba pri ukladaní dát: ${e.message}`);
             setUserNotificationMessage(`Chyba pri ukladaní dát: ${e.message}`, 'error');
+            // Modál zostáva otvorený pri chybe - NEVOLÁME closeEditModal()
         } finally {
             window.hideGlobalLoader();
         }
