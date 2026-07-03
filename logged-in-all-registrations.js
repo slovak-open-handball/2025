@@ -711,14 +711,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return jerseyNumberCounts.get(key) > 1;
     };
 
-    console.log('DEBUG TeamDetailsContent: team received:', team);
-    console.log('DEBUG TeamDetailsContent: team.playerDetails:', team.playerDetails);
-    if (team.playerDetails && team.playerDetails.length > 0) {
-      console.log('DEBUG TeamDetailsContent: first player:', team.playerDetails[0]);
-      console.log('DEBUG TeamDetailsContent: player dateOfBirth:', team.playerDetails[0]?.dateOfBirth);
-      console.log('DEBUG TeamDetailsContent: player address:', team.playerDetails[0]?.address);
-    }
-
     const allConsolidatedMembers = [];
 
     const createMember = (member, type, originalArray, originalIndex) => {
@@ -3320,7 +3312,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 // GENEROVANIE NOTIFIKÁCIÍ – PRESKOČÍME PRE ÚPRAVU ČLENA TÍMU
                                 // ============================================================
                                 if (isAddingNewMember) {
-                                    console.log("DEBUG: Nový člen → preskakujem getChangesForNotification v DataEditModal");
                                 } else if (isAddingNewTeam) {
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
                                 } else if (!isEditingTeamMember) {
@@ -3432,7 +3423,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
 // Pomocná funkcia na aktualizáciu vnoreného objektu podľa cesty a vrátenia upraveného poľa najvyššej úrovne pre aktualizáciu Firestore
 const updateNestedObjectByPath = (obj, path, value) => {
-    // console.log("DEBUG updateNestedObjectByPath: Path:", path); // LOGGING
     if (!path) {
         throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
     }
@@ -3481,8 +3471,6 @@ const updateNestedObjectByPath = (obj, path, value) => {
     // To musí spracovať prípady ako 'teams.Juniors[0]', kde 'teams' je časť najvyššej úrovne.
     const firstPathPart = pathParts[0];
     const topLevelField = firstPathPart.includes('[') ? firstPathPart.substring(0, firstPathPart.indexOf('[')) : firstPathPart;
-
-    // console.log("DEBUG updateNestedObjectByPath: First Path Part:", firstPathPart, "Top Level Field:", topLevelField); // LOGGING
 
     if (!topLevelField) {
         throw new Error(`Vygenerovaná cesta najvyššej úrovne pre aktualizáciu je prázdna. Pôvodná cesta: ${path}`);
@@ -4012,12 +4000,10 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       const intervalId = setInterval(() => {
         if (checkGlobalAuthReady()) {
           clearInterval(intervalId);
-          console.log("AllRegistrationsApp: Firebase a používateľské dáta sú pripravené (interval).");
         }
       }, 100);
 
       const handleGlobalDataUpdate = (event) => {
-        // console.log('AllRegistrationsApp: Prijatá udalosť "globalDataUpdated". Aktualizujem lokálny stav.');
         setIsAuthReady(true);
         setUser(window.auth?.currentUser || null);
         setUserProfileData(event.detail);
@@ -4033,11 +4019,9 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     let unsubscribeGlobalAuth;
     if (window.auth) {
         unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
-            // console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "N/A");
             setUser(currentUser);
             setUserProfileData(window.globalUserProfileData);
             if (!currentUser) {
-                // console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
                 window.location.href = 'login.html';
             }
         });
@@ -4054,7 +4038,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user) {
-      // console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       if (typeof window.showGlobalLoader === 'function') {
         window.showGlobalLoader();
       }
@@ -4064,7 +4047,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
         unsubscribeUserDoc = onSnapshot(userDocRef, (docSnapshot) => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
-            // console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
             setUserProfileData(userData);
             setError('');
@@ -4073,7 +4055,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
               window.hideGlobalLoader();
             }
 
-            // console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené.");
           } else {
             console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
@@ -4108,14 +4089,11 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
-        // console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         if (typeof window.hideGlobalLoader === 'function') {
           window.hideGlobalLoader();
         }
         window.location.href = 'login.html';
         return;
-    } else if (!isAuthReady || !db || user === undefined) {
-        // console.log("AllRegistrationsApp: Čakám na inicializáciu Auth/DB/User data. Aktuálne stavy: isAuthReady:", isAuthReady, "db:", !!db, "user:", user ? user.uid : "N/A", "userProfileData:", userProfileData ? userProfileData.role : "N/A", "isAuthReady:", isAuthReady);
     }
 
     return () => {
@@ -4151,19 +4129,11 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
             const privateDataMap = {};
             privateSnapshot.docs.forEach(doc => {
               privateDataMap[doc.id] = doc.data();
-            });
-  
-            console.log('DEBUG: privateDataMap keys:', Object.keys(privateDataMap));
-            console.log('DEBUG: privateDataMap for user j3UgdXoHtBOnDq5eLyKwFiTUguS2:', privateDataMap['j3UgdXoHtBOnDq5eLyKwFiTUguS2']);
+            });  
   
             // Zlúčenie údajov - z usersprivate preberieme adresy a dátumy narodenia
             const mergedUsersData = usersData.map(user => {
               const privateData = privateDataMap[user.id] || {};
-              
-              // DEBUG: Log pre konkrétneho používateľa
-              if (user.id === 'j3UgdXoHtBOnDq5eLyKwFiTUguS2') {
-                console.log('DEBUG: Private data for user j3UgdXoHtBOnDq5eLyKwFiTUguS2:', privateData);
-              }
   
               const mergedUser = {
                   ...user,
@@ -4297,18 +4267,7 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
               }
   
               return mergedUser;
-            });
-  
-            // DEBUG: Log pre konkrétneho používateľa po zlúčení
-            const testUser = mergedUsersData.find(u => u.id === 'j3UgdXoHtBOnDq5eLyKwFiTUguS2');
-            if (testUser) {
-              console.log('DEBUG: Merged user teams:', testUser.teams);
-              const u10Team = testUser.teams?.['U10 D'];
-              if (u10Team && u10Team[0] && u10Team[0].playerDetails) {
-                console.log('DEBUG: Player details after merge:', u10Team[0].playerDetails);
-                console.log('DEBUG: Player 10 after merge:', u10Team[0].playerDetails[9]);
-              }
-            }
+            });  
   
             setAllUsers(mergedUsersData);
             setFilteredUsers(mergedUsersData);
@@ -4403,8 +4362,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
 
       const sorted = [...filteredUsers].sort((a, b) => {
           const columnDef = defaultColumnOrder.find(col => col.id === columnId); // Use defaultColumnOrder
-          // console.log(`handleSort: Triedenie podľa stĺpca: ${columnId}, Smer: ${direction}`);
-          // console.log(`handleSort: Nájdená definícia stĺpca pre ${columnId}:`, columnDef);
 
           const type = columnDef ? columnDef.type : 'string';
 
@@ -4456,7 +4413,6 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
           }
       });
       setFilteredUsers(sorted);
-      // console.log("handleSort: Prvých 5 zoradených používateľov:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
   };
 
 const openFilterModal = (column) => {
@@ -4602,7 +4558,6 @@ const clearFilter = (column) => {
   }, [allUsers, activeFilters, showUsers, showTeams]);
 
   React.useEffect(() => {
-    // console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. Používateľ: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -4618,13 +4573,11 @@ const clearFilter = (column) => {
       profileLink.classList.remove('hidden');
       logoutButton.classList.remove('hidden');
       registerLink.classList.add('hidden');
-      // console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
     } else {
       authLink.classList.remove('hidden');
       profileLink.classList.add('hidden');
       logoutButton.classList.add('hidden');
       registerLink.classList.remove('hidden');
-      // console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
     }
   }, [user]);
 
@@ -4692,7 +4645,7 @@ const clearFilter = (column) => {
     
                 // 1a) Pripravíme dáta pre users (odstránime súkromné polia)
                 let finalDataToSave = { ...currentDocData };
-                delete finalDataToSave._privateData;
+                delete finalDataToSave._privateData;   // odstránime aj _privateData
                 privateFields.forEach(field => delete finalDataToSave[field]);
                 if (finalDataToSave.billing) {
                     delete finalDataToSave.billing.address;   // fakturačná adresa tiež do private
@@ -4703,9 +4656,9 @@ const clearFilter = (column) => {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
     
-                // Prepíšeme ostatné polia z formulára (okrem súkromných)
+                // Prepíšeme ostatné polia z formulára (okrem súkromných a _privateData)
                 for (const key in updatedDataFromModal) {
-                    if (privateFields.includes(key)) continue;
+                    if (privateFields.includes(key) || key === '_privateData') continue; // preskočíme
                     const value = updatedDataFromModal[key];
                     if (value === undefined) continue;
     
@@ -4771,8 +4724,6 @@ const clearFilter = (column) => {
     
                 // Uložíme do usersprivate (merge)
                 await setDoc(userPrivateDocRef, privateData, { merge: true });
-
-                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
     
                 // Uložíme do users (už bez súkromných polí)
                 await updateDoc(targetDocRef, finalDataToSave);
@@ -4791,6 +4742,9 @@ const clearFilter = (column) => {
                     throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
                 }
                 const currentDocData = docSnapshot.data();
+    
+                // Odstráň _privateData z vstupných dát (ak tam náhodou je)
+                delete updatedDataFromModal._privateData;
     
                 let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category;
                 if (!actualCategory) {
@@ -4881,7 +4835,6 @@ const clearFilter = (column) => {
     
                     const updates = {};
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
-                    console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                     await updateDoc(targetDocRef, updates);
     
                     setUserNotificationMessage("Nový tím bol pridaný.", 'success');
@@ -4917,7 +4870,6 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
-                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                 await updateDoc(targetDocRef, updates);
     
                 setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
@@ -4933,6 +4885,9 @@ const clearFilter = (column) => {
                 originalDataPath.includes('womenTeamMemberDetails') ||
                 originalDataPath.includes('driverDetailsMale') ||
                 originalDataPath.includes('driverDetailsFemale')) {
+    
+                // Odstráň _privateData z vstupných dát
+                delete updatedDataFromModal._privateData;
     
                 const pathParts = originalDataPath.split('.');
                 if (pathParts.length !== 3) {
@@ -5148,7 +5103,6 @@ const clearFilter = (column) => {
     
                 const updates = {};
                 updates[`teams.${category}`] = cleanedTeamsForCategory;
-                console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
                 await updateDoc(targetDocRef, updates);
     
                 // Uložíme usersprivate
@@ -5175,7 +5129,6 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[topLevelField] = updatedObject[topLevelField];
-            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
             await updateDoc(targetDocRef, updates);
     
             setUserNotificationMessage("Zmeny boli uložené.", 'success');
@@ -5251,8 +5204,6 @@ const clearFilter = (column) => {
     
             const updates = {};
             updates[`teams.${category}`] = updatedTeamsForCategory;
-
-            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
     
             // Uložíme do users (vyčistené)
             await updateDoc(targetDocRef, updates);
@@ -5355,7 +5306,6 @@ const clearFilter = (column) => {
                 updates[`teams.${category}`] = updatedTeamsInCategory;
             }
 
-            console.log('DEBUG: Dáta pred uložením do users:', JSON.stringify(finalDataToSave, null, 2));
             await updateDoc(targetDocRef, updates);
     
             // Odstránime aj príslušné osobné údaje z usersprivate
@@ -5442,7 +5392,6 @@ const clearFilter = (column) => {
   }
 
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
-      // console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
       setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
       if (typeof window.showGlobalLoader === 'function') {
         window.showGlobalLoader();
