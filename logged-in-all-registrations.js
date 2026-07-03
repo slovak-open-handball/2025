@@ -16,7 +16,7 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
 
     const traverse = (obj) => {
         if (!obj || typeof obj !== 'object') return;
-        // Odstránime zakázané kľúče na tejto úrovni
+        // Odstráni zakázané kľúče na tejto úrovni
         for (const key of Object.keys(obj)) {
             if (forbiddenKeys.has(key)) {
                 delete obj[key];
@@ -4692,6 +4692,7 @@ const clearFilter = (column) => {
     
                 // 1a) Pripravíme dáta pre users (odstránime súkromné polia)
                 let finalDataToSave = { ...currentDocData };
+                delete finalDataToSave._privateData;
                 privateFields.forEach(field => delete finalDataToSave[field]);
                 if (finalDataToSave.billing) {
                     delete finalDataToSave.billing.address;   // fakturačná adresa tiež do private
