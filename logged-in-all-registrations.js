@@ -2539,7 +2539,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         className: `mt-1 block w-full rounded-r-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                         value: displayPhoneNumber,
                                         onChange: handleContactPhoneNumberChange,
-                                        readOnly: !isSavable,
+                                        readOnly: false,
                                         inputMode: 'tel',
                                         placeholder: 'Zadajte telefónne číslo',
                                         maxLength: 15
@@ -3166,7 +3166,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 });
                         
-                                const isAddingNewMember = isNewEntry && (
+                                const isAddingNewMember = isNewEntryFlag && (
                                     editModalTitle.toLowerCase().includes('pridať nový hráč') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (žena)') ||
                                     editModalTitle.toLowerCase().includes('pridať nový člen realizačného tímu (muž)') ||
@@ -3174,9 +3174,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     editModalTitle.toLowerCase().includes('pridať nový šofér (muž)')
                                 );
                         
-                                const isAddingNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
-                        
-                                // 🔧 Zistíme, či ide o úpravu existujúceho člena tímu
                                 const isEditingTeamMember = 
                                     (editModalTitle.toLowerCase().includes('upraviť hráč') ||
                                      editModalTitle.toLowerCase().includes('upraviť člen realizačného tímu') ||
@@ -3187,38 +3184,81 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                      originalDataPath.includes('womenTeamMemberDetails') ||
                                      originalDataPath.includes('driverDetailsMale') ||
                                      originalDataPath.includes('driverDetailsFemale'));
-                        
+                                
+                                // 🔧 Zistíme, či ide o úpravu tímu
+                                const isEditingTeam = editModalTitle.includes('Upraviť tím');
+                                
                                 let generatedChanges = [];
-                        
+                                
                                 // ============================================================
-                                // GENEROVANIE NOTIFIKÁCIÍ – PRESKOČÍME PRE ÚPRAVU ČLENA TÍMU
+                                // GENEROVANIE NOTIFIKÁCIÍ
                                 // ============================================================
                                 if (isAddingNewMember) {
+                                    // Nový člen - notifikácia sa generuje inde
                                 } else if (isAddingNewTeam) {
                                     generatedChanges = [`Nový tím bol pridaný: ${finalDataToSave.teamName || 'Bez názvu'}`];
-                                } else if (!isEditingTeamMember) {
+                                } else if (isEditingTeam) {
+                                    // 🔧 PRE TÍMY - POROVNÁME PÔVODNÉ A NOVÉ DÁTA
                                     const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
                                     const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
-                        
-                                    if (isTargetUserAdmin || isTargetUserHall) {
+                                    
+                                    // Odstránime pomocné polia, ktoré by mohli spôsobiť falošné zmeny
+                                    delete originalDataForCompare._teamTshirtsMap;
+                                    delete modifiedDataForCompare._teamTshirtsMap;
+                                    delete originalDataForCompare._userId;
+                                    delete modifiedDataForCompare._userId;
+                                    delete originalDataForCompare._teamIndex;
+                                    delete modifiedDataForCompare._teamIndex;
+                                    delete originalDataForCompare._registeredBy;
+                                    delete modifiedDataForCompare._registeredBy;
+                                    delete originalDataForCompare._menTeamMembersCount;
+                                    delete modifiedDataForCompare._menTeamMembersCount;
+                                    delete originalDataForCompare._womenTeamMembersCount;
+                                    delete modifiedDataForCompare._womenTeamMembersCount;
+                                    delete originalDataForCompare._menDriversCount;
+                                    delete modifiedDataForCompare._menDriversCount;
+                                    delete originalDataForCompare._womenDriversCount;
+                                    delete modifiedDataForCompare._womenDriversCount;
+                                    delete originalDataForCompare._players;
+                                    delete modifiedDataForCompare._players;
+                                    
+                                    // Porovnáme zmeny pre tím
+                                    const teamChanges = getChangesForNotification(
+                                        originalDataForCompare,
+                                        modifiedDataForCompare,
+                                        formatDateToDMMYYYY
+                                    );
+                                    
+                                    // Pridáme kontext tímu
+                                    const teamName = modifiedDataForCompare.teamName || 'Bez názvu';
+                                    const teamCategory = modifiedDataForCompare._category || modifiedDataForCompare.category || 'Neznáma kategória';
+                                    generatedChanges = teamChanges.map(change =>
+                                        `Tím ${teamName} (${teamCategory}): ${change}`
+                                    );
+                                } else if (!isEditingTeamMember) {
+                                    // Ostatné prípady (používatelia)
+                                    const originalDataForCompare = JSON.parse(JSON.stringify(data || {}));
+                                    const modifiedDataForCompare = JSON.parse(JSON.stringify(dataToPrepareForSave));
+                                
+                                    if (isTargetUserAdminFromModal || isTargetUserHallFromModal) {
                                         delete originalDataForCompare.address;
                                         delete originalDataForCompare.billing;
                                         delete modifiedDataForCompare.address;
                                         delete modifiedDataForCompare.billing;
                                     }
-                        
+                                
                                     generatedChanges = getChangesForNotification(
                                         originalDataForCompare,
                                         modifiedDataForCompare,
                                         formatDateToDMMYYYY
                                     );
-                        
+                                
                                     const originalCategory = originalDataForCompare?._category || originalDataForCompare?.category || '-';
                                     const updatedCategory = modifiedDataForCompare?._category || modifiedDataForCompare?.category || '-';
                                     if (originalCategory !== updatedCategory && !generatedChanges.some(c => c.includes('Zmena Kategórie:'))) {
                                         generatedChanges.push(`Zmena Kategórie: z '${originalCategory}' na '${updatedCategory}'`);
                                     }
-                        
+                                
                                     if (finalDataToSave.teamName || finalDataToSave._category) {
                                         const teamName = finalDataToSave.teamName || 'Bez názvu';
                                         const teamCategory = finalDataToSave._category || finalDataToSave.category || 'Neznáma kategória';
