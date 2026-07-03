@@ -1346,10 +1346,7 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         disabled: isDataEditDeadlinePassed
                       })
                     )
-                  ),
-                  React.createElement('p', {
-                    className: 'mt-2 text-sm text-gray-500'
-                  }, 'Zadajte farbu')
+                  )
                 ),
                 
                 React.createElement(
