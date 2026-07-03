@@ -4181,6 +4181,11 @@ const clearFilter = (column) => {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
                         // OPRAVA: Používame dotovú notáciu pre deleteField() - rovnako ako v ChangeBillingModal
                         
+                        // DÔLEŽITÉ: Odstránime pôvodný billing objekt, aby sme predišli konfliktom
+                        // (ale zachováme ho pre prípad, že by sme potrebovali pôvodné hodnoty)
+                        // Vymažeme billing z finalDataToSave, aby sme ho mohli nahradiť jednotlivými poliami
+                        delete finalDataToSave.billing;
+                        
                         // ClubName
                         if (value.clubName !== undefined) {
                             if (value.clubName === '') {
