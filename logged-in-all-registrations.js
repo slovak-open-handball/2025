@@ -4176,14 +4176,15 @@ const clearFilter = (column) => {
                     
                     const value = updatedDataFromModal[key];
                     if (value === undefined) continue;
-            
+                
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
+                        // OPRAVA: Používame !== undefined aby sme vedeli rozlíšiť medzi prázdnym reťazcom a undefined
                         finalDataToSave[key] = {
-                            clubName: value.clubName || currentDocData.billing?.clubName || '',
-                            ico: value.ico || currentDocData.billing?.ico || '',
-                            dic: value.dic || currentDocData.billing?.dic || '',
-                            icDph: value.icDph || currentDocData.billing?.icDph || ''
+                            clubName: value.clubName !== undefined ? value.clubName : (currentDocData.billing?.clubName || ''),
+                            ico: value.ico !== undefined ? value.ico : (currentDocData.billing?.ico || ''),
+                            dic: value.dic !== undefined ? value.dic : (currentDocData.billing?.dic || ''),
+                            icDph: value.icDph !== undefined ? value.icDph : (currentDocData.billing?.icDph || '')
                         };
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
                         finalDataToSave[key] = value;
