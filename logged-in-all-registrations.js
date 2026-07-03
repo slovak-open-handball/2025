@@ -2550,7 +2550,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500`,
                                     value: value || '',
                                     onChange: (e) => handleChange(path, e.target.value),
-                                    rows: 3
+                                    rows: 3,
                                     placeholder: 'Sem môžete napísať dodatočné informácie...'
                                 })
                             )
