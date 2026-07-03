@@ -2591,10 +2591,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 const isCurrentUserAdmin = userRole === 'admin';
                 const isUserBeingEditedAdminOrHall = isTargetUserAdmin || isTargetUserHall;
 
-                if (isCurrentUserAdmin && isUserBeingEditedAdminOrHall) {
-                    fieldsToRenderForUser = ['firstName', 'lastName'];
-                }
-
                 const renderedFields = new Set();
 
                 const renderUserField = (path, value) => {
