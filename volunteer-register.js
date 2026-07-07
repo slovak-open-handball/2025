@@ -379,27 +379,50 @@ const App = () => {
             const authResult = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
             const user = authResult.user;
             console.log("Používateľ úspešne vytvorený:", user.uid);
-            await setDoc(doc(db, `users/${user.uid}`), {
+            
+            // VYTVORENIE DÁT PRE KOLEKCIU 'users' - BEZ ADRESY A BEZ DÁTUMU NARODENIA
+            const userData = {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
                 contactPhoneNumber: contactPhoneNumber,
                 role: 'volunteer',
                 approved: true,
-                street: formData.street,
-                houseNumber: formData.houseNumber,
-                city: formData.city,
-                postalCode: formData.postalCode,
-                country: formData.country,
                 gender: formData.gender,
-                birthDate: formData.birthDate,
                 tshirtSize: formData.tshirtSize,
                 volunteerRoles: formData.volunteerRoles,
                 selectedDates: formData.selectedDates,
                 note: formData.note,
                 registrationDate: serverTimestamp(),
-                recaptchaToken: recaptchaToken, // Uloženie tokenu pre audit
-            });
+                recaptchaToken: recaptchaToken,
+            };
+            
+            // VYTVORENIE DÁT PRE KOLEKCIU 'usersprivate' - IBA ADRESA A DÁTUM NARODENIA
+            const privateData = {
+                role: 'volunteer',
+                approved: true,
+                // Adresa používateľa
+                address: {
+                    street: formData.street || '',
+                    houseNumber: formData.houseNumber || '',
+                    city: formData.city || '',
+                    postalCode: formData.postalCode || '',
+                    country: formData.country || ''
+                },
+                // Dátum narodenia
+                birthDate: formData.birthDate || '',
+                // Môžeme pridať aj ďalšie polia, ktoré by mali byť v private
+                registrationDate: serverTimestamp(),
+            };
+            
+            // ZÁPIS DO KOLEKCIE 'users' - VŠETKO OKREM ADRESY A DÁTUMU NARODENIA
+            await setDoc(doc(db, `users/${user.uid}`), userData);
+            console.log("Zápis do 'users' dokončený.");
+            
+            // ZÁPIS DO KOLEKCIE 'usersprivate' - LEN ADRESA A DÁTUM NARODENIA
+            await setDoc(doc(db, `usersprivate/${user.uid}`), privateData);
+            console.log("Zápis do 'usersprivate' dokončený.");
+            
             setSuccess(true);
             setFormData({
                 firstName: '',
@@ -421,6 +444,7 @@ const App = () => {
                 selectedDates: [],
                 note: '',
             });
+            
             await callGoogleAppsScript({
                 firstName: formData.firstName,
                 lastName: formData.lastName,
