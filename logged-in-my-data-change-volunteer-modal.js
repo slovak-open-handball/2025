@@ -918,3 +918,5 @@ if (window.globalUserProfileData) {
         );
     }
 }
+
+export { ChangeVolunteerModal };
