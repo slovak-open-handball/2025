@@ -4798,15 +4798,15 @@ const clearFilter = (column) => {
                     throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu tímu.");
                 }
                 const currentDocData = docSnapshot.data();
-    
+            
                 delete updatedDataFromModal._privateData;
-    
+            
                 let actualCategory = updatedDataFromModal._category || updatedDataFromModal.category;
                 if (!actualCategory) {
                     throw new Error("Pre pridanie/úpravu tímu nebola zadaná kategória.");
                 }
                 const currentCategoryTeams = Array.isArray(currentDocData.teams?.[actualCategory]) ? currentDocData.teams[actualCategory] : [];
-    
+            
                 let oldCategory = null;
                 let oldTeamIndex = -1;
                 const pathPartsFromOriginal = originalDataPath.split('.');
@@ -4818,12 +4818,12 @@ const clearFilter = (column) => {
                         oldTeamIndex = parseInt(categoryMatch[2]);
                     }
                 }
-    
+            
                 delete updatedDataFromModal.dateOfBirth;
                 delete updatedDataFromModal.address;
                 delete updatedDataFromModal._dateOfBirth;
                 delete updatedDataFromModal._address;
-    
+            
                 ['playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].forEach(arrName => {
                     if (Array.isArray(updatedDataFromModal[arrName])) {
                         updatedDataFromModal[arrName] = updatedDataFromModal[arrName].map(member => {
@@ -4832,9 +4832,9 @@ const clearFilter = (column) => {
                         });
                     }
                 });
-    
+            
                 const isNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
-    
+            
                 const createCleanTeam = (data) => {
                     const cleanTeam = {};
                     const allowedTeamFields = [
@@ -4846,7 +4846,7 @@ const clearFilter = (column) => {
                     allowedTeamFields.forEach(field => {
                         if (data[field] !== undefined) cleanTeam[field] = data[field];
                     });
-    
+            
                     const memberArrays = [
                         'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails',
                         'driverDetailsMale', 'driverDetailsFemale'
@@ -4870,55 +4870,183 @@ const clearFilter = (column) => {
                     });
                     return cleanTeam;
                 };
-    
+            
+                // NAČÍTAME PÔVODNÝ TÍM PRE GENEROVANIE NOTIFIKÁCIÍ
+                let originalTeam = null;
+                let teamName = '';
+                let clubName = currentDocData.billing?.clubName || 'Neznámy klub';
+            
+                if (!isNewTeam && oldCategory !== null && oldTeamIndex >= 0) {
+                    const originalTeamsInCategory = currentDocData.teams?.[oldCategory] || [];
+                    if (oldTeamIndex >= 0 && oldTeamIndex < originalTeamsInCategory.length) {
+                        originalTeam = JSON.parse(JSON.stringify(originalTeamsInCategory[oldTeamIndex] || {}));
+                        teamName = originalTeam.teamName || 'Bez názvu';
+                    }
+                }
+            
                 if (isNewTeam) {
                     const cleanTeam = createCleanTeam(updatedDataFromModal);
                     cleanTeam.registeredBy = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim();
                     cleanTeam.accommodation = updatedDataFromModal.accommodation || { type: '' };
-    
+            
                     const newCategoryTeams = [...currentCategoryTeams];
                     newCategoryTeams.push(cleanTeam);
-    
+            
                     const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
-    
+            
                     const updates = {};
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
                     updates['_privateData'] = deleteField();
                     await updateDoc(targetDocRef, updates);
-    
+            
+                    // NOTIFIKÁCIA PRE PRIDANIE NOVÉHO TÍMU
+                    const adminEmail = window.auth.currentUser?.email;
+                    if (adminEmail) {
+                        const notificationsCollectionRef = collection(db, 'notifications');
+                        await addDoc(notificationsCollectionRef, {
+                            userEmail: adminEmail,
+                            changes: [`Nový tím pridaný: ${cleanTeam.teamName || 'Bez názvu'} (Klub: ${clubName}, Kategória: ${actualCategory})`],
+                            timestamp: serverTimestamp()
+                        });
+                    }
+            
                     setUserNotificationMessage("Nový tím bol pridaný.", 'success');
                     closeEditModal();
                     return;
                 }
-    
+            
                 if (!oldCategory || oldTeamIndex < 0) {
                     throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
                 }
-    
+            
                 const existingTeam = currentCategoryTeams[oldTeamIndex] || {};
                 const cleanTeam = createCleanTeam(updatedDataFromModal);
-    
+            
                 const preservedFields = ['packageId', 'players', 'menTeamMembers', 'womenTeamMembers'];
                 preservedFields.forEach(field => {
                     if (existingTeam[field] !== undefined && cleanTeam[field] === undefined) {
                         cleanTeam[field] = existingTeam[field];
                     }
                 });
-    
+            
                 if (!cleanTeam.accommodation) {
                     cleanTeam.accommodation = { type: '' };
                 }
-    
+            
                 const newCategoryTeams = [...currentCategoryTeams];
                 newCategoryTeams[oldTeamIndex] = cleanTeam;
-    
+            
                 const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
-    
+            
                 const updates = {};
                 updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
                 updates['_privateData'] = deleteField();
                 await updateDoc(targetDocRef, updates);
-    
+            
+                // ============================================================
+                // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY TÍMU
+                // ============================================================
+                const adminEmail = window.auth.currentUser?.email;
+                const changes = [];
+            
+                if (originalTeam) {
+                    // 1. Názov tímu
+                    const originalName = originalTeam.teamName || '';
+                    const newName = cleanTeam.teamName || '';
+                    if (originalName !== newName) {
+                        changes.push(`Zmena názvu tímu: z '${originalName || '-'}' na '${newName || '-'}'`);
+                    }
+            
+                    // 2. Typ dopravy
+                    const originalArrivalType = originalTeam.arrival?.type || '';
+                    const newArrivalType = cleanTeam.arrival?.type || '';
+                    if (originalArrivalType !== newArrivalType) {
+                        changes.push(`Zmena typu dopravy: z '${originalArrivalType || '-'}' na '${newArrivalType || '-'}'`);
+                    }
+            
+                    // 3. Čas príchodu
+                    const originalArrivalTime = originalTeam.arrival?.time || '';
+                    const newArrivalTime = cleanTeam.arrival?.time || '';
+                    if (originalArrivalTime !== newArrivalTime) {
+                        changes.push(`Zmena času príchodu: z '${originalArrivalTime || '-'}' na '${newArrivalTime || '-'}'`);
+                    }
+            
+                    // 4. Typ ubytovania
+                    const originalAccommodationType = originalTeam.accommodation?.type || '';
+                    const newAccommodationType = cleanTeam.accommodation?.type || '';
+                    if (originalAccommodationType !== newAccommodationType) {
+                        changes.push(`Zmena typu ubytovania: z '${originalAccommodationType || '-'}' na '${newAccommodationType || '-'}'`);
+                    }
+            
+                    // 5. Balík
+                    const originalPackageName = originalTeam.packageDetails?.name || '';
+                    const newPackageName = cleanTeam.packageDetails?.name || '';
+                    if (originalPackageName !== newPackageName) {
+                        changes.push(`Zmena balíka: z '${originalPackageName || '-'}' na '${newPackageName || '-'}'`);
+                    }
+            
+                    // 6. Farba dresov 1
+                    const originalJerseyHome = originalTeam.jerseyHomeColor || '';
+                    const newJerseyHome = cleanTeam.jerseyHomeColor || '';
+                    if (originalJerseyHome !== newJerseyHome) {
+                        changes.push(`Zmena farby dresov 1: z '${originalJerseyHome || '-'}' na '${newJerseyHome || '-'}'`);
+                    }
+            
+                    // 7. Farba dresov 2
+                    const originalJerseyAway = originalTeam.jerseyAwayColor || '';
+                    const newJerseyAway = cleanTeam.jerseyAwayColor || '';
+                    if (originalJerseyAway !== newJerseyAway) {
+                        changes.push(`Zmena farby dresov 2: z '${originalJerseyAway || '-'}' na '${newJerseyAway || '-'}'`);
+                    }
+            
+                    // 8. Tričká - porovnanie veľkostí a množstiev
+                    const originalTshirts = originalTeam.tshirts || [];
+                    const newTshirts = cleanTeam.tshirts || [];
+            
+                    // Vytvoríme mapy pre jednoduchšie porovnanie
+                    const originalTshirtMap = new Map();
+                    originalTshirts.forEach(t => {
+                        originalTshirtMap.set(String(t.size || '').trim(), t.quantity || 0);
+                    });
+            
+                    const newTshirtMap = new Map();
+                    newTshirts.forEach(t => {
+                        newTshirtMap.set(String(t.size || '').trim(), t.quantity || 0);
+                    });
+            
+                    // Získame všetky veľkosti z oboch máp
+                    const allSizes = new Set([...originalTshirtMap.keys(), ...newTshirtMap.keys()]);
+            
+                    let tshirtChanges = [];
+                    allSizes.forEach(size => {
+                        if (!size) return;
+                        const originalQty = originalTshirtMap.get(size) || 0;
+                        const newQty = newTshirtMap.get(size) || 0;
+                        if (originalQty !== newQty) {
+                            tshirtChanges.push(`${size}: ${originalQty} → ${newQty}`);
+                        }
+                    });
+            
+                    if (tshirtChanges.length > 0) {
+                        changes.push(`Zmeny v tričkách: ${tshirtChanges.join(', ')}`);
+                    }
+                }
+            
+                // Uloženie notifikácií
+                if (changes.length > 0 && adminEmail) {
+                    const teamDisplayName = cleanTeam.teamName || 'Bez názvu';
+                    const changesWithContext = changes.map(change => 
+                        `Tím ${teamDisplayName} (Klub: ${clubName}, Kategória: ${oldCategory}): ${change}`
+                    );
+                    
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail: adminEmail,
+                        changes: changesWithContext,
+                        timestamp: serverTimestamp()
+                    });
+                }
+            
                 setUserNotificationMessage("Zmeny tímu boli uložené.", 'success');
                 closeEditModal();
                 return;
