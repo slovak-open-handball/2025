@@ -4325,7 +4325,7 @@ const clearFilter = (column) => {
                     const originalVal = currentDocData.billing?.[field] || '';
                     const isDeleted = fieldsToDelete[`billing.${field}`] !== undefined;
                     const updatedVal = isDeleted ? undefined : finalDataToSave[`billing.${field}`];
-                    
+    
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
@@ -4337,7 +4337,8 @@ const clearFilter = (column) => {
                     if (isOriginalEmpty) {
                         return;
                     }
-                    
+    
+                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
                     if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
                         const displayOriginal = origStr || '-';
@@ -4397,6 +4398,8 @@ const clearFilter = (column) => {
                         return;
                     }
                     
+                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA
                     if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
@@ -4656,7 +4659,7 @@ const clearFilter = (column) => {
                     }
                 });
             
-                // 2. Zmeny billing polí
+                // 2. Zmeny billing polí - IGNORUJEME PRÁZDNE HODNOTY
                 const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
                 billingFields.forEach(field => {
                     const originalVal = currentDocData.billing?.[field] || '';
@@ -4666,6 +4669,16 @@ const clearFilter = (column) => {
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
+                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+                    const isOriginalEmpty = origStr === '' || origStr === '-' || origStr === 'null' || origStr === 'undefined';
+                    
+                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
+                    if (isOriginalEmpty) {
+                        return;
+                    }
+                    
+                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
                     if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
                         const displayOriginal = origStr || '-';
@@ -4725,6 +4738,8 @@ const clearFilter = (column) => {
                         return;
                     }
                     
+                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA
                     if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
