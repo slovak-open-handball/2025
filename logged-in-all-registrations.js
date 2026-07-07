@@ -4207,7 +4207,68 @@ const clearFilter = (column) => {
             return;
         }
     
-        try {    
+        try {
+            // ============================================================
+            // ŠPECIÁLNE SPRACOVANIE PRE DOBROVOĽNÍKA
+            // ============================================================
+            if (updatedDataFromModal.role === 'volunteer') {
+                // 1. ULOŽENIE CITLIVÝCH ÚDAJOV DO usersprivate
+                const privateData = {
+                    address: {
+                        street: updatedDataFromModal.street || '',
+                        houseNumber: updatedDataFromModal.houseNumber || '',
+                        city: updatedDataFromModal.city || '',
+                        postalCode: updatedDataFromModal.postalCode || '',
+                        country: updatedDataFromModal.country || ''
+                    },
+                    birthDate: updatedDataFromModal.birthDate || ''
+                };
+                
+                const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                
+                // Skontrolujeme, či dokument existuje
+                const privateDocSnap = await getDoc(privateDocRef);
+                if (privateDocSnap.exists()) {
+                    // Ak existuje, použijeme updateDoc
+                    await updateDoc(privateDocRef, privateData);
+                } else {
+                    // Ak neexistuje, použijeme setDoc s role = 'volunteer' a approved = true
+                    await setDoc(privateDocRef, {
+                        ...privateData,
+                        role: 'volunteer',
+                        approved: true
+                    }, { merge: true });
+                }
+                
+                // 2. ULOŽENIE OSTATNÝCH POLÍ DO users (BEZ ADRESY A DÁTUMU NARODENIA)
+                const userData = {
+                    firstName: updatedDataFromModal.firstName,
+                    lastName: updatedDataFromModal.lastName,
+                    contactPhoneNumber: updatedDataFromModal.contactPhoneNumber,
+                    volunteerRoles: updatedDataFromModal.volunteerRoles || [],
+                    selectedDates: updatedDataFromModal.selectedDates || [],
+                    tshirtSize: updatedDataFromModal.tshirtSize || '',
+                    gender: updatedDataFromModal.gender || '',
+                    note: updatedDataFromModal.note || ''
+                };
+                
+                // Odstránime prázdne polia
+                Object.keys(userData).forEach(key => {
+                    if (userData[key] === undefined || userData[key] === null) {
+                        delete userData[key];
+                    }
+                });
+                
+                await updateDoc(targetDocRef, userData);
+                
+                setUserNotificationMessage("Zmeny boli uložené.", 'success');
+                closeEditModal();
+                return;
+            }
+    
+            // ============================================================
+            // AKTUALIZÁCIA POUŽÍVATEĽA (KLUB, ADMIN, HALL)
+            // ============================================================
             if (originalDataPath === '') {
                 const docSnapshot = await getDoc(targetDocRef);
                 if (!docSnapshot.exists()) {
@@ -4220,9 +4281,6 @@ const clearFilter = (column) => {
                 // POLIA, KTORÉ PATRIA DO PRIVATE DATA
                 const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
                 
-                // POLIA BILLING, KTORÉ PATRIA DO USERS (NIE DO PRIVATE)
-                const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
-            
                 let finalDataToSave = { ...currentDocData };
                 delete finalDataToSave._privateData;
                 
@@ -4248,11 +4306,6 @@ const clearFilter = (column) => {
                 
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
-                        // OPRAVA: Používame dotovú notáciu pre deleteField() - rovnako ako v ChangeBillingModal
-                        
-                        // DÔLEŽITÉ: Odstránime pôvodný billing objekt, aby sme predišli konfliktom
-                        // (ale zachováme ho pre prípad, že by sme potrebovali pôvodné hodnoty)
-                        // Vymažeme billing z finalDataToSave, aby sme ho mohli nahradiť jednotlivými poliami
                         delete finalDataToSave.billing;
                         
                         // ClubName
@@ -4263,10 +4316,8 @@ const clearFilter = (column) => {
                                 finalDataToSave['billing.clubName'] = value.clubName;
                             }
                         } else if (currentDocData.billing?.clubName !== undefined) {
-                            // Ak sa pole nezmenilo, zachováme pôvodnú hodnotu (iba ak existuje)
                             finalDataToSave['billing.clubName'] = currentDocData.billing.clubName;
                         }
-                        // Ak pole neexistovalo a ani sa nezmenilo, nič neukladáme
                         
                         // IČO
                         if (value.ico !== undefined) {
@@ -4315,62 +4366,6 @@ const clearFilter = (column) => {
                         finalDataToSave[key] = value;
                     }
                 }
-
-                if (updatedDataFromModal.role === 'volunteer') {
-                    // 1. Uloženie citlivých údajov do usersprivate
-                    const privateData = {
-                        address: {
-                            street: updatedDataFromModal.street || '',
-                            houseNumber: updatedDataFromModal.houseNumber || '',
-                            city: updatedDataFromModal.city || '',
-                            postalCode: updatedDataFromModal.postalCode || '',
-                            country: updatedDataFromModal.country || ''
-                        },
-                        birthDate: updatedDataFromModal.birthDate || ''
-                    };
-                    
-                    const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-                    
-                    // Skontrolujeme, či dokument existuje
-                    const privateDocSnap = await getDoc(privateDocRef);
-                    if (privateDocSnap.exists()) {
-                        // Ak existuje, použijeme updateDoc
-                        await updateDoc(privateDocRef, privateData);
-                    } else {
-                        // Ak neexistuje, použijeme setDoc s role = 'volunteer' a approved = true
-                        // aby sme splnili podmienky canCreateVolunteer
-                        await setDoc(privateDocRef, {
-                            ...privateData,
-                            role: 'volunteer',
-                            approved: true
-                        }, { merge: true });
-                    }
-                    
-                    // 2. Uloženie ostatných polí do users
-                    const userData = {
-                        firstName: updatedDataFromModal.firstName,
-                        lastName: updatedDataFromModal.lastName,
-                        contactPhoneNumber: updatedDataFromModal.contactPhoneNumber,
-                        volunteerRoles: updatedDataFromModal.volunteerRoles || [],
-                        selectedDates: updatedDataFromModal.selectedDates || [],
-                        tshirtSize: updatedDataFromModal.tshirtSize || '',
-                        gender: updatedDataFromModal.gender || '',
-                        note: updatedDataFromModal.note || ''
-                    };
-                    
-                    // Odstránime prázdne polia
-                    Object.keys(userData).forEach(key => {
-                        if (userData[key] === undefined || userData[key] === null) {
-                            delete userData[key];
-                        }
-                    });
-                    
-                    await updateDoc(targetDocRef, userData);
-                    
-                    setUserNotificationMessage("Zmeny boli uložené.", 'success');
-                    closeEditModal();
-                    return;
-                }
                             
                 if (finalDataToSave.teams) {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
@@ -4394,6 +4389,7 @@ const clearFilter = (column) => {
                 const originalCity = originalPrivateAddress.city || '';
                 const originalPostalCode = originalPrivateAddress.postalCode || '';
                 const originalCountry = originalPrivateAddress.country || '';
+                const originalBirthDate = privateData.birthDate || '';
     
                 // AKTUÁLNE HODNOTY Z MODÁLU (adresa)
                 const updatedStreet = updatedDataFromModal.street !== undefined ? updatedDataFromModal.street : currentDocData.street || '';
@@ -4401,6 +4397,7 @@ const clearFilter = (column) => {
                 const updatedCity = updatedDataFromModal.city !== undefined ? updatedDataFromModal.city : currentDocData.city || '';
                 const updatedPostalCode = updatedDataFromModal.postalCode !== undefined ? updatedDataFromModal.postalCode : currentDocData.postalCode || '';
                 const updatedCountry = updatedDataFromModal.country !== undefined ? updatedDataFromModal.country : currentDocData.country || '';
+                const updatedBirthDate = updatedDataFromModal.birthDate !== undefined ? updatedDataFromModal.birthDate : currentDocData.birthDate || '';
     
                 // ULOŽENIE ADRESY DO PRIVATE DATA
                 privateData.address = {
@@ -4411,8 +4408,8 @@ const clearFilter = (column) => {
                     country: updatedCountry
                 };
     
-                if (updatedDataFromModal.birthDate) {
-                    privateData.birthDate = updatedDataFromModal.birthDate;
+                if (updatedBirthDate) {
+                    privateData.birthDate = updatedBirthDate;
                 }
     
                 // ULOŽENIE BILLING ADRESY DO PRIVATE DATA (oddelené od billing polí)
@@ -4467,8 +4464,15 @@ const clearFilter = (column) => {
                     }
                 });
     
-                // 3. Pridanie zmien pre ďalšie polia
-                const additionalFields = ['gender', 'birthDate', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
+                // 3. Kontrola zmeny dátumu narodenia
+                if (originalBirthDate !== updatedBirthDate) {
+                    const displayOrig = originalBirthDate ? formatDateToDMMYYYY(originalBirthDate) : '-';
+                    const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
+                    allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
+                }
+    
+                // 4. Pridanie zmien pre ďalšie polia
+                const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
                         ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
@@ -4492,19 +4496,17 @@ const clearFilter = (column) => {
                     }
                 });
     
-                // 4. Kontrola zmeny názvu klubu
+                // 5. Kontrola zmeny názvu klubu
                 const originalClubName = currentDocData.billing?.clubName || '';
                 const updatedClubName = finalDataToSave['billing.clubName'];
-
-                // Skontrolujeme, či sa názov klubu naozaj zmenil
-                // Ak updatedClubName je undefined, znamená to, že sa pole nezmenilo
+    
                 if (updatedClubName !== undefined && originalClubName !== updatedClubName) {
                     const displayOriginal = originalClubName || '-';
                     const displayUpdated = updatedClubName || '-';
                     allChanges.push(`Zmena názvu klubu: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
     
-                // 5. Kontrola zmeny IČO
+                // 6. Kontrola zmeny IČO
                 const originalIco = currentDocData.billing?.ico || '';
                 const updatedIco = finalDataToSave['billing.ico'] !== undefined ? finalDataToSave['billing.ico'] : currentDocData.billing?.ico;
                 if (updatedIco !== undefined && originalIco !== updatedIco) {
@@ -4513,7 +4515,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena IČO: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
                 
-                // 6. Kontrola zmeny DIČ
+                // 7. Kontrola zmeny DIČ
                 const originalDic = currentDocData.billing?.dic || '';
                 const updatedDic = finalDataToSave['billing.dic'] !== undefined ? finalDataToSave['billing.dic'] : currentDocData.billing?.dic;
                 if (updatedDic !== undefined && originalDic !== updatedDic) {
@@ -4522,7 +4524,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena DIČ: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
                 
-                // 7. Kontrola zmeny IČ DPH
+                // 8. Kontrola zmeny IČ DPH
                 const originalIcDph = currentDocData.billing?.icDph || '';
                 const updatedIcDph = finalDataToSave['billing.icDph'] !== undefined ? finalDataToSave['billing.icDph'] : currentDocData.billing?.icDph;
                 if (updatedIcDph !== undefined && originalIcDph !== updatedIcDph) {
@@ -4531,14 +4533,14 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena IČ DPH: z '${displayOriginal}' na '${displayUpdated}'`);
                 }
                     
-                // 8. Kontrola zmeny roly
+                // 9. Kontrola zmeny roly
                 const originalRole = currentDocData.role || 'Neznáma rola';
                 const updatedRole = finalDataToSave.role || 'Neznáma rola';
                 if (originalRole !== updatedRole) {
                     allChanges.push(`Zmena roly: z '${translateRole(originalRole)}' na '${translateRole(updatedRole)}'`);
                 }
     
-                // 9. Kontrola zmeny schválenia
+                // 10. Kontrola zmeny schválenia
                 if (currentDocData.approved !== undefined && finalDataToSave.approved !== undefined) {
                     const originalApproved = currentDocData.approved ? 'Áno' : 'Nie';
                     const updatedApproved = finalDataToSave.approved ? 'Áno' : 'Nie';
@@ -4547,7 +4549,7 @@ const clearFilter = (column) => {
                     }
                 }
     
-                // 10. Uloženie notifikácií
+                // 11. Uloženie notifikácií
                 if (allChanges.length > 0 && adminEmail) {
                     const changesWithContext = allChanges.map(change => 
                         `Používateľ ${targetUserName} (Klub: ${targetClubName}): ${change}`
@@ -4561,7 +4563,7 @@ const clearFilter = (column) => {
                     });
                 }
     
-                // 11. Uloženie zmien do databázy (users kolekcia)
+                // 12. Uloženie zmien do databázy (users kolekcia)
                 await updateDoc(targetDocRef, finalDataToSave);
     
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
