@@ -4329,13 +4329,12 @@ const clearFilter = (column) => {
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA
-                    // Alebo ak je pôvodná hodnota "-" (reprezentácia prázdneho poľa) a nová je prázdna
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
+                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
                     const isOriginalEmpty = origStr === '' || origStr === '-' || origStr === 'null' || origStr === 'undefined';
-                    const isUpdatedEmpty = updStr === '' || updStr === '-' || updStr === 'null' || updStr === 'undefined';
                     
-                    // Ak je pôvodná aj nová hodnota prázdna -> preskočíme
-                    if (isOriginalEmpty && isUpdatedEmpty) {
+                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
+                    if (isOriginalEmpty) {
                         return;
                     }
                     
@@ -4389,13 +4388,12 @@ const clearFilter = (column) => {
                         ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
                         : '');
                     
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA
-                    // Alebo ak je pôvodná hodnota "-" (reprezentácia prázdneho poľa) a nová je prázdna
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
+                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
                     const isOriginalEmpty = originalVal === '' || originalVal === '-' || originalVal === 'null' || originalVal === 'undefined';
-                    const isUpdatedEmpty = updatedVal === '' || updatedVal === '-' || updatedVal === 'null' || updatedVal === 'undefined';
                     
-                    // Ak je pôvodná aj nová hodnota prázdna -> preskočíme
-                    if (isOriginalEmpty && isUpdatedEmpty && !isDeleted) {
+                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
+                    if (isOriginalEmpty) {
                         return;
                     }
                     
@@ -4706,7 +4704,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
                 }
             
-                // 5. Pridanie zmien pre ďalšie polia
+                // 5. Pridanie zmien pre ďalšie polia - IGNORUJEME PRÁZDNE HODNOTY
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
@@ -4717,6 +4715,15 @@ const clearFilter = (column) => {
                     const updatedVal = isDeleted ? undefined : (finalDataToSave[field] !== undefined && finalDataToSave[field] !== null 
                         ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
                         : '');
+                    
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
+                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+                    const isOriginalEmpty = originalVal === '' || originalVal === '-' || originalVal === 'null' || originalVal === 'undefined';
+                    
+                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
+                    if (isOriginalEmpty) {
+                        return;
+                    }
                     
                     if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
@@ -4731,7 +4738,7 @@ const clearFilter = (column) => {
                         } else {
                             let displayOrig = originalVal || '-';
                             let displayUpd = isDeleted ? '(vymazané)' : (updatedVal || '-');
-            
+                
                             if (field === 'gender') {
                                 const genderMap = {
                                     'male': 'Muž',
