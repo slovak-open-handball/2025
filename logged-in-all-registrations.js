@@ -4334,7 +4334,7 @@ const clearFilter = (column) => {
                     const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
                     allChanges.push(`Zmena dátumu narodenia pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
                 }
-                
+                                
                 // 4. ZMENY ĎALŠÍCH POLÍ
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
                 additionalFields.forEach(field => {
@@ -4359,6 +4359,23 @@ const clearFilter = (column) => {
                             };
                             displayOrig = genderMap[originalVal] || originalVal || '-';
                             displayUpd = genderMap[updatedVal] || updatedVal || '-';
+                        }
+                        
+                        if (field === 'selectedDates') {
+                            // Formátovanie dátumov z yyyy-mm-dd na dd. mm. yyyy
+                            const formatDateArray = (dateStr) => {
+                                if (!dateStr) return '-';
+                                return dateStr.split(', ').map(d => {
+                                    if (!d) return '-';
+                                    const parts = d.trim().split('-');
+                                    if (parts.length === 3) {
+                                        return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+                                    }
+                                    return d;
+                                }).join(', ');
+                            };
+                            displayOrig = formatDateArray(originalVal);
+                            displayUpd = formatDateArray(updatedVal);
                         }
                         
                         allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
@@ -4608,7 +4625,7 @@ const clearFilter = (column) => {
                             // ŠPECIÁLNE SPRACOVANIE PRE POHLAVIE - PREKLAD HODNÔT
                             let displayOrig = originalVal || '-';
                             let displayUpd = updatedVal || '-';
-                            
+            
                             if (field === 'gender') {
                                 const genderMap = {
                                     'male': 'Muž',
@@ -4617,6 +4634,23 @@ const clearFilter = (column) => {
                                 };
                                 displayOrig = genderMap[originalVal] || originalVal || '-';
                                 displayUpd = genderMap[updatedVal] || updatedVal || '-';
+                            }
+                            
+                            if (field === 'selectedDates') {
+                                // Formátovanie dátumov z yyyy-mm-dd na dd. mm. yyyy
+                                const formatDateArray = (dateStr) => {
+                                    if (!dateStr) return '-';
+                                    return dateStr.split(', ').map(d => {
+                                        if (!d) return '-';
+                                        const parts = d.trim().split('-');
+                                        if (parts.length === 3) {
+                                            return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+                                        }
+                                        return d;
+                                    }).join(', ');
+                                };
+                                displayOrig = formatDateArray(originalVal);
+                                displayUpd = formatDateArray(updatedVal);
                             }
                             
                             allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
