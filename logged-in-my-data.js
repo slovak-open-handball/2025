@@ -188,9 +188,14 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         )
     );
 
-    // Box pre dobrovoľnícke údaje (len pre rolu volunteer)
+    // Box pre dobrovoľnícke údaje (len pre rolu volunteer) - ZOBRAZUJE DÁTA Z usersprivate
     let volunteerContent = null;
     if (userProfileData?.role === 'volunteer') {
+        // Získame adresu z privateData (userProfileData.address)
+        const address = userProfileData.address || {};
+        // Získame dátum narodenia z privateData (userProfileData.birthDate)
+        const birthDate = userProfileData.birthDate || '';
+        
         volunteerContent = React.createElement(
             'div',
             { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
@@ -217,10 +222,11 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             React.createElement(
                 'div',
                 { className: 'space-y-6 text-gray-700 text-lg' },
+                // ADRESA Z usersprivate
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa trvalého bydliska'),
                     React.createElement('div', { className: 'font-normal' },
-                        `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${formatPostalCodeForDisplay(userProfileData.postalCode)} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                        `${address.street || '-'} ${address.houseNumber || '-'}, ${formatPostalCodeForDisplay(address.postalCode)} ${address.city || '-'}, ${address.country || '-'}`
                     )
                 ),
                 React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
@@ -230,7 +236,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                     ),
                     React.createElement('div', null,
                         React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Dátum narodenia'),
-                        React.createElement('div', { className: 'font-normal' }, formatDate(userProfileData.birthDate))
+                        // DÁTUM NARODENIA Z usersprivate
+                        React.createElement('div', { className: 'font-normal' }, formatDate(birthDate))
                     )
                 ),
                 userProfileData.tshirtSize && React.createElement('div', null,
@@ -269,7 +276,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     }
 
     // Upravená časť ProfileSection - zobrazenie fakturačných údajov z usersprivate
-    // OPRAVENÉ: icDph namiesto icdph
     let billingContent = null;
     if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && userProfileData.role !== 'referee' && userProfileData.role !== 'volunteer') {
         const address = userProfileData.address || {};
@@ -320,7 +326,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 ),
                 React.createElement('div', null,
                     React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČ DPH'),
-                    // OPRAVENÉ: icDph namiesto icdph
                     React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.icDph || '-')
                 )
             )
@@ -387,6 +392,7 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
     const [userProfileData, setUserProfileData] = useState(initialUserProfileData);
     const userIdRef = useRef(null);
+    const [privateData, setPrivateData] = useState({});
     
     const { 
         isGlobalAuthReady, 
@@ -436,6 +442,11 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                         ...updatedUserData,
                         id: userId,
                         uid: userId,
+                        // Zachováme private dáta
+                        address: prevData?.address || {},
+                        billingAddress: prevData?.billingAddress || {},
+                        birthDate: prevData?.birthDate || '',
+                        persons: prevData?.persons || {},
                     };
                     
                     return mergedData;
@@ -459,19 +470,31 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
         }
         
         const userId = userProfileData.id;
-        const privateDocRef = doc(window.db, 'usersprivate', userId);        
+        const privateDocRef = doc(window.db, 'usersprivate', userId);
         
         const unsubscribePrivate = onSnapshot(privateDocRef, async (docSnap) => {
             if (docSnap.exists()) {
-                const privateData = docSnap.data();
+                const privateDataFromFirestore = docSnap.data();
+                setPrivateData(privateDataFromFirestore);
                 
-                // Aktualizujeme len private dáta
+                // Aktualizujeme userProfileData s private dátami
                 setUserProfileData(prevData => {
                     const mergedData = {
                         ...prevData,
-                        address: privateData.address || {},
-                        billingAddress: privateData.billingAddress || {},
-                        persons: privateData.persons || {},
+                        // Adresa pre dobrovoľníka z usersprivate
+                        address: privateDataFromFirestore.address || {},
+                        // Adresa pre fakturáciu (môže byť samostatná)
+                        billingAddress: privateDataFromFirestore.billingAddress || privateDataFromFirestore.address || {},
+                        // Dátum narodenia pre dobrovoľníka z usersprivate
+                        birthDate: privateDataFromFirestore.birthDate || prevData?.birthDate || '',
+                        // Ostatné private dáta
+                        persons: privateDataFromFirestore.persons || {},
+                        // Priame polia pre jednoduchší prístup (pre kompatibilitu)
+                        street: privateDataFromFirestore.address?.street || prevData?.street || '',
+                        houseNumber: privateDataFromFirestore.address?.houseNumber || prevData?.houseNumber || '',
+                        city: privateDataFromFirestore.address?.city || prevData?.city || '',
+                        postalCode: privateDataFromFirestore.address?.postalCode || prevData?.postalCode || '',
+                        country: privateDataFromFirestore.address?.country || prevData?.country || '',
                     };
                     
                     return mergedData;
@@ -633,7 +656,8 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                 onClose: () => setShowProfileModal(false),
                 userProfileData: userProfileData,
                 roleColor: roleColor,
-                onlyAllowPasswordChange: isPasswordChangeOnlyMode
+                onlyAllowPasswordChange: isPasswordChangeOnlyMode,
+                privateData: privateData
             }
         ),
         React.createElement(
@@ -642,7 +666,8 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                 show: showBillingModal,
                 onClose: () => setShowBillingModal(false),
                 userProfileData: userProfileData,
-                roleColor: roleColor
+                roleColor: roleColor,
+                privateData: privateData
             }
         ),
         React.createElement(
@@ -651,7 +676,8 @@ const MyDataApp = ({ userProfileData: initialUserProfileData }) => {
                 show: showVolunteerModal,
                 onClose: () => setShowVolunteerModal(false),
                 userProfileData: userProfileData,
-                roleColor: roleColor
+                roleColor: roleColor,
+                privateData: privateData
             }
         )
     );
@@ -698,7 +724,7 @@ const renderMyDataApp = (userProfileData) => {
 };
 
 // ============================================================
-// UPRAVENÁ FUNKCIA processUserData - zabezpečí načítanie deadline
+// UPRAVENÁ FUNKCIA processUserData - zabezpečí načítanie z usersprivate
 // ============================================================
 const processUserData = async (userProfileData) => {
     if (!userProfileData) {
@@ -759,9 +785,20 @@ const processUserData = async (userProfileData) => {
     const mergedData = {
         ...userProfileData,
         uid: userId,
+        // Adresa pre dobrovoľníka z usersprivate
         address: privateData.address || {},
-        billingAddress: privateData.billingAddress || {},
+        // Adresa pre fakturáciu z usersprivate (alebo rovnaká)
+        billingAddress: privateData.billingAddress || privateData.address || {},
+        // Dátum narodenia z usersprivate
+        birthDate: privateData.birthDate || userProfileData.birthDate || '',
+        // Ostatné private dáta
         persons: privateData.persons || {},
+        // Priame polia pre jednoduchší prístup
+        street: privateData.address?.street || userProfileData.street || '',
+        houseNumber: privateData.address?.houseNumber || userProfileData.houseNumber || '',
+        city: privateData.address?.city || userProfileData.city || '',
+        postalCode: privateData.address?.postalCode || userProfileData.postalCode || '',
+        country: privateData.address?.country || userProfileData.country || '',
     };
     
     renderMyDataApp(mergedData);
