@@ -2,7 +2,7 @@
 // Zahŕňa formulár, validáciu a ukladanie dát do Firestore.
 // Importy pre potrebné Firebase funkcie
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Import zoznamu predvolieb z externého súboru
 import { countryDialCodes } from "./countryDialCodes.js";
 
@@ -189,6 +189,7 @@ const App = () => {
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
+    const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
 
     // Načítanie reCAPTCHA
     React.useEffect(() => {
@@ -263,7 +264,7 @@ const App = () => {
         return () => {
             if (timeoutId) clearTimeout(timeoutId);
         };
-    }, []);
+    }, []);    
 
     // Načítanie dátumov z Firestore
     React.useEffect(() => {
@@ -281,6 +282,9 @@ const App = () => {
                             ...prev,
                             selectedDates: allDates
                         }));
+                    }
+                    if (data.dataEditDeadline) {
+                        setDataEditDeadline(data.dataEditDeadline.toDate());
                     }
                 }
                 setIsDatesLoading(false);
@@ -395,6 +399,7 @@ const App = () => {
                 note: formData.note,
                 registrationDate: serverTimestamp(),
                 recaptchaToken: recaptchaToken,
+                dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
             };
             
             // VYTVORENIE DÁT PRE KOLEKCIU 'usersprivate' - IBA ADRESA A DÁTUM NARODENIA
