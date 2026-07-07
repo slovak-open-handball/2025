@@ -1458,9 +1458,6 @@ const formatDisplayValue = (value, path) => {
     return String(value); 
 };
 
-// ============================================================
-// UPRAVENÝ DATAEDITMODAL - BEZ PODMIENOK PRE ÚPRAVU
-// ============================================================
 function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, onDeleteTeam, targetDocRef, originalDataPath, setUserNotificationMessage, setError, isNewEntry, getChangesForNotification: getChangesForNotification, formatDateToDMMYYYY: formatDateToDMMYYYY, currentUserId, editModalTitle }) {
     const modalRef = React.useRef(null);
     const db = window.db;
@@ -1510,6 +1507,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
     const generateUniqueId = () => Math.random().toString(36).substring(2, 9);
 
+    // ============================================================
+    // NAČÍTANIE PRIVATE DÁT PRE DOBROVOĽNÍKA
+    // ============================================================
     React.useEffect(() => {
         const loadVolunteerPrivateData = async () => {
             if (isOpen && data?.role === 'volunteer' && targetDocRef) {
@@ -1517,26 +1517,42 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                     const privateSnap = await getDoc(privateDocRef);
                     if (privateSnap.exists()) {
-                        const privateData = privateSnap.data();
+                        const privateDataFromFirestore = privateSnap.data();
+                        setPrivateData(privateDataFromFirestore);
+                        
+                        // Aktualizujeme localEditedData s private dátami
                         setLocalEditedData(prev => ({
                             ...prev,
-                            street: privateData.address?.street || '',
-                            houseNumber: privateData.address?.houseNumber || '',
-                            city: privateData.address?.city || '',
-                            postalCode: privateData.address?.postalCode || '',
-                            country: privateData.address?.country || '',
-                            birthDate: privateData.birthDate || ''
+                            street: privateDataFromFirestore.address?.street || '',
+                            houseNumber: privateDataFromFirestore.address?.houseNumber || '',
+                            city: privateDataFromFirestore.address?.city || '',
+                            postalCode: privateDataFromFirestore.address?.postalCode || '',
+                            country: privateDataFromFirestore.address?.country || '',
+                            birthDate: privateDataFromFirestore.birthDate || ''
+                        }));
+                    } else {
+                        // Ak dokument neexistuje, nastavíme prázdne hodnoty
+                        setPrivateData(null);
+                        setLocalEditedData(prev => ({
+                            ...prev,
+                            street: '',
+                            houseNumber: '',
+                            city: '',
+                            postalCode: '',
+                            country: '',
+                            birthDate: ''
                         }));
                     }
                 } catch (error) {
                     console.error("Chyba pri načítaní private dát:", error);
+                    setPrivateData(null);
                 }
             }
         };
         loadVolunteerPrivateData();
     }, [isOpen, data?.role, targetDocRef, db]);
 
-    // Načítanie usersprivate dát pri otvorení modálu
+    // Načítanie usersprivate dát pri otvorení modálu (všeobecné)
     React.useEffect(() => {
         const loadPrivateData = async () => {
             if (isOpen && targetDocRef) {
@@ -1544,7 +1560,21 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
                     const privateDocSnapshot = await getDoc(userPrivateDocRef);
                     if (privateDocSnapshot.exists()) {
-                        setPrivateData(privateDocSnapshot.data());
+                        const privateDataFromFirestore = privateDocSnapshot.data();
+                        setPrivateData(privateDataFromFirestore);
+                        
+                        // Ak ide o dobrovoľníka, aktualizujeme aj localEditedData
+                        if (data?.role === 'volunteer') {
+                            setLocalEditedData(prev => ({
+                                ...prev,
+                                street: privateDataFromFirestore.address?.street || '',
+                                houseNumber: privateDataFromFirestore.address?.houseNumber || '',
+                                city: privateDataFromFirestore.address?.city || '',
+                                postalCode: privateDataFromFirestore.address?.postalCode || '',
+                                country: privateDataFromFirestore.address?.country || '',
+                                birthDate: privateDataFromFirestore.birthDate || ''
+                            }));
+                        }
                     } else {
                         setPrivateData(null);
                     }
@@ -1555,7 +1585,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             }
         };
         loadPrivateData();
-    }, [isOpen, targetDocRef, db]);
+    }, [isOpen, targetDocRef, db, data?.role]);
 
     React.useEffect(() => {
         if (!isOpen) {
@@ -1856,6 +1886,9 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         return merged;
     }, [privateData]);
 
+    // ============================================================
+    // INICIALIZÁCIA FORMULÁRA - SPRÁVNE NAČÍTANIE PRIVATE DÁT
+    // ============================================================
     React.useEffect(() => {
         const safeData = data || {};
         const initialData = JSON.parse(JSON.stringify(safeData));
@@ -1867,18 +1900,30 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
 
         // Inicializácia polí pre dobrovoľníka
-        if (title.includes('Upraviť používateľa') && data?.role === 'volunteer') {
+        if (isEditingVolunteer) {
+            // Najprv skúsime načítať z privateData (ak už je načítaná)
+            if (privateData) {
+                initialData.street = privateData.address?.street || '';
+                initialData.houseNumber = privateData.address?.houseNumber || '';
+                initialData.city = privateData.address?.city || '';
+                initialData.postalCode = privateData.address?.postalCode || '';
+                initialData.country = privateData.address?.country || '';
+                initialData.birthDate = privateData.birthDate || '';
+            } else {
+                // Inak použijeme existujúce hodnoty (alebo prázdne)
+                initialData.street = initialData.street || '';
+                initialData.houseNumber = initialData.houseNumber || '';
+                initialData.city = initialData.city || '';
+                initialData.postalCode = initialData.postalCode || '';
+                initialData.country = initialData.country || '';
+                initialData.birthDate = initialData.birthDate || '';
+            }
+            
             if (initialData.volunteerRoles === undefined) initialData.volunteerRoles = [];
             if (initialData.selectedDates === undefined) initialData.selectedDates = [];
             if (initialData.tshirtSize === undefined) initialData.tshirtSize = '';
             if (initialData.gender === undefined) initialData.gender = '';
-            if (initialData.birthDate === undefined) initialData.birthDate = '';
             if (initialData.note === undefined) initialData.note = '';
-            if (initialData.street === undefined) initialData.street = '';
-            if (initialData.houseNumber === undefined) initialData.houseNumber = '';
-            if (initialData.city === undefined) initialData.city = '';
-            if (initialData.postalCode === undefined) initialData.postalCode = '';
-            if (initialData.country === undefined) initialData.country = '';
         }
 
         // VŽDY inicializujeme všetky polia pre používateľa
@@ -3018,8 +3063,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                     }
                                 });
                         
-                                // ODSTRÁNENÁ PODMIENKA, KTORÁ BLOKOVALA UKLADANIE
-                                // Voláme onSave priamo - nech sa o všetko postará handleSaveEditedData
                                 onSave(
                                     finalDataToSave,
                                     targetDocRef,
