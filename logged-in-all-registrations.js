@@ -4299,7 +4299,7 @@ const clearFilter = (column) => {
                         }
                     }
                 });
-    
+                
                 // 2. ZMENY ADRESY (z private dát)
                 const addressFields = [
                     { key: 'street', label: 'Ulica' },
@@ -4308,10 +4308,10 @@ const clearFilter = (column) => {
                     { key: 'postalCode', label: 'PSČ' },
                     { key: 'country', label: 'Krajina' }
                 ];
-    
+                
                 const originalAddress = originalPrivateData.address || {};
                 const updatedAddress = privateData.address || {};
-    
+                
                 addressFields.forEach(({ key, label }) => {
                     const origVal = originalAddress[key] || '';
                     const updVal = updatedAddress[key] || '';
@@ -4325,7 +4325,7 @@ const clearFilter = (column) => {
                         allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
                     }
                 });
-    
+                
                 // 3. ZMENA DÁTUMU NARODENIA (z private dát)
                 const originalBirthDate = originalPrivateData.birthDate || '';
                 const updatedBirthDate = privateData.birthDate || '';
@@ -4334,7 +4334,7 @@ const clearFilter = (column) => {
                     const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
                     allChanges.push(`Zmena dátumu narodenia pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
                 }
-    
+                
                 // 4. ZMENY ĎALŠÍCH POLÍ
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
                 additionalFields.forEach(field => {
@@ -4346,10 +4346,25 @@ const clearFilter = (column) => {
                         : '';
                     if (originalVal !== updatedVal) {
                         const label = formatLabel(field);
-                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        // ŠPECIÁLNE SPRACOVANIE PRE POHLAVIE - PREKLAD HODNÔT
+                        let displayOrig = originalVal || '-';
+                        let displayUpd = updatedVal || '-';
+                        
+                        if (field === 'gender') {
+                            // Preklad hodnôt pohlavia do slovenčiny
+                            const genderMap = {
+                                'male': 'Muž',
+                                'female': 'Žena',
+                                '': '-'
+                            };
+                            displayOrig = genderMap[originalVal] || originalVal || '-';
+                            displayUpd = genderMap[updatedVal] || updatedVal || '-';
+                        }
+                        
+                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
                     }
                 });
-    
+                
                 // 5. ULOŽENIE NOTIFIKÁCIÍ
                 if (allChanges.length > 0 && adminEmail) {
                     const notificationsCollectionRef = collection(db, 'notifications');
@@ -4359,12 +4374,12 @@ const clearFilter = (column) => {
                         timestamp: serverTimestamp()
                     });
                 }
-    
+                    
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
                 return;
             }
-    
+                    
             // ============================================================
             // AKTUALIZÁCIA POUŽÍVATEĽA (KLUB, ADMIN, HALL)
             // ============================================================
@@ -4374,9 +4389,9 @@ const clearFilter = (column) => {
                     throw new Error("Dokument používateľa sa nenašiel pre aktualizáciu.");
                 }
                 const currentDocData = docSnapshot.data();
-            
+                            
                 const userPrivateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-            
+                            
                 // POLIA, KTORÉ PATRIA DO PRIVATE DATA
                 const privateFields = ['street', 'houseNumber', 'city', 'postalCode', 'country', 'birthDate', 'dateOfBirth'];
                 
@@ -4590,7 +4605,21 @@ const clearFilter = (column) => {
                             };
                             allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
                         } else {
-                            allChanges.push(`Zmena ${label}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                            // ŠPECIÁLNE SPRACOVANIE PRE POHLAVIE - PREKLAD HODNÔT
+                            let displayOrig = originalVal || '-';
+                            let displayUpd = updatedVal || '-';
+                            
+                            if (field === 'gender') {
+                                const genderMap = {
+                                    'male': 'Muž',
+                                    'female': 'Žena',
+                                    '': '-'
+                                };
+                                displayOrig = genderMap[originalVal] || originalVal || '-';
+                                displayUpd = genderMap[updatedVal] || updatedVal || '-';
+                            }
+                            
+                            allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
                         }
                     }
                 });
