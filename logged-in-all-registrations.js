@@ -4212,6 +4212,21 @@ const clearFilter = (column) => {
             // ŠPECIÁLNE SPRACOVANIE PRE DOBROVOĽNÍKA
             // ============================================================
             if (updatedDataFromModal.role === 'volunteer') {
+                // NAČÍTAME PÔVODNÉ DÁTA POUŽÍVATEĽA
+                const docSnapshot = await getDoc(targetDocRef);
+                if (!docSnapshot.exists()) {
+                    throw new Error("Používateľský dokument sa nenašiel.");
+                }
+                const currentDocData = docSnapshot.data();
+    
+                // NAČÍTAME PÔVODNÉ PRIVATE DÁTA
+                const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
+                let privateDocSnapshot = await getDoc(privateDocRef);
+                let originalPrivateData = {};
+                if (privateDocSnapshot.exists()) {
+                    originalPrivateData = privateDocSnapshot.data();
+                }
+    
                 // 1. ULOŽENIE CITLIVÝCH ÚDAJOV DO usersprivate
                 const privateData = {
                     address: {
@@ -4223,23 +4238,18 @@ const clearFilter = (column) => {
                     },
                     birthDate: updatedDataFromModal.birthDate || ''
                 };
-                
-                const privateDocRef = doc(db, 'usersprivate', targetDocRef.id);
-                
+    
                 // Skontrolujeme, či dokument existuje
-                const privateDocSnap = await getDoc(privateDocRef);
-                if (privateDocSnap.exists()) {
-                    // Ak existuje, použijeme updateDoc
+                if (privateDocSnapshot.exists()) {
                     await updateDoc(privateDocRef, privateData);
                 } else {
-                    // Ak neexistuje, použijeme setDoc s role = 'volunteer' a approved = true
                     await setDoc(privateDocRef, {
                         ...privateData,
                         role: 'volunteer',
                         approved: true
                     }, { merge: true });
                 }
-                
+    
                 // 2. ULOŽENIE OSTATNÝCH POLÍ DO users (BEZ ADRESY A DÁTUMU NARODENIA)
                 const userData = {
                     firstName: updatedDataFromModal.firstName,
@@ -4251,16 +4261,105 @@ const clearFilter = (column) => {
                     gender: updatedDataFromModal.gender || '',
                     note: updatedDataFromModal.note || ''
                 };
-                
+    
                 // Odstránime prázdne polia
                 Object.keys(userData).forEach(key => {
                     if (userData[key] === undefined || userData[key] === null) {
                         delete userData[key];
                     }
                 });
-                
+    
                 await updateDoc(targetDocRef, userData);
+    
+                // ============================================================
+                // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY DOBROVOĽNÍKA
+                // ============================================================
+                const adminEmail = window.auth.currentUser?.email;
+                const volunteerName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy dobrovoľník';
                 
+                let allChanges = [];
+    
+                // 1. ZMENY ZÁKLADNÝCH POLÍ (meno, priezvisko, telefón)
+                const basicFields = ['firstName', 'lastName', 'contactPhoneNumber'];
+                basicFields.forEach(field => {
+                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null ? String(currentDocData[field]) : '';
+                    const updatedVal = userData[field] !== undefined && userData[field] !== null ? String(userData[field]) : '';
+                    if (originalVal !== updatedVal) {
+                        const label = formatLabel(field);
+                        if (field === 'contactPhoneNumber') {
+                            const formatPhone = (phone) => {
+                                if (!phone) return '-';
+                                const { dialCode, numberWithoutDialCode } = parsePhoneNumber(phone, countryDialCodes);
+                                const formattedNumber = formatNumberGroups(numberWithoutDialCode);
+                                return `${dialCode} ${formattedNumber}`.trim();
+                            };
+                            allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                        } else {
+                            allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                        }
+                    }
+                });
+    
+                // 2. ZMENY ADRESY (z private dát)
+                const addressFields = [
+                    { key: 'street', label: 'Ulica' },
+                    { key: 'houseNumber', label: 'Popisné číslo' },
+                    { key: 'city', label: 'Mesto/obec' },
+                    { key: 'postalCode', label: 'PSČ' },
+                    { key: 'country', label: 'Krajina' }
+                ];
+    
+                const originalAddress = originalPrivateData.address || {};
+                const updatedAddress = privateData.address || {};
+    
+                addressFields.forEach(({ key, label }) => {
+                    const origVal = originalAddress[key] || '';
+                    const updVal = updatedAddress[key] || '';
+                    if (origVal !== updVal) {
+                        let displayOrig = origVal || '-';
+                        let displayUpd = updVal || '-';
+                        if (key === 'postalCode') {
+                            displayOrig = formatPostalCodeForDisplay(origVal);
+                            displayUpd = formatPostalCodeForDisplay(updVal);
+                        }
+                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
+                    }
+                });
+    
+                // 3. ZMENA DÁTUMU NARODENIA (z private dát)
+                const originalBirthDate = originalPrivateData.birthDate || '';
+                const updatedBirthDate = privateData.birthDate || '';
+                if (originalBirthDate !== updatedBirthDate) {
+                    const displayOrig = originalBirthDate ? formatDateToDMMYYYY(originalBirthDate) : '-';
+                    const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
+                    allChanges.push(`Zmena dátumu narodenia pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
+                }
+    
+                // 4. ZMENY ĎALŠÍCH POLÍ
+                const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
+                additionalFields.forEach(field => {
+                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
+                        ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
+                        : '';
+                    const updatedVal = userData[field] !== undefined && userData[field] !== null 
+                        ? (Array.isArray(userData[field]) ? userData[field].join(', ') : String(userData[field])) 
+                        : '';
+                    if (originalVal !== updatedVal) {
+                        const label = formatLabel(field);
+                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                    }
+                });
+    
+                // 5. ULOŽENIE NOTIFIKÁCIÍ
+                if (allChanges.length > 0 && adminEmail) {
+                    const notificationsCollectionRef = collection(db, 'notifications');
+                    await addDoc(notificationsCollectionRef, {
+                        userEmail: adminEmail,
+                        changes: allChanges,
+                        timestamp: serverTimestamp()
+                    });
+                }
+    
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
                 return;
