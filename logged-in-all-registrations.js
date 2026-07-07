@@ -4272,19 +4272,134 @@ const clearFilter = (column) => {
                 await updateDoc(targetDocRef, userData);
     
                 // ============================================================
-                // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY DOBROVOĽNÍKA
+                // GENEROVANIE NOTIFIKÁCIÍ PRE ZMENY POUŽÍVATEĽA
                 // ============================================================
+                
                 const adminEmail = window.auth.currentUser?.email;
-                const volunteerName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy dobrovoľník';
+                const targetUserName = `${currentDocData.firstName || ''} ${currentDocData.lastName || ''}`.trim() || 'Neznámy používateľ';
+                const targetClubName = currentDocData.billing?.clubName || 'Neznámy klub';
                 
                 let allChanges = [];
-    
-                // 1. ZMENY ZÁKLADNÝCH POLÍ (meno, priezvisko, telefón)
-                const basicFields = ['firstName', 'lastName', 'contactPhoneNumber'];
+                
+                // 1. Zmeny základných polí (firstName, lastName, email, role, approved, displayNotifications)
+                const basicFields = ['firstName', 'lastName', 'email', 'role', 'approved', 'displayNotifications'];
                 basicFields.forEach(field => {
-                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null ? String(currentDocData[field]) : '';
-                    const updatedVal = userData[field] !== undefined && userData[field] !== null ? String(userData[field]) : '';
-                    if (originalVal !== updatedVal) {
+                    let originalVal = currentDocData[field];
+                    let updatedVal = finalDataToSave[field];
+                    
+                    // Skontrolujeme či pole nebolo vymazané
+                    const isDeleted = fieldsToDelete[field] !== undefined;
+                    if (isDeleted) {
+                        updatedVal = undefined;
+                    }
+                    
+                    // Pre polia, ktoré sú v finalDataToSave cez bodkovú notáciu (napr. approved)
+                    if (field === 'approved' && originalVal === undefined) {
+                        originalVal = currentDocData.approved !== undefined ? currentDocData.approved : false;
+                        updatedVal = finalDataToSave.approved !== undefined ? finalDataToSave.approved : originalVal;
+                    }
+                    
+                    const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
+                    const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
+                    
+                    if (isDeleted || origStr !== updStr) {
+                        const label = formatLabel(field);
+                        const displayOriginal = origStr || '-';
+                        const displayUpdated = isDeleted ? '(vymazané)' : (updStr || '-');
+                        
+                        if (field === 'role') {
+                            allChanges.push(`Zmena ${label}: z '${translateRole(displayOriginal)}' na '${isDeleted ? '(vymazané)' : translateRole(displayUpdated)}'`);
+                        } else if (field === 'approved') {
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal === 'true' ? 'Áno' : 'Nie'}' na '${isDeleted ? '(vymazané)' : (displayUpdated === 'true' ? 'Áno' : 'Nie')}'`);
+                        } else if (field === 'displayNotifications') {
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal === 'true' ? 'Áno' : 'Nie'}' na '${isDeleted ? '(vymazané)' : (displayUpdated === 'true' ? 'Áno' : 'Nie')}'`);
+                        } else {
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal}' na '${displayUpdated}'`);
+                        }
+                    }
+                });
+                
+                // 2. Zmeny billing polí - IGNORUJEME PRÁZDNE HODNOTY
+                const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
+                billingFields.forEach(field => {
+                    const originalVal = currentDocData.billing?.[field] || '';
+                    const isDeleted = fieldsToDelete[`billing.${field}`] !== undefined;
+                    const updatedVal = isDeleted ? undefined : finalDataToSave[`billing.${field}`];
+                    
+                    const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
+                    const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
+                    
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA
+                    // Alebo ak je pôvodná hodnota "-" (reprezentácia prázdneho poľa) a nová je prázdna
+                    const isOriginalEmpty = origStr === '' || origStr === '-' || origStr === 'null' || origStr === 'undefined';
+                    const isUpdatedEmpty = updStr === '' || updStr === '-' || updStr === 'null' || updStr === 'undefined';
+                    
+                    // Ak je pôvodná aj nová hodnota prázdna -> preskočíme
+                    if (isOriginalEmpty && isUpdatedEmpty) {
+                        return;
+                    }
+                    
+                    if (isDeleted || origStr !== updStr) {
+                        const label = formatLabel(`billing.${field}`);
+                        const displayOriginal = origStr || '-';
+                        const displayUpdated = isDeleted ? '(vymazané)' : (updStr || '-');
+                        allChanges.push(`Zmena ${label}: z '${displayOriginal}' na '${displayUpdated}'`);
+                    }
+                });
+                
+                // 3. Kontrola zmien adresy
+                const addressFields = [
+                    { key: 'street', label: 'Ulica', orig: originalStreet, upd: updatedStreet },
+                    { key: 'houseNumber', label: 'Popisné číslo', orig: originalHouseNumber, upd: updatedHouseNumber },
+                    { key: 'city', label: 'Mesto/obec', orig: originalCity, upd: updatedCity },
+                    { key: 'postalCode', label: 'PSČ', orig: originalPostalCode, upd: updatedPostalCode },
+                    { key: 'country', label: 'Krajina', orig: originalCountry, upd: updatedCountry }
+                ];
+                
+                addressFields.forEach(({ key, label, orig, upd }) => {
+                    const origVal = orig || '';
+                    const updVal = upd || '';
+                    if (origVal !== updVal) {
+                        let displayOrig = origVal || '-';
+                        let displayUpd = updVal || '-';
+                        if (key === 'postalCode') {
+                            displayOrig = formatPostalCodeForDisplay(origVal);
+                            displayUpd = formatPostalCodeForDisplay(updVal);
+                        }
+                        allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
+                    }
+                });
+                
+                // 4. Kontrola zmeny dátumu narodenia
+                if (originalBirthDate !== updatedBirthDate) {
+                    const displayOrig = originalBirthDate ? formatDateToDMMYYYY(originalBirthDate) : '-';
+                    const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
+                    allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
+                }
+                
+                // 5. Pridanie zmien pre ďalšie polia - IGNORUJEME PRÁZDNE HODNOTY
+                const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
+                additionalFields.forEach(field => {
+                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
+                        ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
+                        : '';
+                    
+                    const isDeleted = fieldsToDelete[field] !== undefined;
+                    const updatedVal = isDeleted ? undefined : (finalDataToSave[field] !== undefined && finalDataToSave[field] !== null 
+                        ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
+                        : '');
+                    
+                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA
+                    // Alebo ak je pôvodná hodnota "-" (reprezentácia prázdneho poľa) a nová je prázdna
+                    const isOriginalEmpty = originalVal === '' || originalVal === '-' || originalVal === 'null' || originalVal === 'undefined';
+                    const isUpdatedEmpty = updatedVal === '' || updatedVal === '-' || updatedVal === 'null' || updatedVal === 'undefined';
+                    
+                    // Ak je pôvodná aj nová hodnota prázdna -> preskočíme
+                    if (isOriginalEmpty && isUpdatedEmpty && !isDeleted) {
+                        return;
+                    }
+                    
+                    if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
                             const formatPhone = (phone) => {
@@ -4293,101 +4408,52 @@ const clearFilter = (column) => {
                                 const formattedNumber = formatNumberGroups(numberWithoutDialCode);
                                 return `${dialCode} ${formattedNumber}`.trim();
                             };
-                            allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                            allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${isDeleted ? '(vymazané)' : formatPhone(updatedVal)}'`);
                         } else {
-                            allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${originalVal || '-'}' na '${updatedVal || '-'}'`);
+                            let displayOrig = originalVal || '-';
+                            let displayUpd = isDeleted ? '(vymazané)' : (updatedVal || '-');
+                
+                            if (field === 'gender') {
+                                const genderMap = {
+                                    'male': 'Muž',
+                                    'female': 'Žena',
+                                    '': '-'
+                                };
+                                displayOrig = genderMap[originalVal] || originalVal || '-';
+                                displayUpd = isDeleted ? '(vymazané)' : (genderMap[updatedVal] || updatedVal || '-');
+                            }
+                            
+                            if (field === 'selectedDates' && !isDeleted) {
+                                const formatDateArray = (dateStr) => {
+                                    if (!dateStr) return '-';
+                                    return dateStr.split(', ').map(d => {
+                                        if (!d) return '-';
+                                        const parts = d.trim().split('-');
+                                        if (parts.length === 3) {
+                                            return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+                                        }
+                                        return d;
+                                    }).join(', ');
+                                };
+                                displayOrig = formatDateArray(originalVal);
+                                displayUpd = isDeleted ? '(vymazané)' : formatDateArray(updatedVal);
+                            }
+                            
+                            allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
                         }
                     }
                 });
                 
-                // 2. ZMENY ADRESY (z private dát)
-                const addressFields = [
-                    { key: 'street', label: 'Ulica' },
-                    { key: 'houseNumber', label: 'Popisné číslo' },
-                    { key: 'city', label: 'Mesto/obec' },
-                    { key: 'postalCode', label: 'PSČ' },
-                    { key: 'country', label: 'Krajina' }
-                ];
-                
-                const originalAddress = originalPrivateData.address || {};
-                const updatedAddress = privateData.address || {};
-                
-                addressFields.forEach(({ key, label }) => {
-                    const origVal = originalAddress[key] || '';
-                    const updVal = updatedAddress[key] || '';
-                    if (origVal !== updVal) {
-                        let displayOrig = origVal || '-';
-                        let displayUpd = updVal || '-';
-                        if (key === 'postalCode') {
-                            displayOrig = formatPostalCodeForDisplay(origVal);
-                            displayUpd = formatPostalCodeForDisplay(updVal);
-                        }
-                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
-                    }
-                });
-                
-                // 3. ZMENA DÁTUMU NARODENIA (z private dát)
-                const originalBirthDate = originalPrivateData.birthDate || '';
-                const updatedBirthDate = privateData.birthDate || '';
-                if (originalBirthDate !== updatedBirthDate) {
-                    const displayOrig = originalBirthDate ? formatDateToDMMYYYY(originalBirthDate) : '-';
-                    const displayUpd = updatedBirthDate ? formatDateToDMMYYYY(updatedBirthDate) : '-';
-                    allChanges.push(`Zmena dátumu narodenia pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
-                }
-                                
-                // 4. ZMENY ĎALŠÍCH POLÍ
-                const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note'];
-                additionalFields.forEach(field => {
-                    const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
-                        ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
-                        : '';
-                    const updatedVal = userData[field] !== undefined && userData[field] !== null 
-                        ? (Array.isArray(userData[field]) ? userData[field].join(', ') : String(userData[field])) 
-                        : '';
-                    if (originalVal !== updatedVal) {
-                        const label = formatLabel(field);
-                        // ŠPECIÁLNE SPRACOVANIE PRE POHLAVIE - PREKLAD HODNÔT
-                        let displayOrig = originalVal || '-';
-                        let displayUpd = updatedVal || '-';
-                        
-                        if (field === 'gender') {
-                            // Preklad hodnôt pohlavia do slovenčiny
-                            const genderMap = {
-                                'male': 'Muž',
-                                'female': 'Žena',
-                                '': '-'
-                            };
-                            displayOrig = genderMap[originalVal] || originalVal || '-';
-                            displayUpd = genderMap[updatedVal] || updatedVal || '-';
-                        }
-                        
-                        if (field === 'selectedDates') {
-                            // Formátovanie dátumov z yyyy-mm-dd na dd. mm. yyyy
-                            const formatDateArray = (dateStr) => {
-                                if (!dateStr) return '-';
-                                return dateStr.split(', ').map(d => {
-                                    if (!d) return '-';
-                                    const parts = d.trim().split('-');
-                                    if (parts.length === 3) {
-                                        return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
-                                    }
-                                    return d;
-                                }).join(', ');
-                            };
-                            displayOrig = formatDateArray(originalVal);
-                            displayUpd = formatDateArray(updatedVal);
-                        }
-                        
-                        allChanges.push(`Zmena ${label} pre dobrovoľníka ${volunteerName}: z '${displayOrig}' na '${displayUpd}'`);
-                    }
-                });
-                
-                // 5. ULOŽENIE NOTIFIKÁCIÍ
+                // 6. Uloženie notifikácií
                 if (allChanges.length > 0 && adminEmail) {
+                    const changesWithContext = allChanges.map(change => 
+                        `Používateľ ${targetUserName} (Klub: ${targetClubName}): ${change}`
+                    );
+                    
                     const notificationsCollectionRef = collection(db, 'notifications');
                     await addDoc(notificationsCollectionRef, {
                         userEmail: adminEmail,
-                        changes: allChanges,
+                        changes: changesWithContext,
                         timestamp: serverTimestamp()
                     });
                 }
