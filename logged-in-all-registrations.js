@@ -5045,7 +5045,7 @@ const clearFilter = (column) => {
                         const originalQty = originalTshirtMap.get(size) || 0;
                         const newQty = newTshirtMap.get(size) || 0;
                         if (originalQty !== newQty) {
-                            tshirtChanges.push(`${size}: z '${originalQty}' na '${newQty}'`);
+                            tshirtChanges.push(`${size}: z '${originalQty} ks' na '${newQty} ks'`);
                         }
                     });
             
