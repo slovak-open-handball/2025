@@ -4319,7 +4319,7 @@ const clearFilter = (column) => {
                     }
                 });
                 
-                // 2. Zmeny billing polí - IGNORUJEME PRÁZDNE HODNOTY
+                // 2. Zmeny billing polí
                 const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
                 billingFields.forEach(field => {
                     const originalVal = currentDocData.billing?.[field] || '';
@@ -4328,17 +4328,20 @@ const clearFilter = (column) => {
     
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
-                    
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
-                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+    
+                    // ZISTÍME, ČI JE PÔVODNÁ HODNOTA PRÁZDNA
                     const isOriginalEmpty = origStr === '' || origStr === '-' || origStr === 'null' || origStr === 'undefined';
-                    
-                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
-                    if (isOriginalEmpty) {
+                    // ZISTÍME, ČI JE NOVÁ HODNOTA PRÁZDNA
+                    const isUpdatedEmpty = updStr === '' || updStr === '-' || updStr === 'null' || updStr === 'undefined';
+    
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA -> PRESKOČÍME
+                    // (to znamená, že pole bolo prázdne a zostalo prázdne)
+                    if (isOriginalEmpty && isUpdatedEmpty) {
                         return;
                     }
-    
-                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
+                    
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE VYPLNENÁ -> GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA ALEBO BOLA VYMAZANÁ (a pôvodná nebola prázdna)
                     if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
                         const displayOriginal = origStr || '-';
@@ -4346,7 +4349,7 @@ const clearFilter = (column) => {
                         allChanges.push(`Zmena ${label}: z '${displayOriginal}' na '${displayUpdated}'`);
                     }
                 });
-                
+                                
                 // 3. Kontrola zmien adresy
                 const addressFields = [
                     { key: 'street', label: 'Ulica', orig: originalStreet, upd: updatedStreet },
@@ -4377,7 +4380,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
                 }
                 
-                // 5. Pridanie zmien pre ďalšie polia - IGNORUJEME PRÁZDNE HODNOTY
+                // 5. Pridanie zmien pre ďalšie polia
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
@@ -4389,17 +4392,19 @@ const clearFilter = (column) => {
                         ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
                         : '');
                     
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
-                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+                    // ZISTÍME, ČI JE PÔVODNÁ HODNOTA PRÁZDNA
                     const isOriginalEmpty = originalVal === '' || originalVal === '-' || originalVal === 'null' || originalVal === 'undefined';
+                    // ZISTÍME, ČI JE NOVÁ HODNOTA PRÁZDNA
+                    const isUpdatedEmpty = updatedVal === '' || updatedVal === '-' || updatedVal === 'null' || updatedVal === 'undefined';
                     
-                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
-                    if (isOriginalEmpty) {
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA -> PRESKOČÍME
+                    // (to znamená, že pole bolo prázdne a zostalo prázdne)
+                    if (isOriginalEmpty && isUpdatedEmpty) {
                         return;
                     }
                     
-                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
-                    // ALEBO AK SA HODNOTA ZMENILA
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE VYPLNENÁ -> GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA ALEBO BOLA VYMAZANÁ (a pôvodná nebola prázdna)
                     if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
@@ -4659,7 +4664,7 @@ const clearFilter = (column) => {
                     }
                 });
             
-                // 2. Zmeny billing polí - IGNORUJEME PRÁZDNE HODNOTY
+                // 2. Zmeny billing polí
                 const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
                 billingFields.forEach(field => {
                     const originalVal = currentDocData.billing?.[field] || '';
@@ -4668,17 +4673,20 @@ const clearFilter = (column) => {
                     
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
-                    
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
-                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+    
+                    // ZISTÍME, ČI JE PÔVODNÁ HODNOTA PRÁZDNA
                     const isOriginalEmpty = origStr === '' || origStr === '-' || origStr === 'null' || origStr === 'undefined';
+                    // ZISTÍME, ČI JE NOVÁ HODNOTA PRÁZDNA
+                    const isUpdatedEmpty = updStr === '' || updStr === '-' || updStr === 'null' || updStr === 'undefined';
                     
-                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
-                    if (isOriginalEmpty) {
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA -> PRESKOČÍME
+                    // (to znamená, že pole bolo prázdne a zostalo prázdne)
+                    if (isOriginalEmpty && isUpdatedEmpty) {
                         return;
                     }
                     
-                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE VYPLNENÁ -> GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA ALEBO BOLA VYMAZANÁ (a pôvodná nebola prázdna)
                     if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
                         const displayOriginal = origStr || '-';
@@ -4717,7 +4725,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
                 }
             
-                // 5. Pridanie zmien pre ďalšie polia - IGNORUJEME PRÁZDNE HODNOTY
+                // 5. Pridanie zmien pre ďalšie polia
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
@@ -4729,17 +4737,19 @@ const clearFilter = (column) => {
                         ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
                         : '');
                     
-                    // IGNORUJEME ZMENY, KDE PÔVODNÁ HODNOTA JE PRÁZDNA
-                    // Ak je pôvodná hodnota prázdna ('' alebo '-'), nechceme generovať notifikáciu ani pri vymazaní
+                    // ZISTÍME, ČI JE PÔVODNÁ HODNOTA PRÁZDNA
                     const isOriginalEmpty = originalVal === '' || originalVal === '-' || originalVal === 'null' || originalVal === 'undefined';
+                    // ZISTÍME, ČI JE NOVÁ HODNOTA PRÁZDNA
+                    const isUpdatedEmpty = updatedVal === '' || updatedVal === '-' || updatedVal === 'null' || updatedVal === 'undefined';
                     
-                    // Ak je pôvodná hodnota prázdna, preskočíme úplne (aj keď je to deleteField)
-                    if (isOriginalEmpty) {
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE TIEŽ PRÁZDNA -> PRESKOČÍME
+                    // (to znamená, že pole bolo prázdne a zostalo prázdne)
+                    if (isOriginalEmpty && isUpdatedEmpty) {
                         return;
                     }
                     
-                    // AK JE POLE VYMAZANÉ A PÔVODNÁ HODNOTA NEBOLA PRÁZDNA, GENERUJEME NOTIFIKÁCIU
-                    // ALEBO AK SA HODNOTA ZMENILA
+                    // AK JE PÔVODNÁ HODNOTA PRÁZDNA A NOVÁ HODNOTA JE VYPLNENÁ -> GENERUJEME NOTIFIKÁCIU
+                    // ALEBO AK SA HODNOTA ZMENILA ALEBO BOLA VYMAZANÁ (a pôvodná nebola prázdna)
                     if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
