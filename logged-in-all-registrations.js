@@ -4437,21 +4437,26 @@ const clearFilter = (column) => {
                 
                     if (key === 'billing') {
                         // BILLING POLIA UCHOVÁVAME V USERS (NIE V PRIVATE)
-                        // ZACHOVÁME PÔVODNÉ HODNOTY AK NIE SÚ V MODÁLI
                         const billingKeys = ['clubName', 'ico', 'dic', 'icDph'];
                         billingKeys.forEach(billingKey => {
-                            if (value[billingKey] !== undefined) {
-                                // AK JE HODNOTA PRÁZDNY REŤAZEC, POUŽIJEME deleteField
-                                if (value[billingKey] === '') {
-                                    if (currentDocData.billing?.[billingKey] !== undefined) {
-                                        finalDataToSave[`billing.${billingKey}`] = deleteField();
-                                    }
+                            // Získame hodnotu z modálu
+                            let billingValue = value[billingKey];
+                            
+                            // Ak hodnota existuje a je to reťazec, ošetríme ju
+                            if (billingValue !== undefined) {
+                                // Ak je hodnota prázdny reťazec, null alebo undefined -> odstránime pole
+                                if (billingValue === '' || billingValue === null || billingValue === undefined) {
+                                    // Odstránime pole z databázy pomocou deleteField()
+                                    finalDataToSave[`billing.${billingKey}`] = deleteField();
                                 } else {
-                                    finalDataToSave[`billing.${billingKey}`] = value[billingKey];
+                                    // Inak uložíme hodnotu
+                                    finalDataToSave[`billing.${billingKey}`] = billingValue;
                                 }
-                            } else if (currentDocData.billing?.[billingKey] !== undefined) {
-                                // ZACHOVÁME PÔVODNÚ HODNOTU
-                                finalDataToSave[`billing.${billingKey}`] = currentDocData.billing[billingKey];
+                            } else {
+                                // Ak hodnota nie je v modáli, zachováme pôvodnú hodnotu
+                                if (currentDocData.billing?.[billingKey] !== undefined) {
+                                    finalDataToSave[`billing.${billingKey}`] = currentDocData.billing[billingKey];
+                                }
                             }
                         });
                         
@@ -4539,18 +4544,15 @@ const clearFilter = (column) => {
                 // 1. Zmeny základných polí (firstName, lastName, email, role, approved, displayNotifications)
                 const basicFields = ['firstName', 'lastName', 'email', 'role', 'approved', 'displayNotifications'];
                 basicFields.forEach(field => {
-                    // Špeciálne spracovanie pre polia, ktoré môžu byť v finalDataToSave
                     let originalVal = currentDocData[field];
                     let updatedVal = finalDataToSave[field];
                     
                     // Pre polia, ktoré sú v finalDataToSave cez bodkovú notáciu (napr. approved)
                     if (field === 'approved' && originalVal === undefined) {
-                        // approved môže byť v currentDocData alebo nie
                         originalVal = currentDocData.approved !== undefined ? currentDocData.approved : false;
                         updatedVal = finalDataToSave.approved !== undefined ? finalDataToSave.approved : originalVal;
                     }
                     
-                    // Ak je hodnota undefined, nahradíme prázdnym reťazcom
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
@@ -4571,25 +4573,25 @@ const clearFilter = (column) => {
                 // 2. Zmeny billing polí
                 const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
                 billingFields.forEach(field => {
-                    let originalVal = currentDocData.billing?.[field];
+                    let originalVal = currentDocData.billing?.[field] || '';
                     let updatedVal = finalDataToSave[`billing.${field}`];
                     
-                    // Ak je updatedVal deleteField, ignorujeme ho (pole sa maže)
+                    // Ak je updatedVal deleteField, znamená to že pole bolo vymazané
+                    let isDeleted = false;
                     if (updatedVal && typeof updatedVal === 'object' && updatedVal._methodName === 'deleteField') {
+                        isDeleted = true;
                         updatedVal = undefined;
                     }
                     
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
-                    if (origStr !== updStr) {
+                    // Ak bolo pole vymazané alebo sa hodnota zmenila
+                    if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
-                        // Špeciálne spracovanie pre IČ DPH - môže obsahovať písmená
-                        if (field === 'icDph') {
-                            allChanges.push(`Zmena ${label}: z '${origStr || '-'}' na '${updStr || '-'}'`);
-                        } else {
-                            allChanges.push(`Zmena ${label}: z '${origStr || '-'}' na '${updStr || '-'}'`);
-                        }
+                        const displayOriginal = origStr || '-';
+                        const displayUpdated = isDeleted ? '(vymazané)' : (updStr || '-');
+                        allChanges.push(`Zmena ${label}: z '${displayOriginal}' na '${displayUpdated}'`);
                     }
                 });
             
@@ -4623,7 +4625,7 @@ const clearFilter = (column) => {
                     allChanges.push(`Zmena dátumu narodenia: z '${displayOrig}' na '${displayUpd}'`);
                 }
             
-                // 5. Pridanie zmien pre ďalšie polia (gender, tshirtSize, selectedDates, volunteerRoles, note, contactPhoneNumber)
+                // 5. Pridanie zmien pre ďalšie polia
                 const additionalFields = ['gender', 'tshirtSize', 'selectedDates', 'volunteerRoles', 'note', 'contactPhoneNumber'];
                 additionalFields.forEach(field => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
