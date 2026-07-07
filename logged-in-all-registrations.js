@@ -4427,6 +4427,9 @@ const clearFilter = (column) => {
                     finalDataToSave.teams = removeSensitiveFieldsFromTeams(finalDataToSave.teams);
                 }
             
+                // --- ZVLÁŠT UCHOVÁVAME POLIA NA VYMAZANIE ---
+                const fieldsToDelete = {};
+            
                 // SPRACOVANIE POLÍ Z MODÁLU
                 for (const key in updatedDataFromModal) {
                     // Preskočíme privateFields - tie idú do usersprivate
@@ -4446,8 +4449,8 @@ const clearFilter = (column) => {
                             if (billingValue !== undefined) {
                                 // Ak je hodnota prázdny reťazec, null alebo undefined -> odstránime pole
                                 if (billingValue === '' || billingValue === null || billingValue === undefined) {
-                                    // Odstránime pole z databázy pomocou deleteField()
-                                    finalDataToSave[`billing.${billingKey}`] = deleteField();
+                                    // Pridáme do zoznamu polí na vymazanie
+                                    fieldsToDelete[`billing.${billingKey}`] = deleteField();
                                 } else {
                                     // Inak uložíme hodnotu
                                     finalDataToSave[`billing.${billingKey}`] = billingValue;
@@ -4461,7 +4464,12 @@ const clearFilter = (column) => {
                         });
                         
                     } else if (key === 'volunteerRoles' || key === 'selectedDates' || key === 'tshirtSize' || key === 'gender' || key === 'note') {
-                        finalDataToSave[key] = value;
+                        // Ak je hodnota prázdny reťazec alebo null, odstránime pole
+                        if (value === '' || value === null || value === undefined) {
+                            fieldsToDelete[key] = deleteField();
+                        } else {
+                            finalDataToSave[key] = value;
+                        }
                     } else if (key === 'teams') {
                         if (value) {
                             finalDataToSave[key] = removeSensitiveFieldsFromTeams(value);
@@ -4471,7 +4479,12 @@ const clearFilter = (column) => {
                             finalDataToSave[key] = { ...(currentDocData[key] || {}), ...value };
                         }
                     } else {
-                        finalDataToSave[key] = value;
+                        // Ak je hodnota prázdny reťazec alebo null, odstránime pole
+                        if (value === '' || value === null || value === undefined) {
+                            fieldsToDelete[key] = deleteField();
+                        } else {
+                            finalDataToSave[key] = value;
+                        }
                     }
                 }
                             
@@ -4547,6 +4560,12 @@ const clearFilter = (column) => {
                     let originalVal = currentDocData[field];
                     let updatedVal = finalDataToSave[field];
                     
+                    // Skontrolujeme či pole nebolo vymazané
+                    const isDeleted = fieldsToDelete[field] !== undefined;
+                    if (isDeleted) {
+                        updatedVal = undefined;
+                    }
+                    
                     // Pre polia, ktoré sú v finalDataToSave cez bodkovú notáciu (napr. approved)
                     if (field === 'approved' && originalVal === undefined) {
                         originalVal = currentDocData.approved !== undefined ? currentDocData.approved : false;
@@ -4556,16 +4575,19 @@ const clearFilter = (column) => {
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
-                    if (origStr !== updStr) {
+                    if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(field);
+                        const displayOriginal = origStr || '-';
+                        const displayUpdated = isDeleted ? '(vymazané)' : (updStr || '-');
+                        
                         if (field === 'role') {
-                            allChanges.push(`Zmena ${label}: z '${translateRole(origStr)}' na '${translateRole(updStr)}'`);
+                            allChanges.push(`Zmena ${label}: z '${translateRole(displayOriginal)}' na '${isDeleted ? '(vymazané)' : translateRole(displayUpdated)}'`);
                         } else if (field === 'approved') {
-                            allChanges.push(`Zmena ${label}: z '${origStr === 'true' ? 'Áno' : 'Nie'}' na '${updStr === 'true' ? 'Áno' : 'Nie'}'`);
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal === 'true' ? 'Áno' : 'Nie'}' na '${isDeleted ? '(vymazané)' : (displayUpdated === 'true' ? 'Áno' : 'Nie')}'`);
                         } else if (field === 'displayNotifications') {
-                            allChanges.push(`Zmena ${label}: z '${origStr === 'true' ? 'Áno' : 'Nie'}' na '${updStr === 'true' ? 'Áno' : 'Nie'}'`);
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal === 'true' ? 'Áno' : 'Nie'}' na '${isDeleted ? '(vymazané)' : (displayUpdated === 'true' ? 'Áno' : 'Nie')}'`);
                         } else {
-                            allChanges.push(`Zmena ${label}: z '${origStr || '-'}' na '${updStr || '-'}'`);
+                            allChanges.push(`Zmena ${label}: z '${displayOriginal}' na '${displayUpdated}'`);
                         }
                     }
                 });
@@ -4573,20 +4595,13 @@ const clearFilter = (column) => {
                 // 2. Zmeny billing polí
                 const billingFields = ['clubName', 'ico', 'dic', 'icDph'];
                 billingFields.forEach(field => {
-                    let originalVal = currentDocData.billing?.[field] || '';
-                    let updatedVal = finalDataToSave[`billing.${field}`];
-                    
-                    // Ak je updatedVal deleteField, znamená to že pole bolo vymazané
-                    let isDeleted = false;
-                    if (updatedVal && typeof updatedVal === 'object' && updatedVal._methodName === 'deleteField') {
-                        isDeleted = true;
-                        updatedVal = undefined;
-                    }
+                    const originalVal = currentDocData.billing?.[field] || '';
+                    const isDeleted = fieldsToDelete[`billing.${field}`] !== undefined;
+                    const updatedVal = isDeleted ? undefined : finalDataToSave[`billing.${field}`];
                     
                     const origStr = originalVal !== undefined && originalVal !== null ? String(originalVal) : '';
                     const updStr = updatedVal !== undefined && updatedVal !== null ? String(updatedVal) : '';
                     
-                    // Ak bolo pole vymazané alebo sa hodnota zmenila
                     if (isDeleted || origStr !== updStr) {
                         const label = formatLabel(`billing.${field}`);
                         const displayOriginal = origStr || '-';
@@ -4631,10 +4646,13 @@ const clearFilter = (column) => {
                     const originalVal = currentDocData[field] !== undefined && currentDocData[field] !== null 
                         ? (Array.isArray(currentDocData[field]) ? currentDocData[field].join(', ') : String(currentDocData[field])) 
                         : '';
-                    const updatedVal = finalDataToSave[field] !== undefined && finalDataToSave[field] !== null 
+                    
+                    const isDeleted = fieldsToDelete[field] !== undefined;
+                    const updatedVal = isDeleted ? undefined : (finalDataToSave[field] !== undefined && finalDataToSave[field] !== null 
                         ? (Array.isArray(finalDataToSave[field]) ? finalDataToSave[field].join(', ') : String(finalDataToSave[field])) 
-                        : '';
-                    if (originalVal !== updatedVal) {
+                        : '');
+                    
+                    if (isDeleted || originalVal !== updatedVal) {
                         const label = formatLabel(field);
                         if (field === 'contactPhoneNumber') {
                             const formatPhone = (phone) => {
@@ -4643,10 +4661,10 @@ const clearFilter = (column) => {
                                 const formattedNumber = formatNumberGroups(numberWithoutDialCode);
                                 return `${dialCode} ${formattedNumber}`.trim();
                             };
-                            allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${formatPhone(updatedVal)}'`);
+                            allChanges.push(`Zmena ${label}: z '${formatPhone(originalVal)}' na '${isDeleted ? '(vymazané)' : formatPhone(updatedVal)}'`);
                         } else {
                             let displayOrig = originalVal || '-';
-                            let displayUpd = updatedVal || '-';
+                            let displayUpd = isDeleted ? '(vymazané)' : (updatedVal || '-');
             
                             if (field === 'gender') {
                                 const genderMap = {
@@ -4655,10 +4673,10 @@ const clearFilter = (column) => {
                                     '': '-'
                                 };
                                 displayOrig = genderMap[originalVal] || originalVal || '-';
-                                displayUpd = genderMap[updatedVal] || updatedVal || '-';
+                                displayUpd = isDeleted ? '(vymazané)' : (genderMap[updatedVal] || updatedVal || '-');
                             }
                             
-                            if (field === 'selectedDates') {
+                            if (field === 'selectedDates' && !isDeleted) {
                                 const formatDateArray = (dateStr) => {
                                     if (!dateStr) return '-';
                                     return dateStr.split(', ').map(d => {
@@ -4671,7 +4689,7 @@ const clearFilter = (column) => {
                                     }).join(', ');
                                 };
                                 displayOrig = formatDateArray(originalVal);
-                                displayUpd = formatDateArray(updatedVal);
+                                displayUpd = isDeleted ? '(vymazané)' : formatDateArray(updatedVal);
                             }
                             
                             allChanges.push(`Zmena ${label}: z '${displayOrig}' na '${displayUpd}'`);
@@ -4694,7 +4712,13 @@ const clearFilter = (column) => {
                 }
             
                 // 7. Uloženie zmien do databázy (users kolekcia)
+                // Najprv uložíme zmeny
                 await updateDoc(targetDocRef, finalDataToSave);
+                
+                // Potom vymažeme polia, ktoré boli označené na vymazanie
+                if (Object.keys(fieldsToDelete).length > 0) {
+                    await updateDoc(targetDocRef, fieldsToDelete);
+                }
             
                 setUserNotificationMessage("Zmeny boli uložené.", 'success');
                 closeEditModal();
