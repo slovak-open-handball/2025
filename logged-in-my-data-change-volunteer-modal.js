@@ -269,11 +269,11 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
         // --- PRIPRAVA ZMIEN PRE NOTIFIKÁCIU ---
         // Získame pôvodné údaje pred zmenou
         const originalData = {
-            street: userProfileData.street || '',
-            houseNumber: userProfileData.houseNumber || '',
-            city: userProfileData.city || '',
-            postalCode: userProfileData.postalCode || '',
-            country: userProfileData.country || '',
+            street: (userProfileData.address && userProfileData.address.street) || '',
+            houseNumber: (userProfileData.address && userProfileData.address.houseNumber) || '',
+            city: (userProfileData.address && userProfileData.address.city) || '',
+            postalCode: (userProfileData.address && userProfileData.address.postalCode) || '',
+            country: (userProfileData.address && userProfileData.address.country) || '',
             gender: userProfileData.gender || '',
             birthDate: userProfileData.birthDate || '',
             tshirtSize: userProfileData.tshirtSize || '',
@@ -417,20 +417,28 @@ const ChangeVolunteerModal = ({ show, onClose, userProfileData, roleColor }) => 
         try {
             const db = window.db;
             const userRef = doc(db, 'users', userId);
+            const privateRef = doc(db, 'usersprivate', userId);
             
+            // 1. UPDATE V KOLEKCII 'users' - LEN NECITLIVÉ ÚDAJE
             await updateDoc(userRef, {
-                street: formData.street,
-                houseNumber: formData.houseNumber,
-                city: formData.city,
-                postalCode: formData.postalCode.replace(/\s/g, ''),
-                country: formData.country,
                 gender: formData.gender,
-                birthDate: formData.birthDate,
                 tshirtSize: formData.tshirtSize,
                 volunteerRoles: formData.volunteerRoles,
                 selectedDates: formData.selectedDates,
                 note: formData.note,
                 contactPhoneNumber: contactPhoneNumber,
+            });
+            
+            // 2. UPDATE V KOLEKCII 'usersprivate' - ADRESA A DÁTUM NARODENIA
+            await updateDoc(privateRef, {
+                address: {
+                    street: formData.street,
+                    houseNumber: formData.houseNumber,
+                    city: formData.city,
+                    postalCode: formData.postalCode.replace(/\s/g, ''),
+                    country: formData.country
+                },
+                birthDate: formData.birthDate,
             });
             
             // --- VYTVORENIE NOTIFIKÁCIE PRE SPRÁVCU ---
