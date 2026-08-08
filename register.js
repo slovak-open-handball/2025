@@ -740,7 +740,7 @@ function App() {
     const teamsDataForPrivate = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
   
     // 🔥 ODSTRÁNIME DÁTUMY NARODENIA A ADRESY Z teamsDataForUsers
-    // (zachováme všetky ostatné údaje)
+    // (zachováme všetky ostatné údaje vrátane farieb dresov)
     for (const categoryName in teamsDataForUsers) {
       const teams = teamsDataForUsers[categoryName];
       if (!Array.isArray(teams)) continue;
@@ -796,12 +796,14 @@ function App() {
           });
         }
   
+        // ✅ ZACHOVÁME farby dresov - jerseyColors zostávajú v tíme
+        // (netreba nič mazať, už sú v team objekte)
+  
         return team;
       });
     }
   
     // 🔥 PRE teamsDataForPrivate - ODSTRÁNIME VŠETKO OKREM DÁTUMOV A ADRIES
-    // (zachováme len dateOfBirth a address, všetko ostatné vymažeme)
     for (const categoryName in teamsDataForPrivate) {
       const teams = teamsDataForPrivate[categoryName];
       if (!Array.isArray(teams)) continue;
@@ -811,10 +813,8 @@ function App() {
         if (team.playerDetails && Array.isArray(team.playerDetails)) {
           team.playerDetails = team.playerDetails.map(player => {
             const privatePlayer = {};
-            // Ponecháme len dateOfBirth a address
             if (player.dateOfBirth) privatePlayer.dateOfBirth = player.dateOfBirth;
             if (player.address) privatePlayer.address = player.address;
-            // Ak nemá ani jedno, vrátime prázdny objekt
             return privatePlayer;
           });
         }
@@ -860,7 +860,6 @@ function App() {
         }
   
         // Odstránime aj ostatné polia z tímu - ponecháme len štruktúru s prázdnymi poliami
-        // aby sme zachovali konzistentnú štruktúru v usersprivate
         const cleanTeam = {
           playerDetails: team.playerDetails || [],
           womenTeamMemberDetails: team.womenTeamMemberDetails || [],
@@ -1012,12 +1011,8 @@ function App() {
                 if (updatedTeam.packageId === '') updatedTeam.packageId = null;
                 if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
   
-                if (team.jerseyColors) {
-                  updatedTeam.jerseyColors = {
-                    color1: team.jerseyColors.color1 || '',
-                    color2: team.jerseyColors.color2 || ''
-                  };
-                }
+                // ✅ ZACHOVÁME jerseyColors - už sú v updatedTeam
+                // (netreba nič špeciálne robiť)
   
                 return updatedTeam;
             });
@@ -1042,7 +1037,7 @@ function App() {
           dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
           rosterEditDeadline: rosterEditDeadline ? Timestamp.fromDate(rosterEditDeadline) : null,
           categories: formData.categories,
-          teams: teamsDataForUsers,  // ✅ VŠETKO OKREM DÁTUMOV A ADRIES
+          teams: teamsDataForUsers,  // ✅ VŠETKO OKREM DÁTUMOV A ADRIES (VRÁTANE FARIEB DRESOV)
           note: finalGlobalNote || ''
         };
   
