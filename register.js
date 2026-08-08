@@ -796,8 +796,13 @@ function App() {
           });
         }
   
-        // ✅ ZACHOVÁME farby dresov - jerseyColors zostávajú v tíme
-        // (netreba nič mazať, už sú v team objekte)
+        // ✅ KONVERTOVANIE farieb dresov z jerseyColors na jerseyHomeColor a jerseyAwayColor
+        if (team.jerseyColors) {
+          team.jerseyHomeColor = team.jerseyColors.color1 || '';
+          team.jerseyAwayColor = team.jerseyColors.color2 || '';
+          // Odstránime pôvodný jerseyColors objekt, aby sme nemali duplicitné dáta
+          delete team.jerseyColors;
+        }
   
         return team;
       });
@@ -978,7 +983,7 @@ function App() {
       const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
       
       try {
-        // Normalizácia pre users (už sú bez adries, ale potrebujeme ďalšiu normalizáciu)
+        // Normalizácia pre users
         for (const categoryName in teamsDataForUsers) {
             const currentTeamsInCategory = Array.isArray(teamsDataForUsers[categoryName]) ? teamsDataForUsers[categoryName] : [];
             teamsDataForUsers[categoryName] = currentTeamsInCategory.map(team => {
@@ -1011,14 +1016,11 @@ function App() {
                 if (updatedTeam.packageId === '') updatedTeam.packageId = null;
                 if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
   
-                // ✅ ZACHOVÁME jerseyColors - už sú v updatedTeam
-                // (netreba nič špeciálne robiť)
-  
                 return updatedTeam;
             });
         }
   
-        // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users' - VŠETKO OKREM DÁTUMOV A ADRIES
+        // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users' - VŠETKO OKREM DÁTUMOV A ADRIES (VRÁTANE FARIEB DRESOV)
         const userData = {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -1037,7 +1039,7 @@ function App() {
           dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
           rosterEditDeadline: rosterEditDeadline ? Timestamp.fromDate(rosterEditDeadline) : null,
           categories: formData.categories,
-          teams: teamsDataForUsers,  // ✅ VŠETKO OKREM DÁTUMOV A ADRIES (VRÁTANE FARIEB DRESOV)
+          teams: teamsDataForUsers,
           note: finalGlobalNote || ''
         };
   
@@ -1173,7 +1175,7 @@ function App() {
                 }
               },
               categories: formData.categories,
-              teams: finalTeamsDataFromPage7,  // Posielame pôvodné dáta s adresami pre email
+              teams: finalTeamsDataFromPage7,
               globalNote: finalGlobalNote 
             };
           await fetch(GOOGLE_APPS_SCRIPT_URL, {
