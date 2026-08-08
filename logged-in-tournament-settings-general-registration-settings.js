@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, Timestamp, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc, Timestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
 // import { formatToDatetimeLocal, formatDateForDisplay, showNotification, sendAdminNotification } from './utils.js';
