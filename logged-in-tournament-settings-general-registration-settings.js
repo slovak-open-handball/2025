@@ -247,29 +247,19 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
     }
   };
 
-  // NOVÁ FUNKCIA: Vytvorí štýly pre zablokovaný input
-  const getDisabledInputStyles = () => {
-    return {
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-none',
-      disabled: true,
-      readOnly: true,
-      style: { cursor: 'none' }
-    };
-  };
-
   // NOVÁ FUNKCIA: Vytvorí input s možnosťou zablokovania
   const createInput = (id, value, onChange, label, disabled = false) => {
     const inputProps = {
       type: 'datetime-local',
       id: id,
       className: disabled 
-        ? 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-none' 
+        ? 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-not-allowed' 
         : 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
       value: value,
       onChange: onChange,
       disabled: disabled,
       readOnly: disabled,
-      style: disabled ? { cursor: 'none' } : {}
+      style: disabled ? { cursor: 'not-allowed' } : {}
     };
 
     return React.createElement(
