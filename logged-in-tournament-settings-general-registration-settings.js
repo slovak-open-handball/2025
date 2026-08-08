@@ -25,6 +25,25 @@ const calculateDaysDuration = (startDate, endDate) => {
   return diffDays;
 };
 
+// NOVÁ FUNKCIA: Kontrola, či existuje aspoň jeden používateľ s rolou 'club'
+const checkIfClubExists = async (db) => {
+  if (!db) return false;
+  try {
+    const usersCollectionRef = collection(db, 'users');
+    const querySnapshot = await getDocs(usersCollectionRef);
+    let clubExists = false;
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data();
+      if (userData.role === 'club') {
+        clubExists = true;
+      }
+    });
+    return clubExists;
+  } catch (error) {
+    console.error("Chyba pri kontrole existencie klubov:", error);
+    return false;
+  }
+};
 
 export function GeneralRegistrationSettings({ db, userProfileData, tournamentStartDate, setTournamentStartDate, tournamentEndDate, setTournamentEndDate, showNotification, sendAdminNotification, formatToDatetimeLocal, formatDateForDisplay }) {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -33,11 +52,42 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
   const [arrivalDate, setArrivalDate] = React.useState(''); // Nový state pre dátum príchodu
 
+  // NOVÝ STATE: Či existuje aspoň jeden klub
+  const [clubExists, setClubExists] = React.useState(false);
+
   const isFrozenForEditing = React.useMemo(() => {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     return regStart instanceof Date && !isNaN(regStart) && now >= regStart;
   }, [registrationStartDate]);
+
+  // NOVÝ EFFECT: Kontrola existencie klubu pri načítaní a pri zmene používateľov
+  React.useEffect(() => {
+    if (!db) return;
+
+    // Funkcia na kontrolu existencie klubu
+    const checkClubExistence = async () => {
+      const exists = await checkIfClubExists(db);
+      setClubExists(exists);
+    };
+
+    // Okamžitá kontrola pri načítaní
+    checkClubExistence();
+
+    // Nastavenie real-time listenera na kolekciu users
+    const usersCollectionRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(usersCollectionRef, () => {
+      checkClubExistence();
+    }, (error) => {
+      console.error("Chyba pri sledovaní zmien v používateľoch:", error);
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [db]);
 
   React.useEffect(() => {
     let unsubscribeSettings;
@@ -197,6 +247,39 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
     }
   };
 
+  // NOVÁ FUNKCIA: Vytvorí štýly pre zablokovaný input
+  const getDisabledInputStyles = () => {
+    return {
+      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-none',
+      disabled: true,
+      readOnly: true,
+      style: { cursor: 'none' }
+    };
+  };
+
+  // NOVÁ FUNKCIA: Vytvorí input s možnosťou zablokovania
+  const createInput = (id, value, onChange, label, disabled = false) => {
+    const inputProps = {
+      type: 'datetime-local',
+      id: id,
+      className: disabled 
+        ? 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100 cursor-none' 
+        : 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+      value: value,
+      onChange: onChange,
+      disabled: disabled,
+      readOnly: disabled,
+      style: disabled ? { cursor: 'none' } : {}
+    };
+
+    return React.createElement(
+      'div',
+      null,
+      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
+      React.createElement('input', inputProps)
+    );
+  };
+
   return React.createElement(
     'form',
     { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm' }, 
@@ -249,42 +332,30 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
           onChange: (e) => setRosterEditDeadline(e.target.value),
         })
       ),
-    React.createElement(
-      'div',
-      null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrival-date' }, 'Dátum a čas príchodu na turnaj'),
-      React.createElement('input', {
-        type: 'datetime-local',
-        id: 'arrival-date',
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-        value: arrivalDate,
-        onChange: (e) => setArrivalDate(e.target.value),
-      })
+    // NOVÝ INPUT: Dátum príchodu - zablokovaný ak existuje klub
+    createInput(
+      'arrival-date',
+      arrivalDate,
+      (e) => setArrivalDate(e.target.value),
+      'Dátum a čas príchodu na turnaj',
+      clubExists // Zablokujeme, ak existuje aspoň jeden klub
     ),
-    React.createElement(
-      'div',
-      null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tournament-start' }, 'Dátum a čas - začiatok turnaja'),
-      React.createElement('input', {
-        type: 'datetime-local',
-        id: 'tournament-start',
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-        value: tournamentStartDate,
-        onChange: (e) => setTournamentStartDate(e.target.value),
-      })
+    // NOVÝ INPUT: Začiatok turnaja - zablokovaný ak existuje klub
+    createInput(
+      'tournament-start',
+      tournamentStartDate,
+      (e) => setTournamentStartDate(e.target.value),
+      'Dátum a čas - začiatok turnaja',
+      clubExists // Zablokujeme, ak existuje aspoň jeden klub
     ),
-    React.createElement(
-      'div',
-      null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tournament-end' }, 'Dátum a čas - koniec turnaja'),
-    React.createElement('input', {
-          type: 'datetime-local',
-          id: 'tournament-end',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: tournamentEndDate,
-          onChange: (e) => setTournamentEndDate(e.target.value),
-        })
-      ),
+    // NOVÝ INPUT: Koniec turnaja - zablokovaný ak existuje klub
+    createInput(
+      'tournament-end',
+      tournamentEndDate,
+      (e) => setTournamentEndDate(e.target.value),
+      'Dátum a čas - koniec turnaja',
+      clubExists // Zablokujeme, ak existuje aspoň jeden klub
+    ),
     React.createElement(
       'button',
       {
