@@ -91,13 +91,11 @@
         const waitForFirebase = () => {
             return new Promise((resolve) => {
                 if (window.auth && window.db) {
-                    console.log("account.html: Firebase už je inicializovaný.");
                     resolve();
                     return;
                 }
 
                 const handleDbInitialized = () => {
-                    console.log("account.html: Zachytená udalosť dbInitialized.");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
                     resolve();
                 };
@@ -105,14 +103,11 @@
                 window.addEventListener('dbInitialized', handleDbInitialized);
                 
                 setTimeout(() => {
-                    console.warn("account.html: Timeout čakania na Firebase inicializáciu...");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
                     
                     if (window.auth && window.db) {
-                        console.log("account.html: Firebase nájdený po timeoute.");
                         resolve();
                     } else {
-                        console.error("account.html: Firebase sa nepodarilo inicializovať.");
                         resolve();
                     }
                 }, 5000);
@@ -121,27 +116,20 @@
 
         // Spustenie aplikácie
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log("account.html: DOMContentLoaded - čakám na Firebase...");
             
-            await waitForFirebase();
-            
-            console.log("account.html: Firebase je pripravený. Spúšťam aplikáciu.");
+            await waitForFirebase();            
             
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie.</div>';
                 return;
             }
             
-            // 🔥 POUŽIJEME window.ResetPasswordApp namiesto priameho ResetPasswordApp
             if (typeof window.ResetPasswordApp === 'undefined') {
-                console.error("Chyba: Komponent window.ResetPasswordApp nie je definovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             if (!window.auth) {
-                console.error("Chyba: Firebase Auth nie je inicializovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii autentifikácie.</div>';
                 return;
             }
@@ -164,11 +152,8 @@
 
             try {
                 const root = ReactDOM.createRoot(document.getElementById('root'));
-                // 🔥 POUŽIJEME window.ResetPasswordApp
                 root.render(React.createElement(window.ResetPasswordApp, null));
-                console.log("account.html: React App vykreslená.");
             } catch (error) {
-                console.error("Chyba pri vykresľovaní React aplikácie:", error);
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri vykresľovaní aplikácie.</div>';
             }
         });
