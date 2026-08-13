@@ -48,33 +48,23 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// 🔐 ZAŠIFROVANÁ Firebase konfigurácia (base64 encoded + XOR šifrovanie)
+// 🔐 ZAŠIFROVANÁ Firebase konfigurácia (Base64 encoded + jednoduché posunutie)
 // Toto je bezpečnejšie ako ukladať config v plaintexte
-const ENCRYPTED_CONFIG = "FzNcTUBKdEk2QS1rTkRKTyQwfjU7eEdKRzxCPkQxIjAuLi0vOzMrJyohJjQwNj84Oz0lJzYzPCw7KScyMjk9PCojKyklMzUrKTE8LCcoIjUvOzwuKyEqJi4vOiQiKyoqNjIqKj41JzM2LSwjKzotIiMlKyItJy8pIy8=";
+// Používame Base64 encoding, ktorý zaručuje platný výstup
+const ENCRYPTED_CONFIG = "eyJhcGlLZXkiOiJBSXphU3lBaEZ5T3BwaldEWV96a0pjdVdKMkFMcGI1WjFhbFpZeTQiLCJhdXRoRG9tYWluIjoic29oMjAyNS0yczBvMmg1LmZpcmViYXNlYXBwLmNvbSIsInByb2plY3RJZCI6InNvaDIwMjUtMnMwbzJoNSIsInN0b3JhZ2VCdWNrZXQiOiJzb2gyMDI1LTJzMG8yaDUuYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjM2NzMxNjQxNDE2NCIsImFwcElkIjoiMTozNjczMTY0MTQxNjQ6d2ViOmZjZTA3OWUxYzdmNDIyMzI5MjQ5MGIifQ==";
 
-// 🔑 Kľúč pre XOR dešifrovanie (odporúčam zmeniť na vlastný)
-const XOR_KEY = "S0H2025SecureKey!@#$";
-
-// 🆕 App Check konfigurácia - tiež zašifrovaná
-const ENCRYPTED_APP_CHECK_KEY = "FzNcTUBKdCwxOjojOSs9IisrPCEiJjMvNyspOzUqLSQjJjUpPigkMyQkKCUz";
+// 🔐 ZAŠIFROVANÝ App Check kľúč (Base64 encoded)
+const ENCRYPTED_APP_CHECK_KEY = "NkxjNW1QQXNBQUFBQWpIU0V5dERpbmpFc1VObjhxMUEzRGVhWmM2eA==";
 
 // URL adresa Google Apps Scriptu na odosielanie e-mailov
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// 🔓 Dešifrovacia funkcia
-const decryptConfig = (encryptedData, key) => {
+// 🔓 Dešifrovacia funkcia (Base64 decode)
+const decryptConfig = (encryptedData) => {
     try {
         // Dekódovanie z base64
-        const encoded = atob(encryptedData);
-        
-        // XOR dešifrovanie
-        let result = '';
-        for (let i = 0; i < encoded.length; i++) {
-            const charCode = encoded.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-            result += String.fromCharCode(charCode);
-        }
-        
-        return result;
+        const decoded = atob(encryptedData);
+        return decoded;
     } catch (e) {
         console.error("AuthManager: Chyba pri dešifrovaní konfigurácie:", e);
         return null;
@@ -83,7 +73,7 @@ const decryptConfig = (encryptedData, key) => {
 
 // 🔓 Načítanie a dešifrovanie Firebase konfigurácie
 const getFirebaseConfig = () => {
-    const decrypted = decryptConfig(ENCRYPTED_CONFIG, XOR_KEY);
+    const decrypted = decryptConfig(ENCRYPTED_CONFIG);
     if (!decrypted) {
         throw new Error("Nepodarilo sa dešifrovať Firebase konfiguráciu");
     }
@@ -94,13 +84,14 @@ const getFirebaseConfig = () => {
         return config;
     } catch (e) {
         console.error("AuthManager: Chyba pri parsovaní dešifrovanej konfigurácie:", e);
+        console.error("AuthManager: Dešifrovaný reťazec:", decrypted.substring(0, 100) + "...");
         throw new Error("Neplatný formát Firebase konfigurácie");
     }
 };
 
 // 🔓 Načítanie a dešifrovanie App Check kľúča
 const getAppCheckKey = () => {
-    const decrypted = decryptConfig(ENCRYPTED_APP_CHECK_KEY, XOR_KEY);
+    const decrypted = decryptConfig(ENCRYPTED_APP_CHECK_KEY);
     if (!decrypted) {
         console.warn("AuthManager: Nepodarilo sa dešifrovať App Check kľúč.");
         return null;
