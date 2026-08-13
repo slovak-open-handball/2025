@@ -410,3 +410,14 @@ function ResetPasswordApp() {
 
     return null;
 }
+
+// 🔥 DÔLEŽITÉ: Sprístupníme komponent globálne pre použitie v HTML
+// Toto je potrebné, pretože keď je súbor načítaný ako modul (type="module"),
+// funkcie nie sú automaticky dostupné v globálnom scope
+window.ResetPasswordApp = ResetPasswordApp;
+
+// 🔥 Tiež sprístupníme pomocné funkcie pre prípad potreby
+window.getUrlParams = getUrlParams;
+window.validatePassword = validatePassword;
+
+console.log("account.js: ResetPasswordApp bol sprístupnený globálne cez window.ResetPasswordApp");
