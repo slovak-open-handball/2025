@@ -133,8 +133,9 @@
                 return;
             }
             
-            if (typeof ResetPasswordApp === 'undefined') {
-                console.error("Chyba: Komponent ResetPasswordApp nie je definovaný.");
+            // 🔥 POUŽIJEME window.ResetPasswordApp namiesto priameho ResetPasswordApp
+            if (typeof window.ResetPasswordApp === 'undefined') {
+                console.error("Chyba: Komponent window.ResetPasswordApp nie je definovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
@@ -163,7 +164,8 @@
 
             try {
                 const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(ResetPasswordApp, null));
+                // 🔥 POUŽIJEME window.ResetPasswordApp
+                root.render(React.createElement(window.ResetPasswordApp, null));
                 console.log("account.html: React App vykreslená.");
             } catch (error) {
                 console.error("Chyba pri vykresľovaní React aplikácie:", error);
