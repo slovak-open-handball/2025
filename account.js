@@ -136,8 +136,12 @@ function ResetPasswordApp() {
 
     React.useEffect(() => {
         try {
-            // 🔥 Použijeme globálne inštancie z authentication.js
+            // 🔥 Použijeme globálne funkcie z authentication.js
             const authInstance = window.auth;
+            const applyActionCodeFn = window.applyActionCode;
+            const checkActionCodeFn = window.checkActionCode;
+            const verifyPasswordResetCodeFn = window.verifyPasswordResetCode;
+            const confirmPasswordResetFn = window.confirmPasswordReset;
 
             if (!authInstance) {
                 setError("Firebase Authentication nie je inicializované. Skontrolujte authentication.js.");
@@ -151,6 +155,7 @@ function ResetPasswordApp() {
 
             console.log("account.js: currentMode:", currentMode);
             console.log("account.js: currentOobCode:", currentOobCode);
+            console.log("account.js: applyActionCodeFn je funkcia?", typeof applyActionCodeFn === 'function');
 
             if (currentMode && currentOobCode) {
                 setMode(currentMode);
@@ -158,27 +163,36 @@ function ResetPasswordApp() {
 
                 if (currentMode === 'resetPassword') {
                     // Pre reset hesla používame verifyPasswordResetCode
-                    authInstance.verifyPasswordResetCode(currentOobCode)
-                        .then(email => {
-                            setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
-                            setLoading(false);
-                        })
-                        .catch(e => {
-                            console.error("Chyba pri overovaní reset kódu:", e);
-                            setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
-                            setLoading(false);
-                        });
+                    if (typeof verifyPasswordResetCodeFn === 'function') {
+                        verifyPasswordResetCodeFn(authInstance, currentOobCode)
+                            .then(email => {
+                                setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
+                                setLoading(false);
+                            })
+                            .catch(e => {
+                                console.error("Chyba pri overovaní reset kódu:", e);
+                                setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
+                                setLoading(false);
+                            });
+                    } else {
+                        // Fallback na staršiu metódu
+                        authInstance.verifyPasswordResetCode(currentOobCode)
+                            .then(email => {
+                                setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
+                                setLoading(false);
+                            })
+                            .catch(e => {
+                                console.error("Chyba pri overovaní reset kódu:", e);
+                                setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
+                                setLoading(false);
+                            });
+                    }
                 } else if (currentMode === 'verifyAndChangeEmail') {
                     console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // 🔥 Pre Firebase SDK 11.6.1 - skúsime použiť checkActionCode namiesto applyActionCode
-                    if (typeof authInstance.checkActionCode === 'function') {
-                        authInstance.checkActionCode(currentOobCode)
-                            .then((actionCodeInfo) => {
-                                console.log("account.js: checkActionCode úspešné:", actionCodeInfo);
-                                // Potom aplikujeme akčný kód
-                                return authInstance.applyActionCode(currentOobCode);
-                            })
+                    if (typeof applyActionCodeFn === 'function') {
+                        // 🔥 Použijeme importovanú funkciu applyActionCode
+                        applyActionCodeFn(authInstance, currentOobCode)
                             .then(() => {
                                 console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
                                 setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
@@ -193,27 +207,14 @@ function ResetPasswordApp() {
                                 setLoading(false);
                             });
                     } else {
-                        // Alternatívny prístup - priamo applyActionCode
-                        authInstance.applyActionCode(currentOobCode)
-                            .then(() => {
-                                console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
-                                setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
-                                setLoading(false);
-                                setTimeout(() => {
-                                    window.location.href = 'login.html';
-                                }, 3000);
-                            })
-                            .catch(e => {
-                                console.error("account.js: Chyba pri overovaní e-mailu:", e);
-                                setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
-                                setLoading(false);
-                            });
+                        setError("Funkcia applyActionCode nie je dostupná.");
+                        setLoading(false);
                     }
                 } else if (currentMode === 'recoverEmail') {
                     console.log("account.js: Režim 'recoverEmail' detekovaný.");
                     
-                    if (typeof authInstance.applyActionCode === 'function') {
-                        authInstance.applyActionCode(currentOobCode)
+                    if (typeof applyActionCodeFn === 'function') {
+                        applyActionCodeFn(authInstance, currentOobCode)
                             .then(() => {
                                 console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
                                 setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
@@ -228,7 +229,7 @@ function ResetPasswordApp() {
                                 setLoading(false);
                             });
                     } else {
-                        setError("Metóda applyActionCode nie je dostupná v tejto verzii Firebase SDK.");
+                        setError("Funkcia applyActionCode nie je dostupná.");
                         setLoading(false);
                     }
                 } else {
@@ -259,6 +260,8 @@ function ResetPasswordApp() {
         setSuccessMessage('');
 
         const authInstance = window.auth;
+        const confirmPasswordResetFn = window.confirmPasswordReset;
+
         if (!authInstance || !oobCode) {
             setError("Chyba: Autentifikácia nie je pripravená alebo chýba kód.");
             return;
@@ -276,7 +279,11 @@ function ResetPasswordApp() {
 
         setLoading(true);
         try {
-            await authInstance.confirmPasswordReset(oobCode, newPassword);
+            if (typeof confirmPasswordResetFn === 'function') {
+                await confirmPasswordResetFn(authInstance, oobCode, newPassword);
+            } else {
+                await authInstance.confirmPasswordReset(oobCode, newPassword);
+            }
             setSuccessMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku.");
             setMessage('');
             
