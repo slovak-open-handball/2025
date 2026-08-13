@@ -1,5 +1,4 @@
-// logged-in-left-menu.js
-// 🔥 VŠETKY FIREBASE OPERÁCIE IDÚ CEZ WORKER
+import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const loadLeftMenu = async (userProfileData) => {
     if (userProfileData && userProfileData.id) {
@@ -11,10 +10,9 @@ const loadLeftMenu = async (userProfileData) => {
          
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
-            
-            // ❌ ODSTRÁNENÉ: const db = window.db;
+            const db = window.db;
             const userId = userProfileData.id;
-            setupMenuListeners(userProfileData, userId); // 🔥 Odstránený db parameter
+            setupMenuListeners(userProfileData, db, userId);
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
@@ -26,8 +24,7 @@ const loadLeftMenu = async (userProfileData) => {
     }
 };
 
-// 🔥 UPRAVENÁ FUNKCIA - používa Worker namiesto priameho Firestore
-const setupMenuListeners = (userProfileData, userId) => {
+const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
@@ -188,23 +185,12 @@ const setupMenuListeners = (userProfileData, userId) => {
         }
     };
 
-    // 🔥 UPRAVENÁ FUNKCIA - používa Worker namiesto priameho Firestore
     const saveMenuState = async () => {
         if (!userId) return;
+        const userDocRef = doc(db, 'users', userId);
         try {
-            // Použijeme window.updateUserProfile alebo window.callWorker
-            if (window.updateUserProfile) {
-                await window.updateUserProfile({ isMenuToggled });
-            } else if (window.callWorker) {
-                await window.callWorker('/api/user/update', {
-                    method: 'POST',
-                    body: JSON.stringify({ isMenuToggled, uid: userId }),
-                });
-            } else {
-                console.warn('⚠️ window.updateUserProfile ani window.callWorker nie sú dostupné');
-            }
+            await setDoc(userDocRef, { isMenuToggled }, { merge: true });
         } catch (error) {
-            console.error('❌ Chyba pri ukladaní stavu menu:', error);
             window.showGlobalNotification?.('Nepodarilo sa uložiť nastavenia menu.', 'error');
         }
     };
@@ -252,10 +238,12 @@ const addCustomStyles = () => {
             transition: color 200ms ease;
         }
 
+        /* Hover pre VŠETKY riadky (vrátane aktívnych) - najvyššia priorita */
         #left-menu a:hover {
             background-color: #374151 !important;
         }
 
+        /* Aktívny riadok bez hoveru */
         #left-menu a.bg-\\[\\#F9FAFB\\]:not(:hover),
         #left-menu a.dark\\:bg-gray-800\\/30:not(:hover) {
             background-color: #F9FAFB !important;
@@ -264,6 +252,7 @@ const addCustomStyles = () => {
             background-color: rgba(31, 41, 55, 0.3) !important;
         }
 
+        /* Zachovanie farby textu a ikony pri hover */
         #left-menu a:hover,
         #left-menu a:hover .whitespace-nowrap,
         #left-menu a:hover svg {
