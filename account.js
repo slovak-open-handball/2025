@@ -156,6 +156,7 @@ function ResetPasswordApp() {
                 setOobCode(currentOobCode);
 
                 if (currentMode === 'resetPassword') {
+                    // Pre reset hesla používame verifyPasswordResetCode
                     authInstance.verifyPasswordResetCode(currentOobCode)
                         .then(email => {
                             setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
@@ -169,13 +170,11 @@ function ResetPasswordApp() {
                 } else if (currentMode === 'verifyAndChangeEmail') {
                     console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    authInstance.checkActionCode(currentOobCode)
-                        .then(actionCodeInfo => {
-                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
-                            return authInstance.applyActionCode(currentOobCode);
-                        })
-                        .then(async () => {
-                            console.log("account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
+                    // 🔥 OPRAVA: Pre Firebase SDK 7.24.0 používame priamo applyActionCode
+                    // checkActionCode neexistuje v tejto verzii
+                    authInstance.applyActionCode(currentOobCode)
+                        .then(() => {
+                            console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
                             setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
