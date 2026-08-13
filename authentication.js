@@ -181,9 +181,17 @@ const setupFirebase = () => {
         window.EmailAuthProvider = EmailAuthProvider;
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
         window.appCheck = appCheck;
+        
+        // 🔥 PRIDAJTE TÝCHTO 5 RIADKOV - sprístupníme funkcie globálne
+        window.applyActionCode = applyActionCode;
+        window.checkActionCode = checkActionCode;
+        window.verifyPasswordResetCode = verifyPasswordResetCode;
+        window.confirmPasswordReset = confirmPasswordReset;
+        window.sendPasswordResetEmail = sendPasswordResetEmail;
 
         window.dispatchEvent(new CustomEvent('dbInitialized'));
         console.log("AuthManager: Udalosť dbInitialized odoslaná.");
+        console.log("AuthManager: window.applyActionCode je funkcia?", typeof window.applyActionCode === 'function');
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
