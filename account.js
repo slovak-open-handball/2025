@@ -1,6 +1,6 @@
 // account.js
 // Tento súbor predpokladá, že Firebase SDK je už načítané a inicializované
-// v z-account.html a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
+// v authentication.js, ktorý spravuje globálnu autentifikáciu a stav používateľa.
 
 // Pomocná funkcia na získanie URL parametrov
 function getUrlParams() {
@@ -25,21 +25,17 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   const EyeOffIcon = React.createElement(
     'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, // SVG element má fill="none"
-    // Cesta pre vyplnený stred (pupila)
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
     React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    // Cesta pre vonkajší obrys oka (bez výplne)
     React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-    // Cesta pre šikmú čiaru
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
-  // Okraj inputu bude vždy predvolený (border-gray-300)
   const borderClass = 'border-gray-300';
 
   return React.createElement(
     'div',
-    { className: 'mb-4' }, // Pridaná trieda mb-4 pre konzistentné medzery
+    { className: 'mb-4' },
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
@@ -47,7 +43,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        // Používame len predvolenú triedu okraja
         className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
@@ -58,7 +53,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
-        onFocus: onFocus // Pridaný onFocus prop
+        onFocus: onFocus
       }),
       React.createElement(
         'button',
@@ -71,14 +66,13 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    // ZMENA: Podmienka pre zobrazenie popisu hesla - zobrazí sa len ak je validationStatus definovaný
     validationStatus && React.createElement(
       'div',
-      { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
+      { className: `text-xs italic mt-1 text-gray-600` },
       'Heslo musí obsahovať:',
       React.createElement(
         'ul',
-        { className: 'list-none pl-4' }, // Používame list-none a vlastné odrážky pre dynamiku
+        { className: 'list-none pl-4' },
         React.createElement(
           'li',
           { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
@@ -108,7 +102,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   );
 }
 
-// Funkcia pre validáciu hesla (teraz presne zhodná s logged-in-change-password.js)
+// Funkcia pre validáciu hesla
 const validatePassword = (pwd) => {
     const status = {
       minLength: pwd.length >= 10,
@@ -116,49 +110,39 @@ const validatePassword = (pwd) => {
       hasLowerCase: /[a-z]/.test(pwd),
       hasNumber: /[0-9]/.test(pwd),
     };
-    // Celková platnosť hesla
     status.isValid = status.minLength && status.hasUpperCase && status.hasLowerCase && status.hasNumber;
     return status;
 };
 
-
 // Main React component for the reset password / email verification page
 function ResetPasswordApp() {
-    // Odstránené useState pre auth a db, teraz sa pristupuje ku globálnym inštanciám
-    // const [auth, setAuth] = React.useState(null);
-    // const [db, setDb] = React.useState(null);
     const [mode, setMode] = React.useState(null);
     const [oobCode, setOobCode] = React.useState(null);
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
     const [error, setError] = React.useState('');
-    const [message, setMessage] = React.useState(''); // Správa o overení kódu / e-mailu
-    const [successMessage, setSuccessMessage] = React.useState(''); // Správa o úspešnom resete hesla / overení e-mailu
+    const [message, setMessage] = React.useState('');
+    const [successMessage, setSuccessMessage] = React.useState('');
     const [loading, setLoading] = React.useState(true);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-
-    // Stavy pre výsledky validácie nového hesla (ako v logged-in-change-password.js)
     const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
       minLength: false,
       hasUpperCase: false,
       hasLowerCase: false,
       hasNumber: false,
-      isValid: false, // Celková platnosť hesla
+      isValid: false,
     });
     const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
-    // NOVINKA: Stav pre sledovanie, či bol input "Potvrďte nové heslo" aktivovaný
     const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
-
 
     React.useEffect(() => {
         try {
-            // Prístup ku globálnym inštanciám Firebase Auth a Firestore
+            // 🔥 Použijeme globálne inštancie z authentication.js
             const authInstance = window.auth;
-            // const dbInstance = window.db; // Firestore už nie je potrebný v tomto komponente
 
-            if (!authInstance) { // Kontrola, či je authInstance dostupná
-                setError("Firebase Authentication nie je inicializované. Skontrolujte z-account.html.");
+            if (!authInstance) {
+                setError("Firebase Authentication nie je inicializované. Skontrolujte authentication.js.");
                 setLoading(false);
                 return;
             }
@@ -172,7 +156,6 @@ function ResetPasswordApp() {
                 setOobCode(currentOobCode);
 
                 if (currentMode === 'resetPassword') {
-                    // Logika pre resetovanie hesla
                     authInstance.verifyPasswordResetCode(currentOobCode)
                         .then(email => {
                             setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
@@ -183,42 +166,32 @@ function ResetPasswordApp() {
                             setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
                             setLoading(false);
                         });
-                } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
-                    console.log("z-account.js: Režim 'verifyAndChangeEmail' detekovaný.");
+                } else if (currentMode === 'verifyAndChangeEmail') {
+                    console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // NOVINKA: Najprv skontrolujeme akčný kód
                     authInstance.checkActionCode(currentOobCode)
                         .then(actionCodeInfo => {
-                            console.log("z-account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
-                            // E-mail a UID sú tu dostupné, ale už ich nebudeme priamo používať pre Firestore zápis
-                            // targetUserEmail = actionCodeInfo.data.email;
-                            // targetUserUid = actionCodeInfo.data.uid;
-
-                            // Až potom aplikujeme akčný kód
+                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
                             return authInstance.applyActionCode(currentOobCode);
                         })
-                        .then(async () => { // Zmena na async funkciu
-                            console.log("z-account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
-                            
-                            // NOVINKA: Zobrazenie novej správy o úspechu
+                        .then(async () => {
+                            console.log("account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
                             setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
-                            
                             setLoading(false);
-                            // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
                             setTimeout(() => {
                                 window.location.href = 'login.html';
                             }, 3000);
                         })
                         .catch(e => {
-                            console.error("z-account.js: Chyba pri overovaní e-mailu (checkActionCode alebo applyActionCode zlyhalo):", e);
+                            console.error("account.js: Chyba pri overovaní e-mailu:", e);
                             setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
                             setLoading(false);
                         });
-                } else if (currentMode === 'recoverEmail') { // NOVINKA: Režim pre obnovenie pôvodného e-mailu
-                    console.log("z-account.js: Režim 'recoverEmail' detekovaný.");
+                } else if (currentMode === 'recoverEmail') {
+                    console.log("account.js: Režim 'recoverEmail' detekovaný.");
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
-                            console.log("z-account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
+                            console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
                             setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
@@ -226,12 +199,11 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
-                            console.error("z-account.js: Chyba pri obnovovaní e-mailu (recoverEmail zlyhalo):", e);
+                            console.error("account.js: Chyba pri obnovovaní e-mailu:", e);
                             setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
                             setLoading(false);
                         });
-                }
-                 else {
+                } else {
                     setError("Neplatný režim akcie. Chýbajú parametre.");
                     setLoading(false);
                 }
@@ -240,28 +212,24 @@ function ResetPasswordApp() {
                 setLoading(false);
             }
         } catch (e) {
-            console.error("Chyba pri inicializácii Firebase alebo parsovaní URL:", e);
+            console.error("Chyba pri inicializácii:", e);
             setError(`Chyba pri inicializácii: ${e.message}`);
             setLoading(false);
         }
-    }, []); // Odstránená závislosť na dbInstance
+    }, []);
 
-    // Effect pre validáciu hesla pri zmene 'newPassword' alebo 'confirmNewPassword'
+    // Effect pre validáciu hesla
     React.useEffect(() => {
         const pwdStatus = validatePassword(newPassword);
         setPasswordValidationStatus(pwdStatus);
-
-        // isConfirmPasswordMatching závisí aj od celkovej platnosti nového hesla
         setIsConfirmPasswordMatching(newPassword === confirmNewPassword && newPassword.length > 0 && pwdStatus.isValid);
     }, [newPassword, confirmNewPassword]);
-
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setError('');
         setSuccessMessage('');
 
-        // Prístup ku globálnej inštancii Firebase Auth
         const authInstance = window.auth;
         if (!authInstance || !oobCode) {
             setError("Chyba: Autentifikácia nie je pripravená alebo chýba kód.");
@@ -273,7 +241,6 @@ function ResetPasswordApp() {
             return;
         }
 
-        // Používame celkový stav platnosti z passwordValidationStatus
         if (!passwordValidationStatus.isValid) {
             setError("Nové heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
             return;
@@ -297,7 +264,6 @@ function ResetPasswordApp() {
             } else if (e.code === 'auth/user-disabled') {
                 setError("Váš účet bol zakázaný. Kontaktujte podporu.");
             } else if (e.code === 'auth/weak-password') {
-                // Použijeme validatePassword pre detailnejšiu správu o slabom hesle
                 const validationResults = validatePassword(newPassword);
                 const errors = [];
                 if (!validationResults.minLength) errors.push("aspoň 10 znakov");
@@ -314,15 +280,13 @@ function ResetPasswordApp() {
         }
     };
 
-    // Dynamické triedy pre tlačidlo na základe stavu disabled
     const buttonClasses = `
         font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
         ${loading || !newPassword || !confirmNewPassword || !passwordValidationStatus.isValid || !isConfirmPasswordMatching
-            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
-            : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+            : 'bg-blue-500 hover:bg-blue-700 text-white'
         }
     `;
-
 
     if (loading) {
         return React.createElement(
@@ -368,7 +332,6 @@ function ResetPasswordApp() {
         );
     }
 
-    // Ak je režim resetPassword a kód je platný, zobraz formulár
     if (mode === 'resetPassword' && oobCode) {
         return React.createElement(
             'div',
@@ -388,7 +351,6 @@ function ResetPasswordApp() {
                     value: newPassword,
                     onChange: (e) => {
                         setNewPassword(e.target.value);
-                        // Okamžitá aktualizácia validácie
                         setPasswordValidationStatus(validatePassword(e.target.value));
                     },
                     onCopy: (e) => e.preventDefault(),
@@ -396,7 +358,7 @@ function ResetPasswordApp() {
                     onCut: (e) => e.preventDefault(),
                     placeholder: 'Zadajte nové heslo',
                     autoComplete: 'new-password',
-                    validationStatus: passwordValidationStatus, // Odovzdanie detailného stavu validácie hesla
+                    validationStatus: passwordValidationStatus,
                     disabled: loading,
                     showPassword: showPassword,
                     toggleShowPassword: () => setShowPassword(!showPassword)
@@ -407,19 +369,18 @@ function ResetPasswordApp() {
                     value: confirmNewPassword,
                     onChange: (e) => {
                         setConfirmNewPassword(e.target.value);
-                        setConfirmPasswordTouched(true); // Nastaví touched stav
+                        setConfirmPasswordTouched(true);
                     },
-                    onFocus: () => setConfirmPasswordTouched(true), // Nastaví touched stav pri aktivácii
+                    onFocus: () => setConfirmPasswordTouched(true),
                     onCopy: (e) => e.preventDefault(),
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
                     placeholder: 'Zadajte heslo znova',
                     autoComplete: 'new-password',
                     disabled: loading,
-                    showConfirmPassword: showConfirmPassword,
+                    showPassword: showConfirmPassword,
                     toggleShowPassword: () => setShowConfirmPassword(!showConfirmPassword)
                 }),
-                // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
                 !isConfirmPasswordMatching && confirmNewPassword.length > 0 && confirmPasswordTouched &&
                 React.createElement(
                     'p',
@@ -430,7 +391,7 @@ function ResetPasswordApp() {
                     'button',
                     {
                         type: 'submit',
-                        className: buttonClasses, // Použitie dynamických tried
+                        className: buttonClasses,
                         disabled: loading || !newPassword || !confirmNewPassword || !passwordValidationStatus.isValid || !isConfirmPasswordMatching,
                     },
                     loading ? React.createElement(
@@ -447,5 +408,5 @@ function ResetPasswordApp() {
         );
     }
 
-    return null; // Nič nevykresľuj, ak režim nie je resetPassword alebo už bola spracovaná úspešná správa
+    return null;
 }
