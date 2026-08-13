@@ -48,120 +48,21 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// 🔐 DEŠIFROVACIA FUNKCIA S OŠETRENÍM CHÝB
-const decryptConfig = (encryptedData, key) => {
-    try {
-        // Kontrola, či encryptedData nie je prázdne alebo neplatné
-        if (!encryptedData || typeof encryptedData !== 'string') {
-            console.error("🔐 Chyba: encryptedData je prázdne alebo neplatné");
-            throw new Error("Neplatné šifrované dáta");
-        }
-        
-        console.log("🔐 Dĺžka šifrovaných dát:", encryptedData.length);
-        console.log("🔐 Prvých 20 znakov:", encryptedData.substring(0, 20));
-        
-        // Dekódujeme Base64
-        let encrypted;
-        try {
-            encrypted = atob(encryptedData);
-        } catch (base64Error) {
-            console.error("🔐 Chyba pri Base64 dekódovaní:", base64Error);
-            // Skúsime odstrániť neplatné znaky
-            const cleanedData = encryptedData.replace(/[^A-Za-z0-9+/=]/g, '');
-            console.log("🔐 Vyčistené dáta (prvých 20 znakov):", cleanedData.substring(0, 20));
-            encrypted = atob(cleanedData);
-        }
-        
-        console.log("🔐 Dešifrované dáta (prvých 20 znakov):", encrypted.substring(0, 20));
-        
-        // XOR dešifrovanie
-        let decrypted = '';
-        for (let i = 0; i < encrypted.length; i++) {
-            const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
-            decrypted += String.fromCharCode(charCode);
-        }
-        
-        console.log("🔐 Po XOR (prvých 20 znakov):", decrypted.substring(0, 20));
-        
-        // Skúsime parsovať JSON
-        try {
-            return JSON.parse(decrypted);
-        } catch (jsonError) {
-            console.error("🔐 Chyba pri JSON parse:", jsonError);
-            console.log("🔐 Celý reťazec po XOR:", decrypted);
-            throw new Error("Dešifrované dáta nie sú validný JSON");
-        }
-    } catch (e) {
-        console.error("🔐 Chyba pri dešifrovaní konfigurácie:", e);
-        throw new Error(`Nepodarilo sa dešifrovať konfiguráciu Firebase: ${e.message}`);
-    }
+// Vložený konfiguračný objekt
+const firebaseConfig = {
+    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+    projectId: "soh2025-2s0o2h5",
+    storageBucket: "soh2025-2s0o2h5.appspot.com",
+    messagingSenderId: "367316414164",
+    appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
-
-// 🔐 ZAŠIFROVANÉ KONFIGURÁCIE
-// Kľúč pre dešifrovanie (uložený priamo v kóde)
-const ENCRYPTION_KEY = "S0h2025SecureKey!@#";
-
-// 🔐 Firebase Config - zašifrovaný reťazec
-// POZNÁMKA: Toto musí byť platný Base64 reťazec vytvorený šifrovaním JSON konfigurácie
-const ENCRYPTED_FIREBASE_CONFIG = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
-
-// 🔐 Google Apps Script URL - zašifrovaný reťazec
-const ENCRYPTED_GOOGLE_APPS_SCRIPT_URL = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
-
-// 🔐 NÁHRADNÁ KONFIGURÁCIA PRE PRÍPAD CHYBY DEŠIFROVANIA
-// TOTO JE LEN ZÁLOHA - v produkcii by mala byť použitá dešifrovaná konfigurácia
-const FALLBACK_FIREBASE_CONFIG = {
-    apiKey: "VÁŠ_API_KĽÚČ",
-    authDomain: "VÁŠ_AUTH_DOMAIN",
-    projectId: "VÁŠ_PROJECT_ID",
-    storageBucket: "VÁŠ_STORAGE_BUCKET",
-    messagingSenderId: "VÁŠ_MESSAGING_SENDER_ID",
-    appId: "VÁŠ_APP_ID"
-};
-
-// 🔐 DEŠIFRUJEME KONFIGURÁCIE
-let firebaseConfig = null;
-let GOOGLE_APPS_SCRIPT_URL = null;
-
-try {
-    console.log("🔐 Začínam dešifrovanie konfigurácie...");
-    
-    // Pokúsime sa dešifrovať Firebase config
-    try {
-        firebaseConfig = decryptConfig(ENCRYPTED_FIREBASE_CONFIG, ENCRYPTION_KEY);
-        console.log("🔐 Firebase config úspešne dešifrovaný");
-    } catch (firebaseError) {
-        console.error("🔐 Chyba pri dešifrovaní Firebase config:", firebaseError);
-        console.log("🔐 Používam záložnú konfiguráciu");
-        firebaseConfig = FALLBACK_FIREBASE_CONFIG;
-    }
-    
-    // Pokúsime sa dešifrovať Google Apps Script URL
-    try {
-        GOOGLE_APPS_SCRIPT_URL = decryptConfig(ENCRYPTED_GOOGLE_APPS_SCRIPT_URL, ENCRYPTION_KEY);
-        console.log("🔐 Google Apps Script URL úspešne dešifrovaná");
-    } catch (scriptError) {
-        console.error("🔐 Chyba pri dešifrovaní Google Apps Script URL:", scriptError);
-        console.log("🔐 Používam záložnú URL");
-        GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VÁŠ_SCRIPT_ID/exec";
-    }
-    
-    if (!firebaseConfig) {
-        throw new Error("Dešifrované dáta sú prázdne");
-    }
-    
-    console.log("🔐 Konfigurácia úspešne pripravená");
-} catch (e) {
-    console.error("🔐 FATÁLNA CHYBA: Nepodarilo sa pripraviť konfiguráciu:", e);
-    
-    // Ak všetko zlyhá, použijeme záložnú konfiguráciu
-    console.log("🔐 Používam núdzovú konfiguráciu");
-    firebaseConfig = FALLBACK_FIREBASE_CONFIG;
-    GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VÁŠ_SCRIPT_ID/exec";
-}
 
 // 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
 const APP_CHECK_SITE_KEY = "6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x";
+
+// URL adresa Google Apps Scriptu na odosielanie e-mailov
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Definovanie globálnych premenných
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -265,7 +166,6 @@ const isAppCheckSupported = () => {
 
 const setupFirebase = () => {
     try {
-        console.log("🔐 Inicializujem Firebase s konfiguráciou:", firebaseConfig);
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
@@ -294,7 +194,6 @@ const setupFirebase = () => {
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
-        throw e;
     }
 };
 
@@ -374,7 +273,7 @@ const setupPageVisibilityListener = () => {
         
         console.log("AuthManager: Aktualizované nastavenia viditeľnosti stránok:", visibilitySettings);
         
-        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYNENÁ ZMENOU
+        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYVNENÁ ZMENOU
         checkCurrentPageVisibility();
         
     }, (error) => {
@@ -972,26 +871,21 @@ const handleAuthState = async () => {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    try {
-        setupFirebase();
-        handleAuthState();
-        
-        // 🆕 Po dokončení inicializácie nastavíme real-time listener pre viditeľnosť stránok
-        // Počkáme kým sa načíta Firebase a potom nastavíme listener
-        const checkAndSetupListener = () => {
-            if (db && auth) {
-                console.log("AuthManager: Inicializácia Firebase dokončená, nastavujem listener pre viditeľnosť stránok.");
-                setupPageVisibilityListener();
-            } else {
-                console.log("AuthManager: Čakám na inicializáciu Firebase pred nastavením listenera pre viditeľnosť stránok.");
-                setTimeout(checkAndSetupListener, 500);
-            }
-        };
-        
-        // Spustíme kontrolu po krátkom čase, aby sme mali istotu že Firebase je inicializovaný
-        setTimeout(checkAndSetupListener, 1000);
-    } catch (e) {
-        console.error("AuthManager: FATÁLNA CHYBA pri inicializácii:", e);
-        // Chyba už bola ošetrená v dešifrovacej časti
-    }
+    setupFirebase();
+    handleAuthState();
+    
+    // 🆕 Po dokončení inicializácie nastavíme real-time listener pre viditeľnosť stránok
+    // Počkáme kým sa načíta Firebase a potom nastavíme listener
+    const checkAndSetupListener = () => {
+        if (db && auth) {
+            console.log("AuthManager: Inicializácia Firebase dokončená, nastavujem listener pre viditeľnosť stránok.");
+            setupPageVisibilityListener();
+        } else {
+            console.log("AuthManager: Čakám na inicializáciu Firebase pred nastavením listenera pre viditeľnosť stránok.");
+            setTimeout(checkAndSetupListener, 500);
+        }
+    };
+    
+    // Spustíme kontrolu po krátkom čase, aby sme mali istotu že Firebase je inicializovaný
+    setTimeout(checkAndSetupListener, 1000);
 });
