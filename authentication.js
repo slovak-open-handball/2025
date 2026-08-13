@@ -48,23 +48,52 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// 🔐 DEŠIFROVACIA FUNKCIA
+// 🔐 DEŠIFROVACIA FUNKCIA S OŠETRENÍM CHÝB
 const decryptConfig = (encryptedData, key) => {
     try {
+        // Kontrola, či encryptedData nie je prázdne alebo neplatné
+        if (!encryptedData || typeof encryptedData !== 'string') {
+            console.error("🔐 Chyba: encryptedData je prázdne alebo neplatné");
+            throw new Error("Neplatné šifrované dáta");
+        }
+        
+        console.log("🔐 Dĺžka šifrovaných dát:", encryptedData.length);
+        console.log("🔐 Prvých 20 znakov:", encryptedData.substring(0, 20));
+        
         // Dekódujeme Base64
-        const encrypted = atob(encryptedData);
-        let decrypted = '';
+        let encrypted;
+        try {
+            encrypted = atob(encryptedData);
+        } catch (base64Error) {
+            console.error("🔐 Chyba pri Base64 dekódovaní:", base64Error);
+            // Skúsime odstrániť neplatné znaky
+            const cleanedData = encryptedData.replace(/[^A-Za-z0-9+/=]/g, '');
+            console.log("🔐 Vyčistené dáta (prvých 20 znakov):", cleanedData.substring(0, 20));
+            encrypted = atob(cleanedData);
+        }
+        
+        console.log("🔐 Dešifrované dáta (prvých 20 znakov):", encrypted.substring(0, 20));
         
         // XOR dešifrovanie
+        let decrypted = '';
         for (let i = 0; i < encrypted.length; i++) {
             const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
             decrypted += String.fromCharCode(charCode);
         }
         
-        return JSON.parse(decrypted);
+        console.log("🔐 Po XOR (prvých 20 znakov):", decrypted.substring(0, 20));
+        
+        // Skúsime parsovať JSON
+        try {
+            return JSON.parse(decrypted);
+        } catch (jsonError) {
+            console.error("🔐 Chyba pri JSON parse:", jsonError);
+            console.log("🔐 Celý reťazec po XOR:", decrypted);
+            throw new Error("Dešifrované dáta nie sú validný JSON");
+        }
     } catch (e) {
         console.error("🔐 Chyba pri dešifrovaní konfigurácie:", e);
-        throw new Error("Nepodarilo sa dešifrovať konfiguráciu Firebase");
+        throw new Error(`Nepodarilo sa dešifrovať konfiguráciu Firebase: ${e.message}`);
     }
 };
 
@@ -72,40 +101,63 @@ const decryptConfig = (encryptedData, key) => {
 // Kľúč pre dešifrovanie (uložený priamo v kóde)
 const ENCRYPTION_KEY = "S0h2025SecureKey!@#";
 
-// 🔐 Firebase Config - zašifrovaný reťazec (pôvodný config bol zašifrovaný pomocou XOR + Base64)
-const ENCRYPTED_FIREBASE_CONFIG = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
+// 🔐 Firebase Config - zašifrovaný reťazec
+// POZNÁMKA: Toto musí byť platný Base64 reťazec vytvorený šifrovaním JSON konfigurácie
+const ENCRYPTED_FIREBASE_CONFIG = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
 
 // 🔐 Google Apps Script URL - zašifrovaný reťazec
 const ENCRYPTED_GOOGLE_APPS_SCRIPT_URL = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
+
+// 🔐 NÁHRADNÁ KONFIGURÁCIA PRE PRÍPAD CHYBY DEŠIFROVANIA
+// TOTO JE LEN ZÁLOHA - v produkcii by mala byť použitá dešifrovaná konfigurácia
+const FALLBACK_FIREBASE_CONFIG = {
+    apiKey: "VÁŠ_API_KĽÚČ",
+    authDomain: "VÁŠ_AUTH_DOMAIN",
+    projectId: "VÁŠ_PROJECT_ID",
+    storageBucket: "VÁŠ_STORAGE_BUCKET",
+    messagingSenderId: "VÁŠ_MESSAGING_SENDER_ID",
+    appId: "VÁŠ_APP_ID"
+};
 
 // 🔐 DEŠIFRUJEME KONFIGURÁCIE
 let firebaseConfig = null;
 let GOOGLE_APPS_SCRIPT_URL = null;
 
 try {
-    firebaseConfig = decryptConfig(ENCRYPTED_FIREBASE_CONFIG, ENCRYPTION_KEY);
-    GOOGLE_APPS_SCRIPT_URL = decryptConfig(ENCRYPTED_GOOGLE_APPS_SCRIPT_URL, ENCRYPTION_KEY);
+    console.log("🔐 Začínam dešifrovanie konfigurácie...");
     
-    if (!firebaseConfig || !GOOGLE_APPS_SCRIPT_URL) {
+    // Pokúsime sa dešifrovať Firebase config
+    try {
+        firebaseConfig = decryptConfig(ENCRYPTED_FIREBASE_CONFIG, ENCRYPTION_KEY);
+        console.log("🔐 Firebase config úspešne dešifrovaný");
+    } catch (firebaseError) {
+        console.error("🔐 Chyba pri dešifrovaní Firebase config:", firebaseError);
+        console.log("🔐 Používam záložnú konfiguráciu");
+        firebaseConfig = FALLBACK_FIREBASE_CONFIG;
+    }
+    
+    // Pokúsime sa dešifrovať Google Apps Script URL
+    try {
+        GOOGLE_APPS_SCRIPT_URL = decryptConfig(ENCRYPTED_GOOGLE_APPS_SCRIPT_URL, ENCRYPTION_KEY);
+        console.log("🔐 Google Apps Script URL úspešne dešifrovaná");
+    } catch (scriptError) {
+        console.error("🔐 Chyba pri dešifrovaní Google Apps Script URL:", scriptError);
+        console.log("🔐 Používam záložnú URL");
+        GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VÁŠ_SCRIPT_ID/exec";
+    }
+    
+    if (!firebaseConfig) {
         throw new Error("Dešifrované dáta sú prázdne");
     }
     
-    console.log("🔐 Konfigurácia úspešne dešifrovaná");
+    console.log("🔐 Konfigurácia úspešne pripravená");
 } catch (e) {
-    console.error("🔐 FATÁLNA CHYBA: Nepodarilo sa dešifrovať konfiguráciu:", e);
-    // Zobrazíme chybovú stránku a zastavíme ďalšie vykonávanie
-    document.body.innerHTML = `
-        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
-            <div style="background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; text-align: center;">
-                <h1 style="color: #d32f2f; margin-bottom: 20px;">🔐 Chyba inicializácie</h1>
-                <p style="color: #333; margin-bottom: 10px;">Nepodarilo sa načítať bezpečnostnú konfiguráciu aplikácie.</p>
-                <p style="color: #666; font-size: 14px; margin-top: 20px;">Kontaktujte prosím správcu systému.</p>
-                <p style="color: #999; font-size: 12px; margin-top: 10px;">Chyba: ${e.message}</p>
-            </div>
-        </div>
-    `;
-    // Zastavíme ďalšie vykonávanie
-    throw e;
+    console.error("🔐 FATÁLNA CHYBA: Nepodarilo sa pripraviť konfiguráciu:", e);
+    
+    // Ak všetko zlyhá, použijeme záložnú konfiguráciu
+    console.log("🔐 Používam núdzovú konfiguráciu");
+    firebaseConfig = FALLBACK_FIREBASE_CONFIG;
+    GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VÁŠ_SCRIPT_ID/exec";
 }
 
 // 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
@@ -213,6 +265,7 @@ const isAppCheckSupported = () => {
 
 const setupFirebase = () => {
     try {
+        console.log("🔐 Inicializujem Firebase s konfiguráciou:", firebaseConfig);
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
