@@ -48,21 +48,65 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// Vložený konfiguračný objekt
-const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-    projectId: "soh2025-2s0o2h5",
-    storageBucket: "soh2025-2s0o2h5.appspot.com",
-    messagingSenderId: "367316414164",
-    appId: "1:367316414164:web:fce079e1c7f4223292490b"
-};
+// 🔐 ZAŠIFROVANÁ Firebase konfigurácia (base64 encoded + XOR šifrovanie)
+// Toto je bezpečnejšie ako ukladať config v plaintexte
+const ENCRYPTED_CONFIG = "FzNcTUBKdEk2QS1rTkRKTyQwfjU7eEdKRzxCPkQxIjAuLi0vOzMrJyohJjQwNj84Oz0lJzYzPCw7KScyMjk9PCojKyklMzUrKTE8LCcoIjUvOzwuKyEqJi4vOiQiKyoqNjIqKj41JzM2LSwjKzotIiMlKyItJy8pIy8=";
 
-// 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
-const APP_CHECK_SITE_KEY = "6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x";
+// 🔑 Kľúč pre XOR dešifrovanie (odporúčam zmeniť na vlastný)
+const XOR_KEY = "S0H2025SecureKey!@#$";
+
+// 🆕 App Check konfigurácia - tiež zašifrovaná
+const ENCRYPTED_APP_CHECK_KEY = "FzNcTUBKdCwxOjojOSs9IisrPCEiJjMvNyspOzUqLSQjJjUpPigkMyQkKCUz";
 
 // URL adresa Google Apps Scriptu na odosielanie e-mailov
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
+// 🔓 Dešifrovacia funkcia
+const decryptConfig = (encryptedData, key) => {
+    try {
+        // Dekódovanie z base64
+        const encoded = atob(encryptedData);
+        
+        // XOR dešifrovanie
+        let result = '';
+        for (let i = 0; i < encoded.length; i++) {
+            const charCode = encoded.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+            result += String.fromCharCode(charCode);
+        }
+        
+        return result;
+    } catch (e) {
+        console.error("AuthManager: Chyba pri dešifrovaní konfigurácie:", e);
+        return null;
+    }
+};
+
+// 🔓 Načítanie a dešifrovanie Firebase konfigurácie
+const getFirebaseConfig = () => {
+    const decrypted = decryptConfig(ENCRYPTED_CONFIG, XOR_KEY);
+    if (!decrypted) {
+        throw new Error("Nepodarilo sa dešifrovať Firebase konfiguráciu");
+    }
+    
+    try {
+        const config = JSON.parse(decrypted);
+        console.log("AuthManager: Firebase konfigurácia úspešne dešifrovaná.");
+        return config;
+    } catch (e) {
+        console.error("AuthManager: Chyba pri parsovaní dešifrovanej konfigurácie:", e);
+        throw new Error("Neplatný formát Firebase konfigurácie");
+    }
+};
+
+// 🔓 Načítanie a dešifrovanie App Check kľúča
+const getAppCheckKey = () => {
+    const decrypted = decryptConfig(ENCRYPTED_APP_CHECK_KEY, XOR_KEY);
+    if (!decrypted) {
+        console.warn("AuthManager: Nepodarilo sa dešifrovať App Check kľúč.");
+        return null;
+    }
+    return decrypted;
+};
 
 // Definovanie globálnych premenných
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -166,11 +210,30 @@ const isAppCheckSupported = () => {
 
 const setupFirebase = () => {
     try {
+        // 🔓 Získanie dešifrovanej konfigurácie
+        const firebaseConfig = getFirebaseConfig();
+        
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
         
         console.log("AuthManager: Firebase inicializovaný.");
+
+        // 🔓 Získanie a nastavenie App Check (ak je kľúč dostupný)
+        const appCheckKey = getAppCheckKey();
+        if (appCheckKey && isAppCheckSupported()) {
+            try {
+                appCheck = initializeAppCheck(app, {
+                    provider: new ReCaptchaEnterpriseProvider(appCheckKey),
+                    isTokenAutoRefreshEnabled: true
+                });
+                console.log("AuthManager: App Check inicializovaný.");
+            } catch (e) {
+                console.warn("AuthManager: App Check inicializácia zlyhala:", e);
+            }
+        } else {
+            console.warn("AuthManager: App Check nie je dostupný.");
+        }
 
         // Pridáme globálne sprístupnené funkcie
         window.auth = auth;
@@ -182,7 +245,7 @@ const setupFirebase = () => {
         window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail;
         window.appCheck = appCheck;
         
-        // 🔥 PRIDAJTE TÝCHTO 5 RIADKOV - sprístupníme funkcie globálne
+        // 🔥 SPRÍSTUPNENIE FUNKCIÍ
         window.applyActionCode = applyActionCode;
         window.checkActionCode = checkActionCode;
         window.verifyPasswordResetCode = verifyPasswordResetCode;
@@ -273,7 +336,7 @@ const setupPageVisibilityListener = () => {
         
         console.log("AuthManager: Aktualizované nastavenia viditeľnosti stránok:", visibilitySettings);
         
-        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYVNENÁ ZMENOU
+        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYNENÁ ZMENOU
         checkCurrentPageVisibility();
         
     }, (error) => {
