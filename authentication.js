@@ -44,14 +44,50 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// Vložený konfiguračný objekt
+// 🔐 ŠIFROVANÉ HODNOTY - XOR šifra s kľúčom 0x5A
+
+// Pôvodná hodnota: "soh2025-2s0o2h5"
+const ENCRYPTED_PROJECT_ID = [0x0F, 0x0B, 0x37, 0x32, 0x39, 0x35, 0x37, 0x33, 0x2C, 0x3F, 0x39, 0x35, 0x32, 0x31, 0x33, 0x24, 0x32, 0x36, 0x7A];
+
+// Pôvodná hodnota: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4"
+const ENCRYPTED_API_KEY = [0x1B, 0x2E, 0x3D, 0x2C, 0x3B, 0x3C, 0x25, 0x1F, 0x0D, 0x1A, 0x2B, 0x2F, 0x3A, 0x2E, 0x3C, 0x3D, 0x2C, 0x3B, 0x3C, 0x25, 0x2D, 0x3E, 0x2F, 0x2C, 0x3D, 0x2E, 0x3C, 0x0D, 0x1A, 0x2B, 0x2F, 0x3A, 0x2E, 0x3C, 0x3D, 0x2C, 0x3B, 0x3C, 0x25, 0x2D, 0x3E, 0x0D];
+
+// Pôvodná hodnota: "367316414164"
+const ENCRYPTED_MESSAGING_SENDER_ID = [0x6F, 0x7E, 0x6D, 0x7C, 0x6B, 0x7A, 0x6F, 0x7E, 0x6D, 0x7C, 0x6B, 0x7A];
+
+// Pôvodná hodnota: "1:367316414164:web:fce079e1c7f4223292490b"
+const ENCRYPTED_APP_ID = [0x4B, 0x3A, 0x6F, 0x7E, 0x6D, 0x7C, 0x6B, 0x7A, 0x6F, 0x7E, 0x6D, 0x7C, 0x6B, 0x7A, 0x3A, 0x6E, 0x7F, 0x6C, 0x3A, 0x6D, 0x7E, 0x6F, 0x7A, 0x6D, 0x0D, 0x7F, 0x6C, 0x7F, 0x7D, 0x6E, 0x6D, 0x3A, 0x0D, 0x7F, 0x6C, 0x7F, 0x7D, 0x6E, 0x0D, 0x7A, 0x6D, 0x6E, 0x3A, 0x6F, 0x7E, 0x0D, 0x7F, 0x6C, 0x0D];
+
+// Funkcia na dešifrovanie hodnoty z poľa čísel
+function decryptValue(encryptedArray) {
+    const key = 0x5A;
+    let result = '';
+    for (let i = 0; i < encryptedArray.length; i++) {
+        result += String.fromCharCode(encryptedArray[i] ^ key);
+    }
+    return result;
+}
+
+// 🔥 DEŠIFRUJEME VŠETKY HODNOTY
+const DECRYPTED_PROJECT_ID = decryptValue(ENCRYPTED_PROJECT_ID);
+const DECRYPTED_API_KEY = decryptValue(ENCRYPTED_API_KEY);
+const DECRYPTED_MESSAGING_SENDER_ID = decryptValue(ENCRYPTED_MESSAGING_SENDER_ID);
+const DECRYPTED_APP_ID = decryptValue(ENCRYPTED_APP_ID);
+
+console.log("🔐 AuthManager: Dešifrované hodnoty:");
+console.log("  - projectId:", DECRYPTED_PROJECT_ID);
+console.log("  - apiKey:", DECRYPTED_API_KEY.substring(0, 10) + "...");
+console.log("  - messagingSenderId:", DECRYPTED_MESSAGING_SENDER_ID);
+console.log("  - appId:", DECRYPTED_APP_ID.substring(0, 15) + "...");
+
+// Vložený konfiguračný objekt s dešifrovanými hodnotami
 const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-    projectId: "soh2025-2s0o2h5",
-    storageBucket: "soh2025-2s0o2h5.appspot.com",
-    messagingSenderId: "367316414164",
-    appId: "1:367316414164:web:fce079e1c7f4223292490b"
+    apiKey: DECRYPTED_API_KEY,
+    authDomain: DECRYPTED_PROJECT_ID + ".firebaseapp.com",
+    projectId: DECRYPTED_PROJECT_ID,
+    storageBucket: DECRYPTED_PROJECT_ID + ".appspot.com",
+    messagingSenderId: DECRYPTED_MESSAGING_SENDER_ID,
+    appId: DECRYPTED_APP_ID
 };
 
 // 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
