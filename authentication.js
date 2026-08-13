@@ -44,12 +44,8 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// 🔐 ŠIFROVANÁ DEFINÍCIA DB - XOR šifra s kľúčom
-// Pôvodná hodnota: "soh2025-2s0o2h5"
-// Kľúč: 0x5A (použitý pre šifrovanie)
 const ENCRYPTED_DB = [0x0F, 0x0B, 0x37, 0x32, 0x39, 0x35, 0x37, 0x33, 0x2C, 0x3F, 0x39, 0x35, 0x32, 0x31, 0x33, 0x24, 0x32, 0x36, 0x7A];
 
-// Funkcia na dešifrovanie hodnoty
 function decryptDbName() {
     const key = 0x5A;
     let result = '';
@@ -59,7 +55,6 @@ function decryptDbName() {
     return result;
 }
 
-// Použitie dešifrovanej hodnoty pre konfiguráciu
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
     authDomain: decryptDbName() + ".firebaseapp.com",
