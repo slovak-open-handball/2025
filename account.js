@@ -13,9 +13,7 @@ function getUrlParams() {
 }
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-// Akceptuje 'validationStatus' ako objekt pre detailnú vizuálnu indikáciu platnosti hesla
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) {
-  // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -163,15 +161,17 @@ function ResetPasswordApp() {
                             setLoading(false);
                         })
                         .catch(e => {
+                            console.error("Chyba pri overovaní reset kódu:", e);
                             setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
                             setLoading(false);
                         });
                 } else if (currentMode === 'verifyAndChangeEmail') {
+                    console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // 🔥 OPRAVA: Pre Firebase SDK 7.24.0 používame priamo applyActionCode
-                    // checkActionCode neexistuje v tejto verzii
+                    // 🔥 Pre Firebase SDK 11.6.1 používame applyActionCode
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
+                            console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
                             setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
@@ -179,12 +179,15 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
+                            console.error("account.js: Chyba pri overovaní e-mailu:", e);
                             setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
                             setLoading(false);
                         });
                 } else if (currentMode === 'recoverEmail') {
+                    console.log("account.js: Režim 'recoverEmail' detekovaný.");
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
+                            console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
                             setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
@@ -192,6 +195,7 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
+                            console.error("account.js: Chyba pri obnovovaní e-mailu:", e);
                             setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
                             setLoading(false);
                         });
@@ -204,6 +208,7 @@ function ResetPasswordApp() {
                 setLoading(false);
             }
         } catch (e) {
+            console.error("Chyba pri inicializácii:", e);
             setError(`Chyba pri inicializácii: ${e.message}`);
             setLoading(false);
         }
@@ -247,6 +252,7 @@ function ResetPasswordApp() {
                 window.location.href = 'login.html';
             }, 3000);
         } catch (e) {
+            console.error("Chyba pri resetovaní hesla:", e);
             if (e.code === 'auth/expired-action-code') {
                 setError("Odkaz na resetovanie hesla vypršal. Požiadajte o nový.");
             } else if (e.code === 'auth/invalid-action-code') {
@@ -402,10 +408,8 @@ function ResetPasswordApp() {
 }
 
 // 🔥 DÔLEŽITÉ: Sprístupníme komponent globálne pre použitie v HTML
-// Toto je potrebné, pretože keď je súbor načítaný ako modul (type="module"),
-// funkcie nie sú automaticky dostupné v globálnom scope
 window.ResetPasswordApp = ResetPasswordApp;
-
-// 🔥 Tiež sprístupníme pomocné funkcie pre prípad potreby
 window.getUrlParams = getUrlParams;
 window.validatePassword = validatePassword;
+
+console.log("account.js: ResetPasswordApp bol sprístupnený globálne cez window.ResetPasswordApp");
