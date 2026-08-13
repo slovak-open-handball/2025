@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - account</title> <!-- Toto bude dynamicky zmenené JS -->
+    <title>SOH 2025 - account</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- GitHub Pages - development only -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,13 +13,11 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            /* ZMENA: Nastavenie body na flexbox pre centrovanie */
             display: flex;
             flex-direction: column;
-            min-height: 100vh; /* Zabezpečí, že body zaberá celú výšku viewportu */
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            min-height: 100vh;
+            padding-top: 64px;
         }
-        /* Základné štýly pre modálne okno, ak by sa použilo */
         .modal {
             position: fixed;
             z-index: 100;
@@ -43,48 +41,43 @@
             width: 90%;
             text-align: center;
         }
-        /* ZMENA: Centrovanie obsahu v main-content-area */
         #main-content-area {
             flex-grow: 1;
             display: flex;
-            justify-content: center; /* Horizontálne centrovanie */
-            align-items: center;   /* Vertikálne centrovanie */
+            justify-content: center;
+            align-items: center;
             padding: 1rem;
         }
     </style>
-    <!-- Firebase SDKs - ZMENA: Používame verziu 7.24.0 -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- 🔥 ODSTRÁNENÁ priama Firebase konfigurácia - teraz sa načíta z authentication.js -->
 </head>
 <body class="bg-gray-100">
-    <!-- Hlavička a ľavé menu budú načítané dynamicky alebo sú súčasťou iných komponentov -->
     <div id="header-placeholder"></div>
     <div id="left-menu-placeholder"></div>
-
-    <!-- NOVINKA: Element pre globálne notifikácie z header.js -->
     <div id="header-notification-root"></div>
     <div id="authentication-root"></div>
 
-
-    <div id="main-content-area"> <!-- Odstránené flex-1 p-4, presunuté do style -->
-        <div id="root">
-            <!-- React aplikácia sa vykreslí tu -->
-        </div>
+    <div id="main-content-area">
+        <div id="root"></div>
     </div>
 
-    <!-- Načítanie skriptov - DÔLEŽITÉ PORADIE! -->
-    <script src="clear-console.js"></script>
-    <script src="authentication.js"></script>  <!-- 🔥 NAJPRV authentication.js, ktorý inicializuje Firebase -->
-    <script src="header.js"></script>
-    <script src="account.js"></script>
-
-    <script>
-        // Funkcia na získanie URL parametrov pre dynamický názov karty
+    <!-- 🔥 VŠETKY SKRIPTY NAČÍTAME AKO MODULY -->
+    <script type="module">
+        // Načítanie authentication.js ako modulu
+        import './authentication.js';
+    </script>
+    
+    <script type="module">
+        // Počkáme na inicializáciu Firebase a potom načítame header a account
+        import './header.js';
+        import './account.js';
+        
+        // Funkcia na získanie URL parametrov
         function getUrlParams() {
             const params = {};
             window.location.search.substring(1).split('&').forEach(param => {
@@ -94,18 +87,15 @@
             return params;
         }
 
-        // 🔥 Čakáme na inicializáciu Firebase z authentication.js
-        // Používame event 'dbInitialized', ktorý je odoslaný v setupFirebase()
+        // Čakáme na inicializáciu Firebase z authentication.js
         const waitForFirebase = () => {
             return new Promise((resolve) => {
-                // Ak už je Firebase inicializovaný, okamžite vyriešime
                 if (window.auth && window.db) {
                     console.log("account.html: Firebase už je inicializovaný.");
                     resolve();
                     return;
                 }
 
-                // Inak počkáme na udalosť
                 const handleDbInitialized = () => {
                     console.log("account.html: Zachytená udalosť dbInitialized.");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
@@ -114,55 +104,47 @@
 
                 window.addEventListener('dbInitialized', handleDbInitialized);
                 
-                // Timeout pre prípad, že by sa udalosť neodoslala
                 setTimeout(() => {
-                    console.warn("account.html: Timeout čakania na Firebase inicializáciu. Kontrolujem window.auth a window.db...");
+                    console.warn("account.html: Timeout čakania na Firebase inicializáciu...");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
                     
-                    // Posledná kontrola
                     if (window.auth && window.db) {
                         console.log("account.html: Firebase nájdený po timeoute.");
                         resolve();
                     } else {
-                        console.error("account.html: Firebase sa nepodarilo inicializovať ani po timeoute.");
-                        // Aj tak vyriešime, aby sme zobrazili chybovú hlášku
+                        console.error("account.html: Firebase sa nepodarilo inicializovať.");
                         resolve();
                     }
-                }, 5000); // 5 sekúnd timeout
+                }, 5000);
             });
         };
 
-        // Spustíme vykreslenie React aplikácie po načítaní DOM a inicializácii Firebase
+        // Spustenie aplikácie
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("account.html: DOMContentLoaded - čakám na Firebase...");
             
-            // 🔥 Počkáme na inicializáciu Firebase
             await waitForFirebase();
             
             console.log("account.html: Firebase je pripravený. Spúšťam aplikáciu.");
             
-            // Skontrolujeme, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                console.error("Chyba: React alebo ReactDOM nie sú načítané.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie.</div>';
                 return;
             }
             
-            // Zabezpečíme, že ResetPasswordApp je definovaná (je v account.js)
             if (typeof ResetPasswordApp === 'undefined') {
-                console.error("Chyba: Komponent ResetPasswordApp nie je definovaný. Skontrolujte account.js.");
+                console.error("Chyba: Komponent ResetPasswordApp nie je definovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
-            // Kontrola, či je Firebase inicializovaný
             if (!window.auth) {
-                console.error("Chyba: Firebase Auth nie je inicializovaný. Skontrolujte authentication.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii autentifikácie. Skúste to prosím neskôr.</div>';
+                console.error("Chyba: Firebase Auth nie je inicializovaný.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii autentifikácie.</div>';
                 return;
             }
 
-            // Dynamická zmena názvu karty
             const params = getUrlParams();
             const mode = params.mode;
             const titleElement = document.querySelector('title');
@@ -175,7 +157,7 @@
                 } else if (mode === 'recoverEmail') {
                     titleElement.textContent = 'SOH 2025 - Obnovenie e-mailovej adresy';
                 } else {
-                    titleElement.textContent = 'SOH 2025 - account'; // Predvolený názov
+                    titleElement.textContent = 'SOH 2025 - account';
                 }
             }
 
@@ -185,7 +167,7 @@
                 console.log("account.html: React App vykreslená.");
             } catch (error) {
                 console.error("Chyba pri vykresľovaní React aplikácie:", error);
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri vykresľovaní aplikácie. Skúste to prosím neskôr.</div>';
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri vykresľovaní aplikácie.</div>';
             }
         });
     </script>
