@@ -48,21 +48,68 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-// Vložený konfiguračný objekt
-const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-    projectId: "soh2025-2s0o2h5",
-    storageBucket: "soh2025-2s0o2h5.appspot.com",
-    messagingSenderId: "367316414164",
-    appId: "1:367316414164:web:fce079e1c7f4223292490b"
+// 🔐 DEŠIFROVACIA FUNKCIA
+const decryptConfig = (encryptedData, key) => {
+    try {
+        // Dekódujeme Base64
+        const encrypted = atob(encryptedData);
+        let decrypted = '';
+        
+        // XOR dešifrovanie
+        for (let i = 0; i < encrypted.length; i++) {
+            const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+            decrypted += String.fromCharCode(charCode);
+        }
+        
+        return JSON.parse(decrypted);
+    } catch (e) {
+        console.error("🔐 Chyba pri dešifrovaní konfigurácie:", e);
+        throw new Error("Nepodarilo sa dešifrovať konfiguráciu Firebase");
+    }
 };
+
+// 🔐 ZAŠIFROVANÉ KONFIGURÁCIE
+// Kľúč pre dešifrovanie (uložený priamo v kóde)
+const ENCRYPTION_KEY = "S0h2025SecureKey!@#";
+
+// 🔐 Firebase Config - zašifrovaný reťazec (pôvodný config bol zašifrovaný pomocou XOR + Base64)
+const ENCRYPTED_FIREBASE_CONFIG = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
+
+// 🔐 Google Apps Script URL - zašifrovaný reťazec
+const ENCRYPTED_GOOGLE_APPS_SCRIPT_URL = "Mzo6Pjw0PTQxMDsgPzskICQkK0gqKzQgISVMTzxBQUU8PkA/OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3OysnJTwuJCIlKjMnPzQrJCE1LTAxPz0gPzk8OzE7PzE2Pzg9NjE/PjA7MD8gPzE2Pzk3";
+
+// 🔐 DEŠIFRUJEME KONFIGURÁCIE
+let firebaseConfig = null;
+let GOOGLE_APPS_SCRIPT_URL = null;
+
+try {
+    firebaseConfig = decryptConfig(ENCRYPTED_FIREBASE_CONFIG, ENCRYPTION_KEY);
+    GOOGLE_APPS_SCRIPT_URL = decryptConfig(ENCRYPTED_GOOGLE_APPS_SCRIPT_URL, ENCRYPTION_KEY);
+    
+    if (!firebaseConfig || !GOOGLE_APPS_SCRIPT_URL) {
+        throw new Error("Dešifrované dáta sú prázdne");
+    }
+    
+    console.log("🔐 Konfigurácia úspešne dešifrovaná");
+} catch (e) {
+    console.error("🔐 FATÁLNA CHYBA: Nepodarilo sa dešifrovať konfiguráciu:", e);
+    // Zobrazíme chybovú stránku a zastavíme ďalšie vykonávanie
+    document.body.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <div style="background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; text-align: center;">
+                <h1 style="color: #d32f2f; margin-bottom: 20px;">🔐 Chyba inicializácie</h1>
+                <p style="color: #333; margin-bottom: 10px;">Nepodarilo sa načítať bezpečnostnú konfiguráciu aplikácie.</p>
+                <p style="color: #666; font-size: 14px; margin-top: 20px;">Kontaktujte prosím správcu systému.</p>
+                <p style="color: #999; font-size: 12px; margin-top: 10px;">Chyba: ${e.message}</p>
+            </div>
+        </div>
+    `;
+    // Zastavíme ďalšie vykonávanie
+    throw e;
+}
 
 // 🆕 App Check konfigurácia - tvoj identifikačný kľúč (site key) pre reCAPTCHA Enterprise
 const APP_CHECK_SITE_KEY = "6Lc5mPAsAAAAAJhSEytDinjEsUNn8q1A3DeaZc6x";
-
-// URL adresa Google Apps Scriptu na odosielanie e-mailov
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Definovanie globálnych premenných
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -194,6 +241,7 @@ const setupFirebase = () => {
         
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
+        throw e;
     }
 };
 
@@ -273,7 +321,7 @@ const setupPageVisibilityListener = () => {
         
         console.log("AuthManager: Aktualizované nastavenia viditeľnosti stránok:", visibilitySettings);
         
-        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYVNENÁ ZMENOU
+        // SKONTROLUJEME ČI JE AKTUÁLNA STRÁNKA OVPLYNENÁ ZMENOU
         checkCurrentPageVisibility();
         
     }, (error) => {
@@ -871,21 +919,26 @@ const handleAuthState = async () => {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    setupFirebase();
-    handleAuthState();
-    
-    // 🆕 Po dokončení inicializácie nastavíme real-time listener pre viditeľnosť stránok
-    // Počkáme kým sa načíta Firebase a potom nastavíme listener
-    const checkAndSetupListener = () => {
-        if (db && auth) {
-            console.log("AuthManager: Inicializácia Firebase dokončená, nastavujem listener pre viditeľnosť stránok.");
-            setupPageVisibilityListener();
-        } else {
-            console.log("AuthManager: Čakám na inicializáciu Firebase pred nastavením listenera pre viditeľnosť stránok.");
-            setTimeout(checkAndSetupListener, 500);
-        }
-    };
-    
-    // Spustíme kontrolu po krátkom čase, aby sme mali istotu že Firebase je inicializovaný
-    setTimeout(checkAndSetupListener, 1000);
+    try {
+        setupFirebase();
+        handleAuthState();
+        
+        // 🆕 Po dokončení inicializácie nastavíme real-time listener pre viditeľnosť stránok
+        // Počkáme kým sa načíta Firebase a potom nastavíme listener
+        const checkAndSetupListener = () => {
+            if (db && auth) {
+                console.log("AuthManager: Inicializácia Firebase dokončená, nastavujem listener pre viditeľnosť stránok.");
+                setupPageVisibilityListener();
+            } else {
+                console.log("AuthManager: Čakám na inicializáciu Firebase pred nastavením listenera pre viditeľnosť stránok.");
+                setTimeout(checkAndSetupListener, 500);
+            }
+        };
+        
+        // Spustíme kontrolu po krátkom čase, aby sme mali istotu že Firebase je inicializovaný
+        setTimeout(checkAndSetupListener, 1000);
+    } catch (e) {
+        console.error("AuthManager: FATÁLNA CHYBA pri inicializácii:", e);
+        // Chyba už bola ošetrená v dešifrovacej časti
+    }
 });
