@@ -50,7 +50,7 @@
         }
     </style>
     
-    <!-- 🔥 POUŽÍVAME IBA JEDNU VERZIU FIREBASE SDK - 11.6.1 -->
+    <!-- 🔥 POUŽÍVAME IBA JEDNU VERZIU FIREBASE SDK - 11.6.1 CEZ importmap -->
     <script type="importmap">
         {
             "imports": {
@@ -64,6 +64,8 @@
     <!-- React a ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 🔥 ODSTRÁNENÉ STARÉ FIREBASE SDK SKRIPTY -->
 </head>
 <body class="bg-gray-100">
     <div id="header-placeholder"></div>
@@ -102,6 +104,7 @@
                 // Kontrola či je Firebase inicializovaný
                 if (window.auth && window.db) {
                     console.log("account.html: Firebase už je inicializovaný.");
+                    console.log("account.html: window.auth.applyActionCode je funkcia?", typeof window.auth.applyActionCode === 'function');
                     resolve();
                     return;
                 }
@@ -110,6 +113,7 @@
                 const handleDbInitialized = () => {
                     console.log("account.html: Zachytená udalosť dbInitialized.");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
+                    console.log("account.html: window.auth.applyActionCode je funkcia?", typeof window.auth.applyActionCode === 'function');
                     resolve();
                 };
 
@@ -122,6 +126,7 @@
                     
                     if (window.auth && window.db) {
                         console.log("account.html: Firebase nájdený po timeoute.");
+                        console.log("account.html: window.auth.applyActionCode je funkcia?", typeof window.auth.applyActionCode === 'function');
                         resolve();
                     } else {
                         console.error("account.html: Firebase sa nepodarilo inicializovať.");
@@ -163,9 +168,11 @@
 
             // 🔥 Kontrola či metóda applyActionCode existuje
             if (typeof window.auth.applyActionCode !== 'function') {
-                console.error("Chyba: window.auth.applyActionCode nie je funkcia. Skontrolujte verziu Firebase SDK.");
+                console.error("Chyba: window.auth.applyActionCode nie je funkcia.");
                 console.log("window.auth:", window.auth);
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba: Neplatná verzia Firebase SDK.</div>';
+                console.log("window.auth.applyActionCode:", window.auth.applyActionCode);
+                console.log("Typ window.auth:", typeof window.auth);
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba: Neplatná verzia Firebase SDK. Skontrolujte konzolu pre viac informácií.</div>';
                 return;
             }
 
