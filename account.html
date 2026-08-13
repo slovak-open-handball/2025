@@ -49,10 +49,16 @@
             padding: 1rem;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
+    <!-- 🔥 Firebase SDK 11.6.1 - rovnaká verzia ako v authentication.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+            }
+        }
+    </script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
@@ -91,11 +97,13 @@
         const waitForFirebase = () => {
             return new Promise((resolve) => {
                 if (window.auth && window.db) {
+                    console.log("account.html: Firebase už je inicializovaný.");
                     resolve();
                     return;
                 }
 
                 const handleDbInitialized = () => {
+                    console.log("account.html: Zachytená udalosť dbInitialized.");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
                     resolve();
                 };
@@ -103,11 +111,14 @@
                 window.addEventListener('dbInitialized', handleDbInitialized);
                 
                 setTimeout(() => {
+                    console.warn("account.html: Timeout čakania na Firebase inicializáciu...");
                     window.removeEventListener('dbInitialized', handleDbInitialized);
                     
                     if (window.auth && window.db) {
+                        console.log("account.html: Firebase nájdený po timeoute.");
                         resolve();
                     } else {
+                        console.error("account.html: Firebase sa nepodarilo inicializovať.");
                         resolve();
                     }
                 }, 5000);
@@ -116,20 +127,26 @@
 
         // Spustenie aplikácie
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("account.html: DOMContentLoaded - čakám na Firebase...");
             
-            await waitForFirebase();            
+            await waitForFirebase();
+            
+            console.log("account.html: Firebase je pripravený. Spúšťam aplikáciu.");
             
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie.</div>';
                 return;
             }
             
             if (typeof window.ResetPasswordApp === 'undefined') {
+                console.error("Chyba: Komponent window.ResetPasswordApp nie je definovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             if (!window.auth) {
+                console.error("Chyba: Firebase Auth nie je inicializovaný.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii autentifikácie.</div>';
                 return;
             }
@@ -153,7 +170,9 @@
             try {
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(window.ResetPasswordApp, null));
+                console.log("account.html: React App vykreslená.");
             } catch (error) {
+                console.error("Chyba pri vykresľovaní React aplikácie:", error);
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri vykresľovaní aplikácie.</div>';
             }
         });
