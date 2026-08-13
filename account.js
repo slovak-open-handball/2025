@@ -149,6 +149,9 @@ function ResetPasswordApp() {
             const currentMode = params.mode;
             const currentOobCode = params.oobCode;
 
+            console.log("account.js: currentMode:", currentMode);
+            console.log("account.js: currentOobCode:", currentOobCode);
+
             if (currentMode && currentOobCode) {
                 setMode(currentMode);
                 setOobCode(currentOobCode);
@@ -168,37 +171,66 @@ function ResetPasswordApp() {
                 } else if (currentMode === 'verifyAndChangeEmail') {
                     console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // 🔥 Pre Firebase SDK 11.6.1 používame applyActionCode
-                    authInstance.applyActionCode(currentOobCode)
-                        .then(() => {
-                            console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
-                            setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
-                            setLoading(false);
-                            setTimeout(() => {
-                                window.location.href = 'login.html';
-                            }, 3000);
-                        })
-                        .catch(e => {
-                            console.error("account.js: Chyba pri overovaní e-mailu:", e);
-                            setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
-                            setLoading(false);
-                        });
+                    // 🔥 Pre Firebase SDK 11.6.1 - skúsime použiť checkActionCode namiesto applyActionCode
+                    if (typeof authInstance.checkActionCode === 'function') {
+                        authInstance.checkActionCode(currentOobCode)
+                            .then((actionCodeInfo) => {
+                                console.log("account.js: checkActionCode úspešné:", actionCodeInfo);
+                                // Potom aplikujeme akčný kód
+                                return authInstance.applyActionCode(currentOobCode);
+                            })
+                            .then(() => {
+                                console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
+                                setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
+                                setLoading(false);
+                                setTimeout(() => {
+                                    window.location.href = 'login.html';
+                                }, 3000);
+                            })
+                            .catch(e => {
+                                console.error("account.js: Chyba pri overovaní e-mailu:", e);
+                                setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
+                                setLoading(false);
+                            });
+                    } else {
+                        // Alternatívny prístup - priamo applyActionCode
+                        authInstance.applyActionCode(currentOobCode)
+                            .then(() => {
+                                console.log("account.js: applyActionCode úspešné. E-mail bol overený.");
+                                setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
+                                setLoading(false);
+                                setTimeout(() => {
+                                    window.location.href = 'login.html';
+                                }, 3000);
+                            })
+                            .catch(e => {
+                                console.error("account.js: Chyba pri overovaní e-mailu:", e);
+                                setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
+                                setLoading(false);
+                            });
+                    }
                 } else if (currentMode === 'recoverEmail') {
                     console.log("account.js: Režim 'recoverEmail' detekovaný.");
-                    authInstance.applyActionCode(currentOobCode)
-                        .then(() => {
-                            console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
-                            setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
-                            setLoading(false);
-                            setTimeout(() => {
-                                window.location.href = 'login.html';
-                            }, 3000);
-                        })
-                        .catch(e => {
-                            console.error("account.js: Chyba pri obnovovaní e-mailu:", e);
-                            setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
-                            setLoading(false);
-                        });
+                    
+                    if (typeof authInstance.applyActionCode === 'function') {
+                        authInstance.applyActionCode(currentOobCode)
+                            .then(() => {
+                                console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
+                                setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
+                                setLoading(false);
+                                setTimeout(() => {
+                                    window.location.href = 'login.html';
+                                }, 3000);
+                            })
+                            .catch(e => {
+                                console.error("account.js: Chyba pri obnovovaní e-mailu:", e);
+                                setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
+                                setLoading(false);
+                            });
+                    } else {
+                        setError("Metóda applyActionCode nie je dostupná v tejto verzii Firebase SDK.");
+                        setLoading(false);
+                    }
                 } else {
                     setError("Neplatný režim akcie. Chýbajú parametre.");
                     setLoading(false);
