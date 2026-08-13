@@ -187,7 +187,6 @@ const setupFirebase = () => {
         window.checkActionCode = checkActionCode;
         window.verifyPasswordResetCode = verifyPasswordResetCode;
         window.confirmPasswordReset = confirmPasswordReset;
-        window.sendPasswordResetEmail = sendPasswordResetEmail;
 
         window.dispatchEvent(new CustomEvent('dbInitialized'));
         console.log("AuthManager: Udalosť dbInitialized odoslaná.");
