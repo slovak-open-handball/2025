@@ -933,8 +933,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const getDaysBetween = (start, end) => {
         const dates = [];
         let currentDate = new Date(start);
-        while (currentDate <= end) {
-            dates.push(currentDate.toISOString().split('T')[0]);
+        // Nastavíme čas na začiatok dňa v lokálnom čase
+        currentDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(end);
+        endDate.setHours(0, 0, 0, 0);
+    
+        while (currentDate <= endDate) {
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            dates.push(`${year}-${month}-${day}`);
             currentDate.setDate(currentDate.getDate() + 1);
         }
         return dates;
