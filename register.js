@@ -132,6 +132,7 @@ function App() {
 
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
   const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
+  const [arrivalDate, setArrivalDate] = React.useState(null);
   const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(null);
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
@@ -274,6 +275,7 @@ function App() {
       } else {
           setRegistrationStartDate(null);
           setRegistrationEndDate(null);
+          setArrivalDate(null);
           setDataEditDeadline(null);
           setRosterEditDeadline(null);
           setNumberOfPlayersInTeam(0);
@@ -1532,7 +1534,7 @@ function App() {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore,
-                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4, currentGlobalNote: globalNote }), // NOVINKA: Odovzdanie globalNote
+                  handlePrev: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4, currentGlobalNote: globalNote }),
                   handleSubmit: handleNextPage5ToPage6,
                   loading: loading,
                   setLoading: setLoading,
@@ -1543,6 +1545,7 @@ function App() {
                   isRecaptchaReady: isRecaptchaReady,
                   tournamentStartDate: registrationStartDate,
                   tournamentEndDate: registrationEndDate,
+                  arrivalDate: arrivalDate,
               }) :
           page === 6 ?
               React.createElement(Page6Form, {
