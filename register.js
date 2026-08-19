@@ -13,6 +13,23 @@ import { Page7Form } from './register-page7.js';
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+const createTimestampFromLocalDate = (date) => {
+    if (!date) return null;
+    if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+    
+    // Vytvoríme nový Date objekt s rovnakými hodnotami v lokálnom čase
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = date.getSeconds();
+    
+    // Vytvoríme Date v UTC s rovnakými hodnotami
+    const utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+    return Timestamp.fromDate(utcDate);
+};
+
 const formatToDatetimeLocal = (date) => {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
   const day = date.getDate().toString().padStart(2, '0');
@@ -1036,8 +1053,8 @@ function App() {
           approved: true,
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
-          dataEditDeadline: dataEditDeadline ? Timestamp.fromDate(dataEditDeadline) : null,
-          rosterEditDeadline: rosterEditDeadline ? Timestamp.fromDate(rosterEditDeadline) : null,
+          dataEditDeadline: dataEditDeadline ? createTimestampFromLocalDate(dataEditDeadline) : null,
+          rosterEditDeadline: rosterEditDeadline ? createTimestampFromLocalDate(rosterEditDeadline) : null,
           categories: formData.categories,
           teams: teamsDataForUsers,
           note: finalGlobalNote || ''
