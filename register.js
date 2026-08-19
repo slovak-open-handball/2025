@@ -1638,8 +1638,8 @@ function App() {
                   setTeamsDataFromPage4: setTeamsDataFromPage4,
                   onGranularTeamsDataChange: handleGranularTeamsDataChange,
                   isRecaptchaReady: isRecaptchaReady,
-                  tournamentStartDate: registrationStartDate,
-                  tournamentEndDate: registrationEndDate,
+                  tournamentStartDate: tournamentStartDate,
+                  totournamentEndDate: tournamentEndDate,
                   arrivalDate: arrivalDate,
               }) :
           page === 6 ?
