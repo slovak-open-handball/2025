@@ -132,6 +132,8 @@ function App() {
 
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
   const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
+  const [tournamentStartDate, setTournamentStartDate] = React.useState(null);
+  const [tournamentEndDate, setTournamentEndDate] = React.useState(null);
   const [arrivalDate, setArrivalDate] = React.useState(null);
   const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(null);
@@ -275,6 +277,8 @@ function App() {
       } else {
           setRegistrationStartDate(null);
           setRegistrationEndDate(null);
+          setTournamentStartDate(null);
+          setTournamentEndDate(null);
           setArrivalDate(null);
           setDataEditDeadline(null);
           setRosterEditDeadline(null);
@@ -776,9 +780,9 @@ function App() {
           return dates;
       };
   
-      // 🔥 ZÍSKAME AKTUÁLNE DÁTUMY TURNAJA ZE STAVU
-      const tournamentStart = registrationStartDate;
-      const tournamentEnd = registrationEndDate;
+      // 🔥 ZÍSKAME AKTUÁLNE DÁTUMY TURNAJA - POUŽIJEME tournamentStartDate a tournamentEndDate
+      const tournamentStart = tournamentStartDate; // ZMENENÉ
+      const tournamentEnd = tournamentEndDate; // ZMENENÉ
       const currentTournamentDays = (tournamentStart && tournamentEnd && tournamentStart instanceof Date && tournamentEnd instanceof Date && !isNaN(tournamentStart.getTime()) && !isNaN(tournamentEnd.getTime()))
           ? getDaysBetween(tournamentStart, tournamentEnd)
           : [];
@@ -789,18 +793,14 @@ function App() {
           if (!Array.isArray(teams)) continue;
           
           teamsDataForUsers[categoryName] = teams.map(team => {
-              // Ak má tím packageDetails, prepočítame meals podľa aktuálnych dní turnaja
               if (team.packageDetails && team.packageDetails.meals) {
                   const originalMeals = team.packageDetails.meals;
                   const newMeals = {};
                   
-                  // Pre každý deň turnaja skopírujeme nastavenia stravy z pôvodného meals objektu
-                  // Ak pre daný deň neboli nastavenia, použijeme prázdne (žiadne jedlo)
                   currentTournamentDays.forEach(day => {
                       if (originalMeals[day]) {
                           newMeals[day] = { ...originalMeals[day] };
                       } else {
-                          // Ak deň neexistuje v pôvodných meals, vytvoríme ho s nulami
                           newMeals[day] = {
                               breakfast: 0,
                               lunch: 0,
@@ -810,7 +810,6 @@ function App() {
                       }
                   });
                   
-                  // Zachováme participantCard ak existoval
                   if (originalMeals.participantCard !== undefined) {
                       newMeals.participantCard = originalMeals.participantCard;
                   }
@@ -821,7 +820,7 @@ function App() {
           });
       }
   
-      // 🔥 AKTUÁLNE DÁTUMY NASTAVÍME DO packageDetails PRE KAŽDÝ TÍM V teamsDataForPrivate
+      // 🔥 ROVNAKÁ ÚPRAVA AJ PRE teamsDataForPrivate
       for (const categoryName in teamsDataForPrivate) {
           const teams = teamsDataForPrivate[categoryName];
           if (!Array.isArray(teams)) continue;
