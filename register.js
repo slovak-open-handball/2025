@@ -748,499 +748,595 @@ function App() {
   };
 
   const confirmFinalRegistration = async (finalTeamsDataFromPage7, finalGlobalNote) => {
-    setLoading(true);
-    dispatchAppNotification('', 'info');
-    isRegisteringRef.current = true;
+      setLoading(true);
+      dispatchAppNotification('', 'info');
+      isRegisteringRef.current = true;
+    
+      const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
+    
+      // 🔥 VYTVORÍME DVE KÓPIE
+      const teamsDataForUsers = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+      const teamsDataForPrivate = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
+    
+      // 🔥 FUNKCIA NA GENEROVANIE DŇOV MEDZI DÁTUMAMI
+      const getDaysBetween = (start, end) => {
+          const dates = [];
+          let currentDate = new Date(start);
+          currentDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(end);
+          endDate.setHours(0, 0, 0, 0);
+      
+          while (currentDate <= endDate) {
+              const year = currentDate.getFullYear();
+              const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+              const day = String(currentDate.getDate()).padStart(2, '0');
+              dates.push(`${year}-${month}-${day}`);
+              currentDate.setDate(currentDate.getDate() + 1);
+          }
+          return dates;
+      };
   
-    const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
+      // 🔥 ZÍSKAME AKTUÁLNE DÁTUMY TURNAJA ZE STAVU
+      const tournamentStart = registrationStartDate;
+      const tournamentEnd = registrationEndDate;
+      const currentTournamentDays = (tournamentStart && tournamentEnd && tournamentStart instanceof Date && tournamentEnd instanceof Date && !isNaN(tournamentStart.getTime()) && !isNaN(tournamentEnd.getTime()))
+          ? getDaysBetween(tournamentStart, tournamentEnd)
+          : [];
   
-    // 🔥 VYTVORÍME DVE KÓPIE
-    const teamsDataForUsers = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
-    const teamsDataForPrivate = JSON.parse(JSON.stringify(finalTeamsDataFromPage7));
-  
-    // 🔥 ODSTRÁNIME DÁTUMY NARODENIA A ADRESY Z teamsDataForUsers
-    // (zachováme všetky ostatné údaje vrátane farieb dresov)
-    for (const categoryName in teamsDataForUsers) {
-      const teams = teamsDataForUsers[categoryName];
-      if (!Array.isArray(teams)) continue;
-  
-      teamsDataForUsers[categoryName] = teams.map(team => {
-        // Vymažeme dateOfBirth a address z playerDetails
-        if (team.playerDetails && Array.isArray(team.playerDetails)) {
-          team.playerDetails = team.playerDetails.map(player => {
-            const cleanPlayer = { ...player };
-            delete cleanPlayer.dateOfBirth;
-            delete cleanPlayer.address;
-            return cleanPlayer;
+      // 🔥 AKTUÁLNE DÁTUMY NASTAVÍME DO packageDetails PRE KAŽDÝ TÍM V teamsDataForUsers
+      for (const categoryName in teamsDataForUsers) {
+          const teams = teamsDataForUsers[categoryName];
+          if (!Array.isArray(teams)) continue;
+          
+          teamsDataForUsers[categoryName] = teams.map(team => {
+              // Ak má tím packageDetails, prepočítame meals podľa aktuálnych dní turnaja
+              if (team.packageDetails && team.packageDetails.meals) {
+                  const originalMeals = team.packageDetails.meals;
+                  const newMeals = {};
+                  
+                  // Pre každý deň turnaja skopírujeme nastavenia stravy z pôvodného meals objektu
+                  // Ak pre daný deň neboli nastavenia, použijeme prázdne (žiadne jedlo)
+                  currentTournamentDays.forEach(day => {
+                      if (originalMeals[day]) {
+                          newMeals[day] = { ...originalMeals[day] };
+                      } else {
+                          // Ak deň neexistuje v pôvodných meals, vytvoríme ho s nulami
+                          newMeals[day] = {
+                              breakfast: 0,
+                              lunch: 0,
+                              dinner: 0,
+                              refreshment: 0
+                          };
+                      }
+                  });
+                  
+                  // Zachováme participantCard ak existoval
+                  if (originalMeals.participantCard !== undefined) {
+                      newMeals.participantCard = originalMeals.participantCard;
+                  }
+                  
+                  team.packageDetails.meals = newMeals;
+              }
+              return team;
           });
-        }
-  
-        // Vymažeme dateOfBirth a address z womenTeamMemberDetails
-        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-          team.womenTeamMemberDetails = team.womenTeamMemberDetails.map(member => {
-            const cleanMember = { ...member };
-            delete cleanMember.dateOfBirth;
-            delete cleanMember.address;
-            return cleanMember;
-          });
-        }
-  
-        // Vymažeme dateOfBirth a address z menTeamMemberDetails
-        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-          team.menTeamMemberDetails = team.menTeamMemberDetails.map(member => {
-            const cleanMember = { ...member };
-            delete cleanMember.dateOfBirth;
-            delete cleanMember.address;
-            return cleanMember;
-          });
-        }
-  
-        // Vymažeme dateOfBirth a address z driverDetailsMale
-        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-          team.driverDetailsMale = team.driverDetailsMale.map(driver => {
-            const cleanDriver = { ...driver };
-            delete cleanDriver.dateOfBirth;
-            delete cleanDriver.address;
-            return cleanDriver;
-          });
-        }
-  
-        // Vymažeme dateOfBirth a address z driverDetailsFemale
-        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-          team.driverDetailsFemale = team.driverDetailsFemale.map(driver => {
-            const cleanDriver = { ...driver };
-            delete cleanDriver.dateOfBirth;
-            delete cleanDriver.address;
-            return cleanDriver;
-          });
-        }
-  
-        // ✅ KONVERTOVANIE farieb dresov z jerseyColors na jerseyHomeColor a jerseyAwayColor
-        if (team.jerseyColors) {
-          team.jerseyHomeColor = team.jerseyColors.color1 || '';
-          team.jerseyAwayColor = team.jerseyColors.color2 || '';
-          // Odstránime pôvodný jerseyColors objekt, aby sme nemali duplicitné dáta
-          delete team.jerseyColors;
-        }
-  
-        return team;
-      });
-    }
-  
-    // 🔥 PRE teamsDataForPrivate - ODSTRÁNIME VŠETKO OKREM DÁTUMOV A ADRIES
-    for (const categoryName in teamsDataForPrivate) {
-      const teams = teamsDataForPrivate[categoryName];
-      if (!Array.isArray(teams)) continue;
-  
-      teamsDataForPrivate[categoryName] = teams.map(team => {
-        // Spracujeme playerDetails - ponecháme len dateOfBirth a address
-        if (team.playerDetails && Array.isArray(team.playerDetails)) {
-          team.playerDetails = team.playerDetails.map(player => {
-            const privatePlayer = {};
-            if (player.dateOfBirth) privatePlayer.dateOfBirth = player.dateOfBirth;
-            if (player.address) privatePlayer.address = player.address;
-            return privatePlayer;
-          });
-        }
-  
-        // Spracujeme womenTeamMemberDetails
-        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-          team.womenTeamMemberDetails = team.womenTeamMemberDetails.map(member => {
-            const privateMember = {};
-            if (member.dateOfBirth) privateMember.dateOfBirth = member.dateOfBirth;
-            if (member.address) privateMember.address = member.address;
-            return privateMember;
-          });
-        }
-  
-        // Spracujeme menTeamMemberDetails
-        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-          team.menTeamMemberDetails = team.menTeamMemberDetails.map(member => {
-            const privateMember = {};
-            if (member.dateOfBirth) privateMember.dateOfBirth = member.dateOfBirth;
-            if (member.address) privateMember.address = member.address;
-            return privateMember;
-          });
-        }
-  
-        // Spracujeme driverDetailsMale
-        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-          team.driverDetailsMale = team.driverDetailsMale.map(driver => {
-            const privateDriver = {};
-            if (driver.dateOfBirth) privateDriver.dateOfBirth = driver.dateOfBirth;
-            if (driver.address) privateDriver.address = driver.address;
-            return privateDriver;
-          });
-        }
-  
-        // Spracujeme driverDetailsFemale
-        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-          team.driverDetailsFemale = team.driverDetailsFemale.map(driver => {
-            const privateDriver = {};
-            if (driver.dateOfBirth) privateDriver.dateOfBirth = driver.dateOfBirth;
-            if (driver.address) privateDriver.address = driver.address;
-            return privateDriver;
-          });
-        }
-  
-        // Odstránime aj ostatné polia z tímu - ponecháme len štruktúru s prázdnymi poliami
-        const cleanTeam = {
-          playerDetails: team.playerDetails || [],
-          womenTeamMemberDetails: team.womenTeamMemberDetails || [],
-          menTeamMemberDetails: team.menTeamMemberDetails || [],
-          driverDetailsMale: team.driverDetailsMale || [],
-          driverDetailsFemale: team.driverDetailsFemale || []
-        };
-  
-        return cleanTeam;
-      });
-    }
-  
-    try {
-      const authInstance = window.auth;
-      const firestoreDb = window.db;
-  
-      if (!authInstance || !firestoreDb) {
-        dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
-        setLoading(false);
-        isRegisteringRef.current = false;
-        return;
       }
   
-      let recaptchaToken = null;
-      try {
-        recaptchaToken = await getRecaptchaToken('register_user');
-        if (!recaptchaToken) {
-          dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
-          setLoading(false);
-          isRegisteringRef.current = false;
-          return;
-        }
-      } catch (recaptchaError) {
-          dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
-          setLoading(false);
-          isRegisteringRef.current = false;
-          return;
+      // 🔥 AKTUÁLNE DÁTUMY NASTAVÍME DO packageDetails PRE KAŽDÝ TÍM V teamsDataForPrivate
+      for (const categoryName in teamsDataForPrivate) {
+          const teams = teamsDataForPrivate[categoryName];
+          if (!Array.isArray(teams)) continue;
+          
+          teamsDataForPrivate[categoryName] = teams.map(team => {
+              if (team.packageDetails && team.packageDetails.meals) {
+                  const originalMeals = team.packageDetails.meals;
+                  const newMeals = {};
+                  
+                  currentTournamentDays.forEach(day => {
+                      if (originalMeals[day]) {
+                          newMeals[day] = { ...originalMeals[day] };
+                      } else {
+                          newMeals[day] = {
+                              breakfast: 0,
+                              lunch: 0,
+                              dinner: 0,
+                              refreshment: 0
+                          };
+                      }
+                  });
+                  
+                  if (originalMeals.participantCard !== undefined) {
+                      newMeals.participantCard = originalMeals.participantCard;
+                  }
+                  
+                  team.packageDetails.meals = newMeals;
+              }
+              return team;
+          });
       }
-  
-      let user = null;
+    
+      // 🔥 ODSTRÁNIME DÁTUMY NARODENIA A ADRESY Z teamsDataForUsers
+      // (zachováme všetky ostatné údaje vrátane farieb dresov)
+      for (const categoryName in teamsDataForUsers) {
+        const teams = teamsDataForUsers[categoryName];
+        if (!Array.isArray(teams)) continue;
+    
+        teamsDataForUsers[categoryName] = teams.map(team => {
+          // Vymažeme dateOfBirth a address z playerDetails
+          if (team.playerDetails && Array.isArray(team.playerDetails)) {
+            team.playerDetails = team.playerDetails.map(player => {
+              const cleanPlayer = { ...player };
+              delete cleanPlayer.dateOfBirth;
+              delete cleanPlayer.address;
+              return cleanPlayer;
+            });
+          }
+    
+          // Vymažeme dateOfBirth a address z womenTeamMemberDetails
+          if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+            team.womenTeamMemberDetails = team.womenTeamMemberDetails.map(member => {
+              const cleanMember = { ...member };
+              delete cleanMember.dateOfBirth;
+              delete cleanMember.address;
+              return cleanMember;
+            });
+          }
+    
+          // Vymažeme dateOfBirth a address z menTeamMemberDetails
+          if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+            team.menTeamMemberDetails = team.menTeamMemberDetails.map(member => {
+              const cleanMember = { ...member };
+              delete cleanMember.dateOfBirth;
+              delete cleanMember.address;
+              return cleanMember;
+            });
+          }
+    
+          // Vymažeme dateOfBirth a address z driverDetailsMale
+          if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+            team.driverDetailsMale = team.driverDetailsMale.map(driver => {
+              const cleanDriver = { ...driver };
+              delete cleanDriver.dateOfBirth;
+              delete cleanDriver.address;
+              return cleanDriver;
+            });
+          }
+    
+          // Vymažeme dateOfBirth a address z driverDetailsFemale
+          if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+            team.driverDetailsFemale = team.driverDetailsFemale.map(driver => {
+              const cleanDriver = { ...driver };
+              delete cleanDriver.dateOfBirth;
+              delete cleanDriver.address;
+              return cleanDriver;
+            });
+          }
+    
+          // ✅ KONVERTOVANIE farieb dresov z jerseyColors na jerseyHomeColor a jerseyAwayColor
+          if (team.jerseyColors) {
+            team.jerseyHomeColor = team.jerseyColors.color1 || '';
+            team.jerseyAwayColor = team.jerseyColors.color2 || '';
+            // Odstránime pôvodný jerseyColors objekt, aby sme nemali duplicitné dáta
+            delete team.jerseyColors;
+          }
+    
+          return team;
+        });
+      }
+    
+      // 🔥 PRE teamsDataForPrivate - ODSTRÁNIME VŠETKO OKREM DÁTUMOV A ADRIES
+      for (const categoryName in teamsDataForPrivate) {
+        const teams = teamsDataForPrivate[categoryName];
+        if (!Array.isArray(teams)) continue;
+    
+        teamsDataForPrivate[categoryName] = teams.map(team => {
+          // Spracujeme playerDetails - ponecháme len dateOfBirth a address
+          if (team.playerDetails && Array.isArray(team.playerDetails)) {
+            team.playerDetails = team.playerDetails.map(player => {
+              const privatePlayer = {};
+              if (player.dateOfBirth) privatePlayer.dateOfBirth = player.dateOfBirth;
+              if (player.address) privatePlayer.address = player.address;
+              return privatePlayer;
+            });
+          }
+    
+          // Spracujeme womenTeamMemberDetails
+          if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+            team.womenTeamMemberDetails = team.womenTeamMemberDetails.map(member => {
+              const privateMember = {};
+              if (member.dateOfBirth) privateMember.dateOfBirth = member.dateOfBirth;
+              if (member.address) privateMember.address = member.address;
+              return privateMember;
+            });
+          }
+    
+          // Spracujeme menTeamMemberDetails
+          if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+            team.menTeamMemberDetails = team.menTeamMemberDetails.map(member => {
+              const privateMember = {};
+              if (member.dateOfBirth) privateMember.dateOfBirth = member.dateOfBirth;
+              if (member.address) privateMember.address = member.address;
+              return privateMember;
+            });
+          }
+    
+          // Spracujeme driverDetailsMale
+          if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+            team.driverDetailsMale = team.driverDetailsMale.map(driver => {
+              const privateDriver = {};
+              if (driver.dateOfBirth) privateDriver.dateOfBirth = driver.dateOfBirth;
+              if (driver.address) privateDriver.address = driver.address;
+              return privateDriver;
+            });
+          }
+    
+          // Spracujeme driverDetailsFemale
+          if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+            team.driverDetailsFemale = team.driverDetailsFemale.map(driver => {
+              const privateDriver = {};
+              if (driver.dateOfBirth) privateDriver.dateOfBirth = driver.dateOfBirth;
+              if (driver.address) privateDriver.address = driver.address;
+              return privateDriver;
+            });
+          }
+    
+          // Odstránime aj ostatné polia z tímu - ponecháme len štruktúru s prázdnymi poliami
+          const cleanTeam = {
+            playerDetails: team.playerDetails || [],
+            womenTeamMemberDetails: team.womenTeamMemberDetails || [],
+            menTeamMemberDetails: team.menTeamMemberDetails || [],
+            driverDetailsMale: team.driverDetailsMale || [],
+            driverDetailsFemale: team.driverDetailsFemale || []
+          };
+    
+          return cleanTeam;
+        });
+      }
+    
       try {
-        const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
-        user = userCredential.user;
-  
-        if (!user || !user.uid) {
-          dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
+        const authInstance = window.auth;
+        const firestoreDb = window.db;
+    
+        if (!authInstance || !firestoreDb) {
+          dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
           setLoading(false);
           isRegisteringRef.current = false;
           return;
         }
-  
-        console.log("register.js: Používateľ vytvorený, UID:", user.uid);
-  
-        let retries = 0;
-        const maxRetries = 10;
-        let currentUser = authInstance.currentUser;
-        
-        while (!currentUser && retries < maxRetries) {
-          console.log(`register.js: Čakám na prihlásenie používateľa (pokus ${retries + 1}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, 200));
-          currentUser = authInstance.currentUser;
-          retries++;
+    
+        let recaptchaToken = null;
+        try {
+          recaptchaToken = await getRecaptchaToken('register_user');
+          if (!recaptchaToken) {
+            dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
+          }
+        } catch (recaptchaError) {
+            dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
         }
-  
-        if (!currentUser) {
-          dispatchAppNotification('Chyba: Používateľ nebol prihlásený po vytvorení účtu. Skúste to prosím znova.', 'error');
-          setLoading(false);
-          isRegisteringRef.current = false;
-          return;
+    
+        let user = null;
+        try {
+          const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
+          user = userCredential.user;
+    
+          if (!user || !user.uid) {
+            dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
+          }
+    
+          console.log("register.js: Používateľ vytvorený, UID:", user.uid);
+    
+          let retries = 0;
+          const maxRetries = 10;
+          let currentUser = authInstance.currentUser;
+          
+          while (!currentUser && retries < maxRetries) {
+            console.log(`register.js: Čakám na prihlásenie používateľa (pokus ${retries + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            currentUser = authInstance.currentUser;
+            retries++;
+          }
+    
+          if (!currentUser) {
+            dispatchAppNotification('Chyba: Používateľ nebol prihlásený po vytvorení účtu. Skúste to prosím znova.', 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
+          }
+    
+          console.log("register.js: Používateľ je prihlásený, UID:", currentUser.uid);
+    
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          try {
+            await currentUser.getIdToken(true);
+            console.log("register.js: Token bol aktualizovaný.");
+          } catch (tokenError) {
+            console.warn("register.js: Chyba pri aktualizácii tokenu:", tokenError);
+          }
+    
+        } catch (authError) {
+            let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
+            if (authError.code) {
+                switch (authError.code) {
+                    case 'auth/email-already-in-use':
+                        authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.';
+                        dispatchAppNotification(authErrorMessage, 'error');
+                        setTimeout(() => {
+                            setPage(1);
+                        }, 3000);
+                        setLoading(false);
+                        isRegisteringRef.current = false;
+                        return;
+                    case 'auth/invalid-email':
+                        authErrorMessage = 'Neplatný formát e-mailovej adresy.';
+                        break;
+                    case 'auth/weak-password':
+                        authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
+                        break;
+                    default:
+                        authErrorMessage = authError.message || authErrorMessage;
+                        break;
+                }
+            } else {
+                authErrorMessage = authError.message || authErrorMessage;
+            }
+            dispatchAppNotification(authErrorMessage, 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
         }
-  
-        console.log("register.js: Používateľ je prihlásený, UID:", currentUser.uid);
-  
-        await new Promise(resolve => setTimeout(resolve, 500));
+    
+        const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
+        const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
         
         try {
-          await currentUser.getIdToken(true);
-          console.log("register.js: Token bol aktualizovaný.");
-        } catch (tokenError) {
-          console.warn("register.js: Chyba pri aktualizácii tokenu:", tokenError);
-        }
-  
-      } catch (authError) {
-          let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
-          if (authError.code) {
-              switch (authError.code) {
-                  case 'auth/email-already-in-use':
-                      authErrorMessage = 'Zadaná e-mailová adresa už existuje. Zobrazí sa prvá strana registrácie na zmenu e-mailovej adresy.';
-                      dispatchAppNotification(authErrorMessage, 'error');
-                      setTimeout(() => {
-                          setPage(1);
-                      }, 3000);
-                      setLoading(false);
-                      isRegisteringRef.current = false;
-                      return;
-                  case 'auth/invalid-email':
-                      authErrorMessage = 'Neplatný formát e-mailovej adresy.';
-                      break;
-                  case 'auth/weak-password':
-                      authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
-                      break;
-                  default:
-                      authErrorMessage = authError.message || authErrorMessage;
-                      break;
-              }
-          } else {
-              authErrorMessage = authError.message || authErrorMessage;
+          // Normalizácia pre users
+          for (const categoryName in teamsDataForUsers) {
+              const currentTeamsInCategory = Array.isArray(teamsDataForUsers[categoryName]) ? teamsDataForUsers[categoryName] : [];
+              teamsDataForUsers[categoryName] = currentTeamsInCategory.map(team => {
+                  const updatedTeam = { ...team };
+    
+                  updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
+                  updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
+                  updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
+    
+                  updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
+                      ...tshirt,
+                      quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                  }));
+    
+                  updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
+                  if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
+    
+                  updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
+                  if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
+    
+                  if (updatedTeam.arrival.type === 'vlastná doprava') {
+                      updatedTeam.arrival.drivers = {
+                          male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
+                          female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
+                      };
+                  } else {
+                      updatedTeam.arrival.drivers = null;
+                  }
+    
+                  if (updatedTeam.packageId === '') updatedTeam.packageId = null;
+                  if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
+    
+                  return updatedTeam;
+              });
           }
-          dispatchAppNotification(authErrorMessage, 'error');
-          setLoading(false);
-          isRegisteringRef.current = false;
-          return;
-      }
-  
-      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
-      const userPrivateDocRef = doc(collection(firestoreDb, 'usersprivate'), user.uid);
-      
-      try {
-        // Normalizácia pre users
-        for (const categoryName in teamsDataForUsers) {
-            const currentTeamsInCategory = Array.isArray(teamsDataForUsers[categoryName]) ? teamsDataForUsers[categoryName] : [];
-            teamsDataForUsers[categoryName] = currentTeamsInCategory.map(team => {
-                const updatedTeam = { ...team };
-  
-                updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
-                updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
-                updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
-  
-                updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
-                    ...tshirt,
-                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                }));
-  
-                updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
-                if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
-  
-                updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
-                if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
-  
-                if (updatedTeam.arrival.type === 'vlastná doprava') {
-                    updatedTeam.arrival.drivers = {
-                        male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
-                        female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
-                    };
-                } else {
-                    updatedTeam.arrival.drivers = null;
-                }
-  
-                if (updatedTeam.packageId === '') updatedTeam.packageId = null;
-                if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
-  
-                return updatedTeam;
-            });
-        }
-  
-        // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users' - VŠETKO OKREM DÁTUMOV A ADRIES (VRÁTANE FARIEB DRESOV)
-        const userData = {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          contactPhoneNumber: fullPhoneNumber,
-          billing: {
-            clubName: formData.billing.clubName || '',
-            ico: formData.billing.ico || '',
-            dic: formData.billing.dic || '',
-            icDph: formData.billing.icDph || ''
-          },
-          role: userRole,
-          approved: true,
-          registrationDate: serverTimestamp(),
-          passwordLastChanged: serverTimestamp(),
-          dataEditDeadline: dataEditDeadline ? createTimestampFromLocalDate(dataEditDeadline) : null,
-          rosterEditDeadline: rosterEditDeadline ? createTimestampFromLocalDate(rosterEditDeadline) : null,
-          categories: formData.categories,
-          teams: teamsDataForUsers,
-          note: finalGlobalNote || ''
-        };
-  
-        // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate' - LEN DÁTUMY A ADRESY
-        const privateData = {
-            role: 'club', 
-            approved: true,
-            persons: {}
-        };
-  
-        // Pridáme adresu používateľa do privateData
-        if (formData.country || formData.city || formData.postalCode || formData.street || formData.houseNumber) {
-          privateData.address = {
-            country: formData.country || '',
-            city: formData.city || '',
-            postalCode: formData.postalCode || '',
-            street: formData.street || '',
-            houseNumber: formData.houseNumber || ''
-          };
-        }
-  
-        // SPRACOVANIE PERSONS PRE usersprivate - LEN DÁTUMY A ADRESY
-        Object.keys(teamsDataForPrivate).forEach(categoryName => {
-          const teams = teamsDataForPrivate[categoryName];
-          if (!Array.isArray(teams)) return;
-        
-          teams.forEach((team, teamIndex) => {
-            const teamKey = `${categoryName}_team${teamIndex + 1}`;
-            
-            // Pridáme len ak máme nejaké dáta
-            const hasData = 
-              (team.playerDetails && team.playerDetails.some(p => p.dateOfBirth || (p.address && Object.keys(p.address).length > 0))) ||
-              (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0))) ||
-              (team.menTeamMemberDetails && team.menTeamMemberDetails.some(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0))) ||
-              (team.driverDetailsMale && team.driverDetailsMale.some(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0))) ||
-              (team.driverDetailsFemale && team.driverDetailsFemale.some(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0)));
-  
-            if (hasData) {
-              privateData.persons[teamKey] = {};
-            
-              // Hráči - LEN dateOfBirth a address
-              if (team.playerDetails && Array.isArray(team.playerDetails)) {
-                const filteredPlayers = team.playerDetails.filter(p => p.dateOfBirth || (p.address && Object.keys(p.address).length > 0));
-                if (filteredPlayers.length > 0) {
-                  privateData.persons[teamKey].players = filteredPlayers;
-                }
-              }
-            
-              // Ženy - LEN dateOfBirth a address
-              if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-                const filteredMembers = team.womenTeamMemberDetails.filter(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0));
-                if (filteredMembers.length > 0) {
-                  privateData.persons[teamKey].womenTeamMembers = filteredMembers;
-                }
-              }
-            
-              // Muži - LEN dateOfBirth a address
-              if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-                const filteredMembers = team.menTeamMemberDetails.filter(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0));
-                if (filteredMembers.length > 0) {
-                  privateData.persons[teamKey].menTeamMembers = filteredMembers;
-                }
-              }
-            
-              // Šoféri muži - LEN dateOfBirth a address
-              if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-                const filteredDrivers = team.driverDetailsMale.filter(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0));
-                if (filteredDrivers.length > 0) {
-                  privateData.persons[teamKey].driversMale = filteredDrivers;
-                }
-              }
-            
-              // Šoféri ženy - LEN dateOfBirth a address
-              if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-                const filteredDrivers = team.driverDetailsFemale.filter(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0));
-                if (filteredDrivers.length > 0) {
-                  privateData.persons[teamKey].driversFemale = filteredDrivers;
-                }
-              }
-            }
-          });
-        });
-        
-        console.log("register.js: Začínam zápis do Firestore...");
-        
-        // ZÁPIS DO KOLEKCIE 'users' - VŠETKO OKREM DÁTUMOV A ADRIES
-        await setDoc(userDocRef, userData);
-        console.log("register.js: Zápis do 'users' dokončený.");
-  
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // ZÁPIS DO KOLEKCIE 'usersprivate' - LEN DÁTUMY A ADRESY
-        await setDoc(userPrivateDocRef, privateData);
-        console.log("register.js: Zápis do 'usersprivate' dokončený.");
-  
-        console.log("register.js: Všetky dokumenty používateľa boli úspešne vytvorené.");
-  
-      } catch (firestoreError) {
-          let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
-          if (firestoreError.code === 'permission-denied') {
-              firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
-              console.error("Firestore permission denied:", firestoreError);
-          } else {
-              firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
-              console.error("Firestore error:", firestoreError);
-          }
-          dispatchAppNotification(firestoreErrorMessage, 'error');
-          setLoading(false);
-          isRegisteringRef.current = false;
-          return;
-      }
-  
-      // Odoslanie emailu
-      try {
-          const payload = {
-              action: 'sendRegistrationEmail',
-              email: formData.email,
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              contactPhoneNumber: fullPhoneNumber,
-              isAdmin: false,
-              billing: {
-                clubName: formData.billing.clubName,
-                ico: formData.billing.ico,
-                dic: formData.billing.dic,
-                icDph: formData.billing.icDph,
-                address: {
-                  street: formData.street,
-                  houseNumber: formData.houseNumber,
-                  zipCode: formData.postalCode,
-                  city: formData.city,
-                  country: formData.country
-                }
-              },
-              categories: formData.categories,
-              teams: finalTeamsDataFromPage7,
-              globalNote: finalGlobalNote 
-            };
-          await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
+    
+          // PRIPRAVÍME DÁTA PRE KOLEKCIU 'users' - VŠETKO OKREM DÁTUMOV A ADRIES (VRÁTANE FARIEB DRESOV)
+          const userData = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            contactPhoneNumber: fullPhoneNumber,
+            billing: {
+              clubName: formData.billing.clubName || '',
+              ico: formData.billing.ico || '',
+              dic: formData.billing.dic || '',
+              icDph: formData.billing.icDph || ''
             },
-            body: JSON.stringify(payload)
+            role: userRole,
+            approved: true,
+            registrationDate: serverTimestamp(),
+            passwordLastChanged: serverTimestamp(),
+            dataEditDeadline: dataEditDeadline ? createTimestampFromLocalDate(dataEditDeadline) : null,
+            rosterEditDeadline: rosterEditDeadline ? createTimestampFromLocalDate(rosterEditDeadline) : null,
+            categories: formData.categories,
+            teams: teamsDataForUsers,
+            note: finalGlobalNote || ''
+          };
+    
+          // PRIPRAVÍME DÁTA PRE KOLEKCIU 'usersprivate' - LEN DÁTUMY A ADRESY
+          const privateData = {
+              role: 'club', 
+              approved: true,
+              persons: {}
+          };
+    
+          // Pridáme adresu používateľa do privateData
+          if (formData.country || formData.city || formData.postalCode || formData.street || formData.houseNumber) {
+            privateData.address = {
+              country: formData.country || '',
+              city: formData.city || '',
+              postalCode: formData.postalCode || '',
+              street: formData.street || '',
+              houseNumber: formData.houseNumber || ''
+            };
+          }
+    
+          // SPRACOVANIE PERSONS PRE usersprivate - LEN DÁTUMY A ADRESY
+          Object.keys(teamsDataForPrivate).forEach(categoryName => {
+            const teams = teamsDataForPrivate[categoryName];
+            if (!Array.isArray(teams)) return;
+          
+            teams.forEach((team, teamIndex) => {
+              const teamKey = `${categoryName}_team${teamIndex + 1}`;
+              
+              // Pridáme len ak máme nejaké dáta
+              const hasData = 
+                (team.playerDetails && team.playerDetails.some(p => p.dateOfBirth || (p.address && Object.keys(p.address).length > 0))) ||
+                (team.womenTeamMemberDetails && team.womenTeamMemberDetails.some(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0))) ||
+                (team.menTeamMemberDetails && team.menTeamMemberDetails.some(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0))) ||
+                (team.driverDetailsMale && team.driverDetailsMale.some(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0))) ||
+                (team.driverDetailsFemale && team.driverDetailsFemale.some(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0)));
+    
+              if (hasData) {
+                privateData.persons[teamKey] = {};
+              
+                // Hráči - LEN dateOfBirth a address
+                if (team.playerDetails && Array.isArray(team.playerDetails)) {
+                  const filteredPlayers = team.playerDetails.filter(p => p.dateOfBirth || (p.address && Object.keys(p.address).length > 0));
+                  if (filteredPlayers.length > 0) {
+                    privateData.persons[teamKey].players = filteredPlayers;
+                  }
+                }
+              
+                // Ženy - LEN dateOfBirth a address
+                if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+                  const filteredMembers = team.womenTeamMemberDetails.filter(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0));
+                  if (filteredMembers.length > 0) {
+                    privateData.persons[teamKey].womenTeamMembers = filteredMembers;
+                  }
+                }
+              
+                // Muži - LEN dateOfBirth a address
+                if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+                  const filteredMembers = team.menTeamMemberDetails.filter(m => m.dateOfBirth || (m.address && Object.keys(m.address).length > 0));
+                  if (filteredMembers.length > 0) {
+                    privateData.persons[teamKey].menTeamMembers = filteredMembers;
+                  }
+                }
+              
+                // Šoféri muži - LEN dateOfBirth a address
+                if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+                  const filteredDrivers = team.driverDetailsMale.filter(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0));
+                  if (filteredDrivers.length > 0) {
+                    privateData.persons[teamKey].driversMale = filteredDrivers;
+                  }
+                }
+              
+                // Šoféri ženy - LEN dateOfBirth a address
+                if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+                  const filteredDrivers = team.driverDetailsFemale.filter(d => d.dateOfBirth || (d.address && Object.keys(d.address).length > 0));
+                  if (filteredDrivers.length > 0) {
+                    privateData.persons[teamKey].driversFemale = filteredDrivers;
+                  }
+                }
+              }
+            });
           });
-          console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
-      } catch (emailError) {
-          console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
-      }
-  
-      await new Promise(resolve => setTimeout(resolve, 200));
-  
-      dispatchAppNotification(`Ďakujeme za vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
-      setRegistrationSuccess(true);
-  
-      setFormData({
-        firstName: '', lastName: '', email: '', contactPhoneNumber: '',
-        password: '', confirmPassword: '', houseNumber: '', country: '',
-        city: '', postalCode: '', street: '',
-        billing: { clubName: '', ico: '', dic: '', icDph: '' },
-      });
-      setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({});
-      setGlobalNote('');
-  
-      setTimeout(async () => {
-        if (authInstance && authInstance.currentUser) {
-            await signOut(authInstance);
+          
+          console.log("register.js: Začínam zápis do Firestore...");
+          
+          // ZÁPIS DO KOLEKCIE 'users' - VŠETKO OKREM DÁTUMOV A ADRIES
+          await setDoc(userDocRef, userData);
+          console.log("register.js: Zápis do 'users' dokončený.");
+    
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // ZÁPIS DO KOLEKCIE 'usersprivate' - LEN DÁTUMY A ADRESY
+          await setDoc(userPrivateDocRef, privateData);
+          console.log("register.js: Zápis do 'usersprivate' dokončený.");
+    
+          console.log("register.js: Všetky dokumenty používateľa boli úspešne vytvorené.");
+    
+        } catch (firestoreError) {
+            let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
+            if (firestoreError.code === 'permission-denied') {
+                firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
+                console.error("Firestore permission denied:", firestoreError);
+            } else {
+                firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
+                console.error("Firestore error:", firestoreError);
+            }
+            dispatchAppNotification(firestoreErrorMessage, 'error');
+            setLoading(false);
+            isRegisteringRef.current = false;
+            return;
         }
-        window.location.href = 'login.html';
-      }, 20000);
-  
-    } catch (globalError) {
-      let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      console.error("register.js: Neočakávaná chyba:", globalError);
-      dispatchAppNotification(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-      isRegisteringRef.current = false;
-    }
-  };
+    
+        // Odoslanie emailu
+        try {
+            const payload = {
+                action: 'sendRegistrationEmail',
+                email: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                contactPhoneNumber: fullPhoneNumber,
+                isAdmin: false,
+                billing: {
+                  clubName: formData.billing.clubName,
+                  ico: formData.billing.ico,
+                  dic: formData.billing.dic,
+                  icDph: formData.billing.icDph,
+                  address: {
+                    street: formData.street,
+                    houseNumber: formData.houseNumber,
+                    zipCode: formData.postalCode,
+                    city: formData.city,
+                    country: formData.country
+                  }
+                },
+                categories: formData.categories,
+                teams: finalTeamsDataFromPage7,
+                globalNote: finalGlobalNote 
+              };
+            await fetch(GOOGLE_APPS_SCRIPT_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload)
+            });
+            console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
+        } catch (emailError) {
+            console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
+        }
+    
+        await new Promise(resolve => setTimeout(resolve, 200));
+    
+        dispatchAppNotification(`Ďakujeme za vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
+        setRegistrationSuccess(true);
+    
+        setFormData({
+          firstName: '', lastName: '', email: '', contactPhoneNumber: '',
+          password: '', confirmPassword: '', houseNumber: '', country: '',
+          city: '', postalCode: '', street: '',
+          billing: { clubName: '', ico: '', dic: '', icDph: '' },
+        });
+        setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
+        setTeamsDataFromPage4({});
+        setGlobalNote('');
+    
+        setTimeout(async () => {
+          if (authInstance && authInstance.currentUser) {
+              await signOut(authInstance);
+          }
+          window.location.href = 'login.html';
+        }, 20000);
+    
+      } catch (globalError) {
+        let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
+        console.error("register.js: Neočakávaná chyba:", globalError);
+        dispatchAppNotification(errorMessage, 'error');
+      } finally {
+        setLoading(false);
+        isRegisteringRef.current = false;
+      }
+    };
 
   const isPage1FormDataEmpty = (data) => {
     if (data.firstName.trim() !== '' ||
