@@ -1393,8 +1393,7 @@ const AddTeamsGroupApp = (props) => {
         }
     };
 
-    // Komponent pre modálne okno výmeny tímov - UPRAVENÝ pre výmenu v rovnakej skupine
-    const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId }) => {
+    const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId, userTeamsData, superstructureTeams }) => {
         const [selectedGroup, setSelectedGroup] = useState('');
         const [selectedTeam, setSelectedTeam] = useState('');
         const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
@@ -1409,18 +1408,61 @@ const AddTeamsGroupApp = (props) => {
         const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
         
         // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
-        // Ak je zaškrtnuté "v rovnakej skupine", zahrnieme aj pôvodnú skupinu
         const availableGroups = groups.filter(g => 
             g.type === originalGroupType && 
             (swapWithinSameGroup || g.name !== team.groupName)
         );
         
-        // Získame tímy vo vybranej skupine (okrem pôvodného tímu)
-        const teamsInSelectedGroup = allTeams.filter(t => 
-            t.category === categoryName && 
-            t.groupName === selectedGroup &&
-            t.id !== team.id
-        ).sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Získame tímy vo vybranej skupine - použijeme správny zdroj dát
+        const getTeamsInGroup = (groupName) => {
+            // Rozhodneme podľa typu skupiny, odkiaľ brať tímy
+            const group = groups.find(g => g.name === groupName);
+            if (!group) return [];
+            
+            let teamsInGroup = [];
+            
+            if (group.type === 'nadstavbová skupina') {
+                // Nadstavbové skupiny - tímy zo superstructureTeams
+                const globalTeamsList = Object.entries(superstructureTeams).flatMap(([catName, teamArray]) =>
+                    (teamArray || []).map(t => ({
+                        uid: 'global',
+                        category: catName,
+                        id: t.id || crypto.randomUUID(),
+                        teamName: t.teamName,
+                        groupName: t.groupName || null,
+                        order: t.groupName ? (t.order ?? 0) : null,
+                        isSuperstructureTeam: true
+                    }))
+                );
+                teamsInGroup = globalTeamsList.filter(t => 
+                    t.category === categoryName && 
+                    t.groupName === groupName
+                );
+            } else {
+                // Základné skupiny - tímy z userTeamsData
+                teamsInGroup = userTeamsData.filter(t => 
+                    t.category === categoryName && 
+                    t.groupName === groupName
+                );
+            }
+            
+            return teamsInGroup;
+        };
+        
+        // Získame tímy pre zobrazenie v selectboxe
+        let teamsForSelect = [];
+        
+        if (swapWithinSameGroup) {
+            // V rovnakej skupine - použijeme pôvodnú skupinu
+            teamsForSelect = getTeamsInGroup(team.groupName)
+                .filter(t => t.id !== team.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        } else if (selectedGroup) {
+            // V inej skupine
+            teamsForSelect = getTeamsInGroup(selectedGroup)
+                .filter(t => t.id !== team.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        }
         
         const handleSwap = () => {
             if (selectedTeam) {
@@ -1457,7 +1499,7 @@ const AddTeamsGroupApp = (props) => {
                         )
                     ),
                     
-                    // NOVÉ CHECKBOX PRE VÝMENU V ROVNAKEJ SKUPINE
+                    // Checkbox pre výmenu v rovnakej skupine
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-2 mb-2' },
@@ -1478,10 +1520,14 @@ const AddTeamsGroupApp = (props) => {
                         }, 'Vymeniť tímy v rovnakej skupine')
                     ),
                     
-                    React.createElement(
+                    // Selectbox pre výber skupiny (len ak nie je zaškrtnuté "v rovnakej skupine")
+                    !swapWithinSameGroup && React.createElement(
                         'div',
                         null,
-                        !swapWithinSameGroup && React.createElement(
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            'Vyberte cieľovú skupinu:'
+                        ),
+                        React.createElement(
                             'select',
                             {
                                 className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
@@ -1498,7 +1544,7 @@ const AddTeamsGroupApp = (props) => {
                         )
                     ),
                     
-                    // Ak je zaškrtnuté "v rovnakej skupine", zobrazíme tímy z pôvodnej skupiny
+                    // Selectbox pre výber tímu
                     (swapWithinSameGroup || selectedGroup) && React.createElement(
                         'div',
                         null,
@@ -1513,20 +1559,14 @@ const AddTeamsGroupApp = (props) => {
                                 onChange: (e) => setSelectedTeam(e.target.value)
                             },
                             React.createElement('option', { value: '' }, '--- Vyberte tím ---'),
-                            (swapWithinSameGroup 
-                                ? allTeams.filter(t => 
-                                    t.category === categoryName && 
-                                    t.groupName === team.groupName &&
-                                    t.id !== team.id
-                                  ).sort((a, b) => (a.order || 0) - (b.order || 0))
-                                : teamsInSelectedGroup
-                            ).map(t => 
+                            teamsForSelect.map(t => 
                                 React.createElement('option', { key: t.id, value: t.teamName },
                                     `${t.order}. ${t.teamName}`
                                 )
                             )
                         )
-                    ),                  
+                    ),
+                    
                     React.createElement(
                         'div',
                         { className: 'flex justify-end space-x-4 mt-6' },
@@ -1541,10 +1581,7 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement(
                             'button',
                             {
-                                onClick: () => {
-                                    const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
-                                    onSwap(team, targetGroup, selectedTeam);
-                                },
+                                onClick: handleSwap,
                                 disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
                                 className: `px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 border-2 ${
                                     (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
@@ -3899,6 +3936,8 @@ return React.createElement(
         onSwap: (team, targetGroup, targetTeam) => handleSwapTeams(team, targetGroup, targetTeam),
         team: swapModal?.team,
         allTeams: allTeams,
+        userTeamsData: userTeamsData,
+        superstructureTeams: superstructureTeams,
         categoryIdToNameMap: categoryIdToNameMap,
         allGroupsByCategoryId: allGroupsByCategoryId
     }),
