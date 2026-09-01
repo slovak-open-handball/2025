@@ -3959,10 +3959,11 @@ return React.createElement(
         onSwap: (team, targetGroup, targetTeam) => handleSwapTeams(team, targetGroup, targetTeam),
         team: swapModal?.team,
         allTeams: allTeams,
-        userTeamsData: userTeamsData, 
+        userTeamsData: userTeamsData,
         superstructureTeams: superstructureTeams,
         categoryIdToNameMap: categoryIdToNameMap,
-        allGroupsByCategoryId: allGroupsByCategoryId
+        allGroupsByCategoryId: allGroupsByCategoryId,
+        isSwapping: isSwapping
     }),
     React.createElement(
         'div',
