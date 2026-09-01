@@ -241,10 +241,13 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                 );
             } else {
                 // Základné skupiny - tímy z userTeamsData
+                console.log('🔍 FILTROVANIE ZÁKLADNÝCH SKUPÍN');
+                console.log('categoryName:', categoryName);
+                console.log('groupName:', groupName);
+                console.log('userTeamsData length:', userTeamsData.length);
+              
                 teamsInGroup = (userTeamsData || []).filter(t => {
-                    if (t.category !== categoryName) return false;
-                    if (!t.groupName || t.groupName.trim() === '') return false;
-                    return t.groupName.trim() === groupName.trim();
+                    return t.category === categoryName && t.groupName === groupName;
                 });
             }
             
