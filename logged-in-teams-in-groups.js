@@ -168,7 +168,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) 
   );
 };
 
-const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId, userTeamsData, superstructureTeams }) => {
+const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId, userTeamsData, superstructureTeams, isSwapping }) => {
     const [selectedGroup, setSelectedGroup] = useState('');
     const [selectedTeam, setSelectedTeam] = useState('');
     const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
