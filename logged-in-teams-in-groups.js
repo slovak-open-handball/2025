@@ -268,21 +268,25 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         };
         
         let teams = [];
-        
-        // 🔥 DÔLEŽITÁ ZMENA: Ak je swapWithinSameGroup true, použijeme pôvodnú skupinu tímu
+
         if (swapWithinSameGroup) {
-            // V rovnakej skupine - použijeme pôvodnú skupinu
             teams = getTeamsInGroup(team.groupName)
                 .filter(t => t.id !== team.id)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         } else if (selectedGroup) {
-            // V inej skupine
             teams = getTeamsInGroup(selectedGroup)
                 .filter(t => t.id !== team.id)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         }
-        
+
         setTeamsForSelect(teams);
+
+        console.log('🔴 teams pred setTeamsForSelect:', teams);
+        console.log('🔴 swapWithinSameGroup:', swapWithinSameGroup);
+        console.log('🔴 selectedGroup:', selectedGroup);
+        console.log('🔴 team.groupName:', team.groupName);
+        
+        setTeamsForSelect([...teams]);
         // Ak je vybraný tím, ktorý už nie je v zozname, resetujeme ho
         if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
             setSelectedTeam('');
