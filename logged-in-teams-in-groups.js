@@ -167,6 +167,233 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) 
     )
   );
 };
+
+const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId, userTeamsData, superstructureTeams }) => {
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [selectedTeam, setSelectedTeam] = useState('');
+    const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
+    const [teamsForSelect, setTeamsForSelect] = useState([]);
+    
+    if (!isOpen || !team) return null;
+    
+    const categoryName = team.category;
+    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
+    const groups = allGroupsByCategoryId[categoryId] || [];
+    
+    // Získame typ skupiny pôvodného tímu
+    const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
+    
+    // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
+    const availableGroups = groups.filter(g => 
+        g.type === originalGroupType && 
+        (swapWithinSameGroup || g.name !== team.groupName)
+    );
+    
+    // Funkcia na získanie tímov v skupine - priamo z aktuálnych dát
+    const getTeamsInGroup = (groupName) => {
+        if (!groupName) return [];
+        
+        const group = groups.find(g => g.name === groupName);
+        if (!group) return [];
+        
+        let teamsInGroup = [];
+        
+        if (group.type === 'nadstavbová skupina') {
+            // Nadstavbové skupiny - tímy zo superstructureTeams
+            const globalTeamsList = Object.entries(superstructureTeams || {}).flatMap(([catName, teamArray]) =>
+                (teamArray || []).map(t => ({
+                    uid: 'global',
+                    category: catName,
+                    id: t.id || crypto.randomUUID(),
+                    teamName: t.teamName,
+                    groupName: t.groupName || null,
+                    order: t.groupName ? (t.order ?? 0) : null,
+                    isSuperstructureTeam: true
+                }))
+            );
+            teamsInGroup = globalTeamsList.filter(t => 
+                t.category === categoryName && 
+                t.groupName === groupName
+            );
+        } else {
+            // Základné skupiny - tímy z userTeamsData
+            // DÔLEŽITÉ: Používame presné porovnanie a ošetrujeme null/undefined
+            teamsInGroup = (userTeamsData || []).filter(t => {
+                // Skontrolujeme, či má tím správnu kategóriu
+                if (t.category !== categoryName) return false;
+                
+                // Skontrolujeme groupName - musí byť rovnaký a nesmie byť null
+                if (!t.groupName || t.groupName.trim() === '') return false;
+                
+                // Porovnanie názvu skupiny (ošetrenie medzier)
+                return t.groupName.trim() === groupName.trim();
+            });
+        }
+        
+        return teamsInGroup;
+    };
+    
+    // Efekt na aktualizáciu zoznamu tímov pri zmene výberu
+    useEffect(() => {
+        let teams = [];
+        
+        if (swapWithinSameGroup) {
+            // V rovnakej skupine - použijeme pôvodnú skupinu
+            teams = getTeamsInGroup(team.groupName)
+                .filter(t => t.id !== team.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        } else if (selectedGroup) {
+            // V inej skupine
+            teams = getTeamsInGroup(selectedGroup)
+                .filter(t => t.id !== team.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+        }
+        
+        setTeamsForSelect(teams);
+        // Ak je vybraný tím, ktorý už nie je v zozname, resetujeme ho
+        if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
+            setSelectedTeam('');
+        }
+    }, [swapWithinSameGroup, selectedGroup, team.groupName, team.id, userTeamsData, superstructureTeams, categoryName]);
+    
+    const handleSwap = () => {
+        if (selectedTeam) {
+            const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
+            onSwap(team, targetGroup, selectedTeam);
+        }
+    };
+    
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
+            onClick: onClose
+        },
+        React.createElement(
+            'div',
+            {
+                className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+                onClick: e => e.stopPropagation()
+            },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
+                'Vymeniť tím'
+            ),
+            React.createElement(
+                'div',
+                { className: 'space-y-4' },
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        `Pôvodný tím: ${team.groupName} ${team.order}. ${team.teamName}`
+                    )
+                ),
+                
+                // Checkbox pre výmenu v rovnakej skupine
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center space-x-2 mb-2' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'swapWithinSameGroup',
+                        checked: swapWithinSameGroup,
+                        onChange: (e) => {
+                            setSwapWithinSameGroup(e.target.checked);
+                            setSelectedGroup('');
+                            setSelectedTeam('');
+                        },
+                        className: 'w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
+                    }),
+                    React.createElement('label', {
+                        htmlFor: 'swapWithinSameGroup',
+                        className: 'text-sm font-medium text-gray-700 cursor-pointer'
+                    }, 'Vymeniť tímy v rovnakej skupine')
+                ),
+                
+                // Selectbox pre výber skupiny (len ak nie je zaškrtnuté "v rovnakej skupine")
+                !swapWithinSameGroup && React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Vyberte cieľovú skupinu:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                            value: selectedGroup,
+                            onChange: (e) => {
+                                setSelectedGroup(e.target.value);
+                                setSelectedTeam('');
+                            }
+                        },
+                        React.createElement('option', { value: '' }, '--- Vyberte skupinu ---'),
+                        availableGroups.map(group => 
+                            React.createElement('option', { key: group.name, value: group.name }, group.name)
+                        )
+                    )
+                ),
+                
+                // Selectbox pre výber tímu
+                (swapWithinSameGroup || selectedGroup) && React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Vyberte cieľový tím na výmenu:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
+                            value: selectedTeam,
+                            onChange: (e) => setSelectedTeam(e.target.value)
+                        },
+                        React.createElement('option', { value: '' }, '--- Vyberte tím ---'),
+                        teamsForSelect.map(t => 
+                            React.createElement('option', { key: t.id, value: t.teamName },
+                                `${t.order}. ${t.teamName}`
+                            )
+                        )
+                    ),
+                    teamsForSelect.length === 0 && (swapWithinSameGroup || selectedGroup) && React.createElement(
+                        'p',
+                        { className: 'text-sm text-amber-600 mt-1' },
+                        'V tejto skupine nie sú žiadne ďalšie tímy na výmenu.'
+                    )
+                ),
+                
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end space-x-4 mt-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onClose,
+                            className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleSwap,
+                            disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
+                            className: `px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 border-2 ${
+                                (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
+                                    ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
+                                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border-transparent'
+                            }`
+                        },
+                        isSwapping ? 'Spracúvam...' : 'Vymeniť tímy'
+                    )
+                )
+            )
+        )
+    );
+};
+
 const AddTeamsGroupApp = (props) => {
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
@@ -1391,232 +1618,6 @@ const AddTeamsGroupApp = (props) => {
             console.error("Chyba pri aktualizácii tímu:", err);
             notify("Nepodarilo sa aktualizovať zaradenie tímu do skupiny.", "error");
         }
-    };
-
-    const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToNameMap, allGroupsByCategoryId, userTeamsData, superstructureTeams }) => {
-        const [selectedGroup, setSelectedGroup] = useState('');
-        const [selectedTeam, setSelectedTeam] = useState('');
-        const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
-        const [teamsForSelect, setTeamsForSelect] = useState([]);
-        
-        if (!isOpen || !team) return null;
-        
-        const categoryName = team.category;
-        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
-        const groups = allGroupsByCategoryId[categoryId] || [];
-        
-        // Získame typ skupiny pôvodného tímu
-        const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
-        
-        // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
-        const availableGroups = groups.filter(g => 
-            g.type === originalGroupType && 
-            (swapWithinSameGroup || g.name !== team.groupName)
-        );
-        
-        // Funkcia na získanie tímov v skupine - priamo z aktuálnych dát
-        const getTeamsInGroup = (groupName) => {
-            if (!groupName) return [];
-            
-            const group = groups.find(g => g.name === groupName);
-            if (!group) return [];
-            
-            let teamsInGroup = [];
-            
-            if (group.type === 'nadstavbová skupina') {
-                // Nadstavbové skupiny - tímy zo superstructureTeams
-                const globalTeamsList = Object.entries(superstructureTeams || {}).flatMap(([catName, teamArray]) =>
-                    (teamArray || []).map(t => ({
-                        uid: 'global',
-                        category: catName,
-                        id: t.id || crypto.randomUUID(),
-                        teamName: t.teamName,
-                        groupName: t.groupName || null,
-                        order: t.groupName ? (t.order ?? 0) : null,
-                        isSuperstructureTeam: true
-                    }))
-                );
-                teamsInGroup = globalTeamsList.filter(t => 
-                    t.category === categoryName && 
-                    t.groupName === groupName
-                );
-            } else {
-                // Základné skupiny - tímy z userTeamsData
-                // DÔLEŽITÉ: Používame presné porovnanie a ošetrujeme null/undefined
-                teamsInGroup = (userTeamsData || []).filter(t => {
-                    // Skontrolujeme, či má tím správnu kategóriu
-                    if (t.category !== categoryName) return false;
-                    
-                    // Skontrolujeme groupName - musí byť rovnaký a nesmie byť null
-                    if (!t.groupName || t.groupName.trim() === '') return false;
-                    
-                    // Porovnanie názvu skupiny (ošetrenie medzier)
-                    return t.groupName.trim() === groupName.trim();
-                });
-            }
-            
-            return teamsInGroup;
-        };
-        
-        // Efekt na aktualizáciu zoznamu tímov pri zmene výberu
-        useEffect(() => {
-            let teams = [];
-            
-            if (swapWithinSameGroup) {
-                // V rovnakej skupine - použijeme pôvodnú skupinu
-                teams = getTeamsInGroup(team.groupName)
-                    .filter(t => t.id !== team.id)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-            } else if (selectedGroup) {
-                // V inej skupine
-                teams = getTeamsInGroup(selectedGroup)
-                    .filter(t => t.id !== team.id)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-            }
-            
-            setTeamsForSelect(teams);
-            // Ak je vybraný tím, ktorý už nie je v zozname, resetujeme ho
-            if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
-                setSelectedTeam('');
-            }
-        }, [swapWithinSameGroup, selectedGroup, team.groupName, team.id, userTeamsData, superstructureTeams, categoryName]);
-        
-        const handleSwap = () => {
-            if (selectedTeam) {
-                const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
-                onSwap(team, targetGroup, selectedTeam);
-            }
-        };
-        
-        return React.createElement(
-            'div',
-            {
-                className: 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[200]',
-                onClick: onClose
-            },
-            React.createElement(
-                'div',
-                {
-                    className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
-                    onClick: e => e.stopPropagation()
-                },
-                React.createElement(
-                    'h2',
-                    { className: 'text-2xl font-bold text-gray-800 mb-6 text-center' },
-                    'Vymeniť tím'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'space-y-4' },
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            `Pôvodný tím: ${team.groupName} ${team.order}. ${team.teamName}`
-                        )
-                    ),
-                    
-                    // Checkbox pre výmenu v rovnakej skupine
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center space-x-2 mb-2' },
-                        React.createElement('input', {
-                            type: 'checkbox',
-                            id: 'swapWithinSameGroup',
-                            checked: swapWithinSameGroup,
-                            onChange: (e) => {
-                                setSwapWithinSameGroup(e.target.checked);
-                                setSelectedGroup('');
-                                setSelectedTeam('');
-                            },
-                            className: 'w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                        }),
-                        React.createElement('label', {
-                            htmlFor: 'swapWithinSameGroup',
-                            className: 'text-sm font-medium text-gray-700 cursor-pointer'
-                        }, 'Vymeniť tímy v rovnakej skupine')
-                    ),
-                    
-                    // Selectbox pre výber skupiny (len ak nie je zaškrtnuté "v rovnakej skupine")
-                    !swapWithinSameGroup && React.createElement(
-                        'div',
-                        null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            'Vyberte cieľovú skupinu:'
-                        ),
-                        React.createElement(
-                            'select',
-                            {
-                                className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
-                                value: selectedGroup,
-                                onChange: (e) => {
-                                    setSelectedGroup(e.target.value);
-                                    setSelectedTeam('');
-                                }
-                            },
-                            React.createElement('option', { value: '' }, '--- Vyberte skupinu ---'),
-                            availableGroups.map(group => 
-                                React.createElement('option', { key: group.name, value: group.name }, group.name)
-                            )
-                        )
-                    ),
-                    
-                    // Selectbox pre výber tímu
-                    (swapWithinSameGroup || selectedGroup) && React.createElement(
-                        'div',
-                        null,
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                            'Vyberte cieľový tím na výmenu:'
-                        ),
-                        React.createElement(
-                            'select',
-                            {
-                                className: 'w-full p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500',
-                                value: selectedTeam,
-                                onChange: (e) => setSelectedTeam(e.target.value)
-                            },
-                            React.createElement('option', { value: '' }, '--- Vyberte tím ---'),
-                            teamsForSelect.map(t => 
-                                React.createElement('option', { key: t.id, value: t.teamName },
-                                    `${t.order}. ${t.teamName}`
-                                )
-                            )
-                        ),
-                        teamsForSelect.length === 0 && (swapWithinSameGroup || selectedGroup) && React.createElement(
-                            'p',
-                            { className: 'text-sm text-amber-600 mt-1' },
-                            'V tejto skupine nie sú žiadne ďalšie tímy na výmenu.'
-                        )
-                    ),
-                    
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end space-x-4 mt-6' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: onClose,
-                                className: 'px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: handleSwap,
-                                disabled: (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping,
-                                className: `px-6 py-2.5 rounded-lg font-medium transition-colors duration-200 border-2 ${
-                                    (!swapWithinSameGroup && !selectedGroup) || !selectedTeam || isSwapping
-                                        ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
-                                        : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border-transparent'
-                                }`
-                            },
-                            isSwapping ? 'Spracúvam...' : 'Vymeniť tímy'
-                        )
-                    )
-                )
-            )
-        );
     };
   
     // ===================================================================
