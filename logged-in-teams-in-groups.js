@@ -174,67 +174,65 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
     const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
     const [teamsForSelect, setTeamsForSelect] = useState([]);
     
-    if (!isOpen || !team) return null;
-    
-    const categoryName = team.category;
-    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
-    const groups = allGroupsByCategoryId[categoryId] || [];
-    
-    // Získame typ skupiny pôvodného tímu
-    const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
-    
-    // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
-    const availableGroups = groups.filter(g => 
-        g.type === originalGroupType && 
-        (swapWithinSameGroup || g.name !== team.groupName)
-    );
-    
-    // Funkcia na získanie tímov v skupine - priamo z aktuálnych dát
-    const getTeamsInGroup = (groupName) => {
-        if (!groupName) return [];
-        
-        const group = groups.find(g => g.name === groupName);
-        if (!group) return [];
-        
-        let teamsInGroup = [];
-        
-        if (group.type === 'nadstavbová skupina') {
-            // Nadstavbové skupiny - tímy zo superstructureTeams
-            const globalTeamsList = Object.entries(superstructureTeams || {}).flatMap(([catName, teamArray]) =>
-                (teamArray || []).map(t => ({
-                    uid: 'global',
-                    category: catName,
-                    id: t.id || crypto.randomUUID(),
-                    teamName: t.teamName,
-                    groupName: t.groupName || null,
-                    order: t.groupName ? (t.order ?? 0) : null,
-                    isSuperstructureTeam: true
-                }))
-            );
-            teamsInGroup = globalTeamsList.filter(t => 
-                t.category === categoryName && 
-                t.groupName === groupName
-            );
-        } else {
-            // Základné skupiny - tímy z userTeamsData
-            // DÔLEŽITÉ: Používame presné porovnanie a ošetrujeme null/undefined
-            teamsInGroup = (userTeamsData || []).filter(t => {
-                // Skontrolujeme, či má tím správnu kategóriu
-                if (t.category !== categoryName) return false;
-                
-                // Skontrolujeme groupName - musí byť rovnaký a nesmie byť null
-                if (!t.groupName || t.groupName.trim() === '') return false;
-                
-                // Porovnanie názvu skupiny (ošetrenie medzier)
-                return t.groupName.trim() === groupName.trim();
-            });
+    // VŠETKY HOOKY MUSIA BYŤ PRED PODMIENENÝM RETURNOM
+    useEffect(() => {
+        // Reset stavov pri zatvorení modalu
+        if (!isOpen) {
+            setSelectedGroup('');
+            setSelectedTeam('');
+            setSwapWithinSameGroup(false);
+            setTeamsForSelect([]);
+            return;
         }
         
-        return teamsInGroup;
-    };
-    
-    // Efekt na aktualizáciu zoznamu tímov pri zmene výberu
-    useEffect(() => {
+        // Ak nie je tím, nič nerobíme
+        if (!team) return;
+        
+        const categoryName = team.category;
+        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
+        const groups = allGroupsByCategoryId[categoryId] || [];
+        
+        // Získame typ skupiny pôvodného tímu
+        const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
+        
+        // Funkcia na získanie tímov v skupine
+        const getTeamsInGroup = (groupName) => {
+            if (!groupName) return [];
+            
+            const group = groups.find(g => g.name === groupName);
+            if (!group) return [];
+            
+            let teamsInGroup = [];
+            
+            if (group.type === 'nadstavbová skupina') {
+                // Nadstavbové skupiny - tímy zo superstructureTeams
+                const globalTeamsList = Object.entries(superstructureTeams || {}).flatMap(([catName, teamArray]) =>
+                    (teamArray || []).map(t => ({
+                        uid: 'global',
+                        category: catName,
+                        id: t.id || crypto.randomUUID(),
+                        teamName: t.teamName,
+                        groupName: t.groupName || null,
+                        order: t.groupName ? (t.order ?? 0) : null,
+                        isSuperstructureTeam: true
+                    }))
+                );
+                teamsInGroup = globalTeamsList.filter(t => 
+                    t.category === categoryName && 
+                    t.groupName === groupName
+                );
+            } else {
+                // Základné skupiny - tímy z userTeamsData
+                teamsInGroup = (userTeamsData || []).filter(t => {
+                    if (t.category !== categoryName) return false;
+                    if (!t.groupName || t.groupName.trim() === '') return false;
+                    return t.groupName.trim() === groupName.trim();
+                });
+            }
+            
+            return teamsInGroup;
+        };
+        
         let teams = [];
         
         if (swapWithinSameGroup) {
@@ -254,7 +252,23 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
             setSelectedTeam('');
         }
-    }, [swapWithinSameGroup, selectedGroup, team.groupName, team.id, userTeamsData, superstructureTeams, categoryName]);
+    }, [isOpen, team, swapWithinSameGroup, selectedGroup, selectedTeam, userTeamsData, superstructureTeams, categoryIdToNameMap, allGroupsByCategoryId]);
+    
+    // PODMIENENÝ RETURN AŽ TERAZ - PO VŠETKÝCH HOOKOCH
+    if (!isOpen || !team) return null;
+    
+    const categoryName = team.category;
+    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
+    const groups = allGroupsByCategoryId[categoryId] || [];
+    
+    // Získame typ skupiny pôvodného tímu
+    const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
+    
+    // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
+    const availableGroups = groups.filter(g => 
+        g.type === originalGroupType && 
+        (swapWithinSameGroup || g.name !== team.groupName)
+    );
     
     const handleSwap = () => {
         if (selectedTeam) {
@@ -351,11 +365,13 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                             onChange: (e) => setSelectedTeam(e.target.value)
                         },
                         React.createElement('option', { value: '' }, '--- Vyberte tím ---'),
-                        teamsForSelect.map(t => 
-                            React.createElement('option', { key: t.id, value: t.teamName },
-                                `${t.order}. ${t.teamName}`
-                            )
-                        )
+                        teamsForSelect.length > 0 ? 
+                            teamsForSelect.map(t => 
+                                React.createElement('option', { key: t.id, value: t.teamName },
+                                    `${t.order}. ${t.teamName}`
+                                )
+                            ) :
+                            React.createElement('option', { value: '', disabled: true }, 'Žiadne tímy na výmenu')
                     ),
                     teamsForSelect.length === 0 && (swapWithinSameGroup || selectedGroup) && React.createElement(
                         'p',
