@@ -173,24 +173,46 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
     const [selectedTeam, setSelectedTeam] = useState('');
     const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
     const [teamsForSelect, setTeamsForSelect] = useState([]);
+    const [groups, setGroups] = useState([]);
+    const [categoryName, setCategoryName] = useState('');
     
     // VŠETKY HOOKY MUSIA BYŤ PRED PODMIENENÝM RETURNOM
+    
+    // Inicializácia groups a categoryName pri zmene teamu
     useEffect(() => {
-        // Reset stavov pri zatvorení modalu
+        if (!team) return;
+        
+        const catName = team.category;
+        setCategoryName(catName);
+        
+        const catId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === catName);
+        if (catId) {
+            setGroups(allGroupsByCategoryId[catId] || []);
+        }
+    }, [team, categoryIdToNameMap, allGroupsByCategoryId]);
+    
+    // Reset stavov pri zatvorení modalu
+    useEffect(() => {
         if (!isOpen) {
             setSelectedGroup('');
             setSelectedTeam('');
             setSwapWithinSameGroup(false);
             setTeamsForSelect([]);
+        }
+    }, [isOpen]);
+    
+    // Hlavný efekt na aktualizáciu zoznamu tímov - závisí od userTeamsData
+    useEffect(() => {
+        // Ak nie je otvorené alebo nemáme tím, nič nerobíme
+        if (!isOpen || !team) {
             return;
         }
         
-        // Ak nie je tím, nič nerobíme
-        if (!team) return;
-        
-        const categoryName = team.category;
-        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
-        const groups = allGroupsByCategoryId[categoryId] || [];
+        // Ak nemáme groups, nič nerobíme
+        if (groups.length === 0) {
+            setTeamsForSelect([]);
+            return;
+        }
         
         // Získame typ skupiny pôvodného tímu
         const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
@@ -252,14 +274,10 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
             setSelectedTeam('');
         }
-    }, [isOpen, team, swapWithinSameGroup, selectedGroup, selectedTeam, userTeamsData, superstructureTeams, categoryIdToNameMap, allGroupsByCategoryId]);
+    }, [isOpen, team, swapWithinSameGroup, selectedGroup, selectedTeam, userTeamsData, superstructureTeams, categoryName, groups]);
     
     // PODMIENENÝ RETURN AŽ TERAZ - PO VŠETKÝCH HOOKOCH
     if (!isOpen || !team) return null;
-    
-    const categoryName = team.category;
-    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
-    const groups = allGroupsByCategoryId[categoryId] || [];
     
     // Získame typ skupiny pôvodného tímu
     const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
