@@ -1440,11 +1440,17 @@ const AddTeamsGroupApp = (props) => {
                 );
             } else {
                 // Základné skupiny - tímy z userTeamsData
-                // Filtrujeme podľa kategórie a názvu skupiny
-                teamsInGroup = (userTeamsData || []).filter(t => 
-                    t.category === categoryName && 
-                    t.groupName === groupName
-                );
+                // DÔLEŽITÉ: Používame presné porovnanie a ošetrujeme null/undefined
+                teamsInGroup = (userTeamsData || []).filter(t => {
+                    // Skontrolujeme, či má tím správnu kategóriu
+                    if (t.category !== categoryName) return false;
+                    
+                    // Skontrolujeme groupName - musí byť rovnaký a nesmie byť null
+                    if (!t.groupName || t.groupName.trim() === '') return false;
+                    
+                    // Porovnanie názvu skupiny (ošetrenie medzier)
+                    return t.groupName.trim() === groupName.trim();
+                });
             }
             
             return teamsInGroup;
