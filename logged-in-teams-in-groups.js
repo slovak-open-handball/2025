@@ -176,7 +176,6 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
     const [groups, setGroups] = useState([]);
     const [categoryName, setCategoryName] = useState('');
     
-    // VŠETKY HOOKY MUSIA BYŤ PRED PODMIENENÝM RETURNOM
     
     // Inicializácia groups a categoryName pri zmene teamu
     useEffect(() => {
@@ -203,6 +202,17 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
     
     // Hlavný efekt na aktualizáciu zoznamu tímov - závisí od userTeamsData
     useEffect(() => {
+
+        console.log('===== SWAP TEAMS MODAL DEBUG =====');
+        console.log('userTeamsData v SwapTeamsModal:', userTeamsData);
+        console.log('team?.groupName:', team?.groupName);
+        console.log('categoryName:', categoryName);
+        console.log('team?.category:', team?.category);
+        console.log('isOpen:', isOpen);
+        console.log('selectedGroup:', selectedGroup);
+        console.log('swapWithinSameGroup:', swapWithinSameGroup);
+        console.log('-----------------------------------');
+      
         // Ak nie je otvorené alebo nemáme tím, nič nerobíme
         if (!isOpen || !team) {
             return;
