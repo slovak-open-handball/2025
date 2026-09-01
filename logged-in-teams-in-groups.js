@@ -245,10 +245,23 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                 console.log('categoryName:', categoryName);
                 console.log('groupName:', groupName);
                 console.log('userTeamsData length:', userTeamsData.length);
-              
+    
+                // VYPIŠ VŠETKY TÍMY V KATEGÓRII
+                const teamsInCategory = (userTeamsData || []).filter(t => t.category === categoryName);
+                console.log('📋 Tímy v kategórii', categoryName, ':', teamsInCategory.map(t => ({ 
+                    teamName: t.teamName, 
+                    groupName: t.groupName,
+                    order: t.order 
+                })));
+                
                 teamsInGroup = (userTeamsData || []).filter(t => {
-                    return t.category === categoryName && t.groupName === groupName;
+                    const categoryMatch = t.category === categoryName;
+                    const groupMatch = t.groupName === groupName;
+                    // VYPIŠ KAŽDÝ TÍM
+                    console.log(`   Tím: ${t.teamName}, category: ${t.category} (${categoryMatch}), groupName: ${t.groupName} (${groupMatch})`);
+                    return categoryMatch && groupMatch;
                 });
+                console.log('🔍 teamsInGroup po filtri:', teamsInGroup.map(t => t.teamName));
             }
             
             return teamsInGroup;
