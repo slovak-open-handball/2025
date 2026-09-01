@@ -1397,6 +1397,7 @@ const AddTeamsGroupApp = (props) => {
         const [selectedGroup, setSelectedGroup] = useState('');
         const [selectedTeam, setSelectedTeam] = useState('');
         const [swapWithinSameGroup, setSwapWithinSameGroup] = useState(false);
+        const [teamsForSelect, setTeamsForSelect] = useState([]);
         
         if (!isOpen || !team) return null;
         
@@ -1413,9 +1414,8 @@ const AddTeamsGroupApp = (props) => {
             (swapWithinSameGroup || g.name !== team.groupName)
         );
         
-        // Získame tímy vo vybranej skupine - použijeme správny zdroj dát
+        // Funkcia na získanie tímov v skupine - priamo z aktuálnych dát
         const getTeamsInGroup = (groupName) => {
-            // Rozhodneme podľa typu skupiny, odkiaľ brať tímy
             const group = groups.find(g => g.name === groupName);
             if (!group) return [];
             
@@ -1423,7 +1423,7 @@ const AddTeamsGroupApp = (props) => {
             
             if (group.type === 'nadstavbová skupina') {
                 // Nadstavbové skupiny - tímy zo superstructureTeams
-                const globalTeamsList = Object.entries(superstructureTeams).flatMap(([catName, teamArray]) =>
+                const globalTeamsList = Object.entries(superstructureTeams || {}).flatMap(([catName, teamArray]) =>
                     (teamArray || []).map(t => ({
                         uid: 'global',
                         category: catName,
@@ -1440,7 +1440,8 @@ const AddTeamsGroupApp = (props) => {
                 );
             } else {
                 // Základné skupiny - tímy z userTeamsData
-                teamsInGroup = userTeamsData.filter(t => 
+                // Filtrujeme podľa kategórie a názvu skupiny
+                teamsInGroup = (userTeamsData || []).filter(t => 
                     t.category === categoryName && 
                     t.groupName === groupName
                 );
@@ -1449,20 +1450,28 @@ const AddTeamsGroupApp = (props) => {
             return teamsInGroup;
         };
         
-        // Získame tímy pre zobrazenie v selectboxe
-        let teamsForSelect = [];
-        
-        if (swapWithinSameGroup) {
-            // V rovnakej skupine - použijeme pôvodnú skupinu
-            teamsForSelect = getTeamsInGroup(team.groupName)
-                .filter(t => t.id !== team.id)
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-        } else if (selectedGroup) {
-            // V inej skupine
-            teamsForSelect = getTeamsInGroup(selectedGroup)
-                .filter(t => t.id !== team.id)
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-        }
+        // Efekt na aktualizáciu zoznamu tímov pri zmene výberu
+        useEffect(() => {
+            let teams = [];
+            
+            if (swapWithinSameGroup) {
+                // V rovnakej skupine - použijeme pôvodnú skupinu
+                teams = getTeamsInGroup(team.groupName)
+                    .filter(t => t.id !== team.id)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+            } else if (selectedGroup) {
+                // V inej skupine
+                teams = getTeamsInGroup(selectedGroup)
+                    .filter(t => t.id !== team.id)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+            }
+            
+            setTeamsForSelect(teams);
+            // Ak je vybraný tím, ktorý už nie je v zozname, resetujeme ho
+            if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
+                setSelectedTeam('');
+            }
+        }, [swapWithinSameGroup, selectedGroup, team.groupName, team.id, userTeamsData, superstructureTeams, categoryName]);
         
         const handleSwap = () => {
             if (selectedTeam) {
@@ -1564,6 +1573,11 @@ const AddTeamsGroupApp = (props) => {
                                     `${t.order}. ${t.teamName}`
                                 )
                             )
+                        ),
+                        teamsForSelect.length === 0 && (swapWithinSameGroup || selectedGroup) && React.createElement(
+                            'p',
+                            { className: 'text-sm text-amber-600 mt-1' },
+                            'V tejto skupine nie sú žiadne ďalšie tímy na výmenu.'
                         )
                     ),
                     
@@ -3936,7 +3950,7 @@ return React.createElement(
         onSwap: (team, targetGroup, targetTeam) => handleSwapTeams(team, targetGroup, targetTeam),
         team: swapModal?.team,
         allTeams: allTeams,
-        userTeamsData: userTeamsData,
+        userTeamsData: userTeamsData, 
         superstructureTeams: superstructureTeams,
         categoryIdToNameMap: categoryIdToNameMap,
         allGroupsByCategoryId: allGroupsByCategoryId
