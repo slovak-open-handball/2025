@@ -211,6 +211,7 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         console.log('isOpen:', isOpen);
         console.log('selectedGroup:', selectedGroup);
         console.log('swapWithinSameGroup:', swapWithinSameGroup);
+        console.log('groups:', groups);
         console.log('-----------------------------------');
       
         // Ak nie je otvorené alebo nemáme tím, nič nerobíme
