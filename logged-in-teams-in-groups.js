@@ -271,11 +271,19 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
 
         if (swapWithinSameGroup) {
             teams = getTeamsInGroup(team.groupName)
-                .filter(t => t.id !== team.id)
+                .filter(t => {
+                    // Ak majú oba tímy id, porovnávame id
+                    if (t.id && team.id) return t.id !== team.id;
+                    // Inak porovnávame teamName
+                    return t.teamName !== team.teamName;
+                })
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         } else if (selectedGroup) {
             teams = getTeamsInGroup(selectedGroup)
-                .filter(t => t.id !== team.id)
+                .filter(t => {
+                    if (t.id && team.id) return t.id !== team.id;
+                    return t.teamName !== team.teamName;
+                })
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         }
 
