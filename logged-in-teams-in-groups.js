@@ -1416,6 +1416,8 @@ const AddTeamsGroupApp = (props) => {
         
         // Funkcia na získanie tímov v skupine - priamo z aktuálnych dát
         const getTeamsInGroup = (groupName) => {
+            if (!groupName) return [];
+            
             const group = groups.find(g => g.name === groupName);
             if (!group) return [];
             
