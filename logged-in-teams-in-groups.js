@@ -241,27 +241,11 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                 );
             } else {
                 // Základné skupiny - tímy z userTeamsData
-                console.log('🔍 FILTROVANIE ZÁKLADNÝCH SKUPÍN');
-                console.log('categoryName:', categoryName);
-                console.log('groupName:', groupName);
-                console.log('userTeamsData length:', userTeamsData.length);
-    
-                // VYPIŠ VŠETKY TÍMY V KATEGÓRII
-                const teamsInCategory = (userTeamsData || []).filter(t => t.category === categoryName);
-                console.log('📋 Tímy v kategórii', categoryName, ':', teamsInCategory.map(t => ({ 
-                    teamName: t.teamName, 
-                    groupName: t.groupName,
-                    order: t.order 
-                })));
-                
                 teamsInGroup = (userTeamsData || []).filter(t => {
-                    const categoryMatch = t.category === categoryName;
-                    const groupMatch = t.groupName === groupName;
-                    // VYPIŠ KAŽDÝ TÍM
-                    console.log(`   Tím: ${t.teamName}, category: ${t.category} (${categoryMatch}), groupName: ${t.groupName} (${groupMatch})`);
-                    return categoryMatch && groupMatch;
+                    if (t.category !== categoryName) return false;
+                    if (!t.groupName || t.groupName.trim() === '') return false;
+                    return t.groupName.trim() === groupName.trim();
                 });
-                console.log('🔍 teamsInGroup po filtri:', teamsInGroup.map(t => t.teamName));
             }
             
             return teamsInGroup;
@@ -272,9 +256,7 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         if (swapWithinSameGroup) {
             teams = getTeamsInGroup(team.groupName)
                 .filter(t => {
-                    // Ak majú oba tímy id, porovnávame id
                     if (t.id && team.id) return t.id !== team.id;
-                    // Inak porovnávame teamName
                     return t.teamName !== team.teamName;
                 })
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -287,13 +269,6 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
         }
 
-        setTeamsForSelect(teams);
-
-        console.log('🔴 teams pred setTeamsForSelect:', teams);
-        console.log('🔴 swapWithinSameGroup:', swapWithinSameGroup);
-        console.log('🔴 selectedGroup:', selectedGroup);
-        console.log('🔴 team.groupName:', team.groupName);
-        
         setTeamsForSelect([...teams]);
         // Ak je vybraný tím, ktorý už nie je v zozname, resetujeme ho
         if (selectedTeam && !teams.some(t => t.teamName === selectedTeam)) {
@@ -307,15 +282,14 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
     // Získame typ skupiny pôvodného tímu
     const originalGroupType = groups.find(g => g.name === team.groupName)?.type;
     
-    // Filtrujeme skupiny: rovnaká kategória, rovnaký typ
-    // 🔥 DÔLEŽITÁ ZMENA: Ak je swapWithinSameGroup true, zobrazíme všetky skupiny (aby sme mohli prepnúť)
+    // 🔥 UPRAVENÉ: Filtrujeme skupiny - odstránime pôvodnú skupinu, pokiaľ nie je swapWithinSameGroup true
     const availableGroups = groups.filter(g => 
-        g.type === originalGroupType
+        g.type === originalGroupType && 
+        (swapWithinSameGroup || g.name !== team.groupName)
     );
     
     const handleSwap = () => {
         if (selectedTeam) {
-            // 🔥 DÔLEŽITÁ ZMENA: Ak je swapWithinSameGroup true, použijeme pôvodnú skupinu
             const targetGroup = swapWithinSameGroup ? team.groupName : selectedGroup;
             onSwap(team, targetGroup, selectedTeam);
         }
@@ -395,7 +369,6 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
                 ),
                 
                 // Selectbox pre výber tímu
-                // 🔥 DÔLEŽITÁ ZMENA: Zobrazíme aj keď je swapWithinSameGroup true
                 (swapWithinSameGroup || selectedGroup) && React.createElement(
                     'div',
                     null,
