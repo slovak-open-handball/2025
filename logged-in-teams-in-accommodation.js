@@ -542,7 +542,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 });
             }
             window.showGlobalNotification(
-                `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
+                `Tím "${selectedTeam.teamName}" bol priradený do ubytovne "${selectedPlace.name}"`,
                 'success'
             );
             setIsAssignModalOpen(false);
