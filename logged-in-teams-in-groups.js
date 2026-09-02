@@ -1861,9 +1861,13 @@ const AddTeamsGroupApp = (props) => {
           g => g.name.slice(-1).toLowerCase() === lastChar
         );
       
-        // Ak neexistuje skupina s týmto písmenom, nezobrazujeme chybu (používateľ si vyberie skupinu neskôr)
+        // Ak neexistuje skupina s týmto písmenom, zobrazíme chybu
         if (!matchingGroup) {
-          setOrderMismatchMessage(null);
+          // Získame veľké písmeno pre zobrazenie
+          const letter = lastChar.toUpperCase();
+          setOrderMismatchMessage(
+            `Neexistuje skupina s názvom končiacim na písmeno ${letter}.`
+          );
           return;
         }
       
