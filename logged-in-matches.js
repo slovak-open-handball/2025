@@ -9969,85 +9969,146 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                })()
                                                            )
                                                        ) : (
-                                                           // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
-                                                           (() => {
-                                                               // Získame čas začiatku haly pre tento deň
-                                                               const scheduleId = `${hall.id}_${dateStr}`;
-                                                               const savedSchedule = hallSchedules[scheduleId];
-                                                               const hallStartTime = savedSchedule?.startTime || '08:00'; // Predvolený čas 08:00
-                                                               
-                                                               // PRE PRÁZDNY DEŇ - ZISTÍME, ČI EXISTUJE ASPOŇ JEDEN ZÁPAS V TEJTO HALE A DNI (AJ MIMO FILTRA)
-                                                               // Ak áno, použijeme čas po poslednom zápase. Ak nie, použijeme čas začiatku haly.
-                                                               const allMatchesForHallAndDay = matches.filter(m => 
-                                                                   m.hallId === hall.id && 
-                                                                   m.scheduledTime
-                                                               ).filter(m => {
-                                                                   const matchDate = m.scheduledTime.toDate();
-                                                                   const matchDateStr = getLocalDateStr(matchDate);
-                                                                   return matchDateStr === dateStr;
-                                                               }).sort((a, b) => {
-                                                                   const timeA = a.scheduledTime.toDate().getTime();
-                                                                   const timeB = b.scheduledTime.toDate().getTime();
-                                                                   return timeA - timeB;
-                                                               });
-                                                               
-                                                               // Určíme čas, od ktorého sa zobrazí "PRIDAŤ ZÁPAS"
-                                                               let displayStartTime = hallStartTime;
-                                                               
-                                                               // Ak existujú zápasy v tomto dni (aj mimo filtra), použijeme čas po poslednom
-                                                               if (allMatchesForHallAndDay.length > 0) {
-                                                                   const lastMatch = allMatchesForHallAndDay[allMatchesForHallAndDay.length - 1];
-                                                                   if (lastMatch && lastMatch.scheduledTime) {
-                                                                       try {
-                                                                           const lastMatchDate = lastMatch.scheduledTime.toDate();
-                                                                           const lastMatchCategory = categories.find(c => c.name === lastMatch.categoryName);
-                                                                           let lastMatchDuration = 0;
-                                                                           let lastMatchBreak = 5;
-                                                                           if (lastMatchCategory) {
-                                                                               const periods = lastMatchCategory.periods || 2;
-                                                                               const periodDuration = lastMatchCategory.periodDuration || 20;
-                                                                               const breakDuration = lastMatchCategory.breakDuration || 2;
-                                                                               lastMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                               lastMatchBreak = lastMatchCategory.matchBreak || 5;
-                                                                           }
-                                                                           const lastMatchEndTime = new Date(lastMatchDate.getTime() + (lastMatchDuration + lastMatchBreak) * 60000);
-                                                                           const lastMatchEndMinutes = lastMatchEndTime.getHours() * 60 + lastMatchEndTime.getMinutes();
-                                                                           const formatTimeFromMinutes = (minutes) => {
-                                                                               const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
-                                                                               const mins = (minutes % 60).toString().padStart(2, '0');
-                                                                               return `${hours}:${mins}`;
-                                                                           };
-                                                                           displayStartTime = formatTimeFromMinutes(lastMatchEndMinutes);
-                                                                       } catch (e) {
-                                                                           console.error('Chyba pri výpočte času po poslednom zápase:', e);
+                                                       // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
+                                                       (() => {
+                                                           // Získame čas začiatku haly pre tento deň
+                                                           const scheduleId = `${hall.id}_${dateStr}`;
+                                                           const savedSchedule = hallSchedules[scheduleId];
+                                                           const hallStartTime = savedSchedule?.startTime || '08:00'; // Predvolený čas 08:00
+                                                           
+                                                           // PRE PRÁZDNY DEŇ - ZISTÍME, ČI EXISTUJE ASPOŇ JEDEN ZÁPAS V TEJTO HALE A DNI (AJ MIMO FILTRA)
+                                                           // Ak áno, použijeme čas po poslednom zápase. Ak nie, použijeme čas začiatku haly.
+                                                           const allMatchesForHallAndDay = matches.filter(m => 
+                                                               m.hallId === hall.id && 
+                                                               m.scheduledTime
+                                                           ).filter(m => {
+                                                               const matchDate = m.scheduledTime.toDate();
+                                                               const matchDateStr = getLocalDateStr(matchDate);
+                                                               return matchDateStr === dateStr;
+                                                           }).sort((a, b) => {
+                                                               const timeA = a.scheduledTime.toDate().getTime();
+                                                               const timeB = b.scheduledTime.toDate().getTime();
+                                                               return timeA - timeB;
+                                                           });
+                                                           
+                                                           // Určíme čas, od ktorého sa zobrazí "PRIDAŤ ZÁPAS"
+                                                           let displayStartTime = hallStartTime;
+                                                           
+                                                           // Ak existujú zápasy v tomto dni (aj mimo filtra), použijeme čas po poslednom
+                                                           if (allMatchesForHallAndDay.length > 0) {
+                                                               const lastMatch = allMatchesForHallAndDay[allMatchesForHallAndDay.length - 1];
+                                                               if (lastMatch && lastMatch.scheduledTime) {
+                                                                   try {
+                                                                       const lastMatchDate = lastMatch.scheduledTime.toDate();
+                                                                       const lastMatchCategory = categories.find(c => c.name === lastMatch.categoryName);
+                                                                       let lastMatchDuration = 0;
+                                                                       let lastMatchBreak = 5;
+                                                                       if (lastMatchCategory) {
+                                                                           const periods = lastMatchCategory.periods || 2;
+                                                                           const periodDuration = lastMatchCategory.periodDuration || 20;
+                                                                           const breakDuration = lastMatchCategory.breakDuration || 2;
+                                                                           lastMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                           lastMatchBreak = lastMatchCategory.matchBreak || 5;
                                                                        }
+                                                                       const lastMatchEndTime = new Date(lastMatchDate.getTime() + (lastMatchDuration + lastMatchBreak) * 60000);
+                                                                       const lastMatchEndMinutes = lastMatchEndTime.getHours() * 60 + lastMatchEndTime.getMinutes();
+                                                                       const formatTimeFromMinutes = (minutes) => {
+                                                                           const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+                                                                           const mins = (minutes % 60).toString().padStart(2, '0');
+                                                                           return `${hours}:${mins}`;
+                                                                       };
+                                                                       displayStartTime = formatTimeFromMinutes(lastMatchEndMinutes);
+                                                                   } catch (e) {
+                                                                       console.error('Chyba pri výpočte času po poslednom zápase:', e);
                                                                    }
                                                                }
-                                                               
-                                                               // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
-                                                               if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
-                                                                   return React.createElement(
-                                                                       'div',
-                                                                       {
-                                                                           key: 'empty-day-add-button',
-                                                                           className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                           }
+                                                           
+                                                           // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
+                                                           if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
+                                                               return React.createElement(
+                                                                   'div',
+                                                                   {
+                                                                       key: 'empty-day-add-button',
+                                                                       className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                                       style: { 
+                                                                           width: '100%',
+                                                                           backgroundColor: '#f0fdf4'
+                                                                       }
+                                                                   },
+                                                                   React.createElement(
+                                                                       'div', 
+                                                                       { 
+                                                                           className: 'grid items-center text-xs',
                                                                            style: { 
-                                                                               width: '100%',
-                                                                               backgroundColor: '#f0fdf4'
+                                                                               gridTemplateColumns: '130px 1fr',
+                                                                               width: '100%'
+                                                                           },
+                                                                           onClick: function(e) {
+                                                                               e.stopPropagation();
+                                                                               
+                                                                               // POUŽIJEME hall.id namiesto hallId
+                                                                               window.__pendingAssignFilters = {
+                                                                                   hallId: hall.id,
+                                                                                   day: dateStr,
+                                                                                   startTime: displayStartTime
+                                                                               };
+                                                                               
+                                                                               setSelectedBreakForAssign({
+                                                                                   hallId: hall.id,
+                                                                                   date: dateStr,
+                                                                                   breakStartTime: displayStartTime,
+                                                                                   breakEndTime: '23:59',
+                                                                                   breakDuration: 0,
+                                                                                   availableMatches: filteredUnassignedMatches
+                                                                               });
+                                                                               setIsAssignToBreakModalOpen(true);
                                                                            }
                                                                        },
                                                                        React.createElement(
                                                                            'div', 
                                                                            { 
-                                                                               className: 'grid items-center text-xs',
+                                                                               className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                               style: { minWidth: '130px', textAlign: 'center' }
+                                                                           },
+                                                                           React.createElement(
+                                                                               'div', 
+                                                                               { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                               React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
+                                                                               React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
+                                                                                   `od ${displayStartTime}`
+                                                                               )
+                                                                           )
+                                                                       ),
+                                                                       React.createElement(
+                                                                           'div', 
+                                                                           { 
+                                                                               className: 'px-0 py-0 flex items-center justify-center',
                                                                                style: { 
-                                                                                   gridTemplateColumns: '130px 1fr',
-                                                                                   width: '100%'
-                                                                               },
+                                                                                   textAlign: 'center',
+                                                                                   fontWeight: '500',
+                                                                                   color: '#16a34a'
+                                                                               }
+                                                                           },
+                                                                           React.createElement(
+                                                                               'span',
+                                                                               { className: 'text-sm font-medium' },
+                                                                               'PRIDAŤ ZÁPAS'
+                                                                           )
+                                                                       )
+                                                                   ),
+                                                                   // Tlačidlo "+" vpravo
+                                                                   React.createElement(
+                                                                       'div',
+                                                                       { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
+                                                                       React.createElement(
+                                                                           'button',
+                                                                           {
+                                                                               className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                                onClick: function(e) {
                                                                                    e.stopPropagation();
                                                                                    
-                                                                                   // Uložíme do globálnej premennej, že chceme priradiť zápas s týmto časom
+                                                                                   // POUŽIJEME hall.id namiesto hallId
                                                                                    window.__pendingAssignFilters = {
                                                                                        hallId: hall.id,
                                                                                        day: dateStr,
@@ -10063,90 +10124,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        availableMatches: filteredUnassignedMatches
                                                                                    });
                                                                                    setIsAssignToBreakModalOpen(true);
-                                                                               }
+                                                                               },
+                                                                               title: 'Priradiť zápas'
                                                                            },
-                                                                           React.createElement(
-                                                                               'div', 
-                                                                               { 
-                                                                                   className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
-                                                                                   style: { minWidth: '130px', textAlign: 'center' }
-                                                                               },
-                                                                               React.createElement(
-                                                                                   'div', 
-                                                                                   { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                   React.createElement('i', { className: 'fa-solid fa-plus-circle text-green-600 text-xs flex-shrink-0' }),
-                                                                                   React.createElement('span', { className: 'font-medium text-green-700 truncate' }, 
-                                                                                       `od ${displayStartTime}`
-                                                                                   )
-                                                                               )
-                                                                           ),
-                                                                           React.createElement(
-                                                                               'div', 
-                                                                               { 
-                                                                                   className: 'px-0 py-0 flex items-center justify-center',
-                                                                                   style: { 
-                                                                                       textAlign: 'center',
-                                                                                       fontWeight: '500',
-                                                                                       color: '#16a34a'
-                                                                                   }
-                                                                               },
-                                                                               React.createElement(
-                                                                                   'span',
-                                                                                   { className: 'text-sm font-medium' },
-                                                                                   'PRIDAŤ ZÁPAS'
-                                                                               )
-                                                                           )
-                                                                       ),
-                                                                       // Tlačidlo "+" vpravo
-                                                                       React.createElement(
-                                                                           'div',
-                                                                           { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
-                                                                           React.createElement(
-                                                                               'button',
-                                                                               {
-                                                                                   className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                   onClick: function(e) {
-                                                                                       e.stopPropagation();
-                                                                                       
-                                                                                       window.__pendingAssignFilters = {
-                                                                                           hallId: hall.id,
-                                                                                           day: dateStr,
-                                                                                           startTime: displayStartTime
-                                                                                       };
-                                                                                       
-                                                                                       setSelectedBreakForAssign({
-                                                                                           hallId: hall.id,
-                                                                                           date: dateStr,
-                                                                                           breakStartTime: displayStartTime,
-                                                                                           breakEndTime: '23:59',
-                                                                                           breakDuration: 0,
-                                                                                           availableMatches: filteredUnassignedMatches
-                                                                                       });
-                                                                                       setIsAssignToBreakModalOpen(true);
-                                                                                   },
-                                                                                   title: 'Priradiť zápas'
-                                                                               },
-                                                                               React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                                           )
+                                                                           React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                        )
-                                                                   );
-                                                               }
-                                                               
-                                                               // Inak zobrazíme pôvodný text (žiadne zápasy)
-                                                               return React.createElement(
-                                                                   'div',
-                                                                   {
-                                                                       className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
-                                                                       style: { minWidth: '500px' }
-                                                                   },
-                                                                   React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-sm flex-shrink-0' }),
-                                                                   React.createElement('span', { className: 'text-center' }, 
-                                                                       showEmptyMessage 
-                                                                           ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
-                                                                           : 'Žiadne zápasy'
                                                                    )
                                                                );
-                                                           })()
+                                                           }
+                                                           
+                                                           // Inak zobrazíme pôvodný text (žiadne zápasy)
+                                                           return React.createElement(
+                                                               'div',
+                                                               {
+                                                                   className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
+                                                                   style: { minWidth: '500px' }
+                                                               },
+                                                               React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-sm flex-shrink-0' }),
+                                                               React.createElement('span', { className: 'text-center' }, 
+                                                                   showEmptyMessage 
+                                                                       ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
+                                                                       : 'Žiadne zápasy'
+                                                               )
+                                                           );
+                                                       })()
                                                        )
                                                    );
                                                })
