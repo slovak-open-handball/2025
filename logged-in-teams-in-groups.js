@@ -1913,7 +1913,7 @@ const AddTeamsGroupApp = (props) => {
           
           // 🔥 JEDNOTNÁ SPRÁVA - bez rozlíšenia typu skupiny
           setOrderMismatchMessage(
-            `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+            `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
           );
         } else {
           setOrderMismatchMessage(null);
