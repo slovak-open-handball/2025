@@ -9832,7 +9832,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
                                                                        // Získame VŠETKY zápasy pre túto halu a deň (bez filtra)
                                                                        const allMatchesForHallAndDay = matches.filter(m => 
-                                                                           m.hallId === hallId && 
+                                                                           m.hallId === hall.id && 
                                                                            m.scheduledTime
                                                                        ).filter(m => {
                                                                            const matchDate = m.scheduledTime.toDate();
