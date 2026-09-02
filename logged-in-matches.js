@@ -2848,13 +2848,22 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         // Použijeme allMatches namiesto existingMatchesList
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
-            m.scheduledTime
+            m.scheduledTime &&
+            m.id !== match?.id  // Vynecháme aktuálny zápas, ak už má ID
         ).filter(m => {
             const matchDate = m.scheduledTime.toDate();
             const matchDateStr = getLocalDateStr(matchDate);
             return matchDateStr === date;
         });
         
+        // Zoradíme zápasy podľa času
+        allMatchesForHallAndDay.sort((a, b) => {
+            const timeA = a.scheduledTime.toDate().getTime();
+            const timeB = b.scheduledTime.toDate().getTime();
+            return timeA - timeB;
+        });
+        
+        // Pridáme všetky zápasy do obsadených intervalov
         allMatchesForHallAndDay.forEach(match => {
             if (!match.scheduledTime) return;
             
@@ -3151,7 +3160,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
     // Upravený useEffect pre loadHallStartTime - náhrada existujúcej časti
-
+    
     useEffect(() => {
         const loadHallStartTime = async () => {
             console.log('loadHallStartTime - spúšťam sa, selectedHallId:', selectedHallId, 'selectedDate:', selectedDate);
