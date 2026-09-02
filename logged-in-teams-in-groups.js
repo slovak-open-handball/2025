@@ -1830,57 +1830,68 @@ const AddTeamsGroupApp = (props) => {
         }
       };
     
+      // V časti NewTeamModal - upravte useEffect pre validáciu koncovky a čísla poradia
+
       useEffect(() => {
         if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
           setGroupEndingMismatch(false);
           setOrderMismatchMessage(null);
           return;
         }
-      
+
         const trimmed = teamName.trim();
         
         // 🔥 ODSTRÁNENÁ KONTROLA groupEndingMismatch - používateľ si vyberá skupinu manuálne
         // groupEndingMismatch nastavíme vždy na false, pretože skupina sa vyberá zo select boxu
         setGroupEndingMismatch(false);
-  
-        // KONTROLA PORADIA - ostáva zachovaná
+      
+        // KONTROLA PORADIA - kontrolujeme skupinu podľa písmena v názve tímu
         const lastChar = trimmed.slice(-1).toLowerCase();
         const groups = allGroupsByCategoryId[selectedCategory] || [];
         const groupsByType = groups.filter(g => g.type === selectedGroupType);
         
-        // Ak existuje aspoň jedna skupina daného typu a máme aspoň 2 znaky
-        if (groupsByType.length > 0 && trimmed.length >= 2) {
+        // Nájdeme skupinu, ktorá končí na rovnaké písmeno ako názov tímu
+        const matchingGroup = groupsByType.find(
+          g => g.name.slice(-1).toLowerCase() === lastChar
+        );
+  
+        // Ak existuje skupina s rovnakým koncovým písmenom
+        if (matchingGroup && trimmed.length >= 2) {
+          // Extrahujeme číselnú časť (všetko pred posledným písmenom)
           const numberPart = trimmed.slice(0, -1).trim();
           const requestedOrder = parseInt(numberPart, 10);
           
           if (!isNaN(requestedOrder) && requestedOrder >= 1) {
-            // Nájdeme skupinu, ktorá bola vybraná v select boxe
-            // (namiesto hľadania podľa písmena)
-            const selectedGroupObj = groupsByType.find(g => g.name === selectedGroup);
+            const groupName = matchingGroup.name;
+            const categoryName = categoryIdToNameMap[selectedCategory];
             
-            if (selectedGroupObj) {
-              const groupName = selectedGroupObj.name;
-              const categoryName = categoryIdToNameMap[selectedCategory];
-        
-              // Počet tímov v tejto skupine
-              const teamsInGroup = allTeams.filter(
-                t => t.category === categoryName && t.groupName === groupName
-              );
-              
-              const currentCount = teamsInGroup.length;
-              if (currentCount < requestedOrder) {
-                // Iná správa pre základné a nadstavbové skupiny
-                if (selectedGroupType === 'základná skupina') {
-                  setOrderMismatchMessage(
-                    `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
-                  );
-                } else if (selectedGroupType === 'nadstavbová skupina') {
-                  setOrderMismatchMessage(
-                    `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
-                  );
-                }
-              } else {
-                setOrderMismatchMessage(null);
+            // Počet tímov v tejto skupine
+            const teamsInGroup = allTeams.filter(
+              t => t.category === categoryName && t.groupName === groupName
+            );
+            
+            // Získame všetky použité poradia v skupine
+            const usedOrders = new Set(
+              teamsInGroup
+                .map(t => t.order)
+                .filter(o => typeof o === 'number' && o > 0)
+            );
+      
+            // Zistíme maximálne použité poradie
+            const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+            
+            // Ak požadované poradie presahuje maximálne použité poradie + 1,
+            // znamená to, že v skupine je diera
+            if (requestedOrder > maxOrder + 1) {
+              // Iná správa pre základné a nadstavbové skupiny
+              if (selectedGroupType === 'základná skupina') {
+                setOrderMismatchMessage(
+                  `V základnej skupine ${groupName} chýbajú tímy s poradím od ${maxOrder + 1} do ${requestedOrder - 1}.`
+                );
+              } else if (selectedGroupType === 'nadstavbová skupina') {
+                setOrderMismatchMessage(
+                  `V nadstavbovej skupine ${groupName} chýbajú tímy s poradím od ${maxOrder + 1} do ${requestedOrder - 1}.`
+                );
               }
             } else {
               setOrderMismatchMessage(null);
@@ -1889,7 +1900,14 @@ const AddTeamsGroupApp = (props) => {
             setOrderMismatchMessage(null);
           }
         } else {
-          setOrderMismatchMessage(null);
+          // Ak neexistuje skupina s rovnakým koncovým písmenom, zobrazíme varovanie
+          // (ale neblokujeme tlačidlo)
+          if (groupsByType.length > 0 && trimmed.length >= 1) {
+            // Iba informácia, nie chyba
+            setOrderMismatchMessage(null);
+          } else {
+            setOrderMismatchMessage(null);
+          }
         }
       }, [teamName, selectedCategory, selectedGroupType, isOpen, teamToEdit, allTeams, allGroupsByCategoryId, categoryIdToNameMap, selectedGroup, showCategoryPrefix]);
     
@@ -2243,7 +2261,7 @@ const AddTeamsGroupApp = (props) => {
         isDuplicate ||
         !!orderMismatchMessage ||
         selectedGroupLocked ||
-        (!canEditTeamName && !teamName.trim()); // Ak nemôžeme meniť názov, ale pole je prázdne
+        (!canEditTeamName && !teamName.trim());
     
       const modalTitle = teamToEdit ? 'Upraviť tím' : 'Pridať nový tím';
       const buttonText = teamToEdit ? 'Aktualizovať tím' : 'Pridať tím';
