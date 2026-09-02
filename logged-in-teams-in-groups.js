@@ -437,7 +437,6 @@ const AddTeamsGroupApp = (props) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
-    const [uiNotification, setUiNotification] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [teamToEdit, setTeamToEdit] = useState(null);
     const [isInitialHashReadComplete, setIsInitialHashReadComplete] = useState(false);
@@ -1204,22 +1203,6 @@ const AddTeamsGroupApp = (props) => {
         };
     }, []);
   
-
-    // Efekt pre manažovanie notifikácií
-    useEffect(() => {
-        let timer;
-        const unsubscribe = subscribe((notification) => {
-            setUiNotification(notification);
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                setUiNotification(null);
-            }, 5000);
-        });
-        return () => {
-            unsubscribe();
-            clearTimeout(timer);
-        };
-    }, []);
     // ===================================================================
     // VNÚTORNÉ FUNKCIE – všetky majú prístup k setUiNotification, categoryIdToNameMap atď.
     // ===================================================================
@@ -3795,18 +3778,6 @@ const renderSingleCategoryView = () => {
         : allTeams.filter(t => t.groupName);
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([,a], [,b]) => a.localeCompare(b));
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
-    const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
-        uiNotification
-            ? 'opacity-100 scale-100 translate-y-0'
-            : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
-    }`;
-    let typeClasses = '';
-    switch (uiNotification?.type) {
-        case 'success': typeClasses = 'bg-green-500'; break;
-        case 'error': typeClasses = 'bg-red-500'; break;
-        case 'info': typeClasses = 'bg-blue-500'; break;
-        default: typeClasses = 'bg-gray-700';
-    }
     const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transform focus:outline-none';
     const fabButton = React.createElement(
         'button',
