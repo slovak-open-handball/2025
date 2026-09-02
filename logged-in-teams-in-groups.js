@@ -1862,29 +1862,31 @@ const AddTeamsGroupApp = (props) => {
             const groupName = matchingGroup.name;
             const categoryName = categoryIdToNameMap[selectedCategory];
             
-            // 🔥 SPRÁVNE: Filtrujeme tímy podľa kategórie a skupiny
+            // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské)
             const teamsInGroup = allTeams.filter(
               t => t.category === categoryName && 
-                   t.groupName === groupName &&
-                   t.isSuperstructureTeam === true  // Len superstructure tímy (pretože pridávame superstructure tímy)
+                   t.groupName === groupName
             );
             
-            // 🔥 Alternatíva: Ak chcete počítať všetky tímy v skupine (aj používateľské)
-            // const teamsInGroup = allTeams.filter(
-            //   t => t.category === categoryName && t.groupName === groupName
-            // );
+            // Získame všetky použité poradia v skupine
+            const usedOrders = new Set(
+              teamsInGroup
+                .map(t => t.order)
+                .filter(o => typeof o === 'number' && o > 0)
+            );
             
-            const currentTeamCount = teamsInGroup.length;
-            
-            // Ak požadované číslo presahuje počet tímov v skupine
-            if (requestedOrder > currentTeamCount) {
+            // Skontrolujeme, či existuje tím s požadovaným poradím
+            if (!usedOrders.has(requestedOrder)) {
+              // Zistíme maximálne použité poradie
+              const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+              
               if (selectedGroupType === 'základná skupina') {
                 setOrderMismatchMessage(
-                  `V základnej skupine ${groupName} nie je ${requestedOrder}. tím. Skupina má iba ${currentTeamCount} tímov.`
+                  `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
                 );
               } else if (selectedGroupType === 'nadstavbová skupina') {
                 setOrderMismatchMessage(
-                  `V nadstavbovej skupine ${groupName} nie je ${requestedOrder}. tím. Skupina má iba ${currentTeamCount} tímov.`
+                  `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
                 );
               }
             } else {
