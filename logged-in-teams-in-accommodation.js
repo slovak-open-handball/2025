@@ -23,48 +23,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`; }, 5000);
 };
 let isEmailSyncListenerSetup = false;
-const listeners = new Set();
-const notify = (message, type = 'info') => {
-    const id = Date.now() + Math.random();
-    listeners.forEach(cb => cb({ id, message, type }));
-};
-const subscribe = (cb) => {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
-};
-const NotificationPortal = () => {
-    const [notification, setNotification] = React.useState(null);    
-    useEffect(() => {
-        let timer;
-        const unsubscribe = subscribe((notif) => {
-            setNotification(notif);
-            clearTimeout(timer);
-            timer = setTimeout(() => setNotification(null), 5000);
-        });        
-        return () => {
-            unsubscribe();
-            clearTimeout(timer);
-        };
-    }, []);    
-    if (!notification) return null;    
-    const typeClasses = {
-        success: 'bg-green-600',
-        error: 'bg-red-600',
-        info: 'bg-blue-600',
-        default: 'bg-gray-700'
-    }[notification.type || 'default'];    
-    return ReactDOM.createPortal(
-        React.createElement(
-            'div',
-            {
-                key: notification.id,
-                className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
-            },
-            notification.message
-        ),
-        document.body
-    );
-};
 const createAccommodationNotification = async (action, data) => {
     if (!window.db) return;    
     const currentUserEmail = window.globalUserProfileData?.email || null;    
@@ -727,13 +685,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
     }
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-gray-50 py-8 px-4 relative' },        
-        uiNotification && React.createElement(
-            'div',
-            { className: `${uiNotificationClasses} ${typeClasses}` },
-            uiNotification.message
-        ),        
-        React.createElement(NotificationPortal, null),        
+        { className: 'min-h-screen bg-gray-50 py-8 px-4 relative' },              
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto h-full' },
