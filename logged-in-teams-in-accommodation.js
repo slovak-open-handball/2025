@@ -507,10 +507,8 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 newHeaderTextColor: newHeaderTextColor
             });
             window.showGlobalNotification('Farba hlavičky bola aktualizovaná', 'success');
-            notify('Farba ubytovne bola aktualizovaná', 'success');
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
-            notify('Nepodarilo sa uložiť farbu ubytovne', 'error');
         }
         setIsColorModalOpen(false);
         setSelectedPlaceForEdit(null);
@@ -575,7 +573,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
                     oldAccommodation: oldAccommodation,
                     newAccommodation: selectedPlace.name
                 });
-                notify(`Tím ${selectedTeam.teamName} bol presunutý z ${oldAccommodation} do ${selectedPlace.name}`, 'success');
             } else {
                 await createAccommodationNotification('assign_accommodation', {
                     teamName: selectedTeam.teamName,
@@ -585,7 +582,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
                     totalPeople: selectedTeam.peopleWithAccommodation,
                     accommodationName: selectedPlace.name
                 });
-                notify(`Tím ${selectedTeam.teamName} bol priradený do ${selectedPlace.name}`, 'success');
             }
             window.showGlobalNotification(
                 `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
@@ -596,7 +592,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
             setSelectedAccommodationId('');
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa priradiť ubytovňu', 'error');
-            notify('Nepodarilo sa priradiť ubytovňu', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -644,12 +639,10 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 `Priradenie tímu "${teamToRemove.teamName}" bolo odstránené`,
                 'success'
             );
-            notify(`Tím ${teamToRemove.teamName} bol odstránený z ubytovne ${teamToRemove.assignedPlace}`, 'success');
             setIsRemoveModalOpen(false);
             setTeamToRemove(null);
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa odstrániť priradenie', 'error');
-            notify('Nepodarilo sa odstrániť priradenie tímu', 'error');
         } finally {
             setIsLoading(false);
         }
