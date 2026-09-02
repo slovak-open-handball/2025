@@ -654,21 +654,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
         l = Math.round(l * 100);
         return `hsl(${h}, ${s}%, ${l}%)`;
     };
-    const [uiNotification, setUiNotification] = useState(null);
-    useEffect(() => {
-        let timer;
-        const unsubscribe = subscribe((notification) => {
-            setUiNotification(notification);
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                setUiNotification(null);
-            }, 5000);
-        });
-        return () => {
-            unsubscribe();
-            clearTimeout(timer);
-        };
-    }, []);
     const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
         uiNotification
             ? 'opacity-100 scale-100 translate-y-0'
