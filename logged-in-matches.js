@@ -2832,7 +2832,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     };
 
     // Upravená funkcia calculateFirstAvailableTime v AssignMatchModal
-    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks) => {
+    // Nahraďte existujúcu funkciu touto verziou
+    
+    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
         // Konvertujeme hallStartTime na minúty
@@ -2842,36 +2844,46 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         // Vytvoríme zoznam všetkých obsadených intervalov (zápasy + zablokované časy)
         const occupiedIntervals = [];
         
-        // 1. Pridáme existujúce zápasy
-        existingMatchesList
-            .filter(m => m.scheduledTime)
-            .forEach(match => {
-                const matchStart = match.scheduledTime.toDate();
-                const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
-                
-                // Výpočet dĺžky zápasu
-                const matchCategory = categories.find(c => c.name === match.categoryName);
-                let matchDuration = 0;
-                let matchBreak = 5;
-                
-                if (matchCategory) {
-                    const periods = matchCategory.periods || 2;
-                    const periodDuration = matchCategory.periodDuration || 20;
-                    const breakDuration = matchCategory.breakDuration || 2;
-                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                    matchBreak = matchCategory.matchBreak || 5;
-                }
-                
-                // Zápas zaberá čas od začiatku do konca VRÁTANE prestávky po ňom
-                const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
-                
-                occupiedIntervals.push({
-                    start: matchStartMinutes,
-                    end: matchEndWithBreakMinutes,
-                    type: 'match',
-                    id: match.id
-                });
+        // 1. Pridáme VŠETKY existujúce zápasy pre túto halu a deň (NIE len vyfiltrované)
+        // Použijeme allMatches namiesto existingMatchesList
+        const allMatchesForHallAndDay = allMatches.filter(m => 
+            m.hallId === hallId && 
+            m.scheduledTime
+        ).filter(m => {
+            const matchDate = m.scheduledTime.toDate();
+            const matchDateStr = getLocalDateStr(matchDate);
+            return matchDateStr === date;
+        });
+        
+        allMatchesForHallAndDay.forEach(match => {
+            if (!match.scheduledTime) return;
+            
+            const matchStart = match.scheduledTime.toDate();
+            const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
+            
+            // Výpočet dĺžky zápasu
+            const matchCategory = categories.find(c => c.name === match.categoryName);
+            let matchDuration = 0;
+            let matchBreak = 5;
+            
+            if (matchCategory) {
+                const periods = matchCategory.periods || 2;
+                const periodDuration = matchCategory.periodDuration || 20;
+                const breakDuration = matchCategory.breakDuration || 2;
+                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                matchBreak = matchCategory.matchBreak || 5;
+            }
+            
+            // Zápas zaberá čas od začiatku do konca VRÁTANE prestávky po ňom
+            const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
+            
+            occupiedIntervals.push({
+                start: matchStartMinutes,
+                end: matchEndWithBreakMinutes,
+                type: 'match',
+                id: match.id
             });
+        });
         
         // 2. Pridáme zablokované intervaly
         if (blockedBreaks) {
@@ -2882,7 +2894,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         const [breakHours, breakMinutes] = breakData.startTime.split(':').map(Number);
                         const breakStartMinutes = breakHours * 60 + breakMinutes;
                         
-                        // Použijeme uloženú dĺžku intervalu
                         const breakDuration = breakData.duration || matchDur;
                         const breakEndMinutes = breakStartMinutes + breakDuration;
                         
@@ -2904,13 +2915,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const isTimeSlotFree = (startMinutes) => {
             const endMinutes = startMinutes + matchDur + (categoryDetails?.matchBreak || 5);
             
-            // Skontrolujeme všetky obsadené intervaly
             for (const interval of occupiedIntervals) {
-                // Ak sa prekrývajú, čas nie je voľný
                 if (startMinutes < interval.end && endMinutes > interval.start) {
                     return false;
                 }
-                // Ak sme už za intervalom, môžeme pokračovať
                 if (interval.start > startMinutes) {
                     break;
                 }
@@ -2929,37 +2937,31 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             while (!found && attempts < maxAttempts) {
                 attempts++;
                 
-                // Najprv skontrolujeme, či kandidátny čas nie je v obsadenom intervale
                 let isOccupied = false;
                 let nextOccupiedStart = Infinity;
                 
                 for (const interval of occupiedIntervals) {
                     if (candidateTime >= interval.start && candidateTime < interval.end) {
-                        // Tento čas je obsadený - posunieme sa za koniec intervalu
                         isOccupied = true;
                         candidateTime = interval.end;
                         break;
                     }
-                    // Ak sme pred intervalom, zapamätáme si jeho začiatok pre neskoršiu kontrolu
                     if (interval.start > candidateTime && interval.start < nextOccupiedStart) {
                         nextOccupiedStart = interval.start;
                     }
                 }
                 
                 if (isOccupied) {
-                    continue; // Skúsime znova s novým kandidátom
+                    continue;
                 }
                 
-                // Skontrolujeme, či sa zmestíme pred nasledujúci obsadený interval
                 const proposedEnd = candidateTime + matchDur + (categoryDetails?.matchBreak || 5);
                 
                 if (proposedEnd > nextOccupiedStart) {
-                    // Nezmestíme sa, posunieme sa na začiatok nasledujúceho intervalu
                     candidateTime = nextOccupiedStart;
                     continue;
                 }
                 
-                // Ak sme sa dostali až sem, čas je voľný
                 found = true;
             }
             
@@ -3148,12 +3150,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
-    // Upravte loadHallStartTime
+    // Upravený useEffect pre loadHallStartTime - náhrada existujúcej časti
+
     useEffect(() => {
         const loadHallStartTime = async () => {
             console.log('loadHallStartTime - spúšťam sa, selectedHallId:', selectedHallId, 'selectedDate:', selectedDate);
             if (selectedHallId && selectedDate && window.db) {
-                setLoadingHallStartTime(true); // Nastavíme loading
+                setLoadingHallStartTime(true);
                 try {
                     const scheduleId = `${selectedHallId}_${selectedDate}`;
                     const scheduleRef = doc(window.db, 'hallSchedules', scheduleId);
@@ -3167,7 +3170,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         console.log('loadHallStartTime - našiel som startTime:', startTime);
                         setHallStartTime(startTime);
                         
-                        // Po úspešnom načítaní skontrolujeme, či nemáme zbytočnú chybu
                         if (selectedTime) {
                             const [hours, minutes] = selectedTime.split(':').map(Number);
                             const [startHours, startMinutes] = startTime.split(':').map(Number);
@@ -3178,13 +3180,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             if (selectedMinutes < startMinutesTotal) {
                                 setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${startTime} (čas začiatku prvého zápasu v tejto hale)`);
                             } else {
-                                // Ak je čas v poriadku, odstránime chybu (ak je to chyba o chýbajúcom čase)
                                 if (timeError && timeError.includes('nie je nastavený čas začiatku')) {
                                     setTimeError('');
                                 }
                             }
                         } else {
-                            // Ak nie je vybraný čas, odstránime chybu o chýbajúcom čase (už máme čas)
                             if (timeError && timeError.includes('nie je nastavený čas začiatku')) {
                                 setTimeError('');
                             }
@@ -3196,19 +3196,21 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     }
                     
                     // Ak nemáme vybraný čas a máme všetky potrebné údaje, vypočítame prvý dostupný čas
+                    // TERAZ POUŽÍVAME allMatches (všetky zápasy) namiesto existingMatches
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTime(
                             selectedHallId,
                             selectedDate,
-                            existingMatches,
+                            existingMatches,    // stále potrebujeme pre zablokované časy
                             startTime,
                             matchDuration,
-                            blockedBreaks
+                            blockedBreaks,
+                            allMatches         // NOVÝ PARAMETER - všetky zápasy pre výpočet
                         );
                         
                         if (firstAvailable) {
                             setSuggestedTime(firstAvailable);
-                            console.log('Navrhovaný prvý dostupný čas:', firstAvailable);
+                            console.log('Navrhovaný prvý dostupný čas (podľa všetkých zápasov v hale):', firstAvailable);
                         }
                     }
                     
@@ -3216,7 +3218,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     console.error('Chyba pri načítaní času začiatku haly:', error);
                     setHallStartTime(null);
                 } finally {
-                    setLoadingHallStartTime(false); // Ukončíme loading
+                    setLoadingHallStartTime(false);
                 }
             } else {
                 console.log('loadHallStartTime - neplatné parametre');
@@ -3227,7 +3229,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         };
     
         loadHallStartTime();
-    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime]);
+    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks]);
 
     // Kontrola prekrývania časov
     useEffect(() => {
