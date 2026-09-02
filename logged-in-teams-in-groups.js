@@ -1915,16 +1915,16 @@ const AddTeamsGroupApp = (props) => {
           // Rozlíšenie podľa typu skupiny (ak je vybraný typ)
           if (selectedGroupType === 'základná skupina') {
             setOrderMismatchMessage(
-              `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+              `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
             );
           } else if (selectedGroupType === 'nadstavbová skupina') {
             setOrderMismatchMessage(
-              `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+              `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
             );
           } else {
             // Ak nie je vybraný typ skupiny, zobrazíme všeobecnú správu
             setOrderMismatchMessage(
-              `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+              `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
             );
           }
         } else {
