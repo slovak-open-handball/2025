@@ -1836,7 +1836,7 @@ const AddTeamsGroupApp = (props) => {
           setOrderMismatchMessage(null);
           return;
         }
-
+      
         const trimmed = teamName.trim();
         
         // groupEndingMismatch nastavíme vždy na false
@@ -1851,7 +1851,7 @@ const AddTeamsGroupApp = (props) => {
         const matchingGroup = groupsByType.find(
           g => g.name.slice(-1).toLowerCase() === lastChar
         );
-  
+      
         // Ak existuje skupina s rovnakým koncovým písmenom
         if (matchingGroup && trimmed.length >= 2) {
           // Extrahujeme číselnú časť (všetko pred posledným písmenom)
@@ -1862,13 +1862,21 @@ const AddTeamsGroupApp = (props) => {
             const groupName = matchingGroup.name;
             const categoryName = categoryIdToNameMap[selectedCategory];
             
-            // Počet tímov v tejto skupine
+            // 🔥 SPRÁVNE: Filtrujeme tímy podľa kategórie a skupiny
             const teamsInGroup = allTeams.filter(
-              t => t.category === categoryName && t.groupName === groupName
+              t => t.category === categoryName && 
+                   t.groupName === groupName &&
+                   t.isSuperstructureTeam === true  // Len superstructure tímy (pretože pridávame superstructure tímy)
             );
+            
+            // 🔥 Alternatíva: Ak chcete počítať všetky tímy v skupine (aj používateľské)
+            // const teamsInGroup = allTeams.filter(
+            //   t => t.category === categoryName && t.groupName === groupName
+            // );
             
             const currentTeamCount = teamsInGroup.length;
             
+            // Ak požadované číslo presahuje počet tímov v skupine
             if (requestedOrder > currentTeamCount) {
               if (selectedGroupType === 'základná skupina') {
                 setOrderMismatchMessage(
