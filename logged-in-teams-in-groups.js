@@ -1866,7 +1866,7 @@ const AddTeamsGroupApp = (props) => {
           // Získame veľké písmeno pre zobrazenie
           const letter = lastChar.toUpperCase();
           setOrderMismatchMessage(
-            `Neexistuje skupina s názvom končiacim na písmeno ${letter}.`
+            `Neexistuje skupina ${letter}.`
           );
           return;
         }
