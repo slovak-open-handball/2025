@@ -2831,9 +2831,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return false;
     };
 
-    // Upravená funkcia calculateFirstAvailableTime v AssignMatchModal
-    // Nahraďte existujúcu funkciu touto verziou
-    
+    // Upravená funkcia calculateFirstAvailableTime - používa VŠETKY zápasy
     const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
@@ -3130,23 +3128,24 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [match, categories]);
 
-    // Načítanie existujúcich zápasov pre vybranú halu a deň
+    // Načítanie existujúcich zápasov pre vybranú halu a deň - POUŽÍVA VŠETKY ZÁPASY
     useEffect(() => {
         const loadExistingMatches = async () => {
             console.log('loadExistingMatches - spúšťam sa, selectedHallId:', selectedHallId, 'selectedDate:', selectedDate);
             if (selectedHallId && selectedDate && allMatches) {
                 try {
+                    // POUŽIJEME allMatches (všetky zápasy) namiesto filtrovaných
                     const matchesForHallAndDay = allMatches.filter(m => 
                         m.hallId === selectedHallId && 
                         m.scheduledTime && 
-                        m.id !== match?.id
+                        m.id !== match?.id  // Vynecháme aktuálny zápas
                     ).filter(m => {
                         const matchDate = m.scheduledTime.toDate();
                         const matchDateStr = getLocalDateStr(matchDate);
                         return matchDateStr === selectedDate;
                     });
                     
-                    console.log('loadExistingMatches - našiel som', matchesForHallAndDay.length, 'zápasov');
+                    console.log('loadExistingMatches - našiel som', matchesForHallAndDay.length, 'zápasov (všetky, bez filtra)');
                     setExistingMatches(matchesForHallAndDay);
                 } catch (error) {
                     console.error('Chyba pri načítaní existujúcich zápasov:', error);
@@ -3159,8 +3158,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
-    // Upravený useEffect pre loadHallStartTime - náhrada existujúcej časti
-    
+    // Upravený useEffect pre loadHallStartTime
     useEffect(() => {
         const loadHallStartTime = async () => {
             console.log('loadHallStartTime - spúšťam sa, selectedHallId:', selectedHallId, 'selectedDate:', selectedDate);
@@ -3205,16 +3203,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     }
                     
                     // Ak nemáme vybraný čas a máme všetky potrebné údaje, vypočítame prvý dostupný čas
-                    // TERAZ POUŽÍVAME allMatches (všetky zápasy) namiesto existingMatches
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTime(
                             selectedHallId,
                             selectedDate,
-                            existingMatches,    // stále potrebujeme pre zablokované časy
+                            existingMatches,
                             startTime,
                             matchDuration,
                             blockedBreaks,
-                            allMatches         // NOVÝ PARAMETER - všetky zápasy pre výpočet
+                            allMatches  // allMatches obsahuje VŠETKY zápasy
                         );
                         
                         if (firstAvailable) {
