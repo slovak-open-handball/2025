@@ -1842,58 +1842,66 @@ const AddTeamsGroupApp = (props) => {
         // groupEndingMismatch nastavíme vždy na false
         setGroupEndingMismatch(false);
       
-        // KONTROLA PORADIA - kontrolujeme skupinu podľa písmena v názve tímu
+        // Extrahujeme posledné písmeno a číselnú časť z názvu tímu
         const lastChar = trimmed.slice(-1).toLowerCase();
-        const groups = allGroupsByCategoryId[selectedCategory] || [];
-        const groupsByType = groups.filter(g => g.type === selectedGroupType);
+        const numberPart = trimmed.slice(0, -1).trim();
+        const requestedOrder = parseInt(numberPart, 10);
+        
+        // Ak nemáme platné číslo alebo nemáme aspoň 2 znaky, resetujeme chybu
+        if (isNaN(requestedOrder) || requestedOrder < 1 || trimmed.length < 2) {
+          setOrderMismatchMessage(null);
+          return;
+        }
+      
+        // Získame VŠETKY skupiny v danej kategórii (bez ohľadu na typ)
+        const allGroupsInCategory = allGroupsByCategoryId[selectedCategory] || [];
         
         // Nájdeme skupinu, ktorá končí na rovnaké písmeno ako názov tímu
-        const matchingGroup = groupsByType.find(
+        const matchingGroup = allGroupsInCategory.find(
           g => g.name.slice(-1).toLowerCase() === lastChar
         );
       
-        // Ak existuje skupina s rovnakým koncovým písmenom
-        if (matchingGroup && trimmed.length >= 2) {
-          // Extrahujeme číselnú časť (všetko pred posledným písmenom)
-          const numberPart = trimmed.slice(0, -1).trim();
-          const requestedOrder = parseInt(numberPart, 10);
+        // Ak neexistuje skupina s týmto písmenom, nezobrazujeme chybu (používateľ si vyberie skupinu neskôr)
+        if (!matchingGroup) {
+          setOrderMismatchMessage(null);
+          return;
+        }
+      
+        const groupName = matchingGroup.name;
+        const categoryName = categoryIdToNameMap[selectedCategory];
+        
+        // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské)
+        const teamsInGroup = allTeams.filter(
+          t => t.category === categoryName && 
+               t.groupName === groupName
+        );
+        
+        // Získame všetky použité poradia v skupine
+        const usedOrders = new Set(
+          teamsInGroup
+            .map(t => t.order)
+            .filter(o => typeof o === 'number' && o > 0)
+        );
+        
+        // Skontrolujeme, či existuje tím s požadovaným poradím
+        if (!usedOrders.has(requestedOrder)) {
+          // Zistíme maximálne použité poradie
+          const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
           
-          if (!isNaN(requestedOrder) && requestedOrder >= 1) {
-            const groupName = matchingGroup.name;
-            const categoryName = categoryIdToNameMap[selectedCategory];
-            
-            // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské)
-            const teamsInGroup = allTeams.filter(
-              t => t.category === categoryName && 
-                   t.groupName === groupName
+          // Rozlíšenie podľa typu skupiny (ak je vybraný typ)
+          if (selectedGroupType === 'základná skupina') {
+            setOrderMismatchMessage(
+              `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
             );
-            
-            // Získame všetky použité poradia v skupine
-            const usedOrders = new Set(
-              teamsInGroup
-                .map(t => t.order)
-                .filter(o => typeof o === 'number' && o > 0)
+          } else if (selectedGroupType === 'nadstavbová skupina') {
+            setOrderMismatchMessage(
+              `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
             );
-            
-            // Skontrolujeme, či existuje tím s požadovaným poradím
-            if (!usedOrders.has(requestedOrder)) {
-              // Zistíme maximálne použité poradie
-              const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
-              
-              if (selectedGroupType === 'základná skupina') {
-                setOrderMismatchMessage(
-                  `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
-                );
-              } else if (selectedGroupType === 'nadstavbová skupina') {
-                setOrderMismatchMessage(
-                  `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
-                );
-              }
-            } else {
-              setOrderMismatchMessage(null);
-            }
           } else {
-            setOrderMismatchMessage(null);
+            // Ak nie je vybraný typ skupiny, zobrazíme všeobecnú správu
+            setOrderMismatchMessage(
+              `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+            );
           }
         } else {
           setOrderMismatchMessage(null);
