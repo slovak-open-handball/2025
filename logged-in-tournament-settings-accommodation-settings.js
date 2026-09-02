@@ -383,25 +383,25 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             min: 0,
           }
         ),
-        React.createElement(
-          'div',
-          { className: 'flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg' },
-          React.createElement(
-            'div',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejnenie ubytovne'),
-            React.createElement(ToggleSwitch, {
-              isOn: newAccommodationIsPublic,
-              onToggle: () => setNewAccommodationIsPublic(!newAccommodationIsPublic),
-              disabled: false
-            })
-          ),
-          React.createElement(
-            'span',
-            { className: 'text-sm text-gray-500' },
-            newAccommodationIsPublic ? 'Ubytovňa bude viditeľná pre všetkých' : 'Ubytovňa bude skrytá'
-          )
-        ),
+//        React.createElement(
+//          'div',
+//          { className: 'flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg' },
+//          React.createElement(
+//            'div',
+//            { className: 'flex items-center space-x-3' },
+//            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejnenie ubytovne'),
+//            React.createElement(ToggleSwitch, {
+//              isOn: newAccommodationIsPublic,
+//              onToggle: () => setNewAccommodationIsPublic(!newAccommodationIsPublic),
+//              disabled: false
+//            })
+//          ),
+//          React.createElement(
+//            'span',
+//            { className: 'text-sm text-gray-500' },
+//            newAccommodationIsPublic ? 'Ubytovňa bude viditeľná pre všetkých' : 'Ubytovňa bude skrytá'
+//          )
+//        ),
         React.createElement(
           'div',
           { className: 'flex justify-end space-x-3' },
