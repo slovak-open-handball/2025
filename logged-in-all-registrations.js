@@ -4867,24 +4867,41 @@ const clearFilter = (column) => {
             
                 const isNewTeam = isNewEntry && editModalTitle.includes('Pridať nový tím');
             
-                const createCleanTeam = (data) => {
-                    const cleanTeam = {};
+                // ============================================================
+                // ZÁKLADNÉ POLIA TÍMU - POUŽIJEME PÔVODNÝ TÍM AKO ZÁKLAD
+                // ============================================================
+                const createCleanTeam = (data, existingTeam = null) => {
+                    // Ak máme existujúci tím, použijeme ho ako základ
+                    const baseTeam = existingTeam ? JSON.parse(JSON.stringify(existingTeam)) : {};
+                    
+                    // Zachováme dôležité polia, ktoré by sa nemali stratiť
+                    const preservedFields = [
+                        'packageId', 'players', 'menTeamMembers', 'womenTeamMembers',
+                        'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails',
+                        'driverDetailsMale', 'driverDetailsFemale'
+                    ];
+                    
+                    // Začneme s kópiou existujúceho tímu
+                    const cleanTeam = { ...baseTeam };
+                    
+                    // Povolené polia, ktoré sa môžu aktualizovať
                     const allowedTeamFields = [
                         'teamName', 'category', '_category', 'arrival', 'accommodation',
                         'packageDetails', 'packageId', 'tshirts', 'jerseyHomeColor', 'jerseyAwayColor',
                         'players', 'menTeamMembers', 'womenTeamMembers', 'menTeamMembersCount',
                         'womenTeamMembersCount', 'playersCount', 'registeredBy', 'clubName'
                     ];
+                    
+                    // Aktualizujeme len polia, ktoré sú v dátach z modálu
                     allowedTeamFields.forEach(field => {
-                        if (data[field] !== undefined) cleanTeam[field] = data[field];
+                        if (data[field] !== undefined) {
+                            cleanTeam[field] = data[field];
+                        }
                     });
             
-                    const memberArrays = [
-                        'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails',
-                        'driverDetailsMale', 'driverDetailsFemale'
-                    ];
-                    memberArrays.forEach(arrName => {
-                        if (data[arrName] && Array.isArray(data[arrName])) {
+                    // Zachováme existujúce polia členov, ak nie sú v dátach
+                    preservedFields.forEach(arrName => {
+                        if (data[arrName] !== undefined && Array.isArray(data[arrName])) {
                             cleanTeam[arrName] = data[arrName].map(member => {
                                 const cleanMember = {};
                                 const allowedMemberFields = [
@@ -4896,10 +4913,14 @@ const clearFilter = (column) => {
                                 });
                                 return cleanMember;
                             });
+                        } else if (baseTeam[arrName] !== undefined) {
+                            // Zachováme pôvodné členov, ak neboli aktualizované
+                            cleanTeam[arrName] = baseTeam[arrName];
                         } else {
                             cleanTeam[arrName] = [];
                         }
                     });
+                    
                     return cleanTeam;
                 };
             
@@ -4930,6 +4951,63 @@ const clearFilter = (column) => {
                     updates[`teams.${actualCategory}`] = cleanedCategoryTeams;
                     updates['_privateData'] = deleteField();
                     await updateDoc(targetDocRef, updates);
+            
+                    // NOTIFIKÁCIA PRE PRIDANIE NOVÉHO TÍMU
+                    const adminEmail = window.auth.currentUser?.email;
+                    if (adminEmail) {
+                        const notificationsCollectionRef = collection(db, 'notifications');
+                        await addDoc(notificationsCollectionRef, {
+                            userEmail: adminEmail,
+                            changes: [`Nový tím pridaný: ${cleanTeam.teamName || 'Bez názvu'} (Klub: ${clubName}, Kategória: ${actualCategory})`],
+                            timestamp: serverTimestamp()
+                        });
+                    }
+            
+                    setUserNotificationMessage("Nový tím bol pridaný.", 'success');
+                    closeEditModal();
+                    return;
+                }
+            
+                if (!oldCategory || oldTeamIndex < 0) {
+                    throw new Error("Neplatná pôvodná cesta pre úpravu existujúceho tímu.");
+                }
+            
+                // ============================================================
+                // DÔLEŽITÉ: POUŽIJEME EXISTUJÚCI TÍM AKO ZÁKLAD
+                // ============================================================
+                const existingTeam = currentCategoryTeams[oldTeamIndex] || {};
+                const cleanTeam = createCleanTeam(updatedDataFromModal, existingTeam);
+            
+                // Zachováme všetky existujúce polia, ktoré nie sú v dátach
+                const allTeamFields = [
+                    'teamName', 'category', '_category', 'arrival', 'accommodation',
+                    'packageDetails', 'packageId', 'tshirts', 'jerseyHomeColor', 'jerseyAwayColor',
+                    'players', 'menTeamMembers', 'womenTeamMembers', 'menTeamMembersCount',
+                    'womenTeamMembersCount', 'playersCount', 'registeredBy', 'clubName',
+                    'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails',
+                    'driverDetailsMale', 'driverDetailsFemale'
+                ];
+                
+                // Pre každé pole, ktoré existuje v pôvodnom tíme a nie je v dátach, zachováme ho
+                allTeamFields.forEach(field => {
+                    if (existingTeam[field] !== undefined && cleanTeam[field] === undefined) {
+                        cleanTeam[field] = existingTeam[field];
+                    }
+                });
+            
+                if (!cleanTeam.accommodation) {
+                    cleanTeam.accommodation = { type: '' };
+                }
+            
+                const newCategoryTeams = [...currentCategoryTeams];
+                newCategoryTeams[oldTeamIndex] = cleanTeam;
+            
+                const cleanedCategoryTeams = removeSensitiveFieldsFromTeams(newCategoryTeams);
+            
+                const updates = {};
+                updates[`teams.${oldCategory}`] = cleanedCategoryTeams;
+                updates['_privateData'] = deleteField();
+                await updateDoc(targetDocRef, updates);
             
                     // NOTIFIKÁCIA PRE PRIDANIE NOVÉHO TÍMU
                     const adminEmail = window.auth.currentUser?.email;
