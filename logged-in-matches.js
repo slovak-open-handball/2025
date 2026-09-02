@@ -2473,7 +2473,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         'div',
                         null,
                         React.createElement('p', { className: 'text-sm font-medium text-gray-700' }, 'Voľný čas:'),
-                        React.createElement('p', { className: 'text-sm' }, `${breakStartTime} - ${breakEndTime} (${breakDuration} minút)`)
+                        React.createElement('p', { className: 'text-sm' }, `${breakStartTime} - ${breakEndTime}`)
                     ),
                     React.createElement(
                         'span',
