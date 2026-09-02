@@ -1828,9 +1828,7 @@ const AddTeamsGroupApp = (props) => {
           setTeamName(value);
           setTeamNameError('');
         }
-      };
-    
-      // V časti NewTeamModal - upravte useEffect pre validáciu koncovky a čísla poradia
+      };  
 
       useEffect(() => {
         if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
@@ -1841,20 +1839,19 @@ const AddTeamsGroupApp = (props) => {
 
         const trimmed = teamName.trim();
         
-        // 🔥 ODSTRÁNENÁ KONTROLA groupEndingMismatch - používateľ si vyberá skupinu manuálne
-        // groupEndingMismatch nastavíme vždy na false, pretože skupina sa vyberá zo select boxu
+        // groupEndingMismatch nastavíme vždy na false
         setGroupEndingMismatch(false);
       
         // KONTROLA PORADIA - kontrolujeme skupinu podľa písmena v názve tímu
         const lastChar = trimmed.slice(-1).toLowerCase();
         const groups = allGroupsByCategoryId[selectedCategory] || [];
         const groupsByType = groups.filter(g => g.type === selectedGroupType);
-        
+  
         // Nájdeme skupinu, ktorá končí na rovnaké písmeno ako názov tímu
         const matchingGroup = groupsByType.find(
           g => g.name.slice(-1).toLowerCase() === lastChar
         );
-  
+        
         // Ak existuje skupina s rovnakým koncovým písmenom
         if (matchingGroup && trimmed.length >= 2) {
           // Extrahujeme číselnú časť (všetko pred posledným písmenom)
@@ -1870,27 +1867,20 @@ const AddTeamsGroupApp = (props) => {
               t => t.category === categoryName && t.groupName === groupName
             );
             
-            // Získame všetky použité poradia v skupine
-            const usedOrders = new Set(
-              teamsInGroup
-                .map(t => t.order)
-                .filter(o => typeof o === 'number' && o > 0)
-            );
-      
-            // Zistíme maximálne použité poradie
-            const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
+            // 🔥 NOVÁ KONTROLA: Ak je požadované číslo väčšie ako počet tímov v skupine + 1
+            // (pretože číslo v názve tímu by malo zodpovedať pozícii v skupine)
+            const currentTeamCount = teamsInGroup.length;
             
-            // Ak požadované poradie presahuje maximálne použité poradie + 1,
-            // znamená to, že v skupine je diera
-            if (requestedOrder > maxOrder + 1) {
+            // Ak požadované poradie presahuje počet tímov v skupine + 1 (pre nový tím)
+            if (requestedOrder > currentTeamCount + 1) {
               // Iná správa pre základné a nadstavbové skupiny
               if (selectedGroupType === 'základná skupina') {
                 setOrderMismatchMessage(
-                  `V základnej skupine ${groupName} chýbajú tímy s poradím od ${maxOrder + 1} do ${requestedOrder - 1}.`
+                  `V základnej skupine ${groupName} nie je ${requestedOrder}. tím. Skupina má iba ${currentTeamCount} tímov.`
                 );
               } else if (selectedGroupType === 'nadstavbová skupina') {
                 setOrderMismatchMessage(
-                  `V nadstavbovej skupine ${groupName} chýbajú tímy s poradím od ${maxOrder + 1} do ${requestedOrder - 1}.`
+                  `V nadstavbovej skupine ${groupName} nie je ${requestedOrder}. tím. Skupina má iba ${currentTeamCount} tímov.`
                 );
               }
             } else {
@@ -1900,14 +1890,7 @@ const AddTeamsGroupApp = (props) => {
             setOrderMismatchMessage(null);
           }
         } else {
-          // Ak neexistuje skupina s rovnakým koncovým písmenom, zobrazíme varovanie
-          // (ale neblokujeme tlačidlo)
-          if (groupsByType.length > 0 && trimmed.length >= 1) {
-            // Iba informácia, nie chyba
-            setOrderMismatchMessage(null);
-          } else {
-            setOrderMismatchMessage(null);
-          }
+          setOrderMismatchMessage(null);
         }
       }, [teamName, selectedCategory, selectedGroupType, isOpen, teamToEdit, allTeams, allGroupsByCategoryId, categoryIdToNameMap, selectedGroup, showCategoryPrefix]);
     
