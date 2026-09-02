@@ -17,7 +17,7 @@ const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName
     React.createElement(
       'div',
       {
-        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+        className: 'bg-white rounded-xl p-8 max-w-md w-full',
         onClick: e => e.stopPropagation()
       },
       React.createElement(
@@ -94,7 +94,7 @@ const NotificationPortal = () => {
       'div',
       {
         key: notification.id,
-        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
+        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
       },
       notification.message
     ),
@@ -123,7 +123,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) 
     React.createElement(
       'div',
       {
-        className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+        className: 'bg-white rounded-xl p-8 max-w-md w-full',
         onClick: e => e.stopPropagation()
       },
       React.createElement(
@@ -304,7 +304,7 @@ const SwapTeamsModal = ({ isOpen, onClose, onSwap, team, allTeams, categoryIdToN
         React.createElement(
             'div',
             {
-                className: 'bg-white rounded-xl shadow-2xl p-8 max-w-md w-full',
+                className: 'bg-white rounded-xl p-8 max-w-md w-full',
                 onClick: e => e.stopPropagation()
             },
             React.createElement(
@@ -2282,7 +2282,7 @@ const AddTeamsGroupApp = (props) => {
         React.createElement(
           'div',
           {
-            className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg',
+            className: 'bg-white p-8 rounded-xl w-full max-w-lg',
             onClick: (e) => e.stopPropagation()
           },
           React.createElement(
@@ -3775,7 +3775,7 @@ const renderSingleCategoryView = () => {
         : allTeams.filter(t => t.groupName);
     const sortedCategoryEntries = Object.entries(categoryIdToNameMap).sort(([,a], [,b]) => a.localeCompare(b));
     const availableGroupsForSelect = (allGroupsByCategoryId[selectedCategoryId] || []).sort((a, b) => a.name.localeCompare(b.name));
-    const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full shadow-2xl transform focus:outline-none';
+    const fabBaseClasses = 'fixed bottom-8 right-8 p-5 rounded-full transform focus:outline-none';
     const fabButton = React.createElement(
         'button',
         {
