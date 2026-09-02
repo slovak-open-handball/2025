@@ -1853,6 +1853,27 @@ const AddTeamsGroupApp = (props) => {
           return;
         }
       
+        // 🔥 KONTROLA DUPLICITY - ak je duplicita, nezobrazujeme chybu poradia
+        const categoryName = categoryIdToNameMap[selectedCategory];
+        if (categoryName) {
+          const isDuplicate = allTeams.some(team => {
+            const teamNameToCompare = team.isSuperstructureTeam
+              ? team.teamName.replace(new RegExp(`^${categoryName} `), '').trim()
+              : team.teamName.trim();
+            return (
+              team.category === categoryName &&
+              teamNameToCompare === trimmed &&
+              (!teamToEdit || team.teamName.trim() !== originalTeamName.trim())
+            );
+          });
+          
+          // Ak existuje duplicita, vymažeme chybu poradia a vrátime sa
+          if (isDuplicate) {
+            setOrderMismatchMessage(null);
+            return;
+          }
+        }
+      
         // Získame VŠETKY skupiny v danej kategórii (bez ohľadu na typ)
         const allGroupsInCategory = allGroupsByCategoryId[selectedCategory] || [];
         
@@ -1866,13 +1887,12 @@ const AddTeamsGroupApp = (props) => {
           // Získame veľké písmeno pre zobrazenie
           const letter = lastChar.toUpperCase();
           setOrderMismatchMessage(
-            `Neexistuje skupina ${letter}.`
+            `Neexistuje skupina s názvom končiacim na písmeno ${letter}.`
           );
           return;
         }
       
         const groupName = matchingGroup.name;
-        const categoryName = categoryIdToNameMap[selectedCategory];
         
         // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské)
         const teamsInGroup = allTeams.filter(
@@ -1910,7 +1930,7 @@ const AddTeamsGroupApp = (props) => {
         } else {
           setOrderMismatchMessage(null);
         }
-      }, [teamName, selectedCategory, selectedGroupType, isOpen, teamToEdit, allTeams, allGroupsByCategoryId, categoryIdToNameMap, selectedGroup, showCategoryPrefix]);
+      }, [teamName, selectedCategory, selectedGroupType, isOpen, teamToEdit, allTeams, allGroupsByCategoryId, categoryIdToNameMap, selectedGroup, showCategoryPrefix, originalTeamName]);
     
       // Efekt pre order input - VYMAZANÝ PÔVODNÝ EFEKT A PRIDANÝ NOVÝ
       // Teraz vždy nastavíme orderInputValue, aj keď nie je vybratá skupina
