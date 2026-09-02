@@ -16,7 +16,6 @@ const loadLeftMenu = async (userProfileData) => {
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
-            console.error('Chyba pri načítaní menu:', error);
         }
     } else {
         const leftMenuElement = document.getElementById('left-menu');
