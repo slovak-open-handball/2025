@@ -9788,7 +9788,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            onClick: (e) => {
                                                                                                                e.stopPropagation();
                                                                                                                setSelectedBreakForAssign({
-                                                                                                                   hallId: hallId,
+                                                                                                                   hallId: hall.id,
                                                                                                                    date: dateStr,
                                                                                                                    breakStartTime: block.startTime,
                                                                                                                    breakEndTime: block.endTime,
@@ -9890,7 +9890,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    onClick: function(e) {
                                                                                                        e.stopPropagation();
                                                                                                        setSelectedBreakForAssign({
-                                                                                                           hallId: hallId,
+                                                                                                           hallId: hall.id,
                                                                                                            date: dateStr,
                                                                                                            breakStartTime: endTimeStr,
                                                                                                            breakEndTime: breakEndTimeStr,
@@ -9942,7 +9942,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        onClick: function(e) {
                                                                                                            e.stopPropagation();
                                                                                                            setSelectedBreakForAssign({
-                                                                                                               hallId: hallId,
+                                                                                                               hallId: hall.id,
                                                                                                                date: dateStr,
                                                                                                                breakStartTime: endTimeStr,
                                                                                                                breakEndTime: breakEndTimeStr,
