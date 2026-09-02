@@ -1884,7 +1884,6 @@ const AddTeamsGroupApp = (props) => {
       
         // Ak neexistuje skupina s týmto písmenom, zobrazíme chybu
         if (!matchingGroup) {
-          // Získame veľké písmeno pre zobrazenie
           const letter = lastChar.toUpperCase();
           setOrderMismatchMessage(
             `Neexistuje skupina s názvom končiacim na písmeno ${letter}.`
@@ -1894,7 +1893,7 @@ const AddTeamsGroupApp = (props) => {
       
         const groupName = matchingGroup.name;
         
-        // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské)
+        // 🔥 VŠETKY TÍMY v skupine (aj superstructure, aj používateľské) - BEZ ROZLÍŠENIA TYPU
         const teamsInGroup = allTeams.filter(
           t => t.category === categoryName && 
                t.groupName === groupName
@@ -1912,21 +1911,10 @@ const AddTeamsGroupApp = (props) => {
           // Zistíme maximálne použité poradie
           const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
           
-          // Rozlíšenie podľa typu skupiny (ak je vybraný typ)
-          if (selectedGroupType === 'základná skupina') {
-            setOrderMismatchMessage(
-              `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
-            );
-          } else if (selectedGroupType === 'nadstavbová skupina') {
-            setOrderMismatchMessage(
-              `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
-            );
-          } else {
-            // Ak nie je vybraný typ skupiny, zobrazíme všeobecnú správu
-            setOrderMismatchMessage(
-              `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
-            );
-          }
+          // 🔥 JEDNOTNÁ SPRÁVA - bez rozlíšenia typu skupiny
+          setOrderMismatchMessage(
+            `V skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}. Maximálne poradie je ${maxOrder}.`
+          );
         } else {
           setOrderMismatchMessage(null);
         }
