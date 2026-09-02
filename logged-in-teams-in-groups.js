@@ -1846,12 +1846,12 @@ const AddTeamsGroupApp = (props) => {
         const lastChar = trimmed.slice(-1).toLowerCase();
         const groups = allGroupsByCategoryId[selectedCategory] || [];
         const groupsByType = groups.filter(g => g.type === selectedGroupType);
-  
+        
         // Nájdeme skupinu, ktorá končí na rovnaké písmeno ako názov tímu
         const matchingGroup = groupsByType.find(
           g => g.name.slice(-1).toLowerCase() === lastChar
         );
-        
+  
         // Ak existuje skupina s rovnakým koncovým písmenom
         if (matchingGroup && trimmed.length >= 2) {
           // Extrahujeme číselnú časť (všetko pred posledným písmenom)
@@ -1867,13 +1867,9 @@ const AddTeamsGroupApp = (props) => {
               t => t.category === categoryName && t.groupName === groupName
             );
             
-            // 🔥 NOVÁ KONTROLA: Ak je požadované číslo väčšie ako počet tímov v skupine + 1
-            // (pretože číslo v názve tímu by malo zodpovedať pozícii v skupine)
             const currentTeamCount = teamsInGroup.length;
             
-            // Ak požadované poradie presahuje počet tímov v skupine + 1 (pre nový tím)
-            if (requestedOrder > currentTeamCount + 1) {
-              // Iná správa pre základné a nadstavbové skupiny
+            if (requestedOrder > currentTeamCount) {
               if (selectedGroupType === 'základná skupina') {
                 setOrderMismatchMessage(
                   `V základnej skupine ${groupName} nie je ${requestedOrder}. tím. Skupina má iba ${currentTeamCount} tímov.`
