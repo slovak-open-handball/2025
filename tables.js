@@ -1039,13 +1039,16 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             resultText = 'NEODOHRANÉ';
         }
         
-        // Dátum a čas
+        // Dátum a čas - formát DD.MM.YYYY HH:MM
         let dateStr = null;
         let timeStr = null;
         if (match.scheduledTime) {
             try {
                 const date = match.scheduledTime.toDate();
-                dateStr = `${date.getDate()}. ${(date.getMonth() + 1)}. ${date.getFullYear()}`;
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                dateStr = `${day}. ${month}. ${year}`;
                 const hours = date.getHours().toString().padStart(2, '0');
                 const minutes = date.getMinutes().toString().padStart(2, '0');
                 timeStr = `${hours}:${minutes}`;
