@@ -131,7 +131,6 @@ const updateURLFilter = (category, group) => {
 
 // ============================================================
 // KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
-// (presunuté na začiatok, aby bol dostupný pre všetky komponenty)
 // ============================================================
 
 const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
@@ -160,15 +159,17 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             break;
     }
     
-    // Tooltip obsah
-    const tooltipContent = matchInfo ? (
+    // Tooltip obsah - ZOBRAZÍ SA LEN AK JE matchInfo A JE DOKONČENÝ ZÁPAS
+    const showTooltip = matchInfo && matchInfo.score && matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ';
+    
+    const tooltipContent = showTooltip ? (
         React.createElement(
             'div',
             { 
                 className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50',
                 style: { 
-                    minWidth: '180px', 
-                    maxWidth: '280px',
+                    minWidth: '160px', 
+                    maxWidth: '260px',
                     pointerEvents: 'none'
                 }
             },
@@ -177,7 +178,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 { className: 'flex flex-col gap-0.5' },
                 React.createElement(
                     'div',
-                    { className: 'font-semibold text-gray-300 text-center' },
+                    { className: 'font-semibold text-gray-300 text-center text-xs' },
                     matchInfo.homeTeamName || '???'
                 ),
                 React.createElement(
@@ -186,21 +187,21 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
                     React.createElement(
                         'span',
-                        { className: 'font-bold text-white' },
+                        { className: 'font-bold text-white text-xs' },
                         matchInfo.awayTeamName || '???'
                     )
                 ),
                 matchInfo.score && React.createElement(
                     'div',
-                    { className: 'text-center text-gray-300 text-sm font-bold' },
+                    { className: 'text-center text-white text-sm font-bold' },
                     `${matchInfo.score}`
                 ),
                 matchInfo.date && React.createElement(
                     'div',
-                    { className: 'text-center text-gray-400 text-xs' },
+                    { className: 'text-center text-gray-400 text-[10px]' },
                     matchInfo.date
                 ),
-                matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ' && React.createElement(
+                React.createElement(
                     'div',
                     { 
                         className: `text-center text-xs font-bold mt-0.5`,
@@ -240,11 +241,11 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         React.createElement(
             'span',
             {
-                className: 'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
+                className: 'inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
                 style: {
                     backgroundColor: bgColor,
                     color: textColor,
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: '700'
                 }
             },
@@ -1099,7 +1100,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body'),
                             // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
                             React.createElement('th', { 
-                                className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider',
+                                className: 'flex items-center justify-start gap-0.5 flex-wrap',
                                 style: { minWidth: '100px' }
                             }, 
                                 'Forma'
@@ -1196,7 +1197,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                     React.createElement(
                                         'div',
                                         { 
-                                            className: 'flex items-center justify-start gap-0.5 overflow-x-auto',
+                                            className: 'flex items-center justify-start gap-0.5 flex-wrap',
                                             style: { 
                                                 maxWidth: '250px',
                                                 flexWrap: 'nowrap',
