@@ -163,6 +163,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
     const [currentTargetRect, setCurrentTargetRect] = useState(null);
     const timeoutRef = useRef(null);
+    const isHoveringRef = useRef(false);
     
     // Funkcia na výpočet pozície tooltipu
     const calculatePosition = (rect, tooltipHeight) => {
@@ -194,7 +195,8 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
-        if (onHoverEnd) {
+        // 🔥 Zavoláme onHoverEnd LEN AK NAOZAJ OPÚŠŤAME PRVOK
+        if (onHoverEnd && !isHoveringRef.current) {
             onHoverEnd();
         }
     }, [onHoverEnd]);
@@ -210,7 +212,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                           mouseY >= rect.top && mouseY <= rect.bottom;
             
             if (!isOver) {
+                isHoveringRef.current = false;
                 closeTooltip();
+            } else {
+                isHoveringRef.current = true;
             }
         }
     }, [closeTooltip]);
@@ -230,10 +235,8 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
     useEffect(() => {
         if (isVisible) {
             const handleScroll = () => {
-                // Skontrolujeme, či je myš stále nad prvkom
                 checkMouseOver();
-                // Ak je tooltip stále otvorený, aktualizujeme pozíciu
-                if (isVisible && currentTargetRect) {
+                if (isVisible && currentTargetRect && isHoveringRef.current) {
                     const height = tooltipRef.current?.offsetHeight || 160;
                     const position = calculatePosition(currentTargetRect, height);
                     setTooltipPosition(position);
@@ -247,7 +250,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                                   e.clientY >= rect.top && e.clientY <= rect.bottom;
                     
                     if (!isOver) {
+                        isHoveringRef.current = false;
                         closeTooltip();
+                    } else {
+                        isHoveringRef.current = true;
                     }
                 }
             };
@@ -270,8 +276,12 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
+            // 🔥 Pri odmontovaní zavoláme onHoverEnd
+            if (onHoverEnd) {
+                onHoverEnd();
+            }
         };
-    }, []);
+    }, [onHoverEnd]);
     
     const tooltipContent = showTooltip ? (
         React.createElement(
@@ -353,6 +363,8 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     timeoutRef.current = null;
                 }
                 
+                isHoveringRef.current = true;
+                
                 const rect = e.currentTarget.getBoundingClientRect();
                 setCurrentTargetRect(rect);
                 setIsHovered(true);
@@ -367,20 +379,27 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 }
             },
             onMouseLeave: (e) => {
-                // Nastavíme timeout pred zatvorením tooltipu
-                // aby sme umožnili prechod na tooltip (ak by bol interaktívny)
+                isHoveringRef.current = false;
+                
+                // Zrušíme predchádzajúci timeout
                 if (timeoutRef.current) {
                     clearTimeout(timeoutRef.current);
                 }
+                
+                // 🔥 OKAMŽITE ZAVOLÁME onHoverEnd PRE RÝCHLE ZRUŠENIE ZVÝRAZNENIA
+                if (onHoverEnd) {
+                    onHoverEnd();
+                }
+                
+                // Necháme tooltip ešte chvíľu viditeľný pre plynulý prechod
                 timeoutRef.current = setTimeout(() => {
                     closeTooltip();
-                }, 150);
+                }, 100);
             },
             onMouseMove: (e) => {
                 // Aktualizujeme pozíciu tooltipu pri pohybe myši
                 if (isVisible && currentTargetRect) {
                     const rect = e.currentTarget.getBoundingClientRect();
-                    // Aktualizujeme len ak sa zmenila pozícia
                     if (rect.top !== currentTargetRect.top || rect.left !== currentTargetRect.left) {
                         setCurrentTargetRect(rect);
                         const height = tooltipRef.current?.offsetHeight || 160;
