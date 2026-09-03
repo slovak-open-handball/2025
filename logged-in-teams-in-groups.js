@@ -449,6 +449,7 @@ const AddTeamsGroupApp = (props) => {
     const prevAllTeamsLengthRef = useRef(0);
     const [swapModal, setSwapModal] = useState(null);
     const [isSwapping, setIsSwapping] = useState(false);
+    const [categoryMatchStatus, setCategoryMatchStatus] = useState({});
     
     // NOVÝ STAV: Sledovanie zápasov
     const [matchesData, setMatchesData] = useState([]);
@@ -2581,6 +2582,42 @@ const AddTeamsGroupApp = (props) => {
         setTeamToEdit(null);
         setIsModalOpen(true);
     };
+
+    useEffect(() => {
+        if (!window.db) return;
+    
+        const matchesRef = collection(window.db, 'matches');
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const statusMap = {};
+    
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const categoryName = data.categoryName;
+                const status = data.status || 'scheduled';
+    
+                if (!categoryName) return;
+    
+                // Ak už máme pre túto kategóriu zaznamenaný "nescheduled" stav, necháme ho
+                if (statusMap[categoryName] === true) return;
+    
+                // Ak je stav iný ako 'scheduled', označíme kategóriu ako "zablokovanú"
+                if (status !== 'scheduled') {
+                    statusMap[categoryName] = true;
+                } else {
+                    // Ak ešte nemáme žiadny záznam, nastavíme na false
+                    if (!(categoryName in statusMap)) {
+                        statusMap[categoryName] = false;
+                    }
+                }
+            });
+    
+            // Nastavíme stav
+            setCategoryMatchStatus(statusMap);
+        });
+    
+        return () => unsubscribe();
+    }, []);
+  
     // ===================================================================
     // Zvyšok kódu – listenery, render funkcie, return
     // ===================================================================
@@ -2834,7 +2871,7 @@ const AddTeamsGroupApp = (props) => {
         return '#ffff00';
     };
     
-    const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
+    const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false, categoryMatchStatus = {}) => {
         // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
         const getCleanDisplayName = (team) => {
             // Pre superstructure tímy
@@ -3114,6 +3151,8 @@ const AddTeamsGroupApp = (props) => {
                     // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu
                     // Ak je tím v nadstavbovej skupine a názov tímu obsahuje názov kategórie, kruh sa nezobrazí
                     const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
+                    const categoryName = categoryIdToNameMap[targetCategoryId];
+                    const isCategoryBlocked = categoryName && categoryMatchStatus[categoryName] === true;
                     
                     items.push(
                         React.createElement(
@@ -3155,18 +3194,24 @@ const AddTeamsGroupApp = (props) => {
                                     })()
                                 }),
                                 
-                                // 🔥 TLAČIDLO PRE VÝMENU TÍMOV (zobrazené len ak existujú zápasy)
                                 groupHasMatches && React.createElement(
                                     'button',
                                     {
-                                        onClick: () => {
+                                        onClick: isCategoryBlocked ? undefined : () => {
                                             setSwapModal({
                                                 team: team,
                                                 open: true
                                             });
                                         },
-                                        className: 'p-1.5 rounded-full transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50',
-                                        title: 'Vymeniť tím s iným tímom v rovnakej kategórii a type skupiny'
+                                        className: `p-1.5 rounded-full transition-colors ${
+                                            isCategoryBlocked
+                                                ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                                : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
+                                        }`,
+                                        title: isCategoryBlocked
+                                            ? 'Výmena tímov nie je možná, pretože v tejto kategórii už prebiehajú zápasy.'
+                                            : 'Vymeniť tím s iným tímom v rovnakej kategórii a type skupiny',
+                                        disabled: isCategoryBlocked
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' })
@@ -3428,7 +3473,7 @@ const renderGroupedCategories = () => {
                                     React.createElement('div', { 
                                         className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroup, group.name, categoryId)
+                                        renderTeamList(teamsInGroup, group.name, categoryId, false, categoryMatchStatus)
                                     )
                                 )
                             );
@@ -3487,7 +3532,7 @@ const renderGroupedCategories = () => {
                                     React.createElement('div', { 
                                         className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroup, group.name, categoryId)
+                                        renderTeamList(teamsInGroup, group.name, categoryId, false, categoryMatchStatus)
                                     )
                                 )
                             );
