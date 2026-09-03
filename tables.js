@@ -387,9 +387,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 
                 `Zápasy skupiny: ${groupName}`
-            ),
-            React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 
-                `Celkom ${matches.length} zápasov`
             )
         ),
         React.createElement(
