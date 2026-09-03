@@ -129,44 +129,40 @@ const updateURLFilter = (category, group) => {
     }
 };
 
-// ============================================================
-// KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
-// ============================================================
-
 const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
-    let bgColor = '#9CA3AF'; // sivá pre N
+    let bgColor = '#9CA3AF';
     let textColor = '#FFFFFF';
     let label = 'N';
     
     switch (result) {
         case 'V':
-            bgColor = '#22C55E'; // zelená
+            bgColor = '#22C55E';
             label = 'V';
             break;
         case 'P':
-            bgColor = '#EF4444'; // červená
+            bgColor = '#EF4444';
             label = 'P';
             break;
         case 'R':
-            bgColor = '#FBBF24'; // žltá
+            bgColor = '#FBBF24';
             textColor = '#000000';
             label = 'R';
             break;
         default:
-            bgColor = '#D1D5DB'; // svetlo sivá pre N
+            bgColor = '#D1D5DB';
             textColor = '#6B7280';
             label = 'N';
             break;
     }
     
-    // Tooltip obsah - ZOBRAZÍ SA PRE VŠETKY ŠTVORČEKY (aj pre "N")
     const showTooltip = matchInfo && matchInfo.homeTeamName && matchInfo.awayTeamName;
-    
-    // Stav pre zobrazenie tooltipu
     const [isHovered, setIsHovered] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
     const tooltipRef = useRef(null);
+    const containerRef = useRef(null);
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
     const [currentTargetRect, setCurrentTargetRect] = useState(null);
+    const timeoutRef = useRef(null);
     
     // Funkcia na výpočet pozície tooltipu
     const calculatePosition = (rect, tooltipHeight) => {
@@ -176,12 +172,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         let top = rect.top - tooltipHeight - padding;
         let left = rect.left + rect.width / 2 - tooltipWidth / 2;
         
-        // Ak by bol tooltip mimo obrazovky hore, zobrazíme ho dole
         if (top < 10) {
             top = rect.bottom + padding;
         }
         
-        // Ak by bol tooltip mimo obrazovky vľavo/vpravo
         if (left < 10) {
             left = 10;
         } else if (left + tooltipWidth > window.innerWidth - 10) {
@@ -191,16 +185,93 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         return { top, left };
     };
     
+    // Zatvorenie tooltipu
+    const closeTooltip = useCallback(() => {
+        setIsHovered(false);
+        setIsVisible(false);
+        setCurrentTargetRect(null);
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        if (onHoverEnd) {
+            onHoverEnd();
+        }
+    }, [onHoverEnd]);
+    
+    // Kontrola, či je myš stále nad prvkom
+    const checkMouseOver = useCallback(() => {
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const mouseX = window.event?.clientX || 0;
+            const mouseY = window.event?.clientY || 0;
+            
+            const isOver = mouseX >= rect.left && mouseX <= rect.right &&
+                          mouseY >= rect.top && mouseY <= rect.bottom;
+            
+            if (!isOver) {
+                closeTooltip();
+            }
+        }
+    }, [closeTooltip]);
+    
     // Zmeranie výšky tooltipu a aktualizácia pozície
     useLayoutEffect(() => {
-        if (isHovered && tooltipRef.current && currentTargetRect) {
+        if (isVisible && tooltipRef.current && currentTargetRect) {
             const height = tooltipRef.current.offsetHeight;
             if (height > 0) {
                 const position = calculatePosition(currentTargetRect, height);
                 setTooltipPosition(position);
             }
         }
-    }, [isHovered, currentTargetRect, tooltipRef.current]);
+    }, [isVisible, currentTargetRect]);
+    
+    // Event listener pre scroll a resize
+    useEffect(() => {
+        if (isVisible) {
+            const handleScroll = () => {
+                // Skontrolujeme, či je myš stále nad prvkom
+                checkMouseOver();
+                // Ak je tooltip stále otvorený, aktualizujeme pozíciu
+                if (isVisible && currentTargetRect) {
+                    const height = tooltipRef.current?.offsetHeight || 160;
+                    const position = calculatePosition(currentTargetRect, height);
+                    setTooltipPosition(position);
+                }
+            };
+            
+            const handleMouseMove = (e) => {
+                if (containerRef.current) {
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const isOver = e.clientX >= rect.left && e.clientX <= rect.right &&
+                                  e.clientY >= rect.top && e.clientY <= rect.bottom;
+                    
+                    if (!isOver) {
+                        closeTooltip();
+                    }
+                }
+            };
+            
+            window.addEventListener('scroll', handleScroll, true);
+            window.addEventListener('resize', handleScroll);
+            document.addEventListener('mousemove', handleMouseMove);
+            
+            return () => {
+                window.removeEventListener('scroll', handleScroll, true);
+                window.removeEventListener('resize', handleScroll);
+                document.removeEventListener('mousemove', handleMouseMove);
+            };
+        }
+    }, [isVisible, currentTargetRect, checkMouseOver, closeTooltip]);
+    
+    // Čistenie timeoutu pri odmontovaní
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
     
     const tooltipContent = showTooltip ? (
         React.createElement(
@@ -212,9 +283,9 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     minWidth: '180px', 
                     maxWidth: '280px',
                     pointerEvents: 'none',
-                    opacity: isHovered ? 1 : 0,
-                    display: isHovered ? 'block' : 'none',
-                    zIndex: 2147483647, // Maximálna hodnota z-index
+                    opacity: isVisible ? 1 : 0,
+                    display: isVisible ? 'block' : 'none',
+                    zIndex: 2147483647,
                     top: tooltipPosition.top + 'px',
                     left: tooltipPosition.left + 'px',
                     willChange: 'top, left'
@@ -272,14 +343,21 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
     return React.createElement(
         'div',
         {
+            ref: containerRef,
             className: 'relative inline-block',
             style: { zIndex: 0 },
             onMouseEnter: (e) => {
+                // Zrušíme predchádzajúci timeout
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                    timeoutRef.current = null;
+                }
+                
                 const rect = e.currentTarget.getBoundingClientRect();
                 setCurrentTargetRect(rect);
                 setIsHovered(true);
+                setIsVisible(true);
                 
-                // Predbežná pozícia s odhadovanou výškou
                 const estimatedHeight = 160;
                 const position = calculatePosition(rect, estimatedHeight);
                 setTooltipPosition(position);
@@ -288,11 +366,27 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     onHoverStart(teamId);
                 }
             },
-            onMouseLeave: () => {
-                setIsHovered(false);
-                setCurrentTargetRect(null);
-                if (onHoverEnd) {
-                    onHoverEnd();
+            onMouseLeave: (e) => {
+                // Nastavíme timeout pred zatvorením tooltipu
+                // aby sme umožnili prechod na tooltip (ak by bol interaktívny)
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+                timeoutRef.current = setTimeout(() => {
+                    closeTooltip();
+                }, 150);
+            },
+            onMouseMove: (e) => {
+                // Aktualizujeme pozíciu tooltipu pri pohybe myši
+                if (isVisible && currentTargetRect) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    // Aktualizujeme len ak sa zmenila pozícia
+                    if (rect.top !== currentTargetRect.top || rect.left !== currentTargetRect.left) {
+                        setCurrentTargetRect(rect);
+                        const height = tooltipRef.current?.offsetHeight || 160;
+                        const position = calculatePosition(rect, height);
+                        setTooltipPosition(position);
+                    }
                 }
             }
         },
