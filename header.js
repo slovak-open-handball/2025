@@ -365,34 +365,25 @@ const updateNavigationLinks = () => {
     // Spracovanie všetkých odkazov s atribútom data-page
     const publicNavLinks = document.querySelectorAll('[data-page]');
     
-    // ZISTÍME VIDITEĽNOSŤ PRE TEAMS-IN-GROUPS A TABLES
+    // ZÍSKAME NASTAVENIE PRE TEAMS-IN-GROUPS (TOTO JE JEDINÝ DOKUMENT V DB)
     const teamsInGroupsConfig = pagesVisibility['teams-in-groups'];
-    const tablesConfig = pagesVisibility['tables'];
-    
-    // SPOLOČNÁ VIDITEĽNOSŤ: tables aj teams-in-groups musia byť viditeľné spoločne
-    // Ak je jedna viditeľná, druhá musí byť tiež viditeľná
-    const teamsVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
-    const tablesVisible = tablesConfig && tablesConfig.visible === true;
-    
-    // Určíme, či majú byť viditeľné spoločne (obe sú viditeľné)
-    const showGroupAndTables = teamsVisible && tablesVisible;
+    const isVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
     
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
-        const pageConfig = pagesVisibility[pageId];
         
-        let isVisible = false;
+        let shouldBeVisible = false;
         
-        // ŠPECIÁLNE SPRACOVANIE PRE TEAMS-IN-GROUPS A TABLES
+        // PRE TEAMS-IN-GROUPS AJ TABLES POUŽIJEME ROVNAKÉ NASTAVENIE
         if (pageId === 'teams-in-groups' || pageId === 'tables') {
-            // Obe stránky sa zobrazujú spoločne - iba ak sú obe viditeľné
-            isVisible = showGroupAndTables;
+            shouldBeVisible = isVisible;
         } else {
             // Ostatné stránky sa riadia vlastným nastavením
-            isVisible = pageConfig && pageConfig.visible === true;
+            const pageConfig = pagesVisibility[pageId];
+            shouldBeVisible = pageConfig && pageConfig.visible === true;
         }
         
-        if (isVisible) {
+        if (shouldBeVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
             link.dataset.visible = 'true';
@@ -450,16 +441,12 @@ const checkCurrentPageAccess = () => {
         return true;
     }
     
-    // ŠPECIÁLNE SPRACOVANIE PRE TEAMS-IN-GROUPS A TABLES
+    // PRE TEAMS-IN-GROUPS AJ TABLES POUŽIJEME ROVNAKÉ NASTAVENIE
     if (currentPage === 'teams-in-groups' || currentPage === 'tables') {
         const teamsConfig = pagesVisibility['teams-in-groups'];
-        const tablesConfig = pagesVisibility['tables'];
+        const isVisible = teamsConfig && teamsConfig.visible === true;
         
-        // Obe musia byť viditeľné, aby boli prístupné
-        const teamsVisible = teamsConfig && teamsConfig.visible === true;
-        const tablesVisible = tablesConfig && tablesConfig.visible === true;
-        
-        if (!teamsVisible || !tablesVisible) {
+        if (!isVisible) {
             window.location.href = 'index.html';
             return false;
         }
