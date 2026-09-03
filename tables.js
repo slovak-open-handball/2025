@@ -1447,10 +1447,16 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
 
         const opponentRawName = opponentName || match.awayTeamName || match.homeTeamName || null;
 
-        // Na konci funkcie, pred return:
+        // V getMatchInfoForForm, na konci pred return:
+        
+        // 🔥 POUŽIJEME OPPONENT DISPLAY NAME PRIAMO PRE ZVÝRAZNENIE
         let opponentNameForHighlight = null;
         
-        if (opponentName) {
+        // Ak máme opponentDisplayName (už je to správny názov), použijeme ho
+        if (opponentDisplayName && opponentDisplayName !== '???') {
+            opponentNameForHighlight = opponentDisplayName;
+        } else if (opponentName) {
+            // Fallback: skúsime nájsť správny názov
             const foundTeamName = getTeamName(opponentName);
             if (foundTeamName && foundTeamName !== opponentName) {
                 opponentNameForHighlight = foundTeamName;
@@ -1463,7 +1469,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             opponentNameForHighlight = getTeamName(match.homeTeamName || match.homeTeamIdentifier);
         }
         
-        // 🔥 AK JE STALE NULL, POUŽIJEME OPPONENT DISPLAY NAME
+        // 🔥 AK JE STALE NULL, POUŽIJEME OPPONENT DISPLAY NAME Z TOOLTIPU
         if (!opponentNameForHighlight) {
             if (finalIsHome) {
                 opponentNameForHighlight = awayTeamNameForTooltip;
@@ -1482,7 +1488,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             isHome: finalIsHome,
             isAway: finalIsAway,
             opponentId: opponentId,
-            opponentName: opponentNameForHighlight,  // <-- teraz bude mať vždy hodnotu
+            opponentName: opponentNameForHighlight,  // <-- TERAZ BUDE MAŤ SPRÁVNY NÁZOV
             result: result,
             isTransferred: isTransferred
         };
