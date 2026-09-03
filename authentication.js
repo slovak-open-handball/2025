@@ -97,7 +97,8 @@ const publicPages = [
     'volunteer-register.html',
     'teams-in-groups.html',
     'matches.html', 
-    'map.html'
+    'map.html',
+    'tables.html'
 ];
 
 const guestOnlyPages = [
