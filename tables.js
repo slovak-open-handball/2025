@@ -1202,151 +1202,160 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             'div',
             { 
                 key: `${category}|${group}`,
-                className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-8 transition-all'
+                className: 'mb-8 transition-all'
             },
             
-            // Hlavička tabuľky - klikateľná
+            // SAMOSTATNÝ BOX PRE TABUĽKU
             React.createElement(
                 'div',
-                { 
-                    className: 'px-6 py-4 border-b cursor-pointer hover:opacity-80 transition-opacity',
-                    style: { 
-                        backgroundColor: colors.backgroundColor || '#DCFCE7',
-                        color: colors.textColor || '#166534'
-                    },
-                    onClick: () => handleTableHeaderClick(category, group),
-                },
+                { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+                
+                // Hlavička tabuľky - klikateľná
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap items-center justify-between gap-3' },
+                    { 
+                        className: 'px-6 py-4 border-b cursor-pointer hover:opacity-80 transition-opacity',
+                        style: { 
+                            backgroundColor: colors.backgroundColor || '#DCFCE7',
+                            color: colors.textColor || '#166534'
+                        },
+                        onClick: () => handleTableHeaderClick(category, group),
+                    },
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-3' },
-                        React.createElement('h3', { className: 'text-lg font-bold' }, `${category} - ${group}`),
+                        { className: 'flex flex-wrap items-center justify-between gap-3' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-3' },
+                            React.createElement('h3', { className: 'text-lg font-bold' }, `${category} - ${group}`),
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: 'text-xs px-2 py-0.5 rounded-full font-medium',
+                                    style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
+                                },
+                                groupTypeLabel
+                            )
+                        ),
                         React.createElement(
                             'span',
-                            { 
-                                className: 'text-xs px-2 py-0.5 rounded-full font-medium',
-                                style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
-                            },
-                            groupTypeLabel
+                            { className: 'text-xs opacity-70' },
+                            `${completedCount}/${totalMatches} zápasov`
                         )
                     )
-                )
-            ),
-            
-            // Telo tabuľky
-            React.createElement(
-                'div',
-                { className: 'overflow-x-auto' },
+                ),
+                
+                // Telo tabuľky
                 React.createElement(
-                    'table',
-                    { className: 'min-w-full divide-y divide-gray-200' },
-                    
-                    // Hlavička tabuľky
+                    'div',
+                    { className: 'overflow-x-auto' },
                     React.createElement(
-                        'thead',
-                        { className: 'bg-gray-50' },
+                        'table',
+                        { className: 'min-w-full divide-y divide-gray-200' },
+                        
+                        // Hlavička tabuľky
                         React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Tím'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'V'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'R'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'P'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body')
-                        )
-                    ),
-                    
-                    // Riadky - ZORADENÉ POMOCOU compareTeams
-                    React.createElement(
-                        'tbody',
-                        { className: 'divide-y divide-gray-100' },
-                        teams.map((team, index) => {
-                            const position = index + 1;
-                            
-                            return React.createElement(
+                            'thead',
+                            { className: 'bg-gray-50' },
+                            React.createElement(
                                 'tr',
-                                { key: team.id, className: 'hover:bg-gray-100 transition-colors' },
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center font-bold text-gray-700' },
-                                    position
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 font-medium text-gray-800' },
-                                    team.name || '???'
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center text-gray-600' },
-                                    team.played
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center text-green-600 font-bold' },
-                                    team.wins
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center text-yellow-600' },
-                                    team.draws
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center text-red-600' },
-                                    team.losses
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center font-mono' },
-                                    `${team.goalsFor}:${team.goalsAgainst}`
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center font-mono font-bold' },
-                                    team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference
-                                ),
-                                React.createElement(
-                                    'td',
-                                    { className: 'px-4 py-3 text-center font-bold text-blue-600' },
-                                    team.points
-                                )
-                            );
-                        })
+                                null,
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Tím'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'V'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'R'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'P'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body')
+                            )
+                        ),
+                        
+                        // Riadky - ZORADENÉ POMOCOU compareTeams
+                        React.createElement(
+                            'tbody',
+                            { className: 'divide-y divide-gray-100' },
+                            teams.map((team, index) => {
+                                const position = index + 1;
+                                
+                                return React.createElement(
+                                    'tr',
+                                    { key: team.id, className: 'hover:bg-gray-100 transition-colors' },
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center font-bold text-gray-700' },
+                                        position
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 font-medium text-gray-800' },
+                                        team.name || '???'
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center text-gray-600' },
+                                        team.played
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center text-green-600 font-bold' },
+                                        team.wins
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center text-yellow-600' },
+                                        team.draws
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center text-red-600' },
+                                        team.losses
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center font-mono' },
+                                        `${team.goalsFor}:${team.goalsAgainst}`
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center font-mono font-bold' },
+                                        team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference
+                                    ),
+                                    React.createElement(
+                                        'td',
+                                        { className: 'px-4 py-3 text-center font-bold text-blue-600' },
+                                        team.points
+                                    )
+                                );
+                            })
+                        )
                     )
+                ),
+                
+                // Päta - informácie o zápasoch
+                React.createElement(
+                    'div',
+                    { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between gap-2' },
+                    React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
+                    React.createElement('span', {}, `Odohraných: ${completedCount}`)
                 )
             ),
             
-            // Päta - informácie o zápasoch
-            React.createElement(
-                'div',
-                { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between gap-2' },
-                React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
-                React.createElement('span', {}, `Odohraných: ${completedCount}`)
-            ),
-            
-            // ODDELENIE - hrubá čiara medzi tabuľkou a zoznamom zápasov
+            // SAMOSTATNÝ BOX PRE ZOZNAM ZÁPASOV - AK JE ZOBRAZENÁ LEN JEDNA TABUĽKA
             isOnlyTable && React.createElement(
                 'div',
-                { className: 'border-t-4 border-gray-200' }
-            ),
-            
-            // ZOZNAM ZÁPASOV SKUPINY - AK JE ZOBRAZENÁ LEN JEDNA TABUĽKA
-            isOnlyTable && React.createElement(
-                GroupMatchesList,
-                {
-                    matches: groupMatches,
-                    groupName: group,
-                    categoryName: category,
-                    teamNames: teamNames,
-                    hallNames: hallNames
-                }
+                { className: 'mt-6' },
+                React.createElement(
+                    GroupMatchesList,
+                    {
+                        matches: groupMatches,
+                        groupName: group,
+                        categoryName: category,
+                        teamNames: teamNames,
+                        hallNames: hallNames
+                    }
+                )
             )
         );
     };
