@@ -159,8 +159,8 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             break;
     }
     
-    // Tooltip obsah - ZOBRAZÍ SA LEN PRI HOVER
-    const showTooltip = matchInfo && matchInfo.score && matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ';
+    // Tooltip obsah - ZOBRAZÍ SA PRE VŠETKY ŠTVORČEKY (aj pre "N")
+    const showTooltip = matchInfo && matchInfo.homeTeamName && matchInfo.awayTeamName;
     
     // Stav pre zobrazenie tooltipu
     const [isHovered, setIsHovered] = useState(false);
@@ -242,12 +242,20 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     { className: 'text-center text-gray-400 text-xs' },
                     `${matchInfo.dateTime}`
                 ),
-                matchInfo.score && React.createElement(
-                    'div',
-                    { className: 'text-center text-white text-sm font-bold' },
-                    `${matchInfo.score}`
+                matchInfo.score ? (
+                    React.createElement(
+                        'div',
+                        { className: 'text-center text-white text-sm font-bold' },
+                        `${matchInfo.score}`
+                    )
+                ) : (
+                    React.createElement(
+                        'div',
+                        { className: 'text-center text-gray-400 text-xs' },
+                        'Zápas nebol odohraný'
+                    )
                 ),
-                React.createElement(
+                matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ' && React.createElement(
                     'div',
                     { 
                         className: `text-center text-xs font-bold mt-0.5`,
