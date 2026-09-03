@@ -133,6 +133,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const [selectedGroup, setSelectedGroup] = useState(null);
     const [pointsForWin, setPointsForWin] = useState(3);
     const [sortingConditions, setSortingConditions] = useState([]);
+    const [groupsDataState, setGroupsDataState] = useState(groupsData || {});
     
     // Načítanie bodov za výhru a kritérií poradia z databázy
     useEffect(() => {
@@ -151,6 +152,41 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         };
         loadSettings();
+    }, []);
+    
+    // 🔥 PRIAMO NAČÍTANIE TYPOV SKUPÍN Z DATABÁZY
+    useEffect(() => {
+        const loadGroupsDataFromDB = async () => {
+            if (!window.db) return;
+            try {
+                const groupsRef = doc(window.db, 'settings', 'groups');
+                const groupsSnap = await getDoc(groupsRef);
+                if (groupsSnap.exists()) {
+                    const data = groupsSnap.data();
+                    setGroupsDataState(data);
+                    window.groupsData = data;
+                }
+            } catch (err) {
+                console.error('Chyba pri načítaní typov skupín:', err);
+            }
+        };
+        loadGroupsDataFromDB();
+    }, []);
+    
+    // Realtime sledovanie zmien typov skupín
+    useEffect(() => {
+        if (!window.db) return;
+        const groupsRef = doc(window.db, 'settings', 'groups');
+        const unsubscribe = onSnapshot(groupsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setGroupsDataState(data);
+                window.groupsData = data;
+            }
+        }, (err) => {
+            console.error('Chyba pri sledovaní typov skupín:', err);
+        });
+        return () => unsubscribe();
     }, []);
     
     // Výpočet tabuliek skupín
@@ -267,19 +303,43 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     team.goalDifference = team.goalsFor - team.goalsAgainst;
                 });
                 
-                // Zoradenie tímov podľa kritérií
-                teams.sort((a, b) => {
-                    if (a.points !== b.points) return b.points - a.points;
-                    if (a.goalDifference !== b.goalDifference) return b.goalDifference - a.goalDifference;
-                    if (a.goalsFor !== b.goalsFor) return b.goalsFor - a.goalsFor;
-                    return a.name.localeCompare(b.name);
-                });
-                
-                // Určenie typu skupiny
+                // 🔥 URČENIE TYPU SKUPINY - POUŽIJEME groupsDataState
                 let groupType = 'základná';
-                if (groupsData && groupsData[category]) {
-                    const found = groupsData[category].find(g => g.name === group);
-                    if (found) groupType = found.type === 'nadstavbová skupina' ? 'nadstavbová' : 'základná';
+                
+                // Skúsime nájsť skupinu v groupsDataState
+                // Najprv potrebujeme získať ID kategórie podľa názvu
+                let categoryId = null;
+                if (window.categoriesData) {
+                    for (const [catId, catName] of Object.entries(window.categoriesData)) {
+                        if (catName === category) {
+                            categoryId = catId;
+                            break;
+                        }
+                    }
+                }
+                
+                // Ak nemáme ID, skúsime priamo v groupsDataState
+                if (!categoryId) {
+                    for (const [catId, groups] of Object.entries(groupsDataState)) {
+                        const found = groups.find(g => g.name === group);
+                        if (found) {
+                            categoryId = catId;
+                            break;
+                        }
+                    }
+                }
+                
+                // Ak máme ID a groupsDataState, nájdeme typ skupiny
+                if (categoryId && groupsDataState[categoryId]) {
+                    const found = groupsDataState[categoryId].find(g => g.name === group);
+                    if (found && found.type) {
+                        groupType = found.type === 'nadstavbová skupina' ? 'nadstavbová' : 'základná';
+                    }
+                }
+                
+                // Ak sme nenašli, skúsime podľa názvu skupiny (fallback)
+                if (groupType === 'základná' && group.toLowerCase().includes('nadstavbová')) {
+                    groupType = 'nadstavbová';
                 }
                 
                 // Počty zápasov
@@ -312,7 +372,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
         
         calculateGroupTables();
-    }, [matches, categoriesData, groupsData, teamNames, pointsForWin]);
+    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin]);
     
     // Získanie unikátnych kategórií
     const categories = useMemo(() => {
@@ -447,7 +507,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 groupsForCategory.map(group => {
                     const isSelected = selectedGroup === group;
                     const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
-                    const colors = table ? getGroupTypeColors(group, selectedCategory, groupsData) : { backgroundColor: '#DCFCE7', textColor: '#166534' };
+                    const colors = table ? getGroupTypeColors(group, selectedCategory, groupsDataState) : { backgroundColor: '#DCFCE7', textColor: '#166534' };
                     const bgColor = isSelected ? colors.textColor : colors.backgroundColor;
                     const textColor = isSelected ? '#FFFFFF' : colors.textColor;
                     
@@ -472,7 +532,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const renderGroupTable = (table) => {
         const { category, group, groupType, teams, totalMatches, completedCount, completionPercentage, isFullyCompleted } = table;
         
-        const colors = getGroupTypeColors(group, category, groupsData);
+        const colors = getGroupTypeColors(group, category, groupsDataState);
         const progress = generateProgressBar(completionPercentage);
         const statusIcon = isFullyCompleted ? '✅' : '⏳';
         const groupTypeLabel = groupType === 'nadstavbová' ? '🏆 NADSTAVBOVÁ' : '📚 ZÁKLADNÁ';
@@ -509,6 +569,17 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             },
                             groupTypeLabel
                         )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3 text-sm' },
+                        React.createElement('span', { className: 'font-medium' }, `${statusIcon} ${completedCount}/${totalMatches} odohraných`),
+                        React.createElement(
+                            'span',
+                            { className: 'font-mono text-xs' },
+                            `[${progress.filled}${progress.empty}]`
+                        ),
+                        React.createElement('span', { className: 'font-medium' }, `${Math.round(completionPercentage)}%`)
                     )
                 )
             ),
@@ -607,6 +678,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 'div',
                 { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
+                React.createElement('span', {}, `${completedCount} odohraných (${Math.round(completionPercentage)}%)`),
+                React.createElement('span', {}, `${isFullyCompleted ? '✅ Kompletné' : '⏳ Prebieha'}`)
             )
         );
     };
@@ -621,6 +694,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             'div',
             { className: 'mb-6 text-center' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
+            React.createElement('p', { className: 'text-sm text-gray-500 mt-1' }, `${groupTables.length} skupín, ${groupTables.reduce((acc, t) => acc + t.teams.length, 0)} tímov`)
         ),
         
         // Filtre
