@@ -1171,12 +1171,94 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     
     // Funkcie pre zvýraznenie
     const handleHoverStart = (teamId) => {
-        setHighlightedTeamId(teamId);
+        if (teamId) {
+            setHighlightedTeamId(teamId);
+        }
     };
     
     const handleHoverEnd = () => {
         setHighlightedTeamId(null);
     };
+    
+    // 🔥 FUNKCIA NA ZÍSKANIE ID SÚPERA - POUŽÍVA SA PRE ZVÝRAZNENIE
+    const getOpponentIdForMatch = useCallback((teamId, match) => {
+        if (!match || !teamId) return null;
+        
+        // Najprv skúsime priamo podľa ID
+        if (match.homeTeamIdentifier === teamId) {
+            return match.awayTeamIdentifier;
+        }
+        if (match.awayTeamIdentifier === teamId) {
+            return match.homeTeamIdentifier;
+        }
+        
+        // Ak sme nenašli podľa ID, skúsime podľa názvu (pre prenesené zápasy)
+        const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
+        const homeName = match.homeTeamName || match.homeTeamIdentifier || '';
+        const awayName = match.awayTeamName || match.awayTeamIdentifier || '';
+        
+        const normalize = (name) => {
+            if (!name) return '';
+            return name
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        };
+        
+        const teamNameNorm = normalize(teamName);
+        const homeNameNorm = normalize(homeName);
+        const awayNameNorm = normalize(awayName);
+        
+        if (teamNameNorm === homeNameNorm) {
+            // Súper je away tím
+            const opponentId = match.awayTeamIdentifier;
+            // Ak je opponentId v tvare "transferred_xxx", skúsime nájsť pôvodné ID
+            if (opponentId && opponentId.startsWith('transferred_')) {
+                // Hľadáme v groupMatches alebo transferredMatches
+                const originalMatch = groupMatches.find(m => 
+                    m.id === match.id || 
+                    (match.id && m.id === match.id.replace('transferred_', ''))
+                );
+                if (originalMatch && originalMatch.awayTeamIdentifier && !originalMatch.awayTeamIdentifier.startsWith('transferred_')) {
+                    return originalMatch.awayTeamIdentifier;
+                }
+                // Skúsime nájsť podľa názvu v teams
+                for (const team of teams) {
+                    const teamNameNorm2 = normalize(team.name || '');
+                    if (teamNameNorm2 === normalize(awayName)) {
+                        return team.id;
+                    }
+                }
+                return opponentId;
+            }
+            return opponentId;
+        }
+        
+        if (teamNameNorm === awayNameNorm) {
+            // Súper je home tím
+            const opponentId = match.homeTeamIdentifier;
+            if (opponentId && opponentId.startsWith('transferred_')) {
+                const originalMatch = groupMatches.find(m => 
+                    m.id === match.id || 
+                    (match.id && m.id === match.id.replace('transferred_', ''))
+                );
+                if (originalMatch && originalMatch.homeTeamIdentifier && !originalMatch.homeTeamIdentifier.startsWith('transferred_')) {
+                    return originalMatch.homeTeamIdentifier;
+                }
+                for (const team of teams) {
+                    const teamNameNorm2 = normalize(team.name || '');
+                    if (teamNameNorm2 === normalize(homeName)) {
+                        return team.id;
+                    }
+                }
+                return opponentId;
+            }
+            return opponentId;
+        }
+        
+        return null;
+    }, [teamNames, groupMatches, teams]);
     
     // 🔥 FUNKCIA NA ZÍSKANIE INFO O ZÁPASE PRE FORM INDICATOR
     const getMatchInfoForForm = (teamId, match) => {
@@ -1189,7 +1271,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         // Ak sme nenašli podľa ID, skúsime podľa názvu (pre prenesené zápasy)
         let finalIsHome = isHome;
         let finalIsAway = isAway;
-        let matchedByName = false;
         
         if (!isHome && !isAway) {
             const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
@@ -1211,49 +1292,13 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             
             if (teamNameNorm === homeNameNorm) {
                 finalIsHome = true;
-                matchedByName = true;
             } else if (teamNameNorm === awayNameNorm) {
                 finalIsAway = true;
-                matchedByName = true;
             }
         }
         
-        // Získanie ID súpera - ak sme našli podľa názvu, musíme získať ID súpera z match objektu
-        let opponentId = null;
-        let opponentIdentifier = null;
-        
-        if (finalIsHome) {
-            opponentIdentifier = match.awayTeamIdentifier;
-            // Ak je opponentIdentifier v tvare "transferred_xxx", skúsime nájsť pôvodné ID
-            if (opponentIdentifier && opponentIdentifier.startsWith('transferred_')) {
-                // Pokúsime sa nájsť pôvodné ID z pôvodného zápasu
-                const originalMatch = groupMatches.find(m => m.id === match.matchId || m.id === match.id);
-                if (originalMatch && originalMatch.awayTeamIdentifier && !originalMatch.awayTeamIdentifier.startsWith('transferred_')) {
-                    opponentId = originalMatch.awayTeamIdentifier;
-                } else {
-                    opponentId = opponentIdentifier;
-                }
-            } else {
-                opponentId = opponentIdentifier;
-            }
-        } else if (finalIsAway) {
-            opponentIdentifier = match.homeTeamIdentifier;
-            if (opponentIdentifier && opponentIdentifier.startsWith('transferred_')) {
-                const originalMatch = groupMatches.find(m => m.id === match.matchId || m.id === match.id);
-                if (originalMatch && originalMatch.homeTeamIdentifier && !originalMatch.homeTeamIdentifier.startsWith('transferred_')) {
-                    opponentId = originalMatch.homeTeamIdentifier;
-                } else {
-                    opponentId = opponentIdentifier;
-                }
-            } else {
-                opponentId = opponentIdentifier;
-            }
-        }
-        
-        // Ak sme nenašli opponentId a máme opponentIdentifier, použijeme ho
-        if (!opponentId && opponentIdentifier) {
-            opponentId = opponentIdentifier;
-        }
+        // Získanie ID súpera
+        const opponentId = getOpponentIdForMatch(teamId, match);
         
         // Získanie názvov tímov
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
@@ -1348,12 +1393,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             matchId: match.id,
             isHome: finalIsHome,
             isAway: finalIsAway,
-            opponentId: opponentId,  // 🔥 TERAZ SPRÁVNE NASTAVENÉ AJ PRE PRENESENÉ ZÁPASY
+            opponentId: opponentId,
             result: result,
-            isTransferred: isTransferred,
-            _teamId: teamId,
-            _matchHomeId: match.homeTeamIdentifier,
-            _matchAwayId: match.awayTeamIdentifier
+            isTransferred: isTransferred
         };
     };
     
@@ -1538,6 +1580,8 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                         formMatchesWithInfo.map((match, idx) => {
                                             // 🔥 PRIDANÉ: Ak je zápas prenesený, pridáme vizuálne rozlíšenie
                                             const isTransferred = match.isTransferred || match.matchInfo?.isTransferred || false;
+                                            // 🔥 Získame ID súpera pre zvýraznenie
+                                            const opponentId = match.matchInfo?.opponentId || null;
                                             
                                             return React.createElement(
                                                 'div',
@@ -1551,7 +1595,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                                     matchInfo: match.matchInfo,
                                                     onHoverStart: handleHoverStart,
                                                     onHoverEnd: handleHoverEnd,
-                                                    teamId: match.matchInfo?.opponentId || null
+                                                    teamId: opponentId
                                                 }),
                                                 // 🔥 PRIDANÉ: Malý indikátor pre prenesený zápas
                                                 isTransferred && React.createElement(
