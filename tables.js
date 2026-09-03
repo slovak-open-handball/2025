@@ -124,6 +124,166 @@ const getCurrentScoreFromEvents = (events) => {
 };
 
 // ============================================================
+// FUNKCIE PRE ZORAĐOVANIE TÍMOV (rovnaké ako v matchTracker)
+// ============================================================
+
+// Výpočet vzájomného zápasu medzi dvoma tímami
+const calculateHeadToHead = (teamA, teamB, groupMatches) => {
+    let teamAScore = 0;
+    let teamBScore = 0;
+    let teamAWins = 0;
+    let teamBWins = 0;
+    let foundMatch = false;
+    
+    const teamAName = (teamA.name || teamA.id || "").trim();
+    const teamBName = (teamB.name || teamB.id || "").trim();
+    
+    if (!teamAName || !teamBName) {
+        return { teamAScore, teamBScore, teamAWins, teamBWins };
+    }
+    
+    const normalizeName = (name) => {
+        if (!name) return '';
+        return name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, ' ');
+    };
+    
+    const teamANormalized = normalizeName(teamAName);
+    const teamBNormalized = normalizeName(teamBName);
+    
+    for (const match of groupMatches) {
+        let homeName = match.homeTeamName || match.homeTeamIdentifier || '';
+        let awayName = match.awayTeamName || match.awayTeamIdentifier || '';
+        
+        if (!homeName || !awayName) continue;
+        
+        const homeNormalized = normalizeName(homeName);
+        const awayNormalized = normalizeName(awayName);
+        
+        const isMatchBetweenThem = (homeNormalized === teamANormalized && awayNormalized === teamBNormalized) || 
+                                   (homeNormalized === teamBNormalized && awayNormalized === teamANormalized);
+        
+        if (isMatchBetweenThem && match.status === 'completed') {
+            foundMatch = true;
+            
+            let homeScore = match.homeScore || 0;
+            let awayScore = match.awayScore || 0;
+            
+            if (homeNormalized === teamANormalized) {
+                teamAScore = homeScore;
+                teamBScore = awayScore;
+            } else {
+                teamAScore = awayScore;
+                teamBScore = homeScore;
+            }
+            
+            if (teamAScore > teamBScore) {
+                teamAWins = 1;
+                teamBWins = 0;
+            } else if (teamBScore > teamAScore) {
+                teamAWins = 0;
+                teamBWins = 1;
+            }
+            break;
+        }
+    }
+    
+    return { teamAScore, teamBScore, teamAWins, teamBWins };
+};
+
+// Porovnanie dvoch tímov podľa kritérií
+const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
+    // 1. Najprv porovnáme podľa bodov
+    if (teamA.points !== teamB.points) {
+        return teamB.points - teamA.points;
+    }
+
+    // 2. Ak sú body rovnaké, použijeme nastavené kritériá
+    if (sortingConditions && sortingConditions.length > 0) {
+        for (const condition of sortingConditions) {
+            const { parameter, direction } = condition;
+            let comparison = 0;
+            
+            switch (parameter) {
+                case 'headToHead':
+                    const headToHeadResult = calculateHeadToHead(teamA, teamB, groupMatches);
+                    
+                    if (headToHeadResult.teamAWins !== headToHeadResult.teamBWins) {
+                        if (direction === 'desc') {
+                            comparison = headToHeadResult.teamBWins - headToHeadResult.teamAWins;
+                        } else {
+                            comparison = headToHeadResult.teamAWins - headToHeadResult.teamBWins;
+                        }
+                    } else if (headToHeadResult.teamAScore !== headToHeadResult.teamBScore) {
+                        if (direction === 'desc') {
+                            comparison = headToHeadResult.teamBScore - headToHeadResult.teamAScore;
+                        } else {
+                            comparison = headToHeadResult.teamAScore - headToHeadResult.teamBScore;
+                        }
+                    }
+                    break;
+                
+                case 'scoreDifference':
+                    if (direction === 'desc') {
+                        comparison = teamB.goalDifference - teamA.goalDifference;
+                    } else {
+                        comparison = teamA.goalDifference - teamB.goalDifference;
+                    }
+                    break;
+                    
+                case 'goalsScored':
+                    if (direction === 'desc') {
+                        comparison = teamB.goalsFor - teamA.goalsFor;
+                    } else {
+                        comparison = teamA.goalsFor - teamB.goalsFor;
+                    }
+                    break;
+                    
+                case 'goalsConceded':
+                    if (direction === 'asc') {
+                        comparison = teamA.goalsAgainst - teamB.goalsAgainst;
+                    } else {
+                        comparison = teamB.goalsAgainst - teamA.goalsAgainst;
+                    }
+                    break;
+                
+                case 'wins':
+                    if (direction === 'desc') {
+                        comparison = teamB.wins - teamA.wins;
+                    } else {
+                        comparison = teamA.wins - teamB.wins;
+                    }
+                    break;
+                
+                case 'losses':
+                    if (direction === 'asc') {
+                        comparison = teamA.losses - teamB.losses;
+                    } else {
+                        comparison = teamB.losses - teamA.losses;
+                    }
+                    break;
+                
+                case 'draw':
+                    comparison = 0;
+                    break;
+                    
+                default:
+                    comparison = 0;
+            }
+        
+            if (comparison !== 0) return comparison;
+        }
+    }
+    
+    // 3. Ak sú všetky kritériá rovnaké, použijeme abecedné poradie
+    return teamA.name.localeCompare(teamB.name);
+};
+
+// ============================================================
 // KOMPONENT PRE ZOBRAZENIE TABULIEK SKUPÍN
 // ============================================================
 
@@ -186,6 +346,32 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         }, (err) => {
             console.error('Chyba pri sledovaní typov skupín:', err);
+        });
+        return () => unsubscribe();
+    }, []);
+    
+    // Realtime sledovanie zmien nastavení tabuľky (body, kritériá)
+    useEffect(() => {
+        if (!window.db) return;
+        const settingsRef = doc(window.db, 'settings', 'table');
+        const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const newPoints = data.pointsForWin || 3;
+                const newConditions = data.sortingConditions || [];
+                
+                let changed = false;
+                if (pointsForWin !== newPoints) {
+                    setPointsForWin(newPoints);
+                    changed = true;
+                }
+                if (JSON.stringify(sortingConditions) !== JSON.stringify(newConditions)) {
+                    setSortingConditions(newConditions);
+                    changed = true;
+                }
+            }
+        }, (err) => {
+            console.error('Chyba pri sledovaní nastavení tabuľky:', err);
         });
         return () => unsubscribe();
     }, []);
@@ -304,6 +490,28 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     team.goalDifference = team.goalsFor - team.goalsAgainst;
                 });
                 
+                // Vytvorenie zoznamu zápasov pre porovnanie (s mapovanými názvami)
+                const matchesForComparison = groupMatches.map(match => {
+                    const homeTeam = teamsMap.get(match.homeTeamIdentifier);
+                    const awayTeam = teamsMap.get(match.awayTeamIdentifier);
+                    
+                    let homeName = homeTeam ? homeTeam.name : match.homeTeamIdentifier;
+                    let awayName = awayTeam ? awayTeam.name : match.awayTeamIdentifier;
+                    
+                    return {
+                        ...match,
+                        homeTeamName: homeName,
+                        awayTeamName: awayName,
+                        homeScore: match.homeScore || 0,
+                        awayScore: match.awayScore || 0
+                    };
+                });
+                
+                // ZORADENIE TÍMOV POMOCOU compareTeams
+                const sortedTeams = [...teams].sort((a, b) => {
+                    return compareTeams(a, b, matchesForComparison, sortingConditions);
+                });
+                
                 // URČENIE TYPU SKUPINY - POUŽIJEME groupsDataState
                 let groupType = 'základná';
                 
@@ -352,10 +560,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     categoryId,
                     group,
                     groupType,
-                    teams,
+                    teams: sortedTeams,  // <-- POUŽIJEME ZORADENÝ ZOZNAM
                     totalMatches,
                     completedCount,
-                    matches: groupMatches
+                    matches: groupMatches,
+                    sortingConditions: sortingConditions
                 });
             }
             
@@ -370,7 +579,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
         
         calculateGroupTables();
-    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin]);
+    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin, sortingConditions]);
     
     // Získanie unikátnych kategórií
     const categories = useMemo(() => {
@@ -621,11 +830,29 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
     // Render jednej tabuľky
     const renderGroupTable = (table) => {
-        const { category, categoryId, group, groupType, teams, totalMatches, completedCount } = table;
+        const { category, categoryId, group, groupType, teams, totalMatches, completedCount, sortingConditions: tableSorting } = table;
         
         // Správne volanie getGroupTypeColors s categoryId
         const colors = getGroupTypeColors(group, categoryId, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
+        
+        // Získanie textu kritérií pre zobrazenie
+        const getSortingText = () => {
+            if (!tableSorting || tableSorting.length === 0) {
+                return 'Predvolené (body, +/-, strelené góly, abeceda)';
+            }
+            return tableSorting.map((c, i) => {
+                const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
+                             c.parameter === 'scoreDifference' ? '+/-' :
+                             c.parameter === 'goalsScored' ? 'strelené góly' :
+                             c.parameter === 'goalsConceded' ? 'inkasované góly' :
+                             c.parameter === 'wins' ? 'výhry' :
+                             c.parameter === 'losses' ? 'prehry' :
+                             c.parameter === 'draw' ? 'losovanie' : c.parameter;
+                const dir = c.direction === 'asc' ? 'vzostupne' : 'zostupne';
+                return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
+            }).join(', ');
+        };
                 
         return React.createElement(
             'div',
@@ -691,7 +918,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         )
                     ),
                     
-                    // Riadky - BEZ PODFARBOVANIA
+                    // Riadky - ZORADENÉ POMOCOU compareTeams
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
@@ -752,11 +979,16 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 )
             ),
             
-            // Päta - informácie o zápasoch
+            // Päta - informácie o zápasoch a kritériách
             React.createElement(
                 'div',
-                { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between' },
+                { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between gap-2' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
+                React.createElement(
+                    'span',
+                    { className: 'text-gray-400 max-w-md text-right' },
+                    `📋 ${getSortingText()}`
+                )
             )
         );
     };
