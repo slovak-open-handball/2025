@@ -1,3 +1,4 @@
+// tables.js
 // Nahraďte celý obsah súboru matches.js nasledujúcim kódom:
 
 import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -487,6 +488,19 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         
         const { basic: basicGroups, advanced: advancedGroups } = getGroupsByType(selectedCategory);
         
+        // Pomocná funkcia na získanie ID kategórie podľa názvu
+        const getCategoryIdByName = (categoryName) => {
+            if (!categoryName) return null;
+            if (window.categoriesData) {
+                for (const [catId, catName] of Object.entries(window.categoriesData)) {
+                    if (catName === categoryName) {
+                        return catId;
+                    }
+                }
+            }
+            return null;
+        };
+        
         return React.createElement(
             'div',
             { className: 'mb-6 space-y-3' },
@@ -509,7 +523,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 ),
                 categories.map(cat => {
                     const isSelected = selectedCategory === cat;
-                    const color = getCategoryDrawColor(cat) || '#3B82F6';
+                    // Získanie ID kategórie podľa názvu
+                    const categoryId = getCategoryIdByName(cat);
+                    // Použitie ID na získanie farby
+                    const color = categoryId ? getCategoryDrawColor(categoryId) : '#3B82F6';
                     return React.createElement(
                         'button',
                         {
@@ -617,7 +634,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             )
         );
     };
-    
+        
     // Render jednej tabuľky
     const renderGroupTable = (table) => {
         const { category, group, groupType, teams, totalMatches, completedCount, completionPercentage, isFullyCompleted } = table;
