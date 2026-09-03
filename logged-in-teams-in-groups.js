@@ -3149,10 +3149,9 @@ const AddTeamsGroupApp = (props) => {
                     }
                     
                     // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu
-                    // Ak je tím v nadstavbovej skupine a názov tímu obsahuje názov kategórie, kruh sa nezobrazí
-                    const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
                     const categoryName = categoryIdToNameMap[targetCategoryId];
                     const isCategoryBlocked = categoryName && categoryMatchStatus[categoryName] === true;
+                    const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
                     
                     items.push(
                         React.createElement(
