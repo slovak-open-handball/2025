@@ -1327,25 +1327,24 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             console.log('🔍 [getMatchInfoForForm] opponentId from fallback lookup:', opponentId);
         }
         
-        // Získanie názvov tímov
+        // V getMatchInfoForForm, po získaní opponentId:
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
-        let opponentDisplayName = opponentName || '???';
-        
+        let opponentDisplayName = '???';
+
+        // Získanie názvu súpera cez teamNames alebo getDisplayTeamName
         if (opponentId && teamNames[opponentId]) {
             opponentDisplayName = teamNames[opponentId];
-            console.log('🔍 [getMatchInfoForForm] opponentDisplayName from teamNames:', opponentDisplayName);
         } else if (opponentId) {
-            for (const team of teams) {
-                if (team.id === opponentId) {
-                    opponentDisplayName = team.name;
-                    console.log('🔍 [getMatchInfoForForm] opponentDisplayName from teams:', opponentDisplayName);
-                    break;
-                }
+            opponentDisplayName = getDisplayTeamName(opponentId) || opponentId || opponentName || '???';
+        } else if (opponentName) {
+            // Skúsime nájsť tím podľa názvu v teamNames
+            const foundTeamId = Object.keys(teamNames).find(id => teamNames[id] === opponentName);
+            if (foundTeamId) {
+                opponentDisplayName = teamNames[foundTeamId];
+            } else {
+                opponentDisplayName = opponentName;
             }
-            if (!opponentDisplayName || opponentDisplayName === opponentName) {
-                opponentDisplayName = getDisplayTeamName(opponentId) || opponentId || opponentName || '???';
-            }
-        }
+        }        
         
         let score = null;
         let resultText = '';
