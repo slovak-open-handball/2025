@@ -392,15 +392,15 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
                     clearTimeout(timeoutRef.current);
                 }
                 
-                // 🔥 OKAMŽITE ZAVOLÁME onHoverEnd PRE RÝCHLE ZRUŠENIE ZVÝRAZNENIA
-                if (onHoverEnd) {
-                    onHoverEnd();
-                }
-                
-                // Necháme tooltip ešte chvíľu viditeľný pre plynulý prechod
+                // 🔥 PRIDANÉ: ONESKORENIE PRED ZAVOLANÍM onHoverEnd
                 timeoutRef.current = setTimeout(() => {
-                    closeTooltip();
-                }, 100);
+                    if (!isHoveringRef.current) {
+                        if (onHoverEnd) {
+                            onHoverEnd();
+                        }
+                        closeTooltip();
+                    }
+                }, 200); // 200ms oneskorenie
             },
             onMouseMove: (e) => {
                 // Aktualizujeme pozíciu tooltipu pri pohybe myši
@@ -1212,7 +1212,10 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     
     const handleHoverEnd = () => {
         console.log('🔍 [GroupTable] handleHoverEnd - clearing highlight');
-        setHighlightedTeamId(null);
+        // 🔥 PRIDANÉ: ONESKORENIE NA ZRUŠENIE ZVÝRAZNENIA
+        setTimeout(() => {
+            setHighlightedTeamId(null);
+        }, 300); // 300ms oneskorenie
     };
     
     // 🔥 POMOCNÁ FUNKCIA NA NORMALIZÁCIU NÁZVOV
