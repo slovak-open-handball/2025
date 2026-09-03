@@ -154,7 +154,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         loadSettings();
     }, []);
     
-    // 🔥 PRIAMO NAČÍTANIE TYPOV SKUPÍN Z DATABÁZY
+    // PRIAMO NAČÍTANIE TYPOV SKUPÍN Z DATABÁZY
     useEffect(() => {
         const loadGroupsDataFromDB = async () => {
             if (!window.db) return;
@@ -303,7 +303,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     team.goalDifference = team.goalsFor - team.goalsAgainst;
                 });
                 
-                // 🔥 URČENIE TYPU SKUPINY - POUŽIJEME groupsDataState
+                // URČENIE TYPU SKUPINY - POUŽIJEME groupsDataState
                 let groupType = 'základná';
                 
                 // Skúsime nájsť skupinu v groupsDataState
@@ -411,14 +411,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const filled = '█'.repeat(filledLength);
         const empty = '░'.repeat(emptyLength);
         return { filled, empty, filledLength, emptyLength };
-    };
-    
-    // Získanie farby pre tím podľa pozície
-    const getPositionColor = (position) => {
-        if (position === 1) return 'bg-yellow-50';
-        if (position === 2) return 'bg-gray-50';
-        if (position === 3) return 'bg-orange-50';
-        return '';
     };
     
     if (loading) {
@@ -600,17 +592,16 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         )
                     ),
                     
-                    // Riadky
+                    // Riadky - BEZ PODFARBOVANIA
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
                         teams.map((team, index) => {
                             const position = index + 1;
-                            const rowClass = getPositionColor(position);
                             
                             return React.createElement(
                                 'tr',
-                                { key: team.id, className: `${rowClass} hover:bg-gray-100 transition-colors` },
+                                { key: team.id, className: 'hover:bg-gray-100 transition-colors' },
                                 React.createElement(
                                     'td',
                                     { className: 'px-4 py-3 text-center font-bold text-gray-700' },
