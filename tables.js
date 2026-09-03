@@ -357,13 +357,25 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                 // Skontrolujeme, či už neexistuje rovnaký zápas (podľa ID)
                 const exists = result.some(m => m.id === transferred.id);
                 if (!exists) {
-                    // Pridáme prenesený zápas s indikátorom
+                    // 🔥 NÁJDENIE PÔVODNÉHO ZÁPASU PODĽA ID
+                    let originalMatch = null;
+                    if (window.matchesData) {
+                        originalMatch = window.matchesData.find(m => m.id === transferred.id);
+                    }
+                    
+                    // Ak sme nenašli v window.matchesData, skúsime v matches
+                    if (!originalMatch) {
+                        originalMatch = matches.find(m => m.id === transferred.id);
+                    }
+                    
+                    // Pridáme prenesený zápas s indikátorom a údajmi z pôvodného zápasu
                     result.push({
                         ...transferred,
                         isTransferred: true,
-                        // Prenesené zápasy nemajú scheduledTime, dáme im dátum z pôvodného zápasu
-                        scheduledTime: transferred.scheduledTime || null,
-                        // Ak nemáme homeScore/awayScore, použijeme z transferred
+                        // 🔥 POUŽIJEME scheduledTime Z PÔVODNÉHO ZÁPASU (ak existuje)
+                        scheduledTime: originalMatch?.scheduledTime || transferred.scheduledTime || null,
+                        // 🔥 POUŽIJEME hallId Z PÔVODNÉHO ZÁPASU (ak existuje)
+                        hallId: originalMatch?.hallId || transferred.hallId || null,
                         homeScore: transferred.homeScore !== undefined ? transferred.homeScore : 0,
                         awayScore: transferred.awayScore !== undefined ? transferred.awayScore : 0,
                         status: 'completed'
@@ -390,7 +402,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         });
         
         return result;
-    }, [sortedMatches, transferredMatches]);
+    }, [sortedMatches, transferredMatches, matches]);
 
     // Zoskupenie podľa dní
     const matchesByDay = useMemo(() => {
@@ -668,23 +680,12 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamName || match.homeTeamIdentifier || '???';
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamName || match.awayTeamIdentifier || '???';
                             
-                            // 🔥 PRE PRENESENÉ ZÁPASY - POUŽIJEME REÁLNE MIESTO Z PÔVODNÉHO ZÁPASU
-                            // Skúsime nájsť hallId v pôvodnom zápase
+                            // 🔥 PRE PRENESENÉ ZÁPASY - POUŽIJEME HALL NAME Z PÔVODNÉHO ZÁPASU
                             let matchHallName = 'Športová hala';
                             
-                            // 1. Skúsime použiť hallId z preneseného zápasu
                             if (match.hallId && hallNames[match.hallId]) {
                                 matchHallName = hallNames[match.hallId];
-                            } 
-                            // 2. Ak nemáme hallId, skúsime nájsť pôvodný zápas podľa ID
-                            else if (match.id && window.matchesData) {
-                                const originalMatch = window.matchesData.find(m => m.id === match.id);
-                                if (originalMatch && originalMatch.hallId && hallNames[originalMatch.hallId]) {
-                                    matchHallName = hallNames[originalMatch.hallId];
-                                }
-                            }
-                            // 3. Ak stále nemáme, použijeme fromGroup alebo predvolenú hodnotu
-                            else if (match.fromGroup) {
+                            } else if (match.fromGroup) {
                                 matchHallName = match.fromGroup;
                             }
 
