@@ -230,7 +230,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-center gap-2' },
-                    React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
                     React.createElement(
                         'span',
                         { className: 'font-bold text-white text-xs' },
