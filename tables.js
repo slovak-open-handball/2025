@@ -566,19 +566,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         { className: 'text-xs font-medium text-gray-400 mr-1' },
                         'Základné:'
                     ),
-                    // Tlačidlo "Všetky skupiny" (iba ak existujú oba typy)
-                    (basicGroups.length > 0 || advancedGroups.length > 0) && React.createElement(
-                        'button',
-                        {
-                            onClick: () => setSelectedGroup(null),
-                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                selectedGroup === null 
-                                    ? 'bg-purple-600 text-white shadow-md' 
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`
-                        },
-                        'Všetky'
-                    ),
                     basicGroups.map(group => {
                         const isSelected = selectedGroup === group;
                         const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
