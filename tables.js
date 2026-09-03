@@ -227,19 +227,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                         matchInfo.awayTeamName || '???'
                     )
                 ),
-                React.createElement(
+                matchInfo.dateTime && React.createElement(
                     'div',
-                    { className: 'flex items-center justify-center gap-3 text-gray-300 text-xs mt-0.5' },
-                    matchInfo.time && React.createElement(
-                        'span',
-                        { className: 'text-gray-400' },
-                        `🕐 ${matchInfo.time}`
-                    ),
-                    matchInfo.date && React.createElement(
-                        'span',
-                        { className: 'text-gray-400' },
-                        matchInfo.date
-                    )
+                    { className: 'text-center text-gray-400 text-xs' },
+                    `📅 ${matchInfo.dateTime}`
                 ),
                 matchInfo.score && React.createElement(
                     'div',
@@ -1039,19 +1030,17 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             resultText = 'NEODOHRANÉ';
         }
         
-        // Dátum a čas - formát DD.MM.YYYY HH:MM
-        let dateStr = null;
-        let timeStr = null;
+        // Dátum a čas - formát DD. MM. YYYY hh:mm
+        let dateTimeStr = null;
         if (match.scheduledTime) {
             try {
                 const date = match.scheduledTime.toDate();
                 const day = date.getDate().toString().padStart(2, '0');
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 const year = date.getFullYear();
-                dateStr = `${day}. ${month}. ${year}`;
                 const hours = date.getHours().toString().padStart(2, '0');
                 const minutes = date.getMinutes().toString().padStart(2, '0');
-                timeStr = `${hours}:${minutes}`;
+                dateTimeStr = `${day}. ${month}. ${year} ${hours}:${minutes}`;
             } catch (e) {}
         }
         
@@ -1059,8 +1048,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             homeTeamName: isHome ? teamName : opponentName,
             awayTeamName: isHome ? opponentName : teamName,
             score: score,
-            date: dateStr,
-            time: timeStr,
+            dateTime: dateTimeStr,
             resultText: resultText,
             matchId: match.id,
             isHome: isHome,
