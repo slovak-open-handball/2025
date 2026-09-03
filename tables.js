@@ -88,18 +88,30 @@ const getCategoryNameById = (categoryId) => {
 // FUNKCIA PRE PRÁCU S URL HASH FILTROM
 // ============================================================
 
+const encodeForURL = (text) => {
+    if (!text) return '';
+    // Nahradíme medzery za pomlčky a potom zakódujeme pre URL
+    return encodeURIComponent(text.replace(/ /g, '-'));
+};
+
+const decodeFromURL = (text) => {
+    if (!text) return '';
+    // Dekódujeme z URL a potom nahradíme pomlčky späť na medzery
+    return decodeURIComponent(text).replace(/-/g, ' ');
+};
+
 const getFilterFromURL = () => {
     const hash = window.location.hash;
     if (!hash || hash === '#') return { category: null, group: null };
     
     try {
-        // Očakávaný formát: #category=Kategória&group=Skupina
+        // Očakávaný formát: #category=Kateg%C3%B3ria&group=Skupina
         const params = new URLSearchParams(hash.substring(1));
         const category = params.get('category');
         const group = params.get('group');
         return { 
-            category: category ? decodeURIComponent(category) : null, 
-            group: group ? decodeURIComponent(group) : null 
+            category: category ? decodeFromURL(category) : null, 
+            group: group ? decodeFromURL(group) : null 
         };
     } catch (e) {
         return { category: null, group: null };
@@ -109,8 +121,8 @@ const getFilterFromURL = () => {
 const updateURLFilter = (category, group) => {
     try {
         const params = new URLSearchParams();
-        if (category) params.set('category', encodeURIComponent(category));
-        if (group) params.set('group', encodeURIComponent(group));
+        if (category) params.set('category', encodeForURL(category));
+        if (group) params.set('group', encodeForURL(group));
         
         const newHash = params.toString() ? `#${params.toString()}` : '#';
         if (window.location.hash !== newHash) {
@@ -1041,20 +1053,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             'div',
             { className: 'mb-6 text-center' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
-            // Zobrazenie aktívneho filtra
-            selectedCategory && selectedGroup && React.createElement(
-                'p',
-                { className: 'text-sm text-gray-500 mt-1' },
-                `Zobrazená: ${selectedCategory} - ${selectedGroup} `,
-                React.createElement(
-                    'button',
-                    {
-                        onClick: clearFilters,
-                        className: 'text-blue-600 hover:text-blue-800 underline ml-1 cursor-pointer'
-                    },
-                    '(zrušiť filter)'
-                )
-            )
         ),
         
         // Filtre
