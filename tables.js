@@ -1788,6 +1788,20 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 'span',
                                 { className: 'text-gray-600' },
                                 `${completedCount}/${totalMatches} zápasov`
+                            ),
+                            isAdvanced && carryOverEnabled && React.createElement(
+                                'span',
+                                { className: 'text-purple-600 font-medium' },
+                                'Prenášanie'
+                            )
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-3 text-xs' },
+                            React.createElement(
+                                'span',
+                                { className: 'text-gray-600' },
+                                `${completedCount}/${totalMatches} zápasov`
                             )
                         )
                     )
