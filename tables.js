@@ -644,7 +644,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         color: colors.textColor || '#166534'
                     },
                     onClick: () => handleTableHeaderClick(category, group),
-                    title: 'Kliknutím zobrazíte iba túto tabuľku'
                 },
                 React.createElement(
                     'div',
