@@ -165,21 +165,25 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         React.createElement(
             'div',
             { 
-                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none',
-                style: { minWidth: '200px', maxWidth: '300px' }
+                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50',
+                style: { 
+                    minWidth: '180px', 
+                    maxWidth: '280px',
+                    pointerEvents: 'none'
+                }
             },
             React.createElement(
                 'div',
-                { className: 'flex flex-col gap-1' },
+                { className: 'flex flex-col gap-0.5' },
                 React.createElement(
                     'div',
-                    { className: 'font-semibold text-gray-300' },
+                    { className: 'font-semibold text-gray-300 text-center' },
                     matchInfo.homeTeamName || '???'
                 ),
                 React.createElement(
                     'div',
-                    { className: 'flex items-center justify-between gap-3' },
-                    React.createElement('span', { className: 'text-gray-400' }, 'vs'),
+                    { className: 'flex items-center justify-center gap-2' },
+                    React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
                     React.createElement(
                         'span',
                         { className: 'font-bold text-white' },
@@ -188,15 +192,15 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 ),
                 matchInfo.score && React.createElement(
                     'div',
-                    { className: 'text-center text-gray-300 mt-1' },
-                    `Skóre: ${matchInfo.score}`
+                    { className: 'text-center text-gray-300 text-sm font-bold' },
+                    `${matchInfo.score}`
                 ),
                 matchInfo.date && React.createElement(
                     'div',
-                    { className: 'text-center text-gray-400 text-xs mt-0.5' },
+                    { className: 'text-center text-gray-400 text-xs' },
                     matchInfo.date
                 ),
-                matchInfo.resultText && React.createElement(
+                matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ' && React.createElement(
                     'div',
                     { 
                         className: `text-center text-xs font-bold mt-0.5`,
@@ -211,7 +215,8 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             React.createElement(
                 'div',
                 { 
-                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45'
+                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45',
+                    style: { pointerEvents: 'none' }
                 }
             )
         )
