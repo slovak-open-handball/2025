@@ -130,6 +130,206 @@ const updateURLFilter = (category, group) => {
 };
 
 // ============================================================
+// KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
+// (presunuté na začiatok, aby bol dostupný pre všetky komponenty)
+// ============================================================
+
+const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
+    let bgColor = '#9CA3AF'; // sivá pre N
+    let textColor = '#FFFFFF';
+    let label = 'N';
+    
+    switch (result) {
+        case 'V':
+            bgColor = '#22C55E'; // zelená
+            label = 'V';
+            break;
+        case 'P':
+            bgColor = '#EF4444'; // červená
+            label = 'P';
+            break;
+        case 'R':
+            bgColor = '#FBBF24'; // žltá
+            textColor = '#000000';
+            label = 'R';
+            break;
+        default:
+            bgColor = '#D1D5DB'; // svetlo sivá pre N
+            textColor = '#6B7280';
+            label = 'N';
+            break;
+    }
+    
+    // Tooltip obsah
+    const tooltipContent = matchInfo ? (
+        React.createElement(
+            'div',
+            { 
+                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none',
+                style: { minWidth: '200px', maxWidth: '300px' }
+            },
+            React.createElement(
+                'div',
+                { className: 'flex flex-col gap-1' },
+                React.createElement(
+                    'div',
+                    { className: 'font-semibold text-gray-300' },
+                    matchInfo.homeTeamName || '???'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between gap-3' },
+                    React.createElement('span', { className: 'text-gray-400' }, 'vs'),
+                    React.createElement(
+                        'span',
+                        { className: 'font-bold text-white' },
+                        matchInfo.awayTeamName || '???'
+                    )
+                ),
+                matchInfo.score && React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-300 mt-1' },
+                    `Skóre: ${matchInfo.score}`
+                ),
+                matchInfo.date && React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-400 text-xs mt-0.5' },
+                    matchInfo.date
+                ),
+                matchInfo.resultText && React.createElement(
+                    'div',
+                    { 
+                        className: `text-center text-xs font-bold mt-0.5`,
+                        style: { 
+                            color: result === 'V' ? '#4ADE80' : result === 'P' ? '#F87171' : '#FBBF24' 
+                        }
+                    },
+                    matchInfo.resultText
+                )
+            ),
+            // Šípka
+            React.createElement(
+                'div',
+                { 
+                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45'
+                }
+            )
+        )
+    ) : null;
+    
+    return React.createElement(
+        'div',
+        {
+            className: 'relative inline-block',
+            onMouseEnter: () => {
+                if (onHoverStart && teamId) {
+                    onHoverStart(teamId);
+                }
+            },
+            onMouseLeave: () => {
+                if (onHoverEnd) {
+                    onHoverEnd();
+                }
+            }
+        },
+        React.createElement(
+            'span',
+            {
+                className: 'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
+                style: {
+                    backgroundColor: bgColor,
+                    color: textColor,
+                    fontSize: '11px',
+                    fontWeight: '700'
+                }
+            },
+            label
+        ),
+        tooltipContent
+    );
+};
+
+// ============================================================
+// FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
+// (presunuté na začiatok, aby bola dostupná pre všetky komponenty)
+// ============================================================
+
+const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
+    // Získame všetky zápasy tímu v skupine (vrátane prenesených)
+    const teamMatches = [];
+    
+    // Prechádzame všetky zápasy v skupine
+    groupMatches.forEach(match => {
+        // Kontrola, či tím hrá v tomto zápase
+        const isHome = match.homeTeamIdentifier === teamId;
+        const isAway = match.awayTeamIdentifier === teamId;
+        
+        if (isHome || isAway) {
+            // Získame skóre
+            let homeScore = match.homeScore || 0;
+            let awayScore = match.awayScore || 0;
+            
+            // Ak zápas nie je dokončený, skúsime získať skóre z udalostí
+            if (match.status !== 'completed' && match.id) {
+                const events = window.matchTracker?.getEvents?.(match.id) || [];
+                const score = getCurrentScoreFromEvents(events);
+                if (score.home > 0 || score.away > 0) {
+                    homeScore = score.home;
+                    awayScore = score.away;
+                }
+            }
+            
+            // Získame dátum zápasu
+            let matchDate = null;
+            if (match.scheduledTime) {
+                try {
+                    matchDate = match.scheduledTime.toDate();
+                } catch (e) {}
+            }
+            
+            // Zistíme výsledok pre tím
+            let result = 'N'; // N = neodohrané
+            if (match.status === 'completed') {
+                if (isHome) {
+                    if (homeScore > awayScore) result = 'V';
+                    else if (homeScore < awayScore) result = 'P';
+                    else result = 'R';
+                } else {
+                    if (awayScore > homeScore) result = 'V';
+                    else if (awayScore < homeScore) result = 'P';
+                    else result = 'R';
+                }
+            }
+            
+            teamMatches.push({
+                matchId: match.id,
+                date: matchDate,
+                result: result,
+                isTransferred: match.isTransferred || false,
+                scheduledTime: match.scheduledTime,
+                homeTeamName: match.homeTeamName || match.homeTeamIdentifier,
+                awayTeamName: match.awayTeamName || match.awayTeamIdentifier
+            });
+        }
+    });
+    
+    // Zoradenie podľa dátumu (chronologicky - od najstaršieho po najnovší)
+    teamMatches.sort((a, b) => {
+        // Prenesené zápasy dávame na začiatok (odohrali sa skôr)
+        if (a.isTransferred && !b.isTransferred) return -1;
+        if (!a.isTransferred && b.isTransferred) return 1;
+        
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.getTime() - b.date.getTime();
+    });
+    
+    // 🔥 VRÁTIME VŠETKY ZÁPASY (nie len posledných 5)
+    return teamMatches;
+};
+
+// ============================================================
 // FUNKCIA NA ZÍSKANIE SKÓRE Z UDALOSTÍ
 // ============================================================
 
@@ -1870,206 +2070,6 @@ if (groupTables.length === 0) {
         React.createElement('p', { className: 'text-lg' }, 'Žiadne tabuľky skupín')
     );
 }
-
-// ============================================================
-// KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
-// (presunuté na začiatok, aby bol dostupný pre všetky komponenty)
-// ============================================================
-
-const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
-    let bgColor = '#9CA3AF'; // sivá pre N
-    let textColor = '#FFFFFF';
-    let label = 'N';
-    
-    switch (result) {
-        case 'V':
-            bgColor = '#22C55E'; // zelená
-            label = 'V';
-            break;
-        case 'P':
-            bgColor = '#EF4444'; // červená
-            label = 'P';
-            break;
-        case 'R':
-            bgColor = '#FBBF24'; // žltá
-            textColor = '#000000';
-            label = 'R';
-            break;
-        default:
-            bgColor = '#D1D5DB'; // svetlo sivá pre N
-            textColor = '#6B7280';
-            label = 'N';
-            break;
-    }
-    
-    // Tooltip obsah
-    const tooltipContent = matchInfo ? (
-        React.createElement(
-            'div',
-            { 
-                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none',
-                style: { minWidth: '200px', maxWidth: '300px' }
-            },
-            React.createElement(
-                'div',
-                { className: 'flex flex-col gap-1' },
-                React.createElement(
-                    'div',
-                    { className: 'font-semibold text-gray-300' },
-                    matchInfo.homeTeamName || '???'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-between gap-3' },
-                    React.createElement('span', { className: 'text-gray-400' }, 'vs'),
-                    React.createElement(
-                        'span',
-                        { className: 'font-bold text-white' },
-                        matchInfo.awayTeamName || '???'
-                    )
-                ),
-                matchInfo.score && React.createElement(
-                    'div',
-                    { className: 'text-center text-gray-300 mt-1' },
-                    `Skóre: ${matchInfo.score}`
-                ),
-                matchInfo.date && React.createElement(
-                    'div',
-                    { className: 'text-center text-gray-400 text-xs mt-0.5' },
-                    matchInfo.date
-                ),
-                matchInfo.resultText && React.createElement(
-                    'div',
-                    { 
-                        className: `text-center text-xs font-bold mt-0.5`,
-                        style: { 
-                            color: result === 'V' ? '#4ADE80' : result === 'P' ? '#F87171' : '#FBBF24' 
-                        }
-                    },
-                    matchInfo.resultText
-                )
-            ),
-            // Šípka
-            React.createElement(
-                'div',
-                { 
-                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45'
-                }
-            )
-        )
-    ) : null;
-    
-    return React.createElement(
-        'div',
-        {
-            className: 'relative inline-block',
-            onMouseEnter: () => {
-                if (onHoverStart && teamId) {
-                    onHoverStart(teamId);
-                }
-            },
-            onMouseLeave: () => {
-                if (onHoverEnd) {
-                    onHoverEnd();
-                }
-            }
-        },
-        React.createElement(
-            'span',
-            {
-                className: 'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
-                style: {
-                    backgroundColor: bgColor,
-                    color: textColor,
-                    fontSize: '11px',
-                    fontWeight: '700'
-                }
-            },
-            label
-        ),
-        tooltipContent
-    );
-};
-
-// ============================================================
-// FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
-// (presunuté na začiatok, aby bola dostupná pre všetky komponenty)
-// ============================================================
-
-const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
-    // Získame všetky zápasy tímu v skupine (vrátane prenesených)
-    const teamMatches = [];
-    
-    // Prechádzame všetky zápasy v skupine
-    groupMatches.forEach(match => {
-        // Kontrola, či tím hrá v tomto zápase
-        const isHome = match.homeTeamIdentifier === teamId;
-        const isAway = match.awayTeamIdentifier === teamId;
-        
-        if (isHome || isAway) {
-            // Získame skóre
-            let homeScore = match.homeScore || 0;
-            let awayScore = match.awayScore || 0;
-            
-            // Ak zápas nie je dokončený, skúsime získať skóre z udalostí
-            if (match.status !== 'completed' && match.id) {
-                const events = window.matchTracker?.getEvents?.(match.id) || [];
-                const score = getCurrentScoreFromEvents(events);
-                if (score.home > 0 || score.away > 0) {
-                    homeScore = score.home;
-                    awayScore = score.away;
-                }
-            }
-            
-            // Získame dátum zápasu
-            let matchDate = null;
-            if (match.scheduledTime) {
-                try {
-                    matchDate = match.scheduledTime.toDate();
-                } catch (e) {}
-            }
-            
-            // Zistíme výsledok pre tím
-            let result = 'N'; // N = neodohrané
-            if (match.status === 'completed') {
-                if (isHome) {
-                    if (homeScore > awayScore) result = 'V';
-                    else if (homeScore < awayScore) result = 'P';
-                    else result = 'R';
-                } else {
-                    if (awayScore > homeScore) result = 'V';
-                    else if (awayScore < homeScore) result = 'P';
-                    else result = 'R';
-                }
-            }
-            
-            teamMatches.push({
-                matchId: match.id,
-                date: matchDate,
-                result: result,
-                isTransferred: match.isTransferred || false,
-                scheduledTime: match.scheduledTime,
-                homeTeamName: match.homeTeamName || match.homeTeamIdentifier,
-                awayTeamName: match.awayTeamName || match.awayTeamIdentifier
-            });
-        }
-    });
-    
-    // Zoradenie podľa dátumu (chronologicky - od najstaršieho po najnovší)
-    teamMatches.sort((a, b) => {
-        // Prenesené zápasy dávame na začiatok (odohrali sa skôr)
-        if (a.isTransferred && !b.isTransferred) return -1;
-        if (!a.isTransferred && b.isTransferred) return 1;
-        
-        if (!a.date && !b.date) return 0;
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return a.date.getTime() - b.date.getTime();
-    });
-    
-    // 🔥 VRÁTIME VŠETKY ZÁPASY (nie len posledných 5)
-    return teamMatches;
-};
 
 // Render filtrov
 const renderFilters = () => {
