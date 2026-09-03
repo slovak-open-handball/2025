@@ -835,24 +835,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         // Správne volanie getGroupTypeColors s categoryId
         const colors = getGroupTypeColors(group, categoryId, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
-        
-        // Získanie textu kritérií pre zobrazenie
-        const getSortingText = () => {
-            if (!tableSorting || tableSorting.length === 0) {
-                return 'Predvolené (body, +/-, strelené góly, abeceda)';
-            }
-            return tableSorting.map((c, i) => {
-                const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
-                             c.parameter === 'scoreDifference' ? '+/-' :
-                             c.parameter === 'goalsScored' ? 'strelené góly' :
-                             c.parameter === 'goalsConceded' ? 'inkasované góly' :
-                             c.parameter === 'wins' ? 'výhry' :
-                             c.parameter === 'losses' ? 'prehry' :
-                             c.parameter === 'draw' ? 'losovanie' : c.parameter;
-                const dir = c.direction === 'asc' ? 'vzostupne' : 'zostupne';
-                return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
-            }).join(', ');
-        };
                 
         return React.createElement(
             'div',
@@ -984,11 +966,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 'div',
                 { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between gap-2' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
-                React.createElement(
-                    'span',
-                    { className: 'text-gray-400 max-w-md text-right' },
-                    `📋 ${getSortingText()}`
-                )
             )
         );
     };
