@@ -16,7 +16,7 @@ const formatMatchDateTime = (timestamp) => {
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
         return { time: `${hours}:${minutes}`, dateObj: date };
-    } catch (e) {
+    } catch (e) {gb
         return null;
     }
 };
@@ -1873,6 +1873,7 @@ if (groupTables.length === 0) {
 
 // ============================================================
 // KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
+// (presunuté na začiatok, aby bol dostupný pre všetky komponenty)
 // ============================================================
 
 const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
@@ -1992,6 +1993,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
 
 // ============================================================
 // FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
+// (presunuté na začiatok, aby bola dostupná pre všetky komponenty)
 // ============================================================
 
 const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
@@ -2071,7 +2073,6 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
 
 // Render filtrov
 const renderFilters = () => {
-    // ... (rovnaký kód ako v pôvodnom súbore)
     const getGroupsByType = (category) => {
         if (!category) return { basic: [], advanced: [] };
         
