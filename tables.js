@@ -412,8 +412,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                     if (!groups[dateKey]) {
                         groups[dateKey] = {
                             date: date,
-                            matches: [],
-                            isTransferredGroup: false
+                            matches: []
                         };
                     }
                     groups[dateKey].matches.push(match);
@@ -571,48 +570,23 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                         const dayMatches = dayGroup.matches;
                         const dayRows = [];
 
-                        // 🔥 KONTROLA: Či skupina obsahuje aspoň jeden prenesený zápas
-                        const hasTransferred = dayMatches.some(m => m.isTransferred);
-                        const isTransferredGroup = hasTransferred && dayMatches.every(m => m.isTransferred);
-
-                        // Hlavička dňa
-                        if (isTransferredGroup) {
-                            dayRows.push(
+                        // Hlavička dňa - ROVNAKÁ PRE VŠETKY ZÁPASY
+                        dayRows.push(
+                            React.createElement(
+                                'tr',
+                                { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                 React.createElement(
-                                    'tr',
-                                    { key: `day-${dayIndex}`, className: 'bg-purple-50' },
+                                    'td',
+                                    { colSpan: 6, className: 'px-4 py-3 text-left' },
                                     React.createElement(
-                                        'td',
-                                        { colSpan: 6, className: 'px-4 py-3 text-left' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-2' },
-                                            React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-500' }),
-                                            React.createElement('span', { className: 'font-semibold text-purple-700 text-sm' }, 
-                                                `Prenesené zápasy - ${formatDateHeader(dayDate)}`
-                                            )
-                                        )
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
+                                        React.createElement('span', { className: 'font-semibold text-gray-800 text-sm' }, formatDateHeader(dayDate))
                                     )
                                 )
-                            );
-                        } else {
-                            dayRows.push(
-                                React.createElement(
-                                    'tr',
-                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
-                                    React.createElement(
-                                        'td',
-                                        { colSpan: 6, className: 'px-4 py-3 text-left' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-2' },
-                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
-                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-sm' }, formatDateHeader(dayDate))
-                                        )
-                                    )
-                                )
-                            );
-                        }
+                            )
+                        );
 
                         dayMatches.forEach((match) => {
                             const dateTime = match.scheduledTime ? formatMatchDateTime(match.scheduledTime) : null;
