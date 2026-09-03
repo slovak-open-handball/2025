@@ -1191,13 +1191,19 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         
         return result;
     }, [groupMatches, transferredMatches]);
+
+    const highlightTimeoutRef = useRef(null);
     
-    // Funkcie pre zvýraznenie
     const handleHoverStart = (teamName) => {
         console.log('🔍 [GroupTable] handleHoverStart - teamName:', teamName);
-    
+        
+        // Zrušíme predchádzajúci timeout
+        if (highlightTimeoutRef.current) {
+            clearTimeout(highlightTimeoutRef.current);
+            highlightTimeoutRef.current = null;
+        }
+        
         if (teamName) {
-            // 🔥 NÁJDENIE TÍMU PODĽA NÁZVU (nie podľa ID)
             const foundTeam = teams.find(t => t.name === teamName);
             if (foundTeam) {
                 setHighlightedTeamId(foundTeam.id);
@@ -1211,11 +1217,16 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     };
     
     const handleHoverEnd = () => {
-        console.log('🔍 [GroupTable] handleHoverEnd - clearing highlight');
-        // 🔥 PRIDANÉ: ONESKORENIE NA ZRUŠENIE ZVÝRAZNENIA
-        setTimeout(() => {
+        console.log('🔍 [GroupTable] handleHoverEnd - scheduling clear highlight');
+        // Zrušíme predchádzajúci timeout
+        if (highlightTimeoutRef.current) {
+            clearTimeout(highlightTimeoutRef.current);
+        }
+        // Nastavíme nový timeout
+        highlightTimeoutRef.current = setTimeout(() => {
             setHighlightedTeamId(null);
-        }, 300); // 300ms oneskorenie
+            highlightTimeoutRef.current = null;
+        }, 200);
     };
     
     // 🔥 POMOCNÁ FUNKCIA NA NORMALIZÁCIU NÁZVOV
