@@ -1354,7 +1354,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             } else {
                 opponentDisplayName = opponentName;
             }
-        }}        
+        }      
         
         let score = null;
         let resultText = '';
