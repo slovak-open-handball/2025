@@ -701,8 +701,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 const settingsSnap = await getDoc(settingsRef);
                 if (settingsSnap.exists()) {
                     const data = settingsSnap.data();
-                    setPointsForWin(data.pointsForWin || 3);
+                    // 🔥 NASTAVÍME pointsForWin Z DATABÁZY
+                    const newPoints = data.pointsForWin !== undefined ? data.pointsForWin : 3;
+                    setPointsForWin(newPoints);
                     setSortingConditions(data.sortingConditions || []);
+                    
+                    // 🔥 AKTUALIZUJEME AJ GLOBÁLNU PREMENNÚ PRE ĎALŠIE POUŽITIE
+                    window.__pointsForWin = newPoints;
+                    
+                    console.log(`📋 Načítané body za výhru z databázy: ${newPoints}`);
                 }
             } catch (err) {
                 console.error('Chyba pri načítaní nastavení tabuľky:', err);
@@ -710,6 +717,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
         loadSettings();
     }, []);
+    
+    // 🔥 PRIDANÉ: Funkcia na získanie aktuálnych bodov za výhru
+    const getCurrentPointsForWin = useCallback(() => {
+        return pointsForWin;
+    }, [pointsForWin]);
     
     // Načítanie nastavení kategórií (carryOverPoints)
     useEffect(() => {
@@ -799,31 +811,39 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         return () => unsubscribe();
     }, []);
     
-    // Realtime sledovanie zmien nastavení tabuľky (body, kritériá)
+    // 🔥 OPRAVENÉ: Realtime sledovanie zmien nastavení tabuľky (body, kritériá)
     useEffect(() => {
         if (!window.db) return;
         const settingsRef = doc(window.db, 'settings', 'table');
         const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                const newPoints = data.pointsForWin || 3;
+                const newPoints = data.pointsForWin !== undefined ? data.pointsForWin : 3;
                 const newConditions = data.sortingConditions || [];
                 
                 let changed = false;
                 if (pointsForWin !== newPoints) {
+                    console.log(`🔄 Zmena bodov za výhru: ${pointsForWin} → ${newPoints}`);
                     setPointsForWin(newPoints);
+                    window.__pointsForWin = newPoints;
                     changed = true;
                 }
                 if (JSON.stringify(sortingConditions) !== JSON.stringify(newConditions)) {
                     setSortingConditions(newConditions);
                     changed = true;
                 }
+                
+                // Ak sa zmenili body alebo kritériá, prepočítame tabuľky
+                if (changed) {
+                    // Spustíme prepočet - useEffect závisí na pointsForWin a sortingConditions
+                    // takže sa prepočíta automaticky
+                }
             }
         }, (err) => {
             console.error('Chyba pri sledovaní nastavení tabuľky:', err);
         });
         return () => unsubscribe();
-    }, []);
+    }, [pointsForWin, sortingConditions]);
     
     // ============================================================
     // POMOCNÁ FUNKCIA: Získanie skóre z udalostí
@@ -866,7 +886,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     // ============================================================
     // FUNKCIA: Výpočet tabuľky pre základnú skupinu
     // ============================================================
-    const calculateGroupTable = (category, group, groupMatches) => {
+    const calculateGroupTable = useCallback((category, group, groupMatches) => {
         // Získanie všetkých tímov v skupine
         const teamsMap = new Map();
         groupMatches.forEach(match => {
@@ -902,6 +922,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         });
         
+        // 🔥 Použijeme aktuálne body za výhru
+        const currentPointsForWin = pointsForWin;
+        
         // Spracovanie odohraných zápasov
         const completedMatches = groupMatches.filter(m => m.status === 'completed');
         completedMatches.forEach(match => {
@@ -930,11 +953,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
             if (homeScore > awayScore) {
                 homeTeam.wins++;
-                homeTeam.points += pointsForWin;
+                homeTeam.points += currentPointsForWin;
                 awayTeam.losses++;
             } else if (awayScore > homeScore) {
                 awayTeam.wins++;
-                awayTeam.points += pointsForWin;
+                awayTeam.points += currentPointsForWin;
                 homeTeam.losses++;
             } else {
                 homeTeam.draws++;
@@ -997,14 +1020,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             matchesForComparison: matchesForComparison,
             sortingConditions: sortingConditions,
             completionPercentage: totalMatches > 0 ? (completedCount / totalMatches * 100) : 0,
-            isFullyCompleted: totalMatches === completedCount
+            isFullyCompleted: totalMatches === completedCount,
+            pointsForWin: currentPointsForWin
         };
-    };
+    }, [teamNames, pointsForWin, sortingConditions]);
     
     // ============================================================
     // FUNKCIA: Výpočet tabuľky pre nadstavbovú skupinu s prenášaním výsledkov
     // ============================================================
-    const calculateAdvancedGroupTable = (category, group, groupMatches, allBaseGroupTables) => {
+    const calculateAdvancedGroupTable = useCallback((category, group, groupMatches, allBaseGroupTables) => {
         // Získanie typu skupiny
         const groupType = 'nadstavbová';
         
@@ -1057,6 +1081,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         });
         
+        // 🔥 Použijeme aktuálne body za výhru
+        const currentPointsForWin = pointsForWin;
+        
         // Vytvorenie zoznamu všetkých zápasov pre porovnanie (vrátane prenesených)
         const allMatchesForComparison = [];
         const transferredMatches = [];
@@ -1105,11 +1132,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     
                     if (homeScore > awayScore) {
                         homeTeam.wins++;
-                        homeTeam.points += pointsForWin;
+                        homeTeam.points += currentPointsForWin;
                         awayTeam.losses++;
                     } else if (awayScore > homeScore) {
                         awayTeam.wins++;
-                        awayTeam.points += pointsForWin;
+                        awayTeam.points += currentPointsForWin;
                         homeTeam.losses++;
                     } else {
                         homeTeam.draws++;
@@ -1167,7 +1194,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             
                             if (homeTeam && awayTeam) {
                                 // 🔥 DÔLEŽITÉ: Aplikujeme prenesený výsledok na štatistiky
-                                // Rovnako ako v druhom kóde (matchTracker)
+                                // 🔥 POUŽÍVAME currentPointsForWin NAMIESTO pointsForWin
                                 homeTeam.played++;
                                 awayTeam.played++;
                                 homeTeam.goalsFor += homeScore;
@@ -1177,11 +1204,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 
                                 if (homeScore > awayScore) {
                                     homeTeam.wins++;
-                                    homeTeam.points += pointsForWin;
+                                    homeTeam.points += currentPointsForWin;
                                     awayTeam.losses++;
                                 } else if (awayScore > homeScore) {
                                     awayTeam.wins++;
-                                    awayTeam.points += pointsForWin;
+                                    awayTeam.points += currentPointsForWin;
                                     homeTeam.losses++;
                                 } else {
                                     homeTeam.draws++;
@@ -1253,9 +1280,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             completionPercentage: totalMatches > 0 ? (completedCount / totalMatches * 100) : 0,
             isFullyCompleted: totalMatches === completedCount,
             carryOverEnabled: carryOverEnabled,
-            baseGroups: allBaseGroupTables ? allBaseGroupTables.map(t => t.group) : []
+            baseGroups: allBaseGroupTables ? allBaseGroupTables.map(t => t.group) : [],
+            pointsForWin: currentPointsForWin
         };
-    };
+    }, [teamNames, categorySettings, pointsForWin, sortingConditions]);
     
     // ============================================================
     // HLAVNÁ FUNKCIA: Výpočet všetkých tabuliek skupín
@@ -1376,7 +1404,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
         
         calculateAllTables();
-    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin, sortingConditions, categorySettings]);
+    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin, sortingConditions, categorySettings, calculateGroupTable, calculateAdvancedGroupTable]);
     
     // Získanie unikátnych kategórií
     const categories = useMemo(() => {
