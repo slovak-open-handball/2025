@@ -381,12 +381,15 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
 
     return React.createElement(
         'div',
-        { className: 'mt-6 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+        { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' }, // Pridaný mt-8 pre väčší odstup
         React.createElement(
             'div',
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 
                 `Zápasy skupiny: ${groupName}`
+            ),
+            React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 
+                `Celkom ${matches.length} zápasov`
             )
         ),
         React.createElement(
@@ -1191,6 +1194,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         // Správne volanie getGroupTypeColors s categoryId
         const colors = getGroupTypeColors(group, categoryId, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
+        
+        // Zistíme, či je zobrazená iba jedna tabuľka
+        const isOnlyTable = filteredTables.length === 1;
                 
         return React.createElement(
             'div',
@@ -1317,15 +1323,22 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 )
             ),
             
-            // Päta - informácie o zápasoch a kritériách
+            // Päta - informácie o zápasoch
             React.createElement(
                 'div',
                 { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between gap-2' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
+                React.createElement('span', {}, `Odohraných: ${completedCount}`)
+            ),
+            
+            // ODDELENIE - hrubá čiara medzi tabuľkou a zoznamom zápasov
+            isOnlyTable && React.createElement(
+                'div',
+                { className: 'border-t-4 border-gray-200' }
             ),
             
             // ZOZNAM ZÁPASOV SKUPINY - AK JE ZOBRAZENÁ LEN JEDNA TABUĽKA
-            (filteredTables.length === 1) && React.createElement(
+            isOnlyTable && React.createElement(
                 GroupMatchesList,
                 {
                     matches: groupMatches,
