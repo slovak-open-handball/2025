@@ -1453,7 +1453,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                                 isTransferred && React.createElement(
                                                     'span',
                                                     {
-                                                        className: 'absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full',
+                                                        className: 'absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full',
                                                         style: { backgroundColor: '#3B82F6' }
                                                     }
                                                 )
