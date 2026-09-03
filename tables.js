@@ -1330,31 +1330,44 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         // V getMatchInfoForForm, po získaní opponentId:
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
         let opponentDisplayName = '???';
-
-        // Získanie názvu súpera - ROVNAKÁ LOGIKA AKO PRE teamDisplayName
+        
+        // 🔥 FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA ID ALEBO NÁZVU
+        const getTeamName = (identifier) => {
+            if (!identifier) return '???';
+            
+            // 1. Skúsime priamo v teamNames
+            if (teamNames[identifier]) {
+                return teamNames[identifier];
+            }
+            
+            // 2. Skúsime getDisplayTeamName
+            const displayName = getDisplayTeamName(identifier);
+            if (displayName && displayName !== identifier) {
+                return displayName;
+            }
+            
+            // 3. Skúsime nájsť v teams podľa ID
+            const foundInTeams = teams.find(t => t.id === identifier);
+            if (foundInTeams) {
+                return foundInTeams.name;
+            }
+            
+            // 4. Skúsime nájsť v teams podľa názvu
+            const foundByName = teams.find(t => t.name === identifier);
+            if (foundByName) {
+                return foundByName.name;
+            }
+            
+            // 5. Nakoniec vrátime identifikátor
+            return identifier;
+        };
+        
+        // Získanie názvu súpera
         if (opponentId) {
-            // Najprv skúsime z teamNames (kde sú uložené správne názvy)
-            if (teamNames[opponentId]) {
-                opponentDisplayName = teamNames[opponentId];
-            } else {
-                // Potom skúsime getDisplayTeamName
-                const displayName = getDisplayTeamName(opponentId);
-                if (displayName && displayName !== opponentId) {
-                    opponentDisplayName = displayName;
-                } else {
-                    // Nakoniec použijeme ID alebo opponentName
-                    opponentDisplayName = opponentName || opponentId || '???';
-                }
-            }
+            opponentDisplayName = getTeamName(opponentId);
         } else if (opponentName) {
-            // Skúsime nájsť tím podľa názvu v teamNames
-            const foundTeamId = Object.keys(teamNames).find(id => teamNames[id] === opponentName);
-            if (foundTeamId) {
-                opponentDisplayName = teamNames[foundTeamId];
-            } else {
-                opponentDisplayName = opponentName;
-            }
-        }      
+            opponentDisplayName = getTeamName(opponentName);
+        }    
         
         let score = null;
         let resultText = '';
