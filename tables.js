@@ -169,10 +169,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         React.createElement(
             'div',
             { 
-                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl transition-opacity duration-200',
+                className: 'absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl transition-opacity duration-200',
                 style: { 
-                    minWidth: '160px', 
-                    maxWidth: '260px',
+                    minWidth: '180px', 
+                    maxWidth: '280px',
                     pointerEvents: 'none',
                     opacity: isHovered ? 1 : 0,
                     display: isHovered ? 'block' : 'none',
@@ -197,15 +197,24 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                         matchInfo.awayTeamName || '???'
                     )
                 ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-center gap-3 text-gray-300 text-xs mt-0.5' },
+                    matchInfo.time && React.createElement(
+                        'span',
+                        { className: 'text-gray-400' },
+                        `🕐 ${matchInfo.time}`
+                    ),
+                    matchInfo.date && React.createElement(
+                        'span',
+                        { className: 'text-gray-400' },
+                        matchInfo.date
+                    )
+                ),
                 matchInfo.score && React.createElement(
                     'div',
                     { className: 'text-center text-white text-sm font-bold' },
                     `${matchInfo.score}`
-                ),
-                matchInfo.date && React.createElement(
-                    'div',
-                    { className: 'text-center text-gray-400 text-[10px]' },
-                    matchInfo.date
                 ),
                 React.createElement(
                     'div',
@@ -218,11 +227,11 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     matchInfo.resultText
                 )
             ),
-            // Šípka
+            // Šípka hore (smerujúca nahor k štvorčeku)
             React.createElement(
                 'div',
                 { 
-                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45',
+                    className: 'absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45',
                     style: { pointerEvents: 'none' }
                 }
             )
@@ -1007,12 +1016,16 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             resultText = 'NEODOHRANÉ';
         }
         
-        // Dátum
+        // Dátum a čas
         let dateStr = null;
+        let timeStr = null;
         if (match.scheduledTime) {
             try {
                 const date = match.scheduledTime.toDate();
                 dateStr = `${date.getDate()}. ${(date.getMonth() + 1)}. ${date.getFullYear()}`;
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                timeStr = `${hours}:${minutes}`;
             } catch (e) {}
         }
         
@@ -1021,6 +1034,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             awayTeamName: isHome ? opponentName : teamName,
             score: score,
             date: dateStr,
+            time: timeStr,
             resultText: resultText,
             matchId: match.id,
             isHome: isHome,
