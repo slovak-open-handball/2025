@@ -1,5 +1,3 @@
-// Nahraďte celý obsah súboru týmto kódom:
-
 window.isGlobalAuthReady = false;
 window.globalUserProfileData = null;
 window.auth = null;
@@ -43,7 +41,7 @@ import {
     ReCaptchaEnterpriseProvider
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-const ENCRYPTED_CONFIG = "eyJhcGlLZXkiOiJBSXphU3lBaEZ5T3BwaldEWV96a0pjdVdKMkFMcGI1WjFhbFpZeTQiLCJhdXRoRG9tYWluIjoic29oMjAyNS1zMHkxaGdoLmZpcmViYXNlYXBwLmNvbSIsInByb2plY3RJZCI6InNvaDIwMjUtczB5MWhnaCIsInN0b3JhZ2VCdWNrZXQiOiJzb2gyMDI1LXMweTFoZ2guYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjM2NzMxNjQxNDE2NCIsImFwcElkIjoiMTozNjczMTY0MTQxNjQ6d2ViOmZjZTA3OWUxYzdmNDIyMzI5MjQ5MGIifQ==";
+const ENCRYPTED_CONFIG = "eyJhcGlLZXkiOiJBSXphU3lBaEZ5T3BwaldEWV96a0pjdVdKMkFMcGI1WjFhbFpZeTQiLCJhdXRoRG9tYWluIjoic29oMjAyNS0yczBvMmg1LmZpcmViYXNlYXBwLmNvbSIsInByb2plY3RJZCI6InNvaDIwMjUtMnMwbzJoNSIsInN0b3JhZ2VCdWNrZXQiOiJzb2gyMDI1LTJzMG8yaDUuYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjM2NzMxNjQxNDE2NCIsImFwcElkIjoiMTozNjczMTY0MTQxNjQ6d2ViOmZjZTA3OWUxYzdmNDIyMzI5MjQ5MGIifQ==";
 
 const ENCRYPTED_APP_CHECK_KEY = "NkxjNW1QQXNBQUFBQWpIU0V5dERpbmpFc1VObjhxMUEzRGVhWmM2eA==";
 
@@ -90,9 +88,6 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
-// ============================================================
-// ZOZNAM VEREJNÝCH STRÁNOK
-// ============================================================
 const publicPages = [
     'account.html',
     'admin-register.html',
@@ -102,8 +97,7 @@ const publicPages = [
     'volunteer-register.html',
     'teams-in-groups.html',
     'matches.html', 
-    'map.html',
-    'tables.html'
+    'map.html'
 ];
 
 const guestOnlyPages = [
@@ -310,9 +304,6 @@ const checkCurrentPageVisibility = async () => {
         }
     }
     
-    // tables.html sa spravuje rovnako ako teams-in-groups.html - BEZ VÝNIMKY
-    // Viditeľnosť je plne regulovateľná cez databázu
-    
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return;
@@ -345,8 +336,6 @@ const checkCurrentPageVisibility = async () => {
             if (fileName === 'teams-in-groups.html') {
                 return;
             }
-            
-            // tables.html NEMÁ žiadnu výnimku - ak nie je viditeľná, presmeruje sa
         }
         
         const indexUrl = `${appBasePath}/index.html`;
@@ -420,8 +409,6 @@ const isPageAccessibleForGuest = async () => {
             return true;
         }
     }
-    
-    // tables.html sa spravuje rovnako ako teams-in-groups.html - BEZ VÝNIMKY
     
     if (!publicPages.includes(fileName)) {
         return false;
@@ -629,8 +616,6 @@ const handleAuthState = async () => {
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                                     return;
                                 }
-                                
-                                // tables.html sa spravuje rovnako ako teams-in-groups.html - BEZ VÝNIMKY
                                 
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
