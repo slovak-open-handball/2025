@@ -1329,13 +1329,23 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         
         // V getMatchInfoForForm, po získaní opponentId:
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
-        let opponentDisplayName = opponentId ? getDisplayTeamName(opponentId) : opponentName || '???';
+        let opponentDisplayName = '???';
 
-        // Získanie názvu súpera cez teamNames alebo getDisplayTeamName
-        if (opponentId && teamNames[opponentId]) {
-            opponentDisplayName = teamNames[opponentId];
-        } else if (opponentId) {
-            opponentDisplayName = getDisplayTeamName(opponentId) || opponentId || opponentName || '???';
+        // Získanie názvu súpera - ROVNAKÁ LOGIKA AKO PRE teamDisplayName
+        if (opponentId) {
+            // Najprv skúsime z teamNames (kde sú uložené správne názvy)
+            if (teamNames[opponentId]) {
+                opponentDisplayName = teamNames[opponentId];
+            } else {
+                // Potom skúsime getDisplayTeamName
+                const displayName = getDisplayTeamName(opponentId);
+                if (displayName && displayName !== opponentId) {
+                    opponentDisplayName = displayName;
+                } else {
+                    // Nakoniec použijeme ID alebo opponentName
+                    opponentDisplayName = opponentName || opponentId || '???';
+                }
+            }
         } else if (opponentName) {
             // Skúsime nájsť tím podľa názvu v teamNames
             const foundTeamId = Object.keys(teamNames).find(id => teamNames[id] === opponentName);
@@ -1344,7 +1354,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             } else {
                 opponentDisplayName = opponentName;
             }
-        }        
+        }}        
         
         let score = null;
         let resultText = '';
