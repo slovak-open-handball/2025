@@ -129,7 +129,7 @@ const updateURLFilter = (category, group) => {
     }
 };
 
-const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
+const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, teamName }) => {
     let bgColor = '#9CA3AF';
     let textColor = '#FFFFFF';
     let label = 'N';
@@ -377,11 +377,11 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 const position = calculatePosition(rect, estimatedHeight);
                 setTooltipPosition(position);
                 
-                if (onHoverStart && teamId) {
-                    console.log('🖱️ [FormIndicator] Calling onHoverStart with teamId:', teamId);
-                    onHoverStart(teamId);
+                if (onHoverStart && teamName) {
+                    console.log('🖱️ [FormIndicator] Calling onHoverStart with teamName:', teamName);
+                    onHoverStart(teamName);  // Posielame názov, nie ID
                 } else {
-                    console.log('⚠️ [FormIndicator] onHoverStart not called - teamId:', teamId, 'onHoverStart exists:', !!onHoverStart);
+                    console.log('⚠️ [FormIndicator] onHoverStart not called - teamName:', teamName);
                 }
             },
             onMouseLeave: (e) => {
