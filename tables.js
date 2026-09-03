@@ -372,7 +372,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             });
         }
         
-        // Zoradenie: najprv normálne zápasy (podľa dátumu), potom prenesené na koniec
+        // Zoradenie: normálne zápasy podľa dátumu, prenesené na koniec
         result.sort((a, b) => {
             // Prenesené zápasy dávame na koniec
             if (a.isTransferred && !b.isTransferred) return 1;
@@ -668,7 +668,12 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamName || match.homeTeamIdentifier || '???';
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamName || match.awayTeamIdentifier || '???';
                             
-                            const matchHallName = hallNames[match.hallId] || 'Športová hala';
+                            // Pre prenesené zápasy - použijeme názov haly z pôvodného zápasu (ak existuje)
+                            let matchHallName = hallNames[match.hallId] || 'Športová hala';
+                            // Ak nemáme hallId, skúsime použiť fromGroup alebo predvolenú hodnotu
+                            if (!match.hallId && match.fromGroup) {
+                                matchHallName = match.fromGroup;
+                            }
 
                             // Vytvorenie URL pre detail
                             const detailUrl = createMatchDetailUrl(match);
@@ -678,15 +683,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
-                            // Pre prenesené zápasy - iný riadok (purple background)
-                            const rowClass = isTransferred 
-                                ? 'hover:bg-purple-50 transition-colors bg-purple-50' 
-                                : 'hover:bg-gray-50 transition-colors';
-
+                            // Rovnaký riadok pre všetky zápasy
                             dayRows.push(
                                 React.createElement(
                                     'tr',
-                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: rowClass },
+                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: 'hover:bg-gray-50 transition-colors' },
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap' },
@@ -709,7 +710,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-right' },
-                                        React.createElement('span', { className: `font-medium ${isTransferred ? 'text-purple-800' : 'text-gray-800'} text-sm` }, homeTeamDisplay)
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                     ),
                                     React.createElement(
                                         'td',
@@ -717,7 +718,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                         showScore ?
                                             React.createElement(
                                                 'div',
-                                                { className: `flex items-center justify-center gap-1 ${isTransferred ? 'text-purple-800' : ''}` },
+                                                { className: 'flex items-center justify-center gap-1' },
                                                 React.createElement('span', { className: 'font-bold text-gray-800' }, displayHomeScore),
                                                 React.createElement('span', { className: 'text-gray-400' }, ':'),
                                                 React.createElement('span', { className: 'font-bold text-gray-800' }, displayAwayScore)
@@ -727,45 +728,28 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                        React.createElement('span', { className: `font-medium ${isTransferred ? 'text-purple-800' : 'text-gray-800'} text-sm` }, awayTeamDisplay)
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                        isTransferred ? (
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-1' },
-                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-400 text-xs' }),
-                                                React.createElement('span', { className: 'text-purple-600 text-sm' }, match.fromGroup || 'základná skupina')
-                                            )
-                                        ) : (
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-1' },
-                                                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
-                                                React.createElement('span', { className: 'text-gray-600 text-sm max-w-32 truncate' }, matchHallName)
-                                            )
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
+                                            React.createElement('span', { className: 'text-gray-600 text-sm max-w-32 truncate' }, matchHallName)
                                         )
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                        isTransferred ? (
-                                            React.createElement(
-                                                'span',
-                                                { className: 'inline-block text-xs px-2 py-1 rounded-full bg-green-100 text-green-700' },
-                                                'Dokončený'
-                                            )
-                                        ) : (
-                                            React.createElement(
-                                                'a',
-                                                {
-                                                    href: detailUrl,
-                                                    className: buttonClass
-                                                },
-                                                'Detail'
-                                            )
+                                        React.createElement(
+                                            'a',
+                                            {
+                                                href: detailUrl,
+                                                className: buttonClass
+                                            },
+                                            'Detail'
                                         )
                                     )
                                 )
