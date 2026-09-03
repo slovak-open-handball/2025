@@ -1100,8 +1100,33 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     const isAdvanced = groupType === 'nadstavbová';
     const isOnlyTable = filteredTables.length === 1;
     
-    // 🔥 STAV PRE ZVÝRAZNENIE RIADKU (TERAZ JE V SAMOSTATNOM KOMPONENTE)
+    // 🔥 STAV PRE ZVÝRAZNENIE RIADKU
     const [highlightedTeamId, setHighlightedTeamId] = useState(null);
+    
+    // 🔥 PRIDANÉ: ZLÚČENIE ZÁPASOV S PRENESENÝMI ZÁPASMI PRE VÝPOČET FORMY
+    const allGroupMatchesForForm = useMemo(() => {
+        const result = [...groupMatches];
+        
+        // Pridáme prenesené zápasy
+        if (transferredMatches && transferredMatches.length > 0) {
+            transferredMatches.forEach(transferred => {
+                // Skontrolujeme, či už neexistuje rovnaký zápas (podľa ID)
+                const exists = result.some(m => m.id === transferred.id);
+                if (!exists) {
+                    // Pridáme prenesený zápas s indikátorom
+                    result.push({
+                        ...transferred,
+                        isTransferred: true,
+                        homeScore: transferred.homeScore !== undefined ? transferred.homeScore : 0,
+                        awayScore: transferred.awayScore !== undefined ? transferred.awayScore : 0,
+                        status: 'completed'
+                    });
+                }
+            });
+        }
+        
+        return result;
+    }, [groupMatches, transferredMatches]);
     
     // Funkcie pre zvýraznenie
     const handleHoverStart = (teamId) => {
@@ -1136,7 +1161,11 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             awayScore = scoreData.away;
         }
         
-        if (match.status === 'completed' || homeScore > 0 || awayScore > 0) {
+        // 🔥 PRENESENÉ ZÁPASY MAJÚ VŽDY STATUS 'completed'
+        const isTransferred = match.isTransferred || false;
+        const matchStatus = isTransferred ? 'completed' : (match.status || 'scheduled');
+        
+        if (matchStatus === 'completed' || homeScore > 0 || awayScore > 0 || isTransferred) {
             score = `${homeScore}:${awayScore}`;
             
             if (isHome) {
@@ -1164,6 +1193,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                 const minutes = date.getMinutes().toString().padStart(2, '0');
                 dateTimeStr = `${day}. ${month}. ${year} ${hours}:${minutes}`;
             } catch (e) {}
+        } else if (isTransferred) {
+            // Ak nemáme dátum, použijeme text "Prenesený"
+            dateTimeStr = 'Prenesený zápas';
         }
         
         return {
@@ -1175,7 +1207,8 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             matchId: match.id,
             isHome: isHome,
             opponentId: opponentId,
-            result: result
+            result: result,
+            isTransferred: isTransferred
         };
     };
     
@@ -1233,7 +1266,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                 )
             ),
             
-            // Telo tabuľky - UPRAVENÉ ŠÍRKY STĹPCOV
+            // Telo tabuľky
             React.createElement(
                 'div',
                 { className: 'overflow-x-auto' },
@@ -1247,7 +1280,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                         React.createElement(
                             'tr',
                             null,
-                            // Jednotné šírky pre všetky stĺpce
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80' }, 'Tím'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
@@ -1268,12 +1300,12 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                             const position = index + 1;
                             const isHighlighted = highlightedTeamId === team.id;
                             
-                            // 🔥 ZÍSKANIE FORMY TÍMU - VŠETKY ZÁPASY
-                            const teamForm = getTeamForm(team.id, groupMatches, teamNames, matches);
+                            // 🔥 ZÍSKANIE FORMY TÍMU - POUŽIJEME ZLÚČENÉ ZÁPASY
+                            const teamForm = getTeamForm(team.id, allGroupMatchesForForm, teamNames, matches);
                             
                             // 🔥 PRÍPRAVA MATCH INFO PRE KAŽDÝ ŠTVORČEK
                             const formMatchesWithInfo = teamForm.map((match, idx) => {
-                                // Nájdenie pôvodného zápasu v groupMatches
+                                // Nájdenie pôvodného zápasu v groupMatches alebo transferredMatches
                                 let fullMatch = groupMatches.find(m => m.id === match.matchId);
                                 if (!fullMatch && transferredMatches) {
                                     fullMatch = transferredMatches.find(m => m.id === match.matchId);
@@ -1343,7 +1375,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                     { className: 'px-4 py-3 text-center font-bold text-blue-600' },
                                     team.points
                                 ),
-                                // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
+                                // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY VRÁTANE PRENESENÝCH
                                 React.createElement(
                                     'td',
                                     { className: 'px-4 py-3 text-center' },
@@ -1358,16 +1390,34 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                                 padding: '2px 0'
                                             }
                                         },
-                                        formMatchesWithInfo.map((match, idx) => 
-                                            React.createElement(FormIndicator, { 
-                                                key: idx, 
-                                                result: match.result,
-                                                matchInfo: match.matchInfo,
-                                                onHoverStart: handleHoverStart,
-                                                onHoverEnd: handleHoverEnd,
-                                                teamId: match.matchInfo?.opponentId || null
-                                            })
-                                        )
+                                        formMatchesWithInfo.map((match, idx) => {
+                                            // 🔥 PRIDANÉ: Ak je zápas prenesený, pridáme vizuálne rozlíšenie
+                                            const isTransferred = match.isTransferred || match.matchInfo?.isTransferred || false;
+                                            
+                                            return React.createElement(
+                                                'div',
+                                                {
+                                                    key: idx,
+                                                    className: 'relative',
+                                                    style: { display: 'inline-block' }
+                                                },
+                                                React.createElement(FormIndicator, { 
+                                                    result: match.result,
+                                                    matchInfo: match.matchInfo,
+                                                    onHoverStart: handleHoverStart,
+                                                    onHoverEnd: handleHoverEnd,
+                                                    teamId: match.matchInfo?.opponentId || null
+                                                }),
+                                                // 🔥 PRIDANÉ: Malý indikátor pre prenesený zápas
+                                                isTransferred && React.createElement(
+                                                    'span',
+                                                    {
+                                                        className: 'absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full',
+                                                        style: { backgroundColor: '#3B82F6' }
+                                                    }
+                                                )
+                                            );
+                                        })
                                     )
                                 )
                             );
