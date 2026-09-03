@@ -1043,8 +1043,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         }
         
-        // Získanie nastavenia pre prenášanie bodov
+        // 🔥 Získanie nastavenia pre prenášanie bodov - POUŽIJEME categorySettings
         const carryOverEnabled = categorySettings[category]?.carryOverPoints ?? false;
+        
+        // 🔥 LOGOVANIE PRE DEBUG
+        console.log(`📊 [${category} - ${group}] carryOverEnabled: ${carryOverEnabled}`);
+        console.log(`📊 [${category} - ${group}] Počet základných skupín: ${allBaseGroupTables?.length || 0}`);
         
         // Získanie všetkých tímov v nadstavbovej skupine
         const teamsMap = new Map();
@@ -1089,7 +1093,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const transferredMatches = [];
         const processedPairs = new Set();
         
-        // 1. Pridáme zápasy z nadstavbovej skupiny a spočítame ich štatistiky
+        // ============================================================
+        // 🔥 KROK 1: Spracujeme zápasy z NADSTAVBOVEJ skupiny
+        // ============================================================
         groupMatches.forEach(match => {
             const homeTeam = teamsMap.get(match.homeTeamIdentifier);
             const awayTeam = teamsMap.get(match.awayTeamIdentifier);
@@ -1148,9 +1154,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         });
         
-        // 2. Ak je prenášanie zapnuté, prenesieme výsledky zo základných skupín
+        // ============================================================
+        // 🔥 KROK 2: PRENESENIE VÝSLEDKOV ZO ZÁKLADNÝCH SKUPÍN
+        // ============================================================
         if (carryOverEnabled && allBaseGroupTables && allBaseGroupTables.length > 0) {
+            console.log(`🔄 [${category} - ${group}] Prenášam výsledky zo základných skupín...`);
+            
             for (const baseTable of allBaseGroupTables) {
+                console.log(`   📋 Základná skupina: ${baseTable.category} - ${baseTable.group}`);
+                
                 // Získame všetky dokončené zápasy zo základnej skupiny
                 const baseCompletedMatches = baseTable.matches.filter(m => m.status === 'completed');
                 
@@ -1168,7 +1180,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         }
                     }
                     
-                    if (!homeFinalName || !awayFinalName) continue;
+                    if (!homeFinalName || !awayFinalName) {
+                        console.log(`   ⚠️ Nenašli sa názvy tímov pre zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+                        continue;
+                    }
                     
                     // Skontrolujeme, či oba tímy sú v nadstavbovej skupine
                     const homeInAdvanced = teamsMap.has(match.homeTeamIdentifier);
@@ -1193,8 +1208,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             const awayTeam = teamsMap.get(match.awayTeamIdentifier);
                             
                             if (homeTeam && awayTeam) {
+                                console.log(`   ✅ Prenášam zápas: ${homeFinalName} ${homeScore}:${awayScore} ${awayFinalName} (z ${match.groupName})`);
+                                
                                 // 🔥 DÔLEŽITÉ: Aplikujeme prenesený výsledok na štatistiky
-                                // 🔥 POUŽÍVAME currentPointsForWin NAMIESTO pointsForWin
                                 homeTeam.played++;
                                 awayTeam.played++;
                                 homeTeam.goalsFor += homeScore;
@@ -1245,12 +1261,23 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 });
                             }
                         }
+                    } else {
+                        if (!homeInAdvanced) {
+                            console.log(`   ⚠️ Tím "${homeFinalName}" (${match.homeTeamIdentifier}) nie je v nadstavbovej skupine`);
+                        }
+                        if (!awayInAdvanced) {
+                            console.log(`   ⚠️ Tím "${awayFinalName}" (${match.awayTeamIdentifier}) nie je v nadstavbovej skupine`);
+                        }
                     }
                 }
             }
+        } else if (!carryOverEnabled) {
+            console.log(`⏭️ [${category} - ${group}] Prenášanie je VYPNUTÉ (carryOverEnabled = false)`);
         }
         
-        // Výpočet rozdielu skóre
+        // ============================================================
+        // 🔥 KROK 3: Výpočet rozdielu skóre a zoradenie
+        // ============================================================
         const teams = Array.from(teamsMap.values());
         teams.forEach(team => {
             team.goalDifference = team.goalsFor - team.goalsAgainst;
@@ -1264,6 +1291,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         // Počty zápasov
         const totalMatches = groupMatches.length;
         const completedCount = groupMatches.filter(m => m.status === 'completed').length;
+        
+        console.log(`📊 [${category} - ${group}] Prenesených zápasov: ${transferredMatches.length}`);
+        console.log(`📊 [${category} - ${group}] Celkom tímov: ${teams.length}`);
         
         return {
             category,
@@ -1284,30 +1314,30 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             pointsForWin: currentPointsForWin
         };
     }, [teamNames, categorySettings, pointsForWin, sortingConditions]);
-    
-    // ============================================================
-    // HLAVNÁ FUNKCIA: Výpočet všetkých tabuliek skupín
-    // ============================================================
-    useEffect(() => {
-        if (!matches || matches.length === 0) {
-            setLoading(false);
-            return;
-        }
         
-        const calculateAllTables = () => {
-            // 1. Zoskupenie zápasov podľa kategórie a skupiny
-            const groupsMap = new Map();
+        // ============================================================
+        // HLAVNÁ FUNKCIA: Výpočet všetkých tabuliek skupín
+        // ============================================================
+        useEffect(() => {
+            if (!matches || matches.length === 0) {
+                setLoading(false);
+                return;
+            }
             
-            matches.forEach(match => {
-                if (match.isPlacementMatch) return;
-                if (!match.categoryName || !match.groupName) return;
+            const calculateAllTables = () => {
+                // 1. Zoskupenie zápasov podľa kategórie a skupiny
+                const groupsMap = new Map();
                 
-                const key = `${match.categoryName}|${match.groupName}`;
-                if (!groupsMap.has(key)) {
-                    groupsMap.set(key, {
-                        category: match.categoryName,
-                        group: match.groupName,
-                        matches: []
+                matches.forEach(match => {
+                    if (match.isPlacementMatch) return;
+                    if (!match.categoryName || !match.groupName) return;
+                    
+                    const key = `${match.categoryName}|${match.groupName}`;
+                    if (!groupsMap.has(key)) {
+                        groupsMap.set(key, {
+                            category: match.categoryName,
+                            group: match.groupName,
+                            matches: []
                     });
                 }
                 groupsMap.get(key).matches.push(match);
