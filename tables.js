@@ -370,6 +370,89 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [sortedMatches]);
 
+    // --- REALTIME SLEDOVANIE SKÓRE Z UDALOSTÍ ---
+    const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
+    const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
+    const [matchStatuses, setMatchStatuses] = useState({});
+    
+    // Realtime sledovanie zmien zápasov
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const updatedStatuses = {};
+            const updatedScores = {};
+            
+            snapshot.docChanges().forEach(change => {
+                const match = {
+                    id: change.doc.id,
+                    ...change.doc.data()
+                };
+                
+                const newStatus = match.status || 'scheduled';
+                updatedStatuses[match.id] = newStatus;
+                
+                if (match.homeScore !== undefined || match.awayScore !== undefined) {
+                    updatedScores[match.id] = {
+                        home: match.homeScore,
+                        away: match.awayScore
+                    };
+                }
+            });
+            
+            if (Object.keys(updatedStatuses).length > 0) {
+                setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
+            
+            if (Object.keys(updatedScores).length > 0) {
+                setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
+            }
+        }, (error) => {
+            console.error('Chyba pri sledovaní zmien zápasov:', error);
+        });
+        
+        return () => unsubscribe();
+    }, []);
+    
+    // Realtime sledovanie udalostí (gólov)
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const eventsRef = collection(window.db, 'matchEvents');
+        
+        const unsubscribe = onSnapshot(eventsRef, (snapshot) => {
+            const goalsByMatch = {};
+            
+            snapshot.forEach(doc => {
+                const event = doc.data();
+                if (event.eventType === 'goal') {
+                    if (!goalsByMatch[event.matchId]) {
+                        goalsByMatch[event.matchId] = { home: 0, away: 0 };
+                    }
+                    if (event.team === 'home') {
+                        goalsByMatch[event.matchId].home++;
+                    } else if (event.team === 'away') {
+                        goalsByMatch[event.matchId].away++;
+                    }
+                }
+            });
+            
+            setMatchScoresFromEvents(prev => {
+                const newScores = {};
+                Object.keys(goalsByMatch).forEach(matchId => {
+                    newScores[matchId] = goalsByMatch[matchId];
+                });
+                return newScores;
+            });
+        }, (error) => {
+            console.error('Chyba pri sledovaní udalostí:', error);
+        });
+        
+        return () => unsubscribe();
+    }, []);
+
     // Funkcia na vytvorenie URL pre detail zápasu
     const createMatchDetailUrl = (match) => {
         if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
@@ -380,7 +463,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
 
     // Funkcia na zistenie, či má byť tlačidlo žlté
     const isMatchActive = (match) => {
-        const status = match.status || 'scheduled';
+        const status = matchStatuses[match.id] || match.status || 'scheduled';
         return status === 'in-progress' || status === 'paused';
     };
 
@@ -452,24 +535,43 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
 
                         dayMatches.forEach((match) => {
                             const dateTime = formatMatchDateTime(match.scheduledTime);
-                            const matchStatus = match.status || 'scheduled';
+                            const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
                             const isActive = isMatchActive(match);
                             
-                            // Získanie skóre
-                            let homeScore = match.homeScore;
-                            let awayScore = match.awayScore;
+                            // --- ZÍSKANIE SKÓRE Z REALTIME DÁT ---
+                            const eventsScore = matchScoresFromEvents[match.id];
+                            const dbScore = matchScoresFromDb[match.id];
+                            const isMatchInProgress = matchStatus === 'in-progress' || matchStatus === 'paused';
+                            const isMatchCompleted = matchStatus === 'completed';
+                            const hasDbScore = dbScore && (dbScore.home !== undefined && dbScore.home !== null && dbScore.away !== undefined && dbScore.away !== null);
                             
-                            // Ak je zápas v priebehu a nemá skóre, skúsime z udalostí
-                            if ((matchStatus === 'in-progress' || matchStatus === 'paused') && 
-                                (homeScore === undefined || homeScore === null)) {
-                                const events = window.matchTracker?.getEvents?.(match.id) || [];
-                                const score = getCurrentScoreFromEvents(events);
-                                homeScore = score.home;
-                                awayScore = score.away;
+                            let displayHomeScore = null;
+                            let displayAwayScore = null;
+                            let showScore = false;
+                            
+                            // Ak je zápas ukončený, použijeme skóre z databázy
+                            if (isMatchCompleted && hasDbScore) {
+                                displayHomeScore = dbScore.home;
+                                displayAwayScore = dbScore.away;
+                                showScore = true;
                             }
-
-                            const hasScore = homeScore !== undefined && homeScore !== null && 
-                                           awayScore !== undefined && awayScore !== null;
+                            // Ak zápas prebieha, použijeme skóre z udalostí
+                            else if (isMatchInProgress) {
+                                if (eventsScore && (eventsScore.home > 0 || eventsScore.away > 0)) {
+                                    displayHomeScore = eventsScore.home;
+                                    displayAwayScore = eventsScore.away;
+                                } else {
+                                    displayHomeScore = 0;
+                                    displayAwayScore = 0;
+                                }
+                                showScore = true;
+                            }
+                            // Inak použijeme uložené skóre z databázy
+                            else if (hasDbScore) {
+                                displayHomeScore = dbScore.home;
+                                displayAwayScore = dbScore.away;
+                                showScore = true;
+                            }
 
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
@@ -562,13 +664,13 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                        hasScore ?
+                                        showScore ?
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center justify-center gap-1' },
-                                                React.createElement('span', { className: 'font-bold text-gray-800' }, homeScore),
+                                                React.createElement('span', { className: 'font-bold text-gray-800' }, displayHomeScore),
                                                 React.createElement('span', { className: 'text-gray-400' }, ':'),
-                                                React.createElement('span', { className: 'font-bold text-gray-800' }, awayScore)
+                                                React.createElement('span', { className: 'font-bold text-gray-800' }, displayAwayScore)
                                             ) :
                                             React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
                                     ),
@@ -603,11 +705,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                             'a',
                                             {
                                                 href: detailUrl,
-                                                className: buttonClass,
-                                                onClick: (e) => {
-                                                    // Povolíme normálnu navigáciu na /matches.html
-                                                    // Necháme to fungovať ako bežný odkaz
-                                                }
+                                                className: buttonClass
                                             },
                                             'Detail'
                                         )
