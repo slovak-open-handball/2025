@@ -400,6 +400,18 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         return Array.from(groups).sort();
     }, [groupTables, selectedCategory]);
     
+    // Funkcia na kliknutie na hlavičku tabuľky
+    const handleTableHeaderClick = (category, group) => {
+        // Ak je už táto tabuľka vybraná, zrušíme filter
+        if (selectedCategory === category && selectedGroup === group) {
+            setSelectedCategory(null);
+            setSelectedGroup(null);
+        } else {
+            setSelectedCategory(category);
+            setSelectedGroup(group);
+        }
+    };
+    
     if (loading) {
         return React.createElement(
             'div',
@@ -613,22 +625,29 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const colors = getGroupTypeColors(group, category, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
         
+        // Zistíme, či je táto tabuľka vybraná (či už je filter aktívny)
+        const isTableSelected = selectedCategory === category && selectedGroup === group;
+        
         return React.createElement(
             'div',
             { 
                 key: `${category}|${group}`,
-                className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-8'
+                className: `bg-white rounded-xl shadow-lg border overflow-hidden mb-8 transition-all ${
+                    isTableSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                }`
             },
             
-            // Hlavička tabuľky
+            // Hlavička tabuľky - klikateľná
             React.createElement(
                 'div',
                 { 
-                    className: 'px-6 py-4 border-b',
+                    className: 'px-6 py-4 border-b cursor-pointer hover:opacity-80 transition-opacity',
                     style: { 
                         backgroundColor: colors.backgroundColor || '#DCFCE7',
                         color: colors.textColor || '#166534'
-                    }
+                    },
+                    onClick: () => handleTableHeaderClick(category, group),
+                    title: 'Kliknutím zobrazíte iba túto tabuľku'
                 },
                 React.createElement(
                     'div',
@@ -644,7 +663,25 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
                             },
                             groupTypeLabel
+                        ),
+                        // Indikátor, že hlavička je klikateľná
+                        React.createElement(
+                            'span',
+                            { 
+                                className: 'text-xs px-2 py-0.5 rounded-full font-medium',
+                                style: { backgroundColor: 'rgba(255,255,255,0.4)', color: colors.textColor }
+                            },
+                            '🔍 klikni'
                         )
+                    ),
+                    // Zobrazenie informácie o filtri
+                    isTableSelected && React.createElement(
+                        'span',
+                        { 
+                            className: 'text-xs px-2 py-1 rounded-full font-medium bg-white/50',
+                            style: { color: colors.textColor }
+                        },
+                        '✅ Zobrazená iba táto tabuľka'
                     )
                 )
             ),
@@ -756,6 +793,20 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             'div',
             { className: 'mb-6 text-center' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
+            // Zobrazenie aktívneho filtra
+            selectedCategory && selectedGroup && React.createElement(
+                'p',
+                { className: 'text-sm text-gray-500 mt-1' },
+                `Zobrazená: ${selectedCategory} - ${selectedGroup} `,
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => { setSelectedCategory(null); setSelectedGroup(null); },
+                        className: 'text-blue-600 hover:text-blue-800 underline ml-1 cursor-pointer'
+                    },
+                    '(zrušiť filter)'
+                )
+            )
         ),
         
         // Filtre
