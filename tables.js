@@ -729,6 +729,315 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
 };
 
 // ============================================================
+// KOMPONENT PRE JEDNOTLIVÚ TABUĽKU SKUPINY (samostatný komponent)
+// ============================================================
+
+const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, teamNames, matches, groupsDataState, handleTableHeaderClick, getTeamForm, hallNames }) => {
+    const { category, categoryId, group, groupType, teams, totalMatches, completedCount, carryOverEnabled } = table;
+    
+    const colors = getGroupTypeColors(group, categoryId, groupsDataState);
+    const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
+    const isAdvanced = groupType === 'nadstavbová';
+    const isOnlyTable = filteredTables.length === 1;
+    
+    // 🔥 STAV PRE ZVÝRAZNENIE RIADKU (TERAZ JE V SAMOSTATNOM KOMPONENTE)
+    const [highlightedTeamId, setHighlightedTeamId] = useState(null);
+    
+    // Funkcie pre zvýraznenie
+    const handleHoverStart = (teamId) => {
+        setHighlightedTeamId(teamId);
+    };
+    
+    const handleHoverEnd = () => {
+        setHighlightedTeamId(null);
+    };
+    
+    // 🔥 FUNKCIA NA ZÍSKANIE INFO O ZÁPASE PRE FORM INDICATOR
+    const getMatchInfoForForm = (teamId, match) => {
+        if (!match) return null;
+        
+        const isHome = match.homeTeamIdentifier === teamId;
+        const opponentId = isHome ? match.awayTeamIdentifier : match.homeTeamIdentifier;
+        const opponentName = teamNames[opponentId] || getDisplayTeamName(opponentId) || opponentId || '???';
+        const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
+        
+        let score = null;
+        let resultText = '';
+        let result = 'N';
+        
+        // Získanie skóre
+        let homeScore = match.homeScore || 0;
+        let awayScore = match.awayScore || 0;
+        
+        if (homeScore === 0 && awayScore === 0 && match.id) {
+            const events = window.matchTracker?.getEvents?.(match.id) || [];
+            const scoreData = getCurrentScoreFromEvents(events);
+            homeScore = scoreData.home;
+            awayScore = scoreData.away;
+        }
+        
+        if (match.status === 'completed' || homeScore > 0 || awayScore > 0) {
+            score = `${homeScore}:${awayScore}`;
+            
+            if (isHome) {
+                if (homeScore > awayScore) { result = 'V'; resultText = 'VÝHRA'; }
+                else if (homeScore < awayScore) { result = 'P'; resultText = 'PREHRA'; }
+                else { result = 'R'; resultText = 'REMIZA'; }
+            } else {
+                if (awayScore > homeScore) { result = 'V'; resultText = 'VÝHRA'; }
+                else if (awayScore < homeScore) { result = 'P'; resultText = 'PREHRA'; }
+                else { result = 'R'; resultText = 'REMIZA'; }
+            }
+        } else {
+            resultText = 'NEODOHRANÉ';
+        }
+        
+        // Dátum
+        let dateStr = null;
+        if (match.scheduledTime) {
+            try {
+                const date = match.scheduledTime.toDate();
+                dateStr = `${date.getDate()}. ${(date.getMonth() + 1)}. ${date.getFullYear()}`;
+            } catch (e) {}
+        }
+        
+        return {
+            homeTeamName: isHome ? teamName : opponentName,
+            awayTeamName: isHome ? opponentName : teamName,
+            score: score,
+            date: dateStr,
+            resultText: resultText,
+            matchId: match.id,
+            isHome: isHome,
+            opponentId: opponentId,
+            result: result
+        };
+    };
+    
+    return React.createElement(
+        'div', 
+        { 
+            key: `${category}|${group}`,
+            className: 'mb-8 transition-all'
+        },
+        
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+            
+            React.createElement(
+                'div',
+                { 
+                    className: 'px-6 py-4 border-b cursor-pointer hover:opacity-80 transition-opacity',
+                    style: { 
+                        backgroundColor: colors.backgroundColor || '#DCFCE7',
+                        color: colors.textColor || '#166534'
+                    },
+                    onClick: () => handleTableHeaderClick(category, group),
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap items-center justify-between gap-3' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3' },
+                        React.createElement('h3', { className: 'text-lg font-bold' }, `${category} - ${group}`),
+                        React.createElement(
+                            'span',
+                            { 
+                                className: 'text-xs px-2 py-0.5 rounded-full font-medium',
+                                style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
+                            },
+                            groupTypeLabel
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3 text-xs' },                            
+                        isAdvanced && carryOverEnabled && React.createElement(
+                            'span',
+                            { className: 'text-black-600 font-medium' },
+                            'Vzájomné zápasy zo základných skupín sa započítavajú.'
+                        ),
+                        React.createElement(
+                            'span',
+                            { className: 'text-gray-600' },
+                            `${completedCount}/${totalMatches} zápasov`
+                        )
+                    )
+                )
+            ),
+            
+            // Telo tabuľky - UPRAVENÉ ŠÍRKY STĹPCOV
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full divide-y divide-gray-200' },
+                    
+                    React.createElement(
+                        'thead',
+                        { className: 'bg-gray-50' },
+                        React.createElement(
+                            'tr',
+                            null,
+                            // Jednotné šírky pre všetky stĺpce
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Tím'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'V'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'R'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'P'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body'),
+                            // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
+                            React.createElement('th', { 
+                                className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider',
+                                style: { minWidth: '100px' }
+                            }, 
+                                'Forma'
+                            )
+                        )
+                    ),
+                    
+                    React.createElement(
+                        'tbody',
+                        { className: 'divide-y divide-gray-100' },
+                        teams.map((team, index) => {
+                            const position = index + 1;
+                            const isHighlighted = highlightedTeamId === team.id;
+                            
+                            // 🔥 ZÍSKANIE FORMY TÍMU - VŠETKY ZÁPASY
+                            const teamForm = getTeamForm(team.id, groupMatches, teamNames, matches);
+                            
+                            // 🔥 PRÍPRAVA MATCH INFO PRE KAŽDÝ ŠTVORČEK
+                            const formMatchesWithInfo = teamForm.map((match, idx) => {
+                                // Nájdenie pôvodného zápasu v groupMatches
+                                let fullMatch = groupMatches.find(m => m.id === match.matchId);
+                                if (!fullMatch && transferredMatches) {
+                                    fullMatch = transferredMatches.find(m => m.id === match.matchId);
+                                }
+                                if (!fullMatch) {
+                                    fullMatch = match;
+                                }
+                                const matchInfo = getMatchInfoForForm(team.id, fullMatch || match);
+                                return {
+                                    ...match,
+                                    matchInfo: matchInfo
+                                };
+                            });
+                            
+                            // Získanie farby pozadia pre riadok pri zvýraznení
+                            const rowBgColor = isHighlighted ? 'bg-yellow-50' : '';
+                            
+                            return React.createElement(
+                                'tr',
+                                { 
+                                    key: team.id, 
+                                    className: `hover:bg-gray-100 transition-colors duration-200 ${rowBgColor}`,
+                                    style: isHighlighted ? { backgroundColor: '#FEFCE8' } : {}
+                                },
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center font-bold text-gray-700' },
+                                    position
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 font-medium text-gray-800 truncate max-w-xs' },
+                                    team.name || '???'
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center text-gray-600' },
+                                    team.played
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center text-green-600 font-bold' },
+                                    team.wins
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center text-yellow-600' },
+                                    team.draws
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center text-red-600' },
+                                    team.losses
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center font-mono' },
+                                    `${team.goalsFor}:${team.goalsAgainst}`
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center font-mono font-bold' },
+                                    team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center font-bold text-blue-600' },
+                                    team.points
+                                ),
+                                // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-3 text-center' },
+                                    React.createElement(
+                                        'div',
+                                        { 
+                                            className: 'flex items-center justify-start gap-0.5 overflow-x-auto',
+                                            style: { 
+                                                maxWidth: '250px',
+                                                flexWrap: 'nowrap',
+                                                whiteSpace: 'nowrap',
+                                                padding: '2px 0'
+                                            }
+                                        },
+                                        formMatchesWithInfo.map((match, idx) => 
+                                            React.createElement(FormIndicator, { 
+                                                key: idx, 
+                                                result: match.result,
+                                                matchInfo: match.matchInfo,
+                                                onHoverStart: handleHoverStart,
+                                                onHoverEnd: handleHoverEnd,
+                                                teamId: match.matchInfo?.opponentId || null
+                                            })
+                                        )
+                                    )
+                                )
+                            );
+                        })
+                    )
+                )
+            )
+        ),
+        
+        // Zoznam zápasov - ak je zobrazená len jedna tabuľka
+        isOnlyTable && React.createElement(
+            'div',
+            { className: 'mt-6' },
+            React.createElement(
+                GroupMatchesList,
+                {
+                    matches: groupMatches,
+                    groupName: group,
+                    categoryName: category,
+                    teamNames: teamNames,
+                    hallNames: hallNames,
+                    transferredMatches: transferredMatches || []
+                }
+            )
+        )
+    );
+};
+
+// ============================================================
 // KOMPONENT PRE ZOBRAZENIE TABULIEK SKUPÍN
 // ============================================================
 
@@ -1378,902 +1687,604 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
     }, [teamNames, categorySettings, pointsForWin, sortingConditions]);
         
-        // ============================================================
-        // HLAVNÁ FUNKCIA: Výpočet všetkých tabuliek skupín
-        // ============================================================
-        useEffect(() => {
-            if (!matches || matches.length === 0) {
-                setLoading(false);
-                return;
-            }
-            
-            const calculateAllTables = () => {
-                // 1. Zoskupenie zápasov podľa kategórie a skupiny
-                const groupsMap = new Map();
-                
-                matches.forEach(match => {
-                    if (match.isPlacementMatch) return;
-                    if (!match.categoryName || !match.groupName) return;
-                    
-                    const key = `${match.categoryName}|${match.groupName}`;
-                    if (!groupsMap.has(key)) {
-                        groupsMap.set(key, {
-                            category: match.categoryName,
-                            group: match.groupName,
-                            matches: []
-                    });
-                }
-                groupsMap.get(key).matches.push(match);
-            });
-            
-            // 2. Najprv vypočítame všetky ZÁKLADNÉ skupiny
-            const baseGroupTables = [];
-            const advancedGroupData = [];
-            
-            for (const [key, groupData] of groupsMap) {
-                const { category, group, matches: groupMatches } = groupData;
-                
-                // Zistíme typ skupiny
-                let isAdvanced = false;
-                let categoryId = null;
-                
-                // Získame ID kategórie
-                if (window.categoriesData) {
-                    for (const [catId, catName] of Object.entries(window.categoriesData)) {
-                        if (catName === category) {
-                            categoryId = catId;
-                            break;
-                        }
-                    }
-                }
-                
-                // Skontrolujeme typ skupiny v groupsDataState
-                if (categoryId && groupsDataState[categoryId]) {
-                    const found = groupsDataState[categoryId].find(g => g.name === group);
-                    if (found && found.type === 'nadstavbová skupina') {
-                        isAdvanced = true;
-                    }
-                }
-                
-                // Fallback podľa názvu
-                if (!isAdvanced && group.toLowerCase().includes('nadstavbová')) {
-                    isAdvanced = true;
-                }
-                
-                if (isAdvanced) {
-                    advancedGroupData.push({
-                        category,
-                        categoryId,
-                        group,
-                        matches: groupMatches,
-                        key
-                    });
-                } else {
-                    // Základná skupina - vypočítame hneď
-                    const table = calculateGroupTable(category, group, groupMatches);
-                    if (table) {
-                        baseGroupTables.push(table);
-                    }
-                }
-            }
-            
-            // 3. Teraz vypočítame NADSTAVBOVÉ skupiny s prenášaním výsledkov
-            const allTables = [...baseGroupTables];
-            
-            // Vytvoríme mapu základných skupín podľa kategórie
-            const baseGroupsByCategory = {};
-            for (const baseTable of baseGroupTables) {
-                if (!baseGroupsByCategory[baseTable.category]) {
-                    baseGroupsByCategory[baseTable.category] = [];
-                }
-                baseGroupsByCategory[baseTable.category].push(baseTable);
-            }
-            
-            for (const advData of advancedGroupData) {
-                const { category, group, matches: groupMatches } = advData;
-                
-                // Získame základné skupiny pre túto kategóriu
-                const baseGroups = baseGroupsByCategory[category] || [];
-                
-                // Vypočítame nadstavbovú tabuľku s prenášaním
-                const table = calculateAdvancedGroupTable(category, group, groupMatches, baseGroups);
-                if (table) {
-                    allTables.push(table);
-                }
-            }
-            
-            // 4. Zoradenie tabuliek
-            allTables.sort((a, b) => {
-                if (a.category !== b.category) return a.category.localeCompare(b.category);
-                // Nadstavbové skupiny na konci
-                const aIsAdvanced = a.groupType === 'nadstavbová';
-                const bIsAdvanced = b.groupType === 'nadstavbová';
-                if (aIsAdvanced !== bIsAdvanced) return aIsAdvanced ? 1 : -1;
-                return a.group.localeCompare(b.group);
-            });
-            
-            setGroupTables(allTables);
+    // ============================================================
+    // HLAVNÁ FUNKCIA: Výpočet všetkých tabuliek skupín
+    // ============================================================
+    useEffect(() => {
+        if (!matches || matches.length === 0) {
             setLoading(false);
-        };
-        
-        calculateAllTables();
-    }, [matches, categoriesData, groupsDataState, teamNames, pointsForWin, sortingConditions, categorySettings, calculateGroupTable, calculateAdvancedGroupTable]);
-    
-    // Získanie unikátnych kategórií
-    const categories = useMemo(() => {
-        const cats = new Set();
-        groupTables.forEach(table => cats.add(table.category));
-        return Array.from(cats).sort();
-    }, [groupTables]);
-    
-    // Filtrovanie tabuliek
-    const filteredTables = useMemo(() => {
-        let filtered = groupTables;
-        if (selectedCategory) {
-            filtered = filtered.filter(t => t.category === selectedCategory);
+            return;
         }
-        if (selectedGroup) {
-            filtered = filtered.filter(t => t.group === selectedGroup);
-        }
-        return filtered;
-    }, [groupTables, selectedCategory, selectedGroup]);
-    
-    // Získanie unikátnych skupín pre vybranú kategóriu
-    const groupsForCategory = useMemo(() => {
-        if (!selectedCategory) return [];
-        const groups = new Set();
-        groupTables
-            .filter(t => t.category === selectedCategory)
-            .forEach(t => groups.add(t.group));
-        return Array.from(groups).sort();
-    }, [groupTables, selectedCategory]);
-    
-    // Funkcia na kliknutie na hlavičku tabuľky
-    const handleTableHeaderClick = (category, group) => {
-        if (selectedCategory === category && selectedGroup === group) {
-            setSelectedCategory(null);
-            setSelectedGroup(null);
-        } else {
-            setSelectedCategory(category);
-            setSelectedGroup(group);
-        }
-    };
-    
-    // Funkcia na zrušenie filtrov
-    const clearFilters = () => {
-        setSelectedCategory(null);
-        setSelectedGroup(null);
-    };
-    
-    if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center py-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
-        );
-    }
-    
-    if (groupTables.length === 0) {
-        return React.createElement(
-            'div',
-            { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
-            React.createElement('i', { className: 'fa-solid fa-table text-5xl mb-3 opacity-50' }),
-            React.createElement('p', { className: 'text-lg' }, 'Žiadne tabuľky skupín')
-        );
-    }
-    
-    // Render filtrov (rovnaký ako predtým)
-    const renderFilters = () => {
-        // ... (rovnaký kód ako v pôvodnom súbore)
-        const getGroupsByType = (category) => {
-            if (!category) return { basic: [], advanced: [] };
-            
-            const groups = [];
-            groupTables
-                .filter(t => t.category === category)
-                .forEach(t => groups.push(t.group));
-            
-            groups.sort();
-            
-            const basic = [];
-            const advanced = [];
-            
-            groups.forEach(groupName => {
-                let groupType = 'základná';
-                
-                let categoryId = null;
-                if (window.categoriesData) {
-                    for (const [catId, catName] of Object.entries(window.categoriesData)) {
-                        if (catName === category) {
-                            categoryId = catId;
-                            break;
-                        }
-                    }
-                }
-                
-                if (categoryId && groupsDataState[categoryId]) {
-                    const found = groupsDataState[categoryId].find(g => g.name === groupName);
-                    if (found && found.type) {
-                        groupType = found.type === 'nadstavbová skupina' ? 'nadstavbová' : 'základná';
-                    }
-                }
-                
-                if (groupType === 'nadstavbová') {
-                    advanced.push(groupName);
-                } else {
-                    basic.push(groupName);
-                }
-            });
-            
-            return { basic, advanced };
-        };
         
-        const { basic: basicGroups, advanced: advancedGroups } = getGroupsByType(selectedCategory);
+        const calculateAllTables = () => {
+            // 1. Zoskupenie zápasov podľa kategórie a skupiny
+            const groupsMap = new Map();
+            
+            matches.forEach(match => {
+                if (match.isPlacementMatch) return;
+                if (!match.categoryName || !match.groupName) return;
+                
+                const key = `${match.categoryName}|${match.groupName}`;
+                if (!groupsMap.has(key)) {
+                    groupsMap.set(key, {
+                        category: match.categoryName,
+                        group: match.groupName,
+                        matches: []
+                });
+            }
+            groupsMap.get(key).matches.push(match);
+        });
         
-        const getCategoryIdByName = (categoryName) => {
-            if (!categoryName) return null;
+        // 2. Najprv vypočítame všetky ZÁKLADNÉ skupiny
+        const baseGroupTables = [];
+        const advancedGroupData = [];
+        
+        for (const [key, groupData] of groupsMap) {
+            const { category, group, matches: groupMatches } = groupData;
+            
+            // Zistíme typ skupiny
+            let isAdvanced = false;
+            let categoryId = null;
+            
+            // Získame ID kategórie
             if (window.categoriesData) {
                 for (const [catId, catName] of Object.entries(window.categoriesData)) {
-                    if (catName === categoryName) {
-                        return catId;
+                    if (catName === category) {
+                        categoryId = catId;
+                        break;
                     }
                 }
             }
-            return null;
-        };
-        
-        return React.createElement(
-            'div',
-            { className: 'mb-6 space-y-3' },
             
+            // Skontrolujeme typ skupiny v groupsDataState
+            if (categoryId && groupsDataState[categoryId]) {
+                const found = groupsDataState[categoryId].find(g => g.name === group);
+                if (found && found.type === 'nadstavbová skupina') {
+                    isAdvanced = true;
+                }
+            }
+            
+            // Fallback podľa názvu
+            if (!isAdvanced && group.toLowerCase().includes('nadstavbová')) {
+                isAdvanced = true;
+            }
+            
+            if (isAdvanced) {
+                advancedGroupData.push({
+                    category,
+                    categoryId,
+                    group,
+                    matches: groupMatches,
+                    key
+                });
+            } else {
+                // Základná skupina - vypočítame hneď
+                const table = calculateGroupTable(category, group, groupMatches);
+                if (table) {
+                    baseGroupTables.push(table);
+                }
+            }
+        }
+        
+        // 3. Teraz vypočítame NADSTAVBOVÉ skupiny s prenášaním výsledkov
+        const allTables = [...baseGroupTables];
+        
+        // Vytvoríme mapu základných skupín podľa kategórie
+        const baseGroupsByCategory = {};
+        for (const baseTable of baseGroupTables) {
+            if (!baseGroupsByCategory[baseTable.category]) {
+                baseGroupsByCategory[baseTable.category] = [];
+            }
+            baseGroupsByCategory[baseTable.category].push(baseTable);
+        }
+        
+        for (const advData of advancedGroupData) {
+            const { category, group, matches: groupMatches } = advData;
+            
+            // Získame základné skupiny pre túto kategóriu
+            const baseGroups = baseGroupsByCategory[category] || [];
+            
+            // Vypočítame nadstavbovú tabuľku s prenášaním
+            const table = calculateAdvancedGroupTable(category, group, groupMatches, baseGroups);
+            if (table) {
+                allTables.push(table);
+            }
+        }
+        
+        // 4. Zoradenie tabuliek
+        allTables.sort((a, b) => {
+            if (a.category !== b.category) return a.category.localeCompare(b.category);
+            // Nadstavbové skupiny na konci
+            const aIsAdvanced = a.groupType === 'nadstavbová';
+            const bIsAdvanced = b.groupType === 'nadstavbová';
+            if (aIsAdvanced !== bIsAdvanced) return aIsAdvanced ? 1 : -1;
+            return a.group.localeCompare(b.group);
+        });
+        
+        setGroupTables(allTables);
+        setLoading(false);
+    };
+    
+    calculateAllTables();
+}, [matches, categoriesData, groupsDataState, teamNames, pointsForWin, sortingConditions, categorySettings, calculateGroupTable, calculateAdvancedGroupTable]);
+
+// Získanie unikátnych kategórií
+const categories = useMemo(() => {
+    const cats = new Set();
+    groupTables.forEach(table => cats.add(table.category));
+    return Array.from(cats).sort();
+}, [groupTables]);
+
+// Filtrovanie tabuliek
+const filteredTables = useMemo(() => {
+    let filtered = groupTables;
+    if (selectedCategory) {
+        filtered = filtered.filter(t => t.category === selectedCategory);
+    }
+    if (selectedGroup) {
+        filtered = filtered.filter(t => t.group === selectedGroup);
+    }
+    return filtered;
+}, [groupTables, selectedCategory, selectedGroup]);
+
+// Získanie unikátnych skupín pre vybranú kategóriu
+const groupsForCategory = useMemo(() => {
+    if (!selectedCategory) return [];
+    const groups = new Set();
+    groupTables
+        .filter(t => t.category === selectedCategory)
+        .forEach(t => groups.add(t.group));
+    return Array.from(groups).sort();
+}, [groupTables, selectedCategory]);
+
+// Funkcia na kliknutie na hlavičku tabuľky
+const handleTableHeaderClick = (category, group) => {
+    if (selectedCategory === category && selectedGroup === group) {
+        setSelectedCategory(null);
+        setSelectedGroup(null);
+    } else {
+        setSelectedCategory(category);
+        setSelectedGroup(group);
+    }
+};
+
+// Funkcia na zrušenie filtrov
+const clearFilters = () => {
+    setSelectedCategory(null);
+    setSelectedGroup(null);
+};
+
+if (loading) {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center py-16' },
+        React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+    );
+}
+
+if (groupTables.length === 0) {
+    return React.createElement(
+        'div',
+        { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
+        React.createElement('i', { className: 'fa-solid fa-table text-5xl mb-3 opacity-50' }),
+        React.createElement('p', { className: 'text-lg' }, 'Žiadne tabuľky skupín')
+    );
+}
+
+// ============================================================
+// KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
+// ============================================================
+
+const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
+    let bgColor = '#9CA3AF'; // sivá pre N
+    let textColor = '#FFFFFF';
+    let label = 'N';
+    
+    switch (result) {
+        case 'V':
+            bgColor = '#22C55E'; // zelená
+            label = 'V';
+            break;
+        case 'P':
+            bgColor = '#EF4444'; // červená
+            label = 'P';
+            break;
+        case 'R':
+            bgColor = '#FBBF24'; // žltá
+            textColor = '#000000';
+            label = 'R';
+            break;
+        default:
+            bgColor = '#D1D5DB'; // svetlo sivá pre N
+            textColor = '#6B7280';
+            label = 'N';
+            break;
+    }
+    
+    // Tooltip obsah
+    const tooltipContent = matchInfo ? (
+        React.createElement(
+            'div',
+            { 
+                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none',
+                style: { minWidth: '200px', maxWidth: '300px' }
+            },
             React.createElement(
                 'div',
-                { className: 'flex flex-wrap gap-2 justify-center' },
+                { className: 'flex flex-col gap-1' },
                 React.createElement(
+                    'div',
+                    { className: 'font-semibold text-gray-300' },
+                    matchInfo.homeTeamName || '???'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between gap-3' },
+                    React.createElement('span', { className: 'text-gray-400' }, 'vs'),
+                    React.createElement(
+                        'span',
+                        { className: 'font-bold text-white' },
+                        matchInfo.awayTeamName || '???'
+                    )
+                ),
+                matchInfo.score && React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-300 mt-1' },
+                    `Skóre: ${matchInfo.score}`
+                ),
+                matchInfo.date && React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-400 text-xs mt-0.5' },
+                    matchInfo.date
+                ),
+                matchInfo.resultText && React.createElement(
+                    'div',
+                    { 
+                        className: `text-center text-xs font-bold mt-0.5`,
+                        style: { 
+                            color: result === 'V' ? '#4ADE80' : result === 'P' ? '#F87171' : '#FBBF24' 
+                        }
+                    },
+                    matchInfo.resultText
+                )
+            ),
+            // Šípka
+            React.createElement(
+                'div',
+                { 
+                    className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45'
+                }
+            )
+        )
+    ) : null;
+    
+    return React.createElement(
+        'div',
+        {
+            className: 'relative inline-block',
+            onMouseEnter: () => {
+                if (onHoverStart && teamId) {
+                    onHoverStart(teamId);
+                }
+            },
+            onMouseLeave: () => {
+                if (onHoverEnd) {
+                    onHoverEnd();
+                }
+            }
+        },
+        React.createElement(
+            'span',
+            {
+                className: 'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
+                style: {
+                    backgroundColor: bgColor,
+                    color: textColor,
+                    fontSize: '11px',
+                    fontWeight: '700'
+                }
+            },
+            label
+        ),
+        tooltipContent
+    );
+};
+
+// ============================================================
+// FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
+// ============================================================
+
+const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
+    // Získame všetky zápasy tímu v skupine (vrátane prenesených)
+    const teamMatches = [];
+    
+    // Prechádzame všetky zápasy v skupine
+    groupMatches.forEach(match => {
+        // Kontrola, či tím hrá v tomto zápase
+        const isHome = match.homeTeamIdentifier === teamId;
+        const isAway = match.awayTeamIdentifier === teamId;
+        
+        if (isHome || isAway) {
+            // Získame skóre
+            let homeScore = match.homeScore || 0;
+            let awayScore = match.awayScore || 0;
+            
+            // Ak zápas nie je dokončený, skúsime získať skóre z udalostí
+            if (match.status !== 'completed' && match.id) {
+                const events = window.matchTracker?.getEvents?.(match.id) || [];
+                const score = getCurrentScoreFromEvents(events);
+                if (score.home > 0 || score.away > 0) {
+                    homeScore = score.home;
+                    awayScore = score.away;
+                }
+            }
+            
+            // Získame dátum zápasu
+            let matchDate = null;
+            if (match.scheduledTime) {
+                try {
+                    matchDate = match.scheduledTime.toDate();
+                } catch (e) {}
+            }
+            
+            // Zistíme výsledok pre tím
+            let result = 'N'; // N = neodohrané
+            if (match.status === 'completed') {
+                if (isHome) {
+                    if (homeScore > awayScore) result = 'V';
+                    else if (homeScore < awayScore) result = 'P';
+                    else result = 'R';
+                } else {
+                    if (awayScore > homeScore) result = 'V';
+                    else if (awayScore < homeScore) result = 'P';
+                    else result = 'R';
+                }
+            }
+            
+            teamMatches.push({
+                matchId: match.id,
+                date: matchDate,
+                result: result,
+                isTransferred: match.isTransferred || false,
+                scheduledTime: match.scheduledTime,
+                homeTeamName: match.homeTeamName || match.homeTeamIdentifier,
+                awayTeamName: match.awayTeamName || match.awayTeamIdentifier
+            });
+        }
+    });
+    
+    // Zoradenie podľa dátumu (chronologicky - od najstaršieho po najnovší)
+    teamMatches.sort((a, b) => {
+        // Prenesené zápasy dávame na začiatok (odohrali sa skôr)
+        if (a.isTransferred && !b.isTransferred) return -1;
+        if (!a.isTransferred && b.isTransferred) return 1;
+        
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return a.date.getTime() - b.date.getTime();
+    });
+    
+    // 🔥 VRÁTIME VŠETKY ZÁPASY (nie len posledných 5)
+    return teamMatches;
+};
+
+// Render filtrov
+const renderFilters = () => {
+    // ... (rovnaký kód ako v pôvodnom súbore)
+    const getGroupsByType = (category) => {
+        if (!category) return { basic: [], advanced: [] };
+        
+        const groups = [];
+        groupTables
+            .filter(t => t.category === category)
+            .forEach(t => groups.push(t.group));
+        
+        groups.sort();
+        
+        const basic = [];
+        const advanced = [];
+        
+        groups.forEach(groupName => {
+            let groupType = 'základná';
+            
+            let categoryId = null;
+            if (window.categoriesData) {
+                for (const [catId, catName] of Object.entries(window.categoriesData)) {
+                    if (catName === category) {
+                        categoryId = catId;
+                        break;
+                    }
+                }
+            }
+            
+            if (categoryId && groupsDataState[categoryId]) {
+                const found = groupsDataState[categoryId].find(g => g.name === groupName);
+                if (found && found.type) {
+                    groupType = found.type === 'nadstavbová skupina' ? 'nadstavbová' : 'základná';
+                }
+            }
+            
+            if (groupType === 'nadstavbová') {
+                advanced.push(groupName);
+            } else {
+                basic.push(groupName);
+            }
+        });
+        
+        return { basic, advanced };
+    };
+    
+    const { basic: basicGroups, advanced: advancedGroups } = getGroupsByType(selectedCategory);
+    
+    const getCategoryIdByName = (categoryName) => {
+        if (!categoryName) return null;
+        if (window.categoriesData) {
+            for (const [catId, catName] of Object.entries(window.categoriesData)) {
+                if (catName === categoryName) {
+                    return catId;
+                }
+            }
+        }
+        return null;
+    };
+    
+    return React.createElement(
+        'div',
+        { className: 'mb-6 space-y-3' },
+        
+        React.createElement(
+            'div',
+            { className: 'flex flex-wrap gap-2 justify-center' },
+            React.createElement(
+                'button',
+                {
+                    onClick: clearFilters,
+                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        selectedCategory === null 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky kategórie'
+            ),
+            categories.map(cat => {
+                const isSelected = selectedCategory === cat;
+                const categoryId = getCategoryIdByName(cat);
+                const color = categoryId ? getCategoryDrawColor(categoryId) : '#3B82F6';
+                return React.createElement(
                     'button',
                     {
-                        onClick: clearFilters,
+                        key: cat,
+                        onClick: () => {
+                            if (isSelected) {
+                                clearFilters();
+                            } else {
+                                setSelectedCategory(cat);
+                                setSelectedGroup(null);
+                            }
+                        },
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                            selectedCategory === null 
-                                ? 'bg-blue-600 text-white shadow-md' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`
+                            isSelected 
+                                ? 'text-white shadow-md' 
+                                : 'text-gray-700 hover:bg-gray-300'
+                        }`,
+                        style: isSelected ? { backgroundColor: color } : { backgroundColor: getLighterColor(color) }
                     },
-                    'Všetky kategórie'
+                    cat
+                );
+            })
+        ),
+        
+        selectedCategory && (basicGroups.length > 0 || advancedGroups.length > 0) && React.createElement(
+            'div',
+            { className: 'border-t border-gray-200 pt-3 space-y-2' },
+            
+            basicGroups.length > 0 && React.createElement(
+                'div',
+                { className: 'flex flex-wrap items-center gap-2 justify-center' },
+                React.createElement(
+                    'span',
+                    { className: 'text-xs font-medium text-gray-400 mr-1' },
+                    'Základné:'
                 ),
-                categories.map(cat => {
-                    const isSelected = selectedCategory === cat;
-                    const categoryId = getCategoryIdByName(cat);
-                    const color = categoryId ? getCategoryDrawColor(categoryId) : '#3B82F6';
+                basicGroups.map(group => {
+                    const isSelected = selectedGroup === group;
+                    const bgColor = isSelected ? '#166534' : '#DCFCE7';
+                    const textColor = isSelected ? '#FFFFFF' : '#166534';
+                    
                     return React.createElement(
                         'button',
                         {
-                            key: cat,
-                            onClick: () => {
-                                if (isSelected) {
-                                    clearFilters();
-                                } else {
-                                    setSelectedCategory(cat);
-                                    setSelectedGroup(null);
-                                }
-                            },
-                            className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                                isSelected 
-                                    ? 'text-white shadow-md' 
-                                    : 'text-gray-700 hover:bg-gray-300'
+                            key: group,
+                            onClick: () => setSelectedGroup(isSelected ? null : group),
+                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                isSelected ? 'shadow-md' : 'hover:opacity-80'
                             }`,
-                            style: isSelected ? { backgroundColor: color } : { backgroundColor: getLighterColor(color) }
+                            style: { backgroundColor: bgColor, color: textColor }
                         },
-                        cat
+                        group
                     );
                 })
             ),
             
-            selectedCategory && (basicGroups.length > 0 || advancedGroups.length > 0) && React.createElement(
+            advancedGroups.length > 0 && React.createElement(
                 'div',
-                { className: 'border-t border-gray-200 pt-3 space-y-2' },
-                
-                basicGroups.length > 0 && React.createElement(
-                    'div',
-                    { className: 'flex flex-wrap items-center gap-2 justify-center' },
-                    React.createElement(
-                        'span',
-                        { className: 'text-xs font-medium text-gray-400 mr-1' },
-                        'Základné:'
-                    ),
-                    basicGroups.map(group => {
-                        const isSelected = selectedGroup === group;
-                        const bgColor = isSelected ? '#166534' : '#DCFCE7';
-                        const textColor = isSelected ? '#FFFFFF' : '#166534';
-                        
-                        return React.createElement(
-                            'button',
-                            {
-                                key: group,
-                                onClick: () => setSelectedGroup(isSelected ? null : group),
-                                className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                    isSelected ? 'shadow-md' : 'hover:opacity-80'
-                                }`,
-                                style: { backgroundColor: bgColor, color: textColor }
-                            },
-                            group
-                        );
-                    })
-                ),
-                
-                advancedGroups.length > 0 && React.createElement(
-                    'div',
-                    { className: 'flex flex-wrap items-center gap-2 justify-center' },
-                    React.createElement(
-                        'span',
-                        { className: 'text-xs font-medium text-gray-400 mr-1' },
-                        'Nadstavbové:'
-                    ),
-                    advancedGroups.map(group => {
-                        const isSelected = selectedGroup === group;
-                        const bgColor = isSelected ? '#1E40AF' : '#DBEAFE';
-                        const textColor = isSelected ? '#FFFFFF' : '#1E40AF';
-                        
-                        return React.createElement(
-                            'button',
-                            {
-                                key: group,
-                                onClick: () => setSelectedGroup(isSelected ? null : group),
-                                className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                    isSelected ? 'shadow-md' : 'hover:opacity-80'
-                                }`,
-                                style: { backgroundColor: bgColor, color: textColor }
-                            },
-                            group
-                        );
-                    })
-                )
-            )
-        );
-    };
-
-    // ============================================================
-    // FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
-    // ============================================================
-    
-    const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
-        // Získame všetky zápasy tímu v skupine (vrátane prenesených)
-        const teamMatches = [];
-        
-        // Prechádzame všetky zápasy v skupine
-        groupMatches.forEach(match => {
-            // Kontrola, či tím hrá v tomto zápase
-            const isHome = match.homeTeamIdentifier === teamId;
-            const isAway = match.awayTeamIdentifier === teamId;
-            
-            if (isHome || isAway) {
-                // Získame skóre
-                let homeScore = match.homeScore || 0;
-                let awayScore = match.awayScore || 0;
-                
-                // Ak zápas nie je dokončený, skúsime získať skóre z udalostí
-                if (match.status !== 'completed' && match.id) {
-                    const events = window.matchTracker?.getEvents?.(match.id) || [];
-                    const score = getCurrentScoreFromEvents(events);
-                    if (score.home > 0 || score.away > 0) {
-                        homeScore = score.home;
-                        awayScore = score.away;
-                    }
-                }
-                
-                // Získame dátum zápasu
-                let matchDate = null;
-                if (match.scheduledTime) {
-                    try {
-                        matchDate = match.scheduledTime.toDate();
-                    } catch (e) {}
-                }
-                
-                // Zistíme výsledok pre tím
-                let result = 'N'; // N = neodohrané
-                if (match.status === 'completed') {
-                    if (isHome) {
-                        if (homeScore > awayScore) result = 'V';
-                        else if (homeScore < awayScore) result = 'P';
-                        else result = 'R';
-                    } else {
-                        if (awayScore > homeScore) result = 'V';
-                        else if (awayScore < homeScore) result = 'P';
-                        else result = 'R';
-                    }
-                }
-                
-                teamMatches.push({
-                    matchId: match.id,
-                    date: matchDate,
-                    result: result,
-                    isTransferred: match.isTransferred || false,
-                    scheduledTime: match.scheduledTime,
-                    homeTeamName: match.homeTeamName || match.homeTeamIdentifier,
-                    awayTeamName: match.awayTeamName || match.awayTeamIdentifier
-                });
-            }
-        });
-        
-        // Zoradenie podľa dátumu (chronologicky - od najstaršieho po najnovší)
-        teamMatches.sort((a, b) => {
-            // Prenesené zápasy dávame na začiatok (odohrali sa skôr)
-            if (a.isTransferred && !b.isTransferred) return -1;
-            if (!a.isTransferred && b.isTransferred) return 1;
-            
-            if (!a.date && !b.date) return 0;
-            if (!a.date) return 1;
-            if (!b.date) return -1;
-            return a.date.getTime() - b.date.getTime();
-        });
-        
-        // 🔥 VRÁTIME VŠETKY ZÁPASY (nie len posledných 5)
-        return teamMatches;
-    };
-    
-   // ============================================================
-   // KOMPONENT PRE ZOBRAZENIE JEDNOTLIVÉHO ŠTVORČEKA FORMY
-   // ============================================================
-   
-   const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) => {
-       let bgColor = '#9CA3AF'; // sivá pre N
-       let textColor = '#FFFFFF';
-       let label = 'N';
-       
-       switch (result) {
-           case 'V':
-               bgColor = '#22C55E'; // zelená
-               label = 'V';
-               break;
-           case 'P':
-               bgColor = '#EF4444'; // červená
-               label = 'P';
-               break;
-           case 'R':
-               bgColor = '#FBBF24'; // žltá
-               textColor = '#000000';
-               label = 'R';
-               break;
-           default:
-               bgColor = '#D1D5DB'; // svetlo sivá pre N
-               textColor = '#6B7280';
-               label = 'N';
-               break;
-       }
-       
-       // Tooltip obsah
-       const tooltipContent = matchInfo ? (
-           React.createElement(
-               'div',
-               { 
-                   className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 whitespace-nowrap pointer-events-none',
-                   style: { minWidth: '200px', maxWidth: '300px' }
-               },
-               React.createElement(
-                   'div',
-                   { className: 'flex flex-col gap-1' },
-                   React.createElement(
-                       'div',
-                       { className: 'font-semibold text-gray-300' },
-                       matchInfo.homeTeamName || '???'
-                   ),
-                   React.createElement(
-                       'div',
-                       { className: 'flex items-center justify-between gap-3' },
-                       React.createElement('span', { className: 'text-gray-400' }, 'vs'),
-                       React.createElement(
-                           'span',
-                           { className: 'font-bold text-white' },
-                           matchInfo.awayTeamName || '???'
-                       )
-                   ),
-                   matchInfo.score && React.createElement(
-                       'div',
-                       { className: 'text-center text-gray-300 mt-1' },
-                       `Skóre: ${matchInfo.score}`
-                   ),
-                   matchInfo.date && React.createElement(
-                       'div',
-                       { className: 'text-center text-gray-400 text-xs mt-0.5' },
-                       matchInfo.date
-                   ),
-                   matchInfo.resultText && React.createElement(
-                       'div',
-                       { 
-                           className: `text-center text-xs font-bold mt-0.5`,
-                           style: { 
-                               color: result === 'V' ? '#4ADE80' : result === 'P' ? '#F87171' : '#FBBF24' 
-                           }
-                       },
-                       matchInfo.resultText
-                   )
-               ),
-               // Šípka
-               React.createElement(
-                   'div',
-                   { 
-                       className: 'absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45'
-                   }
-               )
-           )
-       ) : null;
-       
-       return React.createElement(
-           'div',
-           {
-               className: 'relative inline-block',
-               onMouseEnter: () => {
-                   if (onHoverStart && teamId) {
-                       onHoverStart(teamId);
-                   }
-               },
-               onMouseLeave: () => {
-                   if (onHoverEnd) {
-                       onHoverEnd();
-                   }
-               }
-           },
-           React.createElement(
-               'span',
-               {
-                   className: 'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold mx-0.5 cursor-default transition-all duration-200 hover:scale-110 hover:shadow-lg',
-                   style: {
-                       backgroundColor: bgColor,
-                       color: textColor,
-                       fontSize: '11px',
-                       fontWeight: '700'
-                   }
-               },
-               label
-           ),
-           tooltipContent
-       );
-   };
-    
-   // ============================================================
-   // UPRAVENÁ FUNKCIA: Render jednej tabuľky (s formou - všetky zápasy, bez zalamovania)
-   // ============================================================
-   
-   const renderGroupTable = (table) => {
-       const { category, categoryId, group, groupType, teams, totalMatches, completedCount, matches: groupMatches, transferredMatches, carryOverEnabled } = table;
-       
-       const colors = getGroupTypeColors(group, categoryId, groupsDataState);
-       const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
-       const isAdvanced = groupType === 'nadstavbová';
-       const isOnlyTable = filteredTables.length === 1;
-       
-       // Zobrazenie informácie o prenášaní pre nadstavbové skupiny
-       const showCarryOverInfo = isAdvanced && carryOverEnabled && transferredMatches && transferredMatches.length > 0;
-       
-       // 🔥 STAV PRE ZVÝRAZNENIE RIADKU
-       const [highlightedTeamId, setHighlightedTeamId] = useState(null);
-       
-       // Funkcie pre zvýraznenie
-       const handleHoverStart = (teamId) => {
-           setHighlightedTeamId(teamId);
-       };
-       
-       const handleHoverEnd = () => {
-           setHighlightedTeamId(null);
-       };
-       
-       // 🔥 FUNKCIA NA ZÍSKANIE INFO O ZÁPASE PRE FORM INDICATOR
-       const getMatchInfoForForm = (teamId, match) => {
-           if (!match) return null;
-           
-           const isHome = match.homeTeamIdentifier === teamId;
-           const opponentId = isHome ? match.awayTeamIdentifier : match.homeTeamIdentifier;
-           const opponentName = teamNames[opponentId] || getDisplayTeamName(opponentId) || opponentId || '???';
-           const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
-           
-           let score = null;
-           let resultText = '';
-           let result = 'N';
-           
-           // Získanie skóre
-           let homeScore = match.homeScore || 0;
-           let awayScore = match.awayScore || 0;
-           
-           if (homeScore === 0 && awayScore === 0 && match.id) {
-               const events = window.matchTracker?.getEvents?.(match.id) || [];
-               const scoreData = getCurrentScoreFromEvents(events);
-               homeScore = scoreData.home;
-               awayScore = scoreData.away;
-           }
-           
-           if (match.status === 'completed' || homeScore > 0 || awayScore > 0) {
-               score = `${homeScore}:${awayScore}`;
-               
-               if (isHome) {
-                   if (homeScore > awayScore) { result = 'V'; resultText = 'VÝHRA'; }
-                   else if (homeScore < awayScore) { result = 'P'; resultText = 'PREHRA'; }
-                   else { result = 'R'; resultText = 'REMIZA'; }
-               } else {
-                   if (awayScore > homeScore) { result = 'V'; resultText = 'VÝHRA'; }
-                   else if (awayScore < homeScore) { result = 'P'; resultText = 'PREHRA'; }
-                   else { result = 'R'; resultText = 'REMIZA'; }
-               }
-           } else {
-               resultText = 'NEODOHRANÉ';
-           }
-           
-           // Dátum
-           let dateStr = null;
-           if (match.scheduledTime) {
-               try {
-                   const date = match.scheduledTime.toDate();
-                   dateStr = `${date.getDate()}. ${(date.getMonth() + 1)}. ${date.getFullYear()}`;
-               } catch (e) {}
-           }
-           
-           return {
-               homeTeamName: isHome ? teamName : opponentName,
-               awayTeamName: isHome ? opponentName : teamName,
-               score: score,
-               date: dateStr,
-               resultText: resultText,
-               matchId: match.id,
-               isHome: isHome,
-               opponentId: opponentId,
-               result: result
-           };
-       };
-       
-       return React.createElement(
-           'div', 
-           { 
-               key: `${category}|${group}`,
-               className: 'mb-8 transition-all'
-           },
-           
-           React.createElement(
-               'div',
-               { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
-               
-               React.createElement(
-                   'div',
-                   { 
-                       className: 'px-6 py-4 border-b cursor-pointer hover:opacity-80 transition-opacity',
-                       style: { 
-                           backgroundColor: colors.backgroundColor || '#DCFCE7',
-                           color: colors.textColor || '#166534'
-                       },
-                       onClick: () => handleTableHeaderClick(category, group),
-                   },
-                   React.createElement(
-                       'div',
-                       { className: 'flex flex-wrap items-center justify-between gap-3' },
-                       React.createElement(
-                           'div',
-                           { className: 'flex items-center gap-3' },
-                           React.createElement('h3', { className: 'text-lg font-bold' }, `${category} - ${group}`),
-                           React.createElement(
-                               'span',
-                               { 
-                                   className: 'text-xs px-2 py-0.5 rounded-full font-medium',
-                                   style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
-                               },
-                               groupTypeLabel
-                           )
-                       ),
-                       React.createElement(
-                           'div',
-                           { className: 'flex items-center gap-3 text-xs' },                            
-                           isAdvanced && carryOverEnabled && React.createElement(
-                               'span',
-                               { className: 'text-black-600 font-medium' },
-                               'Vzájomné zápasy zo základných skupín sa započítavajú.'
-                           ),
-                           React.createElement(
-                               'span',
-                               { className: 'text-gray-600' },
-                               `${completedCount}/${totalMatches} zápasov`
-                           )
-                       )
-                   )
-               ),
-               
-               // Telo tabuľky - UPRAVENÉ ŠÍRKY STĹPCOV
-               React.createElement(
-                   'div',
-                   { className: 'overflow-x-auto' },
-                   React.createElement(
-                       'table',
-                       { className: 'min-w-full divide-y divide-gray-200' },
-                       
-                       React.createElement(
-                           'thead',
-                           { className: 'bg-gray-50' },
-                           React.createElement(
-                               'tr',
-                               null,
-                               // Jednotné šírky pre všetky stĺpce
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
-                               React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Tím'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'V'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'R'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'P'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
-                               React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body'),
-                               // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
-                               React.createElement('th', { 
-                                   className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider',
-                                   style: { minWidth: '100px' }
-                               }, 
-                                   'Forma'
-                               )
-                           )
-                       ),
-                       
-                       React.createElement(
-                           'tbody',
-                           { className: 'divide-y divide-gray-100' },
-                           teams.map((team, index) => {
-                               const position = index + 1;
-                               const isHighlighted = highlightedTeamId === team.id;
-                               
-                               // 🔥 ZÍSKANIE FORMY TÍMU - VŠETKY ZÁPASY
-                               const teamForm = getTeamForm(team.id, groupMatches, teamNames, matches);
-                               
-                               // 🔥 PRÍPRAVA MATCH INFO PRE KAŽDÝ ŠTVORČEK
-                               const formMatchesWithInfo = teamForm.map((match, idx) => {
-                                   // Nájdenie pôvodného zápasu v groupMatches
-                                   let fullMatch = groupMatches.find(m => m.id === match.matchId);
-                                   if (!fullMatch && transferredMatches) {
-                                       fullMatch = transferredMatches.find(m => m.id === match.matchId);
-                                   }
-                                   if (!fullMatch) {
-                                       fullMatch = match;
-                                   }
-                                   const matchInfo = getMatchInfoForForm(team.id, fullMatch || match);
-                                   return {
-                                       ...match,
-                                       matchInfo: matchInfo
-                                   };
-                               });
-                               
-                               // Získanie farby pozadia pre riadok pri zvýraznení
-                               const rowBgColor = isHighlighted ? 'bg-yellow-50' : '';
-                               
-                               return React.createElement(
-                                   'tr',
-                                   { 
-                                       key: team.id, 
-                                       className: `hover:bg-gray-100 transition-colors duration-200 ${rowBgColor}`,
-                                       style: isHighlighted ? { backgroundColor: '#FEFCE8' } : {}
-                                   },
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center font-bold text-gray-700' },
-                                       position
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 font-medium text-gray-800 truncate max-w-xs' },
-                                       team.name || '???'
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center text-gray-600' },
-                                       team.played
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center text-green-600 font-bold' },
-                                       team.wins
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center text-yellow-600' },
-                                       team.draws
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center text-red-600' },
-                                       team.losses
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center font-mono' },
-                                       `${team.goalsFor}:${team.goalsAgainst}`
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center font-mono font-bold' },
-                                       team.goalDifference > 0 ? `+${team.goalDifference}` : team.goalDifference
-                                   ),
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center font-bold text-blue-600' },
-                                       team.points
-                                   ),
-                                   // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
-                                   React.createElement(
-                                       'td',
-                                       { className: 'px-4 py-3 text-center' },
-                                       React.createElement(
-                                           'div',
-                                           { 
-                                               className: 'flex items-center justify-start gap-0.5 overflow-x-auto',
-                                               style: { 
-                                                   maxWidth: '250px',
-                                                   flexWrap: 'nowrap',
-                                                   whiteSpace: 'nowrap',
-                                                   padding: '2px 0'
-                                               }
-                                           },
-                                           formMatchesWithInfo.map((match, idx) => 
-                                               React.createElement(FormIndicator, { 
-                                                   key: idx, 
-                                                   result: match.result,
-                                                   matchInfo: match.matchInfo,
-                                                   onHoverStart: handleHoverStart,
-                                                   onHoverEnd: handleHoverEnd,
-                                                   teamId: match.matchInfo?.opponentId || null
-                                               })
-                                           )
-                                       )
-                                   )
-                               );
-                           })
-                       )
-                   )
-               )
-           ),
-           
-           // Zoznam zápasov - ak je zobrazená len jedna tabuľka
-           isOnlyTable && React.createElement(
-               'div',
-               { className: 'mt-6' },
-               React.createElement(
-                   GroupMatchesList,
-                   {
-                       matches: groupMatches,
-                       groupName: group,
-                       categoryName: category,
-                       teamNames: teamNames,
-                       hallNames: hallNames,
-                       transferredMatches: transferredMatches || []
-                   }
-               )
-           )
-       );
-   };
-    
-    // Hlavný render
-    return React.createElement(
-        'div',
-        { className: 'max-w-7xl mx-auto px-4 py-6' },
-        
-        React.createElement(
-            'div',
-            { className: 'mb-6 text-center' },
-            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
-        ),
-        
-        renderFilters(),
-        
-        filteredTables.length === 0 ? (
-            React.createElement(
-                'div',
-                { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
-                React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
-                React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne tabuľky'),
+                { className: 'flex flex-wrap items-center gap-2 justify-center' },
                 React.createElement(
-                    'button',
-                    {
-                        onClick: clearFilters,
-                        className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
-                    },
-                    'Zrušiť filtre'
-                )
+                    'span',
+                    { className: 'text-xs font-medium text-gray-400 mr-1' },
+                    'Nadstavbové:'
+                ),
+                advancedGroups.map(group => {
+                    const isSelected = selectedGroup === group;
+                    const bgColor = isSelected ? '#1E40AF' : '#DBEAFE';
+                    const textColor = isSelected ? '#FFFFFF' : '#1E40AF';
+                    
+                    return React.createElement(
+                        'button',
+                        {
+                            key: group,
+                            onClick: () => setSelectedGroup(isSelected ? null : group),
+                            className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                isSelected ? 'shadow-md' : 'hover:opacity-80'
+                            }`,
+                            style: { backgroundColor: bgColor, color: textColor }
+                        },
+                        group
+                    );
+                })
             )
-        ) : (
-            filteredTables.map(table => renderGroupTable(table))
         )
     );
+};
+
+// Hlavný render
+return React.createElement(
+    'div',
+    { className: 'max-w-7xl mx-auto px-4 py-6' },
+    
+    React.createElement(
+        'div',
+        { className: 'mb-6 text-center' },
+        React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
+    ),
+    
+    renderFilters(),
+    
+    filteredTables.length === 0 ? (
+        React.createElement(
+            'div',
+            { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
+            React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
+            React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne tabuľky'),
+            React.createElement(
+                'button',
+                {
+                    onClick: clearFilters,
+                    className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
+                },
+                'Zrušiť filtre'
+            )
+        )
+    ) : (
+        filteredTables.map(table => 
+            React.createElement(GroupTable, {
+                key: `${table.category}|${table.group}`,
+                table: table,
+                filteredTables: filteredTables,
+                groupMatches: table.matches,
+                transferredMatches: table.transferredMatches || [],
+                teamNames: teamNames,
+                matches: matches,
+                groupsDataState: groupsDataState,
+                handleTableHeaderClick: handleTableHeaderClick,
+                getTeamForm: getTeamForm,
+                hallNames: hallNames
+            })
+        )
+    )
+);
 };
 
 // ============================================================
