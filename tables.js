@@ -1441,10 +1441,10 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
 
         const opponentRawName = opponentName || match.awayTeamName || match.homeTeamName || null;
 
+        // Na konci funkcie, pred return:
         let opponentNameForHighlight = null;
-
+        
         if (opponentName) {
-            // Skúsime nájsť správny názov tímu
             const foundTeamName = getTeamName(opponentName);
             if (foundTeamName && foundTeamName !== opponentName) {
                 opponentNameForHighlight = foundTeamName;
@@ -1457,6 +1457,15 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             opponentNameForHighlight = getTeamName(match.homeTeamName || match.homeTeamIdentifier);
         }
         
+        // 🔥 AK JE STALE NULL, POUŽIJEME OPPONENT DISPLAY NAME
+        if (!opponentNameForHighlight) {
+            if (finalIsHome) {
+                opponentNameForHighlight = awayTeamNameForTooltip;
+            } else if (finalIsAway) {
+                opponentNameForHighlight = homeTeamNameForTooltip;
+            }
+        }
+        
         return {
             homeTeamName: homeTeamNameForTooltip,
             awayTeamName: awayTeamNameForTooltip,
@@ -1467,7 +1476,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             isHome: finalIsHome,
             isAway: finalIsAway,
             opponentId: opponentId,
-            opponentName: opponentNameForHighlight,
+            opponentName: opponentNameForHighlight,  // <-- teraz bude mať vždy hodnotu
             result: result,
             isTransferred: isTransferred
         };
@@ -1670,6 +1679,16 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                             } else if (opponentId) {
                                                 // Fallback: skúsime podľa ID
                                                 opponentTeamName = teamNames[opponentId] || getDisplayTeamName(opponentId) || opponentId;
+                                            }
+                                            
+                                            // 🔥 AK JE STALE NULL, SKÚSIME ZÍSKAŤ NÁZOV Z MATCH INFO
+                                            if (!opponentTeamName && match.matchInfo) {
+                                                // Ak je tím domáci, súper je hosť a naopak
+                                                if (match.matchInfo.isHome) {
+                                                    opponentTeamName = match.matchInfo.awayTeamName;
+                                                } else if (match.matchInfo.isAway) {
+                                                    opponentTeamName = match.matchInfo.homeTeamName;
+                                                }
                                             }
                                             
                                             // 🔥 LOG PRE KAŽDÝ ŠTVORČEK
