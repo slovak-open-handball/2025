@@ -1212,11 +1212,11 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             if (isHome) {
                 if (homeScore > awayScore) { result = 'V'; resultText = 'VÝHRA'; }
                 else if (homeScore < awayScore) { result = 'P'; resultText = 'PREHRA'; }
-                else { result = 'R'; resultText = 'REMIZA'; }
+                else { result = 'R'; resultText = 'REMÍZA'; }
             } else {
                 if (awayScore > homeScore) { result = 'V'; resultText = 'VÝHRA'; }
                 else if (awayScore < homeScore) { result = 'P'; resultText = 'PREHRA'; }
-                else { result = 'R'; resultText = 'REMIZA'; }
+                else { result = 'R'; resultText = 'REMÍZA'; }
             }
         } else {
             resultText = 'NEODOHRANÉ';
