@@ -1193,9 +1193,13 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     }, [groupMatches, transferredMatches]);
 
     const highlightTimeoutRef = useRef(null);
+    const isHoveringRef = useRef(false);
     
     const handleHoverStart = (teamName) => {
         console.log('🔍 [GroupTable] handleHoverStart - teamName:', teamName);
+        
+        // Nastavíme, že myš je nad prvkom
+        isHoveringRef.current = true;
         
         // Zrušíme predchádzajúci timeout
         if (highlightTimeoutRef.current) {
@@ -1218,15 +1222,15 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     
     const handleHoverEnd = () => {
         console.log('🔍 [GroupTable] handleHoverEnd - scheduling clear highlight');
-        // Zrušíme predchádzajúci timeout
+        
         if (highlightTimeoutRef.current) {
             clearTimeout(highlightTimeoutRef.current);
         }
-        // Nastavíme nový timeout
+        
         highlightTimeoutRef.current = setTimeout(() => {
             setHighlightedTeamId(null);
             highlightTimeoutRef.current = null;
-        }, 200);
+        }, 500); // 500ms oneskorenie
     };
     
     // 🔥 POMOCNÁ FUNKCIA NA NORMALIZÁCIU NÁZVOV
