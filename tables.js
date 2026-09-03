@@ -634,9 +634,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             'div',
             { 
                 key: `${category}|${group}`,
-                className: `bg-white rounded-xl shadow-lg border overflow-hidden mb-8 transition-all ${
-                    isTableSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
-                }`
+                className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-8 transition-all'
             },
             
             // Hlavička tabuľky - klikateľná
