@@ -164,19 +164,49 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
     
     // Stav pre zobrazenie tooltipu
     const [isHovered, setIsHovered] = useState(false);
+    const tooltipRef = useRef(null);
+    const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+    
+    // Výpočet pozície tooltipu pri hover
+    const updateTooltipPosition = (e) => {
+        if (!tooltipRef.current) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const tooltipHeight = 200; // približná výška tooltipu
+        const tooltipWidth = 220; // približná šírka tooltipu
+        
+        let top = rect.top - tooltipHeight - 8;
+        let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+        
+        // Ak by bol tooltip mimo obrazovky hore, zobrazíme ho dole
+        if (top < 10) {
+            top = rect.bottom + 8;
+        }
+        
+        // Ak by bol tooltip mimo obrazovky vľavo/vpravo
+        if (left < 10) {
+            left = 10;
+        } else if (left + tooltipWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipWidth - 10;
+        }
+        
+        setTooltipPosition({ top, left });
+    };
     
     const tooltipContent = showTooltip ? (
         React.createElement(
             'div',
             { 
-                className: 'absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl transition-opacity duration-200',
+                ref: tooltipRef,
+                className: 'fixed px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-2xl transition-opacity duration-200',
                 style: { 
                     minWidth: '180px', 
                     maxWidth: '280px',
                     pointerEvents: 'none',
                     opacity: isHovered ? 1 : 0,
                     display: isHovered ? 'block' : 'none',
-                    zIndex: 9999
+                    zIndex: 99999,
+                    top: tooltipPosition.top + 'px',
+                    left: tooltipPosition.left + 'px'
                 }
             },
             React.createElement(
@@ -226,14 +256,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     },
                     matchInfo.resultText
                 )
-            ),
-            // Šípka hore (smerujúca nahor k štvorčeku)
-            React.createElement(
-                'div',
-                { 
-                    className: 'absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45',
-                    style: { pointerEvents: 'none' }
-                }
             )
         )
     ) : null;
@@ -243,8 +265,9 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         {
             className: 'relative inline-block',
             style: { zIndex: 1 },
-            onMouseEnter: () => {
+            onMouseEnter: (e) => {
                 setIsHovered(true);
+                updateTooltipPosition(e);
                 if (onHoverStart && teamId) {
                     onHoverStart(teamId);
                 }
