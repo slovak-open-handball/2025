@@ -3204,7 +3204,7 @@ const AddTeamsGroupApp = (props) => {
                                         },
                                         className: `p-1.5 rounded-full transition-colors ${
                                             isCategoryBlocked
-                                                ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                                ? 'text-gray-400 cursor-not-allowed'
                                                 : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 cursor-pointer'
                                         }`,
                                         title: isCategoryBlocked
