@@ -85,6 +85,43 @@ const getCategoryNameById = (categoryId) => {
 };
 
 // ============================================================
+// FUNKCIA PRE PRÁCU S URL HASH FILTROM
+// ============================================================
+
+const getFilterFromURL = () => {
+    const hash = window.location.hash;
+    if (!hash || hash === '#') return { category: null, group: null };
+    
+    try {
+        // Očakávaný formát: #category=Kategória&group=Skupina
+        const params = new URLSearchParams(hash.substring(1));
+        const category = params.get('category');
+        const group = params.get('group');
+        return { 
+            category: category ? decodeURIComponent(category) : null, 
+            group: group ? decodeURIComponent(group) : null 
+        };
+    } catch (e) {
+        return { category: null, group: null };
+    }
+};
+
+const updateURLFilter = (category, group) => {
+    try {
+        const params = new URLSearchParams();
+        if (category) params.set('category', encodeURIComponent(category));
+        if (group) params.set('group', encodeURIComponent(group));
+        
+        const newHash = params.toString() ? `#${params.toString()}` : '#';
+        if (window.location.hash !== newHash) {
+            history.replaceState(null, '', newHash);
+        }
+    } catch (e) {
+        console.error('Chyba pri aktualizácii URL:', e);
+    }
+};
+
+// ============================================================
 // FUNKCIA NA ZÍSKANIE SKÓRE Z UDALOSTÍ
 // ============================================================
 
@@ -295,6 +332,25 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const [pointsForWin, setPointsForWin] = useState(3);
     const [sortingConditions, setSortingConditions] = useState([]);
     const [groupsDataState, setGroupsDataState] = useState(groupsData || {});
+    const [isInitialized, setIsInitialized] = useState(false);
+    
+    // Načítanie filtra z URL pri inicializácii
+    useEffect(() => {
+        const urlFilter = getFilterFromURL();
+        if (urlFilter.category) {
+            setSelectedCategory(urlFilter.category);
+        }
+        if (urlFilter.group) {
+            setSelectedGroup(urlFilter.group);
+        }
+        setIsInitialized(true);
+    }, []);
+    
+    // Aktualizácia URL pri zmene filtra
+    useEffect(() => {
+        if (!isInitialized) return;
+        updateURLFilter(selectedCategory, selectedGroup);
+    }, [selectedCategory, selectedGroup, isInitialized]);
     
     // Načítanie bodov za výhru a kritérií poradia z databázy
     useEffect(() => {
@@ -622,6 +678,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         }
     };
     
+    // Funkcia na zrušenie filtrov
+    const clearFilters = () => {
+        setSelectedCategory(null);
+        setSelectedGroup(null);
+    };
+    
     if (loading) {
         return React.createElement(
             'div',
@@ -720,7 +782,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 React.createElement(
                     'button',
                     {
-                        onClick: () => { setSelectedCategory(null); setSelectedGroup(null); },
+                        onClick: clearFilters,
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                             selectedCategory === null 
                                 ? 'bg-blue-600 text-white shadow-md' 
@@ -741,8 +803,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             key: cat,
                             onClick: () => {
                                 if (isSelected) {
-                                    setSelectedCategory(null);
-                                    setSelectedGroup(null);
+                                    clearFilters();
                                 } else {
                                     setSelectedCategory(cat);
                                     setSelectedGroup(null);
@@ -988,7 +1049,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 React.createElement(
                     'button',
                     {
-                        onClick: () => { setSelectedCategory(null); setSelectedGroup(null); },
+                        onClick: clearFilters,
                         className: 'text-blue-600 hover:text-blue-800 underline ml-1 cursor-pointer'
                     },
                     '(zrušiť filter)'
@@ -1009,7 +1070,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 React.createElement(
                     'button',
                     {
-                        onClick: () => { setSelectedCategory(null); setSelectedGroup(null); },
+                        onClick: clearFilters,
                         className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
                     },
                     'Zrušiť filtre'
