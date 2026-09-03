@@ -225,7 +225,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 { className: 'flex flex-col gap-0.5' },
                 React.createElement(
                     'div',
-                    { className: 'font-semibold text-gray-300 text-center text-xs' },
+                    { className: 'font-bold text-white text-xs' },
                     matchInfo.homeTeamName || '???'
                 ),
                 React.createElement(
