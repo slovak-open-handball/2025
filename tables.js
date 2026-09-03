@@ -655,10 +655,10 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
-                            // 🔥 Riadok - bledosivý pre prenesené zápasy
+                            // 🔥 ROVNAKÁ HOVER FARBA PRE VŠETKY RIADKY - bg-gray-200
                             const rowClass = isTransferred
                                 ? 'hover:bg-gray-200 transition-colors bg-gray-100'
-                                : 'hover:bg-gray-50 transition-colors';
+                                : 'hover:bg-gray-200 transition-colors';
 
                             dayRows.push(
                                 React.createElement(
