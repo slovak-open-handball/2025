@@ -536,7 +536,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             'div',
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 
-                `Zápasy skupiny: ${groupName}`
+                `Zápasy skupiny`
             )
         ),
         React.createElement(
