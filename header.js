@@ -362,12 +362,15 @@ const updateNavigationLinks = () => {
         return;
     }
     
+    // Spracovanie všetkých odkazov s atribútom data-page
     const publicNavLinks = document.querySelectorAll('[data-page]');
     
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
         
+        // Špeciálne spracovanie pre "tables" - použije rovnakú logiku ako "teams-in-groups"
+        // Oba používajú rovnaký mechanizmus kontroly viditeľnosti
         const isVisible = pageConfig && pageConfig.visible === true;
         
         if (isVisible) {
