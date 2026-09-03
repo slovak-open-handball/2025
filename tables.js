@@ -633,8 +633,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         React.createElement(
             'div',
             { className: 'mb-6 text-center' },
-            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, '📊 Tabuľky skupín'),
-            React.createElement('p', { className: 'text-sm text-gray-500 mt-1' }, `${groupTables.length} skupín, ${groupTables.reduce((acc, t) => acc + t.teams.length, 0)} tímov`)
+            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
         ),
         
         // Filtre
