@@ -368,7 +368,13 @@ const updateNavigationLinks = () => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
         
-        const isVisible = pageConfig && pageConfig.visible === true;
+        let isVisible = pageConfig && pageConfig.visible === true;
+        
+        // ŠPECIÁLNE PRAVIDLO: Tabuľky majú rovnakú viditeľnosť ako Skupiny
+        if (pageId === 'tables') {
+            const groupsConfig = pagesVisibility['teams-in-groups'];
+            isVisible = groupsConfig && groupsConfig.visible === true;
+        }
         
         if (isVisible) {
             link.classList.remove('hidden');
@@ -400,6 +406,8 @@ const initializeNavigationVisibility = () => {
     // Skryjeme všetky verejné odkazy
     const publicNavLinks = document.querySelectorAll('[data-page]');
     publicNavLinks.forEach(link => {
+        const pageId = link.getAttribute('data-page');
+        // Tabuľky skryjeme rovnako ako Skupiny (budú sa riadiť rovnakou logikou)
         link.classList.add('hidden');
         link.style.display = 'none';
     });
