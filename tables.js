@@ -166,15 +166,17 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
     const [isHovered, setIsHovered] = useState(false);
     const tooltipRef = useRef(null);
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+    const [tooltipHeight, setTooltipHeight] = useState(0);
     
     // Výpočet pozície tooltipu pri hover
     const updateTooltipPosition = (e) => {
-        if (!tooltipRef.current) return;
         const rect = e.currentTarget.getBoundingClientRect();
-        const tooltipHeight = 200; // približná výška tooltipu
         const tooltipWidth = 220; // približná šírka tooltipu
         
-        let top = rect.top - tooltipHeight - 8;
+        // Ak už máme zmeranú výšku tooltipu, použijeme ju, inak použijeme predvolenú
+        const height = tooltipHeight > 0 ? tooltipHeight : 160;
+        
+        let top = rect.top - height - 8;
         let left = rect.left + rect.width / 2 - tooltipWidth / 2;
         
         // Ak by bol tooltip mimo obrazovky hore, zobrazíme ho dole
@@ -191,6 +193,33 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         
         setTooltipPosition({ top, left });
     };
+    
+    // Zmeranie výšky tooltipu po vykreslení
+    useEffect(() => {
+        if (isHovered && tooltipRef.current) {
+            const height = tooltipRef.current.offsetHeight;
+            if (height > 0 && height !== tooltipHeight) {
+                setTooltipHeight(height);
+                // Po zmene výšky prepočítame pozíciu
+                const rect = tooltipRef.current.parentElement?.getBoundingClientRect();
+                if (rect) {
+                    const tooltipWidth = 220;
+                    let top = rect.top - height - 8;
+                    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+                    
+                    if (top < 10) {
+                        top = rect.bottom + 8;
+                    }
+                    if (left < 10) {
+                        left = 10;
+                    } else if (left + tooltipWidth > window.innerWidth - 10) {
+                        left = window.innerWidth - tooltipWidth - 10;
+                    }
+                    setTooltipPosition({ top, left });
+                }
+            }
+        }
+    }, [isHovered, tooltipHeight]);
     
     const tooltipContent = showTooltip ? (
         React.createElement(
@@ -230,7 +259,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 matchInfo.dateTime && React.createElement(
                     'div',
                     { className: 'text-center text-gray-400 text-xs' },
-                    `📅 ${matchInfo.dateTime}`
+                    `${matchInfo.dateTime}`
                 ),
                 matchInfo.score && React.createElement(
                     'div',
@@ -258,7 +287,22 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             style: { zIndex: 1 },
             onMouseEnter: (e) => {
                 setIsHovered(true);
-                updateTooltipPosition(e);
+                // Najprv nastavíme pozíciu s odhadovanou výškou
+                const rect = e.currentTarget.getBoundingClientRect();
+                const tooltipWidth = 220;
+                let top = rect.top - 160 - 8;
+                let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+                
+                if (top < 10) {
+                    top = rect.bottom + 8;
+                }
+                if (left < 10) {
+                    left = 10;
+                } else if (left + tooltipWidth > window.innerWidth - 10) {
+                    left = window.innerWidth - tooltipWidth - 10;
+                }
+                setTooltipPosition({ top, left });
+                
                 if (onHoverStart && teamId) {
                     onHoverStart(teamId);
                 }
