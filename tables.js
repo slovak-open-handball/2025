@@ -1193,14 +1193,20 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     }, [groupMatches, transferredMatches]);
     
     // Funkcie pre zvýraznenie
-    const handleHoverStart = (teamId) => {
-        console.log('🔍 [GroupTable] handleHoverStart - teamId:', teamId);
-        console.log('🔍 [GroupTable] Current highlightedTeamId:', highlightedTeamId);
-        if (teamId) {
-            setHighlightedTeamId(teamId);
-            console.log('✅ [GroupTable] Set highlightedTeamId to:', teamId);
+    const handleHoverStart = (teamName) => {
+        console.log('🔍 [GroupTable] handleHoverStart - teamName:', teamName);
+    
+        if (teamName) {
+            // 🔥 NÁJDENIE TÍMU PODĽA NÁZVU (nie podľa ID)
+            const foundTeam = teams.find(t => t.name === teamName);
+            if (foundTeam) {
+                setHighlightedTeamId(foundTeam.id);
+                console.log('✅ [GroupTable] Set highlightedTeamId to:', foundTeam.id, 'for team:', foundTeam.name);
+            } else {
+                console.log('⚠️ [GroupTable] No team found with name:', teamName);
+            }
         } else {
-            console.log('⚠️ [GroupTable] teamId is null, not setting highlight');
+            console.log('⚠️ [GroupTable] teamName is null, not setting highlight');
         }
     };
     
@@ -1432,6 +1438,24 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         
         console.log('✅ [getMatchInfoForForm] Final opponentId:', opponentId);
         console.log('✅ [getMatchInfoForForm] Final homeTeam:', homeTeamNameForTooltip, 'awayTeam:', awayTeamNameForTooltip);
+
+        const opponentRawName = opponentName || match.awayTeamName || match.homeTeamName || null;
+
+        let opponentNameForHighlight = null;
+
+        if (opponentName) {
+            // Skúsime nájsť správny názov tímu
+            const foundTeamName = getTeamName(opponentName);
+            if (foundTeamName && foundTeamName !== opponentName) {
+                opponentNameForHighlight = foundTeamName;
+            } else {
+                opponentNameForHighlight = opponentName;
+            }
+        } else if (finalIsHome && match.awayTeamIdentifier) {
+            opponentNameForHighlight = getTeamName(match.awayTeamName || match.awayTeamIdentifier);
+        } else if (finalIsAway && match.homeTeamIdentifier) {
+            opponentNameForHighlight = getTeamName(match.homeTeamName || match.homeTeamIdentifier);
+        }
         
         return {
             homeTeamName: homeTeamNameForTooltip,
@@ -1443,6 +1467,8 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             isHome: finalIsHome,
             isAway: finalIsAway,
             opponentId: opponentId,
+            opponentName: opponentNameForHighlight,
+            opponentName: opponentRawName,
             result: result,
             isTransferred: isTransferred
         };
@@ -1626,6 +1652,26 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                         formMatchesWithInfo.map((match, idx) => {
                                             const isTransferred = match.isTransferred || match.matchInfo?.isTransferred || false;
                                             const opponentId = match.matchInfo?.opponentId || null;
+                                            const opponentName = match.matchInfo?.opponentName || null;
+
+                                            // 🔥 ZÍSKAME NÁZOV SÚPERA PRE ZVÝRAZNENIE
+                                            let opponentTeamName = null;
+                                            if (opponentName) {
+                                                // Skúsime nájsť v teamNames podľa názvu
+                                                for (const [id, name] of Object.entries(teamNames)) {
+                                                    if (name === opponentName) {
+                                                        opponentTeamName = name;
+                                                        break;
+                                                    }
+                                                }
+                                                // Ak sme nenašli, použijeme opponentName
+                                                if (!opponentTeamName) {
+                                                    opponentTeamName = opponentName;
+                                                }
+                                            } else if (opponentId) {
+                                                // Fallback: skúsime podľa ID
+                                                opponentTeamName = teamNames[opponentId] || getDisplayTeamName(opponentId) || opponentId;
+                                            }
                                             
                                             // 🔥 LOG PRE KAŽDÝ ŠTVORČEK
                                             console.log(`📊 [FormItem] Team: ${team.name}, matchId: ${match.matchId}, result: ${match.result}, opponentId: ${opponentId}, isTransferred: ${isTransferred}`);
@@ -1642,7 +1688,8 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                                     matchInfo: match.matchInfo,
                                                     onHoverStart: handleHoverStart,
                                                     onHoverEnd: handleHoverEnd,
-                                                    teamId: opponentId
+                                                    teamId: opponentId,
+                                                    teamName: opponentTeamName
                                                 }),
                                                 isTransferred && React.createElement(
                                                     'span',
