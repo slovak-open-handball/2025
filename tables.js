@@ -126,7 +126,6 @@ const updateURLFilter = (category, group) => {
             history.replaceState(null, '', newHash);
         }
     } catch (e) {
-        console.error('Chyba pri aktualizácii URL:', e);
     }
 };
 
@@ -480,7 +479,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                 setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
             }
         }, (error) => {
-            console.error('Chyba pri sledovaní zmien zápasov:', error);
         });
         
         return () => unsubscribe();
@@ -517,7 +515,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                 return newScores;
             });
         }, (error) => {
-            console.error('Chyba pri sledovaní udalostí:', error);
         });
         
         return () => unsubscribe();
@@ -783,11 +780,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     
                     // 🔥 AKTUALIZUJEME AJ GLOBÁLNU PREMENNÚ PRE ĎALŠIE POUŽITIE
                     window.__pointsForWin = newPoints;
-                    
-                    console.log(`📋 Načítané body za výhru z databázy: ${newPoints}`);
-                }
+                                    }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení tabuľky:', err);
             }
         };
         loadSettings();
@@ -820,7 +814,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     window.categorySettings = settings;
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení kategórií:', err);
             }
         };
         loadCategorySettings();
@@ -846,7 +839,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 window.categorySettings = settings;
             }
         }, (err) => {
-            console.error('Chyba pri sledovaní nastavení kategórií:', err);
         });
         return () => unsubscribe();
     }, []);
@@ -864,7 +856,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     window.groupsData = data;
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní typov skupín:', err);
             }
         };
         loadGroupsDataFromDB();
@@ -881,7 +872,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 window.groupsData = data;
             }
         }, (err) => {
-            console.error('Chyba pri sledovaní typov skupín:', err);
         });
         return () => unsubscribe();
     }, []);
@@ -898,7 +888,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 
                 let changed = false;
                 if (pointsForWin !== newPoints) {
-                    console.log(`🔄 Zmena bodov za výhru: ${pointsForWin} → ${newPoints}`);
                     setPointsForWin(newPoints);
                     window.__pointsForWin = newPoints;
                     changed = true;
@@ -915,7 +904,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
             }
         }, (err) => {
-            console.error('Chyba pri sledovaní nastavení tabuľky:', err);
         });
         return () => unsubscribe();
     }, [pointsForWin, sortingConditions]);
@@ -2000,7 +1988,6 @@ const TablesApp = () => {
                 window.categoriesList = list;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní farieb kategórií:', err);
         }
     };
     
@@ -2016,16 +2003,13 @@ const TablesApp = () => {
                 window.groupsData = data;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní skupín:', err);
         }
     };
     
     // 🔥 FUNKCIA NA PREPOČITANIE VŠETKÝCH NÁZVOV TÍMOV
     const recalculateAllTeamNames = useCallback(async () => {
-        console.log('🔄 Prepočítavam všetky názvy tímov...');
         
         if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
-            console.log('⚠️ matchTracker nie je dostupný, preskakujem prepočet');
             return;
         }
         
@@ -2071,19 +2055,15 @@ const TablesApp = () => {
         }
         
         if (needsUpdate) {
-            console.log('🔄 Aktualizujem názvy tímov...');
             setTeamNames(prev => ({ ...prev, ...names }));
-            // Aktualizujeme aj globálnu premennú
             window.teamNames = { ...window.teamNames, ...names };
         } else {
-            console.log('ℹ️ Žiadne nové názvy tímov na aktualizáciu');
         }
     }, [matches, teamNames]);
     
     // 🔥 FUNKCIA NA PREPOČITANIE VŠETKÝCH TABULIEK
     const recalculateAllTables = useCallback(() => {
-        console.log('🔄 Prepočítavam všetky tabuľky...');
-        setShouldRecalculate(prev => !prev); // Toggle pre spustenie prepočtu v GroupTablesView
+        setShouldRecalculate(prev => !prev);
     }, []);
     
     // 🔥 REALTIME SLEDOVANIE ZMIEN ZÁPASOV SO ZAMERANÍM NA STAV "completed"
@@ -2110,12 +2090,10 @@ const TablesApp = () => {
                 
                 updatedStatuses[match.id] = newStatus;
                 
-                // 🔥 DETEKOVALI SME ZMENU STAVU NA "completed"
                 if (change.type === 'modified' && oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
                     hasNewCompleted = true;
                     completedMatchId = match.id;
                     completedMatchData = match;
-                    console.log(`✅ Zápas DOHRANÝ! ID: ${match.id}, Kategória: ${match.categoryName}, Skupina: ${match.groupName}`);
                 }
             });
             
@@ -2129,27 +2107,17 @@ const TablesApp = () => {
             if (hasNewCompleted) {
                 setLastCompletedMatchId(completedMatchId);
                 
-                // Počkáme krátko (1s) aby sa stihli aktualizovať dáta v databáze
-                setTimeout(async () => {
-                    console.log('🔄 Spúšťam prepočet tabuliek a názvov tímov kvôli dokončenému zápasu...');
-                    
-                    // 1. Najprv prepočítame názvy tímov
-                    await recalculateAllTeamNames();
-                    
-                    // 2. Potom prepočítame tabuľky
-                    recalculateAllTables();
-                    
-                    // 3. Ak existuje globálna funkcia na aktualizáciu, zavoláme ju
+                setTimeout(async () => {                    
+                    await recalculateAllTeamNames();                    
+                    recalculateAllTables();                    
                     if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                         window.updateTeamNamesGlobally();
                     }
                     
-                    console.log('✅ Prepočet dokončený');
                 }, 1000);
             }
             
         }, (err) => {
-            console.error('Chyba pri sledovaní zápasov:', err);
         });
         
         return () => unsubscribe();
@@ -2339,7 +2307,6 @@ const TablesApp = () => {
             setMatches(updatedMatches);
             window.matchesData = updatedMatches;
         }, (err) => {
-            console.error('Chyba pri sledovaní zápasov:', err);
         });
         
         return () => unsubscribe();
