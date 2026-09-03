@@ -1857,7 +1857,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     };
     
     // ============================================================
-    // UPRAVENÁ FUNKCIA: Render jednej tabuľky (s formou - všetky zápasy)
+    // UPRAVENÁ FUNKCIA: Render jednej tabuľky (s formou - všetky zápasy, bez zalamovania)
     // ============================================================
     
     const renderGroupTable = (table) => {
@@ -1948,8 +1948,13 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body'),
-                                // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY
-                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Forma')
+                                // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
+                                React.createElement('th', { 
+                                    className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider',
+                                    style: { minWidth: '100px' }
+                                }, 
+                                    'Forma'
+                                )
                             )
                         ),
                         
@@ -2010,15 +2015,20 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                         { className: 'px-4 py-3 text-center font-bold text-blue-600' },
                                         team.points
                                     ),
-                                    // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY
+                                    // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 text-center' },
                                         React.createElement(
                                             'div',
                                             { 
-                                                className: 'flex items-center justify-center gap-0.5 flex-wrap',
-                                                style: { maxWidth: '200px' }
+                                                className: 'flex items-center justify-start gap-0.5 overflow-x-auto',
+                                                style: { 
+                                                    maxWidth: '250px',
+                                                    flexWrap: 'nowrap',
+                                                    whiteSpace: 'nowrap',
+                                                    padding: '2px 0'
+                                                }
                                             },
                                             teamForm.map((match, idx) => 
                                                 React.createElement(FormIndicator, { key: idx, result: match.result })
