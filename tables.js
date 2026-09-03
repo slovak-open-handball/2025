@@ -214,7 +214,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     pointerEvents: 'none',
                     opacity: isHovered ? 1 : 0,
                     display: isHovered ? 'block' : 'none',
-                    zIndex: 99999,
+                    zIndex: 9999999999,
                     top: tooltipPosition.top + 'px',
                     left: tooltipPosition.left + 'px'
                 }
