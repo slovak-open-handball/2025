@@ -3279,6 +3279,7 @@ const AddTeamsGroupApp = (props) => {
                     }
                 }
                 
+                const categoryName = categoryIdToNameMap[targetCategoryId];
                 // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu (pre extra tímy)
                 const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
                 
