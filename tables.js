@@ -655,11 +655,15 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
-                            // Rovnaký riadok pre všetky zápasy - prenesené majú rovnaký vzhľad
+                            // 🔥 Riadok - bledosivý pre prenesené zápasy
+                            const rowClass = isTransferred
+                                ? 'hover:bg-gray-200 transition-colors bg-gray-100'
+                                : 'hover:bg-gray-50 transition-colors';
+
                             dayRows.push(
                                 React.createElement(
                                     'tr',
-                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: 'hover:bg-gray-50 transition-colors' },
+                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: rowClass },
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap' },
