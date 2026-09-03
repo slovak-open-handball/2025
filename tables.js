@@ -557,7 +557,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 'div',
                 { className: 'border-t border-gray-200 pt-3 space-y-2' },
                 
-                // Riadok s názvom "Základné skupiny" (ak existujú)
+                // Riadok s názvom "Základné skupiny" (ak existujú) - ZELENÉ
                 basicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'flex flex-wrap items-center gap-2 justify-center' },
@@ -582,6 +582,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     basicGroups.map(group => {
                         const isSelected = selectedGroup === group;
                         const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
+                        // ZELENÉ FARBY pre základné skupiny
                         const colors = table ? getGroupTypeColors(group, selectedCategory, groupsDataState) : { backgroundColor: '#DCFCE7', textColor: '#166534' };
                         const bgColor = isSelected ? colors.textColor : colors.backgroundColor;
                         const textColor = isSelected ? '#FFFFFF' : colors.textColor;
@@ -601,7 +602,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     })
                 ),
                 
-                // Riadok s názvom "Nadstavbové skupiny" (ak existujú)
+                // Riadok s názvom "Nadstavbové skupiny" (ak existujú) - MODRÉ
                 advancedGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'flex flex-wrap items-center gap-2 justify-center' },
@@ -613,6 +614,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     advancedGroups.map(group => {
                         const isSelected = selectedGroup === group;
                         const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
+                        // MODRÉ FARBY pre nadstavbové skupiny
                         const colors = table ? getGroupTypeColors(group, selectedCategory, groupsDataState) : { backgroundColor: '#DBEAFE', textColor: '#1E40AF' };
                         const bgColor = isSelected ? colors.textColor : colors.backgroundColor;
                         const textColor = isSelected ? '#FFFFFF' : colors.textColor;
@@ -634,7 +636,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             )
         );
     };
-        
+            
     // Render jednej tabuľky
     const renderGroupTable = (table) => {
         const { category, group, groupType, teams, totalMatches, completedCount, completionPercentage, isFullyCompleted } = table;
