@@ -389,6 +389,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
                     console.log('⚠️ [FormIndicator] onHoverStart not called - teamName:', teamName);
                 }
             },
+            // V FormIndicator, upravte onMouseLeave:
             onMouseLeave: (e) => {
                 // 🔥 NASTAVÍME GLOBÁLNY STAV NA FALSE
                 if (window.__formIndicatorHover) {
@@ -401,15 +402,17 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
                     clearTimeout(timeoutRef.current);
                 }
                 
-                // 🔥 PRIDANÉ: ONESKORENIE PRED ZAVOLANÍM onHoverEnd
+                // 🔥 PREDĹŽIME ONESKORENIE NA 500ms
                 timeoutRef.current = setTimeout(() => {
+                    // Skontrolujeme, či myš stále nie je nad prvkom
                     if (!isHoveringRef.current) {
+                        // Zavoláme onHoverEnd len ak tooltip naozaj zmizol
                         if (onHoverEnd) {
                             onHoverEnd();
                         }
                         closeTooltip();
                     }
-                }, 200);
+                }, 500); // Zvýšené na 500ms
             },
             onMouseMove: (e) => {
                 // Aktualizujeme pozíciu tooltipu pri pohybe myši
@@ -1243,16 +1246,12 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     const handleHoverEnd = () => {
         console.log('🔍 [GroupTable] handleHoverEnd - scheduling clear highlight');
         
-        // 🔥 NASTAVÍME GLOBÁLNY STAV NA FALSE
-        window.__formIndicatorHover.isHovering = false;
-        window.__formIndicatorHover.teamName = null;
-        
         // Zrušíme predchádzajúci timeout
         if (highlightTimeoutRef.current) {
             clearTimeout(highlightTimeoutRef.current);
         }
         
-        // Nastavíme nový timeout
+        // Nastavíme nový timeout - DLHŠÍ (800ms)
         highlightTimeoutRef.current = setTimeout(() => {
             // 🔥 SKONTROLUJEME GLOBÁLNY STAV
             if (!window.__formIndicatorHover.isHovering) {
@@ -1261,7 +1260,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                 console.log('✅ [GroupTable] Highlight cleared');
             } else {
                 console.log('⚠️ [GroupTable] Highlight not cleared - mouse still over element');
-                // 🔥 AK JE MYŠ STÁLE NAD PRVKOM, ZNOVA NASTAVÍME ZVÝRAZNENIE
+                // Obnovíme zvýraznenie
                 const teamName = window.__formIndicatorHover.teamName;
                 if (teamName) {
                     const foundTeam = teams.find(t => t.name === teamName);
@@ -1271,7 +1270,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                     }
                 }
             }
-        }, 300);
+        }, 800); // 800ms oneskorenie
     };
     
     // 🔥 POMOCNÁ FUNKCIA NA NORMALIZÁCIU NÁZVOV
