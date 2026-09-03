@@ -38,10 +38,10 @@ import {
     query,
     where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-//import {
-//    initializeAppCheck,
-//    ReCaptchaEnterpriseProvider
-//} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+import {
+    initializeAppCheck,
+    ReCaptchaEnterpriseProvider
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
 const ENCRYPTED_CONFIG = "eyJhcGlLZXkiOiJBSXphU3lBaEZ5T3BwaldEWV96a0pjdVdKMkFMcGI1WjFhbFpZeTQiLCJhdXRoRG9tYWluIjoic29oMjAyNS1zMHkxaGdoLmZpcmViYXNlYXBwLmNvbSIsInByb2plY3RJZCI6InNvaDIwMjUtczB5MWhnaCIsInN0b3JhZ2VCdWNrZXQiOiJzb2gyMDI1LXMweTFoZ2guYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjM2NzMxNjQxNDE2NCIsImFwcElkIjoiMTozNjczMTY0MTQxNjQ6d2ViOmZjZTA3OWUxYzdmNDIyMzI5MjQ5MGIifQ==";
 
