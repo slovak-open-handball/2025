@@ -365,13 +365,32 @@ const updateNavigationLinks = () => {
     // Spracovanie všetkých odkazov s atribútom data-page
     const publicNavLinks = document.querySelectorAll('[data-page]');
     
+    // ZISTÍME VIDITEĽNOSŤ PRE TEAMS-IN-GROUPS A TABLES
+    const teamsInGroupsConfig = pagesVisibility['teams-in-groups'];
+    const tablesConfig = pagesVisibility['tables'];
+    
+    // SPOLOČNÁ VIDITEĽNOSŤ: tables aj teams-in-groups musia byť viditeľné spoločne
+    // Ak je jedna viditeľná, druhá musí byť tiež viditeľná
+    const teamsVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
+    const tablesVisible = tablesConfig && tablesConfig.visible === true;
+    
+    // Určíme, či majú byť viditeľné spoločne (obe sú viditeľné)
+    const showGroupAndTables = teamsVisible && tablesVisible;
+    
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
         const pageConfig = pagesVisibility[pageId];
         
-        // Špeciálne spracovanie pre "tables" - použije rovnakú logiku ako "teams-in-groups"
-        // Oba používajú rovnaký mechanizmus kontroly viditeľnosti
-        const isVisible = pageConfig && pageConfig.visible === true;
+        let isVisible = false;
+        
+        // ŠPECIÁLNE SPRACOVANIE PRE TEAMS-IN-GROUPS A TABLES
+        if (pageId === 'teams-in-groups' || pageId === 'tables') {
+            // Obe stránky sa zobrazujú spoločne - iba ak sú obe viditeľné
+            isVisible = showGroupAndTables;
+        } else {
+            // Ostatné stránky sa riadia vlastným nastavením
+            isVisible = pageConfig && pageConfig.visible === true;
+        }
         
         if (isVisible) {
             link.classList.remove('hidden');
@@ -428,6 +447,22 @@ const checkCurrentPageAccess = () => {
     // Povolené stránky bez kontroly
     const allowedPages = ['', 'index', 'login', 'admin-register'];
     if (allowedPages.includes(currentPage)) {
+        return true;
+    }
+    
+    // ŠPECIÁLNE SPRACOVANIE PRE TEAMS-IN-GROUPS A TABLES
+    if (currentPage === 'teams-in-groups' || currentPage === 'tables') {
+        const teamsConfig = pagesVisibility['teams-in-groups'];
+        const tablesConfig = pagesVisibility['tables'];
+        
+        // Obe musia byť viditeľné, aby boli prístupné
+        const teamsVisible = teamsConfig && teamsConfig.visible === true;
+        const tablesVisible = tablesConfig && tablesConfig.visible === true;
+        
+        if (!teamsVisible || !tablesVisible) {
+            window.location.href = 'index.html';
+            return false;
+        }
         return true;
     }
     
