@@ -668,10 +668,23 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamName || match.homeTeamIdentifier || '???';
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamName || match.awayTeamIdentifier || '???';
                             
-                            // Pre prenesené zápasy - použijeme názov haly z pôvodného zápasu (ak existuje)
-                            let matchHallName = hallNames[match.hallId] || 'Športová hala';
-                            // Ak nemáme hallId, skúsime použiť fromGroup alebo predvolenú hodnotu
-                            if (!match.hallId && match.fromGroup) {
+                            // 🔥 PRE PRENESENÉ ZÁPASY - POUŽIJEME REÁLNE MIESTO Z PÔVODNÉHO ZÁPASU
+                            // Skúsime nájsť hallId v pôvodnom zápase
+                            let matchHallName = 'Športová hala';
+                            
+                            // 1. Skúsime použiť hallId z preneseného zápasu
+                            if (match.hallId && hallNames[match.hallId]) {
+                                matchHallName = hallNames[match.hallId];
+                            } 
+                            // 2. Ak nemáme hallId, skúsime nájsť pôvodný zápas podľa ID
+                            else if (match.id && window.matchesData) {
+                                const originalMatch = window.matchesData.find(m => m.id === match.id);
+                                if (originalMatch && originalMatch.hallId && hallNames[originalMatch.hallId]) {
+                                    matchHallName = hallNames[originalMatch.hallId];
+                                }
+                            }
+                            // 3. Ak stále nemáme, použijeme fromGroup alebo predvolenú hodnotu
+                            else if (match.fromGroup) {
                                 matchHallName = match.fromGroup;
                             }
 
@@ -683,7 +696,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
-                            // Rovnaký riadok pre všetky zápasy
+                            // Rovnaký riadok pre všetky zápasy - prenesené majú rovnaký vzhľad
                             dayRows.push(
                                 React.createElement(
                                     'tr',
@@ -691,20 +704,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap' },
-                                        isTransferred ? (
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-1' },
-                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-400 text-xs' }),
-                                                React.createElement('span', { className: 'font-mono font-medium text-purple-600 text-sm' }, 'Prenesený')
-                                            )
-                                        ) : (
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-1' },
-                                                React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
-                                            )
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                            React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
                                         )
                                     ),
                                     React.createElement(
