@@ -1,13 +1,6 @@
-// tables.js
-// Nahraďte celý obsah súboru matches.js nasledujúcim kódom:
-
 import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
-
-// ============================================================
-// POMOCNÉ FUNKCIE
-// ============================================================
 
 const formatMatchDateTime = (timestamp) => {
     if (!timestamp) return null;
@@ -83,10 +76,6 @@ const getCategoryNameById = (categoryId) => {
     }
     return null;
 };
-
-// ============================================================
-// FUNKCIA PRE PRÁCU S URL HASH FILTROM
-// ============================================================
 
 const encodeForURL = (text) => {
     if (!text) return '';
@@ -165,7 +154,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
     const timeoutRef = useRef(null);
     const isHoveringRef = useRef(false);
     
-    // Funkcia na výpočet pozície tooltipu
     const calculatePosition = (rect, tooltipHeight) => {
         const tooltipWidth = 220;
         const padding = 8;
@@ -186,7 +174,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
         return { top, left };
     };
     
-    // Zatvorenie tooltipu
     const closeTooltip = useCallback(() => {
         setIsHovered(false);
         setIsVisible(false);
@@ -195,13 +182,11 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
-        // 🔥 Zavoláme onHoverEnd LEN AK NAOZAJ OPÚŠŤAME PRVOK
         if (onHoverEnd && !isHoveringRef.current) {
             onHoverEnd();
         }
     }, [onHoverEnd]);
     
-    // Kontrola, či je myš stále nad prvkom
     const checkMouseOver = useCallback(() => {
         if (containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
@@ -220,7 +205,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
         }
     }, [closeTooltip]);
     
-    // Zmeranie výšky tooltipu a aktualizácia pozície
     useLayoutEffect(() => {
         if (isVisible && tooltipRef.current && currentTargetRect) {
             const height = tooltipRef.current.offsetHeight;
@@ -231,7 +215,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
         }
     }, [isVisible, currentTargetRect]);
     
-    // Event listener pre scroll a resize
     useEffect(() => {
         if (isVisible) {
             const handleScroll = () => {
@@ -270,13 +253,11 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
         }
     }, [isVisible, currentTargetRect, checkMouseOver, closeTooltip]);
     
-    // Čistenie timeoutu pri odmontovaní
     useEffect(() => {
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
-            // 🔥 Pri odmontovaní zavoláme onHoverEnd
             if (onHoverEnd) {
                 onHoverEnd();
             }
@@ -356,7 +337,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
             ref: containerRef,
             className: 'relative inline-block',
             style: { zIndex: 0 },
-            // V FormIndicator komponente, v onMouseEnter:
             onMouseEnter: (e) => {
                 
                 if (timeoutRef.current) {
@@ -364,7 +344,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
                     timeoutRef.current = null;
                 }
                 
-                // 🔥 NASTAVÍME GLOBÁLNY STAV
                 if (window.__formIndicatorHover) {
                     window.__formIndicatorHover.isHovering = true;
                     window.__formIndicatorHover.teamName = teamName;
@@ -384,33 +363,26 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
                     onHoverStart(teamName);
                 }
             },
-            // V FormIndicator, upravte onMouseLeave:
             onMouseLeave: (e) => {
-                // 🔥 NASTAVÍME GLOBÁLNY STAV NA FALSE
                 if (window.__formIndicatorHover) {
                     window.__formIndicatorHover.isHovering = false;
                 }
                 isHoveringRef.current = false;
                 
-                // Zrušíme predchádzajúci timeout
                 if (timeoutRef.current) {
                     clearTimeout(timeoutRef.current);
                 }
                 
-                // 🔥 PREDĹŽIME ONESKORENIE NA 500ms
                 timeoutRef.current = setTimeout(() => {
-                    // Skontrolujeme, či myš stále nie je nad prvkom
                     if (!isHoveringRef.current) {
-                        // Zavoláme onHoverEnd len ak tooltip naozaj zmizol
                         if (onHoverEnd) {
                             onHoverEnd();
                         }
                         closeTooltip();
                     }
-                }, 500); // Zvýšené na 500ms
+                }, 500); 
             },
             onMouseMove: (e) => {
-                // Aktualizujeme pozíciu tooltipu pri pohybe myši
                 if (isVisible && currentTargetRect) {
                     const rect = e.currentTarget.getBoundingClientRect();
                     if (rect.top !== currentTargetRect.top || rect.left !== currentTargetRect.left) {
@@ -441,31 +413,21 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId, te
     );
 };
 
-// ============================================================
-// FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
-// ============================================================
-
 const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
-    // Získame všetky zápasy tímu v skupine (vrátane prenesených)
     const teamMatches = [];
     
-    // Prechádzame všetky zápasy v skupine
     groupMatches.forEach(match => {
-        // Kontrola, či tím hrá v tomto zápase
         const isHome = match.homeTeamIdentifier === teamId;
         const isAway = match.awayTeamIdentifier === teamId;
         
-        // 🔥 PRIDANÉ: Ak je to prenesený zápas, skúsime porovnať aj podľa názvu
         let isTransferredMatch = match.isTransferred || false;
         let isTeamInMatch = isHome || isAway;
         
-        // 🔥 AK NENAŠLI SME PODĽA ID, SKÚSIME PODĽA NÁZVU (pre prenesené zápasy)
         if (!isTeamInMatch && isTransferredMatch) {
             const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
             const homeName = match.homeTeamName || match.homeTeamIdentifier || '';
             const awayName = match.awayTeamName || match.awayTeamIdentifier || '';
             
-            // Porovnanie názvov (bez diakritiky, malé písmená)
             const normalize = (name) => {
                 if (!name) return '';
                 return name
@@ -481,9 +443,8 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
             
             if (teamNameNorm === homeNameNorm || teamNameNorm === awayNameNorm) {
                 isTeamInMatch = true;
-                // Nastavíme správne isHome/isAway pre ďalšie spracovanie
                 if (teamNameNorm === homeNameNorm) {
-                    match.homeTeamIdentifier = teamId; // Dočasne nastavíme
+                    match.homeTeamIdentifier = teamId;
                 } else {
                     match.awayTeamIdentifier = teamId;
                 }
@@ -491,11 +452,9 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
         }
         
         if (isTeamInMatch) {
-            // Získame skóre
             let homeScore = match.homeScore || 0;
             let awayScore = match.awayScore || 0;
             
-            // Ak zápas nie je dokončený, skúsime získať skóre z udalostí
             if (match.status !== 'completed' && match.id) {
                 const events = window.matchTracker?.getEvents?.(match.id) || [];
                 const score = getCurrentScoreFromEvents(events);
@@ -505,7 +464,6 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
                 }
             }
             
-            // Získame dátum zápasu
             let matchDate = null;
             if (match.scheduledTime) {
                 try {
@@ -513,12 +471,10 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
                 } catch (e) {}
             }
             
-            // Zistíme výsledok pre tím
-            let result = 'N'; // N = neodohrané
+            let result = 'N'; 
             const isMatchCompleted = match.status === 'completed' || match.isTransferred === true;
             
             if (isMatchCompleted) {
-                // Zistíme, či je tím domáci alebo hostia (môže sa zmeniť po úprave vyššie)
                 const finalIsHome = match.homeTeamIdentifier === teamId;
                 const finalIsAway = match.awayTeamIdentifier === teamId;
                 
@@ -547,9 +503,7 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
         }
     });
     
-    // Zoradenie podľa dátumu (chronologicky - od najstaršieho po najnovší)
     teamMatches.sort((a, b) => {
-        // Prenesené zápasy dávame na začiatok (odohrali sa skôr)
         if (a.isTransferred && !b.isTransferred) return -1;
         if (!a.isTransferred && b.isTransferred) return 1;
         
@@ -561,10 +515,6 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
     
     return teamMatches;
 };
-
-// ============================================================
-// FUNKCIA NA ZÍSKANIE SKÓRE Z UDALOSTÍ
-// ============================================================
 
 const getCurrentScoreFromEvents = (events) => {
     if (!events || events.length === 0) {
@@ -601,11 +551,6 @@ const getCurrentScoreFromEvents = (events) => {
     return { home: homeScore, away: awayScore };
 };
 
-// ============================================================
-// FUNKCIE PRE ZORAĐOVANIE TÍMOV (rovnaké ako v matchTracker)
-// ============================================================
-
-// Výpočet vzájomného zápasu medzi dvoma tímami
 const calculateHeadToHead = (teamA, teamB, groupMatches) => {
     let teamAScore = 0;
     let teamBScore = 0;
@@ -673,14 +618,11 @@ const calculateHeadToHead = (teamA, teamB, groupMatches) => {
     return { teamAScore, teamBScore, teamAWins, teamBWins };
 };
 
-// Porovnanie dvoch tímov podľa kritérií
 const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
-    // 1. Najprv porovnáme podľa bodov
     if (teamA.points !== teamB.points) {
         return teamB.points - teamA.points;
     }
 
-    // 2. Ak sú body rovnaké, použijeme nastavené kritériá
     if (sortingConditions && sortingConditions.length > 0) {
         for (const condition of sortingConditions) {
             const { parameter, direction } = condition;
@@ -757,16 +699,10 @@ const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
         }
     }
     
-    // 3. Ak sú všetky kritériá rovnaké, použijeme abecedné poradie
     return teamA.name.localeCompare(teamB.name);
 };
 
-// ============================================================
-// KOMPONENT PRE ZOBRAZENIE ZOZNAMU ZÁPASOV SKUPINY
-// ============================================================
-
 const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNames, transferredMatches = [] }) => {
-    // Zoradenie zápasov podľa dátumu a času
     const sortedMatches = useMemo(() => {
         return [...matches].sort((a, b) => {
             if (!a.scheduledTime) return 1;
@@ -779,34 +715,26 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         });
     }, [matches]);
 
-    // Pridáme prenesené zápasy do zoznamu
     const allMatches = useMemo(() => {
         const result = [...sortedMatches];
         
-        // Pridáme prenesené zápasy (označíme ich ako prenesené)
         if (transferredMatches && transferredMatches.length > 0) {
             transferredMatches.forEach(transferred => {
-                // Skontrolujeme, či už neexistuje rovnaký zápas (podľa ID)
                 const exists = result.some(m => m.id === transferred.id);
                 if (!exists) {
-                    // 🔥 NÁJDENIE PÔVODNÉHO ZÁPASU PODĽA ID
                     let originalMatch = null;
                     if (window.matchesData) {
                         originalMatch = window.matchesData.find(m => m.id === transferred.id);
                     }
                     
-                    // Ak sme nenašli v window.matchesData, skúsime v matches
                     if (!originalMatch) {
                         originalMatch = matches.find(m => m.id === transferred.id);
                     }
                     
-                    // Pridáme prenesený zápas s indikátorom a údajmi z pôvodného zápasu
                     result.push({
                         ...transferred,
                         isTransferred: true,
-                        // 🔥 POUŽIJEME scheduledTime Z PÔVODNÉHO ZÁPASU (ak existuje)
                         scheduledTime: originalMatch?.scheduledTime || transferred.scheduledTime || null,
-                        // 🔥 POUŽIJEME hallId Z PÔVODNÉHO ZÁPASU (ak existuje)
                         hallId: originalMatch?.hallId || transferred.hallId || null,
                         homeScore: transferred.homeScore !== undefined ? transferred.homeScore : 0,
                         awayScore: transferred.awayScore !== undefined ? transferred.awayScore : 0,
@@ -816,9 +744,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             });
         }
         
-        // Zoradenie: normálne zápasy podľa dátumu, prenesené podľa dátumu (nie na koniec)
         result.sort((a, b) => {
-            // Oba sú normálne alebo oba prenesené
             if (!a.scheduledTime && !b.scheduledTime) return 0;
             if (!a.scheduledTime) return 1;
             if (!b.scheduledTime) return -1;
@@ -832,7 +758,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return result;
     }, [sortedMatches, transferredMatches, matches]);
 
-    // Zoskupenie podľa dní
     const matchesByDay = useMemo(() => {
         const groups = {};
         
@@ -852,13 +777,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             }
         });
         
-        // Zoradenie podľa dátumu
         const result = Object.values(groups).sort((a, b) => a.date - b.date);
         
         return result;
     }, [allMatches]);
 
-    // Funkcia na vytvorenie URL pre detail zápasu
     const createMatchDetailUrl = (match) => {
         if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
         const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
@@ -866,18 +789,15 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return `matches.html#match/${encodedHome}/${encodedAway}`;
     };
 
-    // Funkcia na zistenie, či má byť tlačidlo žlté
     const isMatchActive = (match) => {
         const status = matchStatuses[match.id] || match.status || 'scheduled';
         return status === 'in-progress' || status === 'paused';
     };
 
-    // --- REALTIME SLEDOVANIE SKÓRE Z UDALOSTÍ ---
     const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
     const [matchStatuses, setMatchStatuses] = useState({});
     
-    // Realtime sledovanie zmien zápasov
     useEffect(() => {
         if (!window.db) return;
         
@@ -917,7 +837,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return () => unsubscribe();
     }, []);
     
-    // Realtime sledovanie udalostí (gólov)
     useEffect(() => {
         if (!window.db) return;
         
@@ -1000,7 +919,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                         const dayMatches = dayGroup.matches;
                         const dayRows = [];
 
-                        // Hlavička dňa - ROVNAKÁ PRE VŠETKY ZÁPASY
                         dayRows.push(
                             React.createElement(
                                 'tr',
@@ -1024,7 +942,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const isActive = isMatchActive(match);
                             const isTransferred = match.isTransferred || false;
                             
-                            // --- ZÍSKANIE SKÓRE Z REALTIME DÁT ---
                             const eventsScore = matchScoresFromEvents[match.id];
                             const dbScore = matchScoresFromDb[match.id];
                             const isMatchInProgress = matchStatus === 'in-progress' || matchStatus === 'paused';
@@ -1035,13 +952,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             let displayAwayScore = null;
                             let showScore = false;
                             
-                            // Ak je zápas ukončený, použijeme skóre z databázy
                             if (isMatchCompleted && hasDbScore) {
                                 displayHomeScore = dbScore.home;
                                 displayAwayScore = dbScore.away;
                                 showScore = true;
                             }
-                            // Ak zápas prebieha, použijeme skóre z udalostí
                             else if (isMatchInProgress) {
                                 if (eventsScore && (eventsScore.home > 0 || eventsScore.away > 0)) {
                                     displayHomeScore = eventsScore.home;
@@ -1052,13 +967,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 }
                                 showScore = true;
                             }
-                            // Inak použijeme uložené skóre z databázy
                             else if (hasDbScore) {
                                 displayHomeScore = dbScore.home;
                                 displayAwayScore = dbScore.away;
                                 showScore = true;
                             }
-                            // Ak je to prenesený zápas, použijeme jeho skóre
                             else if (isTransferred && match.homeScore !== undefined && match.awayScore !== undefined) {
                                 displayHomeScore = match.homeScore;
                                 displayAwayScore = match.awayScore;
@@ -1068,7 +981,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamName || match.homeTeamIdentifier || '???';
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamName || match.awayTeamIdentifier || '???';
                             
-                            // 🔥 PRE PRENESENÉ ZÁPASY - POUŽIJEME HALL NAME Z PÔVODNÉHO ZÁPASU
                             let matchHallName = 'Športová hala';
                             
                             if (match.hallId && hallNames[match.hallId]) {
@@ -1077,15 +989,12 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 matchHallName = match.fromGroup;
                             }
 
-                            // Vytvorenie URL pre detail
                             const detailUrl = createMatchDetailUrl(match);
                             
-                            // Tlačidlo Detail - žlté ak je zápas aktívny
                             const buttonClass = isActive
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
-                            // 🔥 ROVNAKÁ HOVER FARBA PRE VŠETKY RIADKY - bg-gray-200
                             const rowClass = isTransferred
                                 ? 'hover:bg-gray-200 transition-colors bg-gray-100'
                                 : 'hover:bg-gray-200 transition-colors';
@@ -1161,10 +1070,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
     );
 };
 
-// ============================================================
-// KOMPONENT PRE JEDNOTLIVÚ TABUĽKU SKUPINY (samostatný komponent)
-// ============================================================
-
 const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, teamNames, matches, groupsDataState, handleTableHeaderClick, getTeamForm, hallNames }) => {
     const { category, categoryId, group, groupType, teams, totalMatches, completedCount, carryOverEnabled } = table;
     
@@ -1173,14 +1078,11 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     const isAdvanced = groupType === 'nadstavbová';
     const isOnlyTable = filteredTables.length === 1;
     
-    // 🔥 STAV PRE ZVÝRAZNENIE RIADKU
     const [highlightedTeamId, setHighlightedTeamId] = useState(null);
     
-    // 🔥 PRIDANÉ: ZLÚČENIE ZÁPASOV S PRENESENÝMI ZÁPASMI PRE VÝPOČET FORMY
     const allGroupMatchesForForm = useMemo(() => {
         const result = [...groupMatches];
         
-        // Pridáme prenesené zápasy
         if (transferredMatches && transferredMatches.length > 0) {
             transferredMatches.forEach(transferred => {
                 const exists = result.some(m => m.id === transferred.id);
@@ -1203,7 +1105,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     const isHoveringRef = useRef(false);
 
     useEffect(() => {
-        // Inicializácia globálneho stavu
         if (!window.__formIndicatorHover) {
             window.__formIndicatorHover = {
                 isHovering: false,
@@ -1213,11 +1114,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     }, []);
     
     const handleHoverStart = (teamName) => {        
-        // 🔥 NASTAVÍME GLOBÁLNY STAV
         window.__formIndicatorHover.isHovering = true;
         window.__formIndicatorHover.teamName = teamName;
         
-        // Zrušíme predchádzajúci timeout
         if (highlightTimeoutRef.current) {
             clearTimeout(highlightTimeoutRef.current);
             highlightTimeoutRef.current = null;
@@ -1232,7 +1131,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     };
     
     const handleHoverEnd = () => {        
-        // Zrušíme predchádzajúci timeout
         if (highlightTimeoutRef.current) {
             clearTimeout(highlightTimeoutRef.current);
         }
@@ -1253,7 +1151,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         }, 800); 
     };
     
-    // 🔥 POMOCNÁ FUNKCIA NA NORMALIZÁCIU NÁZVOV
     const normalizeName = useCallback((name) => {
         if (!name) return '';
         return name
@@ -1263,7 +1160,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             .trim();
     }, []);
     
-    // 🔥 FUNKCIA NA ZÍSKANIE ID SÚPERA - VYHĽADÁVA PODĽA NÁZVU AJ ID
     const getOpponentIdByName = useCallback((opponentName) => {
         if (!opponentName) {
             return null;
@@ -1273,11 +1169,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         
         for (const team of teams) {
             const teamNameNorm = normalizeName(team.name || '');
-            // 🔥 POROVNANIE PODĽA NÁZVU
             if (teamNameNorm === oppNameNorm) {
                 return team.id;
             }
-            // 🔥 PRIDANÉ: POROVNANIE PODĽA ID (ak opponentName je ID)
             if (team.id === opponentName) {
                 return team.id;
             }
@@ -1285,16 +1179,13 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         return null;
     }, [teams, normalizeName]);
     
-    // 🔥 FUNKCIA NA ZÍSKANIE INFO O ZÁPASE PRE FORM INDICATOR
     const getMatchInfoForForm = (teamId, match) => {
         if (!match) return null;        
         
-        // Zistíme, či je tím domáci alebo hosť
         let finalIsHome = match.homeTeamIdentifier === teamId;
         let finalIsAway = match.awayTeamIdentifier === teamId;
         let opponentName = null;        
         
-        // Ak sme nenašli podľa ID, skúsime podľa názvu
         if (!finalIsHome && !finalIsAway) {
             const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
             const homeName = match.homeTeamName || match.homeTeamIdentifier || '';
@@ -1317,13 +1208,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             opponentName = match.homeTeamName || match.homeTeamIdentifier || '';
         }
         
-        // 🔥 AJ KEĎ JE finalIsHome/finalIsAway FALSE, SKÚSIME URČIŤ SÚPERA PODĽA NÁZVU Z MATCHU
-        // Toto je dôležité pre neodohrané zápasy, kde nemáme priradeného súpera
         let opponentId = null;
         
-        // Najprv skúsime nájsť súpera podľa názvu z match objektu
         if (!opponentName && match.homeTeamName && match.awayTeamName) {
-            // Ak nevieme, ktorý tím je náš, skúsime oba názvy
             const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
             const teamNameNorm = normalizeName(teamName);
             const homeNameNorm = normalizeName(match.homeTeamName || '');
@@ -1338,11 +1225,9 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             }
         }
         
-        // 🔥 ZÍSKAME ID SÚPERA PODĽA NÁZVU
         if (opponentName) {
             opponentId = getOpponentIdByName(opponentName);
         } else {
-            // Ak nemáme opponentName, skúsime použiť ID súpera z matchu
             if (finalIsHome && match.awayTeamIdentifier) {
                 opponentId = getOpponentIdByName(match.awayTeamName || match.awayTeamIdentifier);
             } else if (finalIsAway && match.homeTeamIdentifier) {
@@ -1350,42 +1235,34 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             }
         }
         
-        // V getMatchInfoForForm, po získaní opponentId:
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
         let opponentDisplayName = '???';
         
-        // 🔥 FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA ID ALEBO NÁZVU
         const getTeamName = (identifier) => {
             if (!identifier) return '???';
             
-            // 1. Skúsime priamo v teamNames
             if (teamNames[identifier]) {
                 return teamNames[identifier];
             }
             
-            // 2. Skúsime getDisplayTeamName
             const displayName = getDisplayTeamName(identifier);
             if (displayName && displayName !== identifier) {
                 return displayName;
             }
             
-            // 3. Skúsime nájsť v teams podľa ID
             const foundInTeams = teams.find(t => t.id === identifier);
             if (foundInTeams) {
                 return foundInTeams.name;
             }
             
-            // 4. Skúsime nájsť v teams podľa názvu
             const foundByName = teams.find(t => t.name === identifier);
             if (foundByName) {
                 return foundByName.name;
             }
             
-            // 5. Nakoniec vrátime identifikátor
             return identifier;
         };
         
-        // Získanie názvu súpera
         if (opponentId) {
             opponentDisplayName = getTeamName(opponentId);
         } else if (opponentName) {
@@ -1454,17 +1331,12 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         }        
 
         const opponentRawName = opponentName || match.awayTeamName || match.homeTeamName || null;
-
-        // V getMatchInfoForForm, na konci pred return:
         
-        // 🔥 POUŽIJEME OPPONENT DISPLAY NAME PRIAMO PRE ZVÝRAZNENIE
         let opponentNameForHighlight = null;
         
-        // Ak máme opponentDisplayName (už je to správny názov), použijeme ho
         if (opponentDisplayName && opponentDisplayName !== '???') {
             opponentNameForHighlight = opponentDisplayName;
         } else if (opponentName) {
-            // Fallback: skúsime nájsť správny názov
             const foundTeamName = getTeamName(opponentName);
             if (foundTeamName && foundTeamName !== opponentName) {
                 opponentNameForHighlight = foundTeamName;
@@ -1477,7 +1349,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             opponentNameForHighlight = getTeamName(match.homeTeamName || match.homeTeamIdentifier);
         }
         
-        // 🔥 AK JE STALE NULL, POUŽIJEME OPPONENT DISPLAY NAME Z TOOLTIPU
         if (!opponentNameForHighlight) {
             if (finalIsHome) {
                 opponentNameForHighlight = awayTeamNameForTooltip;
@@ -1496,7 +1367,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             isHome: finalIsHome,
             isAway: finalIsAway,
             opponentId: opponentId,
-            opponentName: opponentNameForHighlight,  // <-- TERAZ BUDE MAŤ SPRÁVNY NÁZOV
+            opponentName: opponentNameForHighlight,
             result: result,
             isTransferred: isTransferred
         };
@@ -1556,7 +1427,6 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                 )
             ),
             
-            // Telo tabuľky
             React.createElement(
                 'div',
                 { className: 'overflow-x-auto' },
@@ -1590,10 +1460,8 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                             const position = index + 1;
                             const isHighlighted = highlightedTeamId === team.id;
                             
-                            // 🔥 ZÍSKANIE FORMY TÍMU - POUŽIJEME ZLÚČENÉ ZÁPASY
                             const teamForm = getTeamForm(team.id, allGroupMatchesForForm, teamNames, matches);
                             
-                            // 🔥 PRÍPRAVA MATCH INFO PRE KAŽDÝ ŠTVORČEK
                             const formMatchesWithInfo = teamForm.map((match, idx) => {
                                 let fullMatch = groupMatches.find(m => m.id === match.matchId);
                                 if (!fullMatch && transferredMatches) {
@@ -1682,28 +1550,22 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                                             const opponentId = match.matchInfo?.opponentId || null;
                                             const opponentName = match.matchInfo?.opponentName || null;
 
-                                            // 🔥 ZÍSKAME NÁZOV SÚPERA PRE ZVÝRAZNENIE
                                             let opponentTeamName = null;
                                             if (opponentName) {
-                                                // Skúsime nájsť v teamNames podľa názvu
                                                 for (const [id, name] of Object.entries(teamNames)) {
                                                     if (name === opponentName) {
                                                         opponentTeamName = name;
                                                         break;
                                                     }
                                                 }
-                                                // Ak sme nenašli, použijeme opponentName
                                                 if (!opponentTeamName) {
                                                     opponentTeamName = opponentName;
                                                 }
                                             } else if (opponentId) {
-                                                // Fallback: skúsime podľa ID
                                                 opponentTeamName = teamNames[opponentId] || getDisplayTeamName(opponentId) || opponentId;
                                             }
                                             
-                                            // 🔥 AK JE STALE NULL, SKÚSIME ZÍSKAŤ NÁZOV Z MATCH INFO
                                             if (!opponentTeamName && match.matchInfo) {
-                                                // Ak je tím domáci, súper je hosť a naopak
                                                 if (match.matchInfo.isHome) {
                                                     opponentTeamName = match.matchInfo.awayTeamName;
                                                 } else if (match.matchInfo.isAway) {
@@ -2835,12 +2697,10 @@ const TablesApp = () => {
         }
     }, [matches, teamNames]);
     
-    // 🔥 FUNKCIA NA PREPOČITANIE VŠETKÝCH TABULIEK
     const recalculateAllTables = useCallback(() => {
         setShouldRecalculate(prev => !prev);
     }, []);
     
-    // 🔥 REALTIME SLEDOVANIE ZMIEN ZÁPASOV SO ZAMERANÍM NA STAV "completed"
     useEffect(() => {
         if (!window.db) return;
         
@@ -2871,13 +2731,11 @@ const TablesApp = () => {
                 }
             });
             
-            // Ak sa zmenili statusy, aktualizujeme stav
             if (Object.keys(updatedStatuses).length > 0) {
                 previousStatuses = { ...previousStatuses, ...updatedStatuses };
                 setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
             }
             
-            // 🔥 AK BOL ZÁPAS DOHRANÝ - SPUSTÍME PREPOČET
             if (hasNewCompleted) {
                 setLastCompletedMatchId(completedMatchId);
                 
@@ -2897,7 +2755,6 @@ const TablesApp = () => {
         return () => unsubscribe();
     }, [recalculateAllTeamNames, recalculateAllTables]);
     
-    // Načítanie mien tímov
     const loadTeamNames = async (matchesList) => {
         const names = { ...teamNames };
         let needsUpdate = false;
@@ -2960,7 +2817,6 @@ const TablesApp = () => {
         }
     };
     
-    // Načítanie názvov hál
     const loadHallNames = async (matchesList) => {
         const hallIds = new Set();
         matchesList.forEach(match => {
@@ -2995,7 +2851,6 @@ const TablesApp = () => {
         }
     };
     
-    // Hlavné načítanie dát
     useEffect(() => {
         const init = async () => {
             if (!window.db) {
@@ -3011,7 +2866,6 @@ const TablesApp = () => {
                 await loadCategoryColors();
                 await loadGroupsData();
                 
-                // Načítanie zápasov
                 const matchesRef = collection(window.db, 'matches');
                 const querySnapshot = await getDocs(matchesRef);
                 
@@ -3023,7 +2877,6 @@ const TablesApp = () => {
                     initialStatuses[doc.id] = match.status || 'scheduled';
                 });
                 
-                // Zoradenie zápasov
                 allMatches.sort((a, b) => {
                     if (!a.scheduledTime) return 1;
                     if (!b.scheduledTime) return -1;
@@ -3037,13 +2890,10 @@ const TablesApp = () => {
                 setMatches(allMatches);
                 setMatchStatuses(initialStatuses);
                 
-                // Načítanie názvov hál
                 await loadHallNames(allMatches);
                 
-                // Načítanie mien tímov
                 await loadTeamNames(allMatches);
                 
-                // Nastavenie globálnych premenných
                 window.matchesData = allMatches;
                 
             } catch (err) {
@@ -3056,7 +2906,6 @@ const TablesApp = () => {
         init();
     }, []);
     
-    // 🔥 REALTIME SLEDOVANIE ZMIEN (používame na aktualizáciu matches)
     useEffect(() => {
         if (!window.db) return;
         
@@ -3103,7 +2952,6 @@ const TablesApp = () => {
         );
     }
     
-    // Zobrazenie tabuliek skupín
     return React.createElement(GroupTablesView, {
         matches: matches,
         categoriesData: categoriesData,
@@ -3112,10 +2960,6 @@ const TablesApp = () => {
         hallNames: hallNames
     });
 };
-
-// ============================================================
-// RENDER APLIKÁCIE
-// ============================================================
 
 const renderApp = () => {
     const rootElement = document.getElementById('root');
