@@ -569,17 +569,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             },
                             groupTypeLabel
                         )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-3 text-sm' },
-                        React.createElement('span', { className: 'font-medium' }, `${statusIcon} ${completedCount}/${totalMatches} odohraných`),
-                        React.createElement(
-                            'span',
-                            { className: 'font-mono text-xs' },
-                            `[${progress.filled}${progress.empty}]`
-                        ),
-                        React.createElement('span', { className: 'font-medium' }, `${Math.round(completionPercentage)}%`)
                     )
                 )
             ),
@@ -678,8 +667,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 'div',
                 { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
-                React.createElement('span', {}, `${completedCount} odohraných (${Math.round(completionPercentage)}%)`),
-                React.createElement('span', {}, `${isFullyCompleted ? '✅ Kompletné' : '⏳ Prebieha'}`)
             )
         );
     };
