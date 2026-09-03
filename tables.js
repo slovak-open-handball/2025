@@ -503,7 +503,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                         React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
-                        React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
                         React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, '')
                     )
                 ),
@@ -522,7 +521,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                 React.createElement(
                                     'td',
-                                    { colSpan: 7, className: 'px-4 py-3 text-left' },
+                                    { colSpan: 6, className: 'px-4 py-3 text-left' },
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center gap-2' },
@@ -578,62 +577,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
 
-                            // Info tagy
-                            const infoTags = [];
-                            
-                            if (match.matchType && !match.isPlacementMatch) {
-                                infoTags.push(
-                                    React.createElement('span', { 
-                                        key: 'type',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: {
-                                            backgroundColor: '#F3E8FF',
-                                            color: '#6B21A5',
-                                            fontWeight: '500'
-                                        }
-                                    },
-                                    match.matchType
-                                ));
-                            }
-
-                            if (match.isPlacementMatch && match.placementRank) {
-                                infoTags.push(
-                                    React.createElement('span', { 
-                                        key: 'placement',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: {
-                                            backgroundColor: '#FFEDD5',
-                                            color: '#EA580C',
-                                            fontWeight: '500'
-                                        }
-                                    },
-                                    `o ${match.placementRank}. miesto`
-                                ));
-                            }
-
-                            // Kategória
-                            let categoryDisplayTag = match.categoryName || categoryName;
-                            if (!categoryDisplayTag && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
-                                categoryDisplayTag = window.categoriesData[match.categoryId];
-                            }
-                            
-                            if (categoryDisplayTag) {
-                                const categoryColor = getCategoryDrawColor(match.categoryId);
-                                const lighterColor = getLighterColor(categoryColor);
-                                infoTags.push(
-                                    React.createElement('span', { 
-                                        key: 'category',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: {
-                                            backgroundColor: lighterColor,
-                                            color: categoryColor,
-                                            fontWeight: '500'
-                                        }
-                                    },
-                                    categoryDisplayTag
-                                ));
-                            }
-
                             // Vytvorenie URL pre detail
                             const detailUrl = createMatchDetailUrl(match);
                             
@@ -687,15 +630,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                             { className: 'flex items-center gap-1' },
                                             React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
                                             React.createElement('span', { className: 'text-gray-600 text-sm max-w-32 truncate' }, matchHallName)
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'td',
-                                        { className: 'px-4 py-3' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex flex-wrap gap-1' },
-                                            infoTags
                                         )
                                     ),
                                     React.createElement(
