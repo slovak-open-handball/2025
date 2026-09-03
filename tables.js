@@ -1192,7 +1192,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 
                                 processedPairs.add(pairKey);
                                 
-                                // Pridáme do zoznamu prenesených zápasov
+                                // Pridáme do zoznamu prenesených zápasov (pre zobrazenie)
                                 transferredMatches.push({
                                     id: `transferred_${match.id}`,
                                     homeTeamIdentifier: match.homeTeamIdentifier,
