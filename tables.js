@@ -1783,16 +1783,16 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         ),
                         React.createElement(
                             'div',
-                            { className: 'flex items-center gap-3 text-xs' },
+                            { className: 'flex items-center gap-3 text-xs' },                            
+                            isAdvanced && carryOverEnabled && React.createElement(
+                                'span',
+                                { className: 'text-black-600 font-medium' },
+                                'Vzájomné zápasy sa započítavajú.'
+                            ),
                             React.createElement(
                                 'span',
                                 { className: 'text-gray-600' },
                                 `${completedCount}/${totalMatches} zápasov`
-                            ),
-                            isAdvanced && carryOverEnabled && React.createElement(
-                                'span',
-                                { className: 'text-purple-600 font-medium' },
-                                'Prenášanie'
                             )
                         )
                     )
