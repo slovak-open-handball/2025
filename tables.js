@@ -384,12 +384,8 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             });
         }
         
-        // Zoradenie: normálne zápasy podľa dátumu, prenesené na koniec
+        // Zoradenie: normálne zápasy podľa dátumu, prenesené podľa dátumu (nie na koniec)
         result.sort((a, b) => {
-            // Prenesené zápasy dávame na koniec
-            if (a.isTransferred && !b.isTransferred) return 1;
-            if (!a.isTransferred && b.isTransferred) return -1;
-            
             // Oba sú normálne alebo oba prenesené
             if (!a.scheduledTime && !b.scheduledTime) return 0;
             if (!a.scheduledTime) return 1;
@@ -409,19 +405,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         const groups = {};
         
         allMatches.forEach(match => {
-            // Prenesené zápasy dávame do samostatnej skupiny
-            if (match.isTransferred) {
-                if (!groups['__transferred__']) {
-                    groups['__transferred__'] = {
-                        date: null,
-                        matches: [],
-                        isTransferredGroup: true
-                    };
-                }
-                groups['__transferred__'].matches.push(match);
-                return;
-            }
-            
             if (match.scheduledTime) {
                 try {
                     const date = match.scheduledTime.toDate();
@@ -438,12 +421,8 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             }
         });
         
-        // Zoradenie: najprv normálne dni, potom prenesené
-        const result = Object.values(groups).sort((a, b) => {
-            if (a.isTransferredGroup) return 1;
-            if (b.isTransferredGroup) return -1;
-            return a.date - b.date;
-        });
+        // Zoradenie podľa dátumu
+        const result = Object.values(groups).sort((a, b) => a.date - b.date);
         
         return result;
     }, [allMatches]);
@@ -590,8 +569,11 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                     matchesByDay.map((dayGroup, dayIndex) => {
                         const dayDate = dayGroup.date;
                         const dayMatches = dayGroup.matches;
-                        const isTransferredGroup = dayGroup.isTransferredGroup;
                         const dayRows = [];
+
+                        // 🔥 KONTROLA: Či skupina obsahuje aspoň jeden prenesený zápas
+                        const hasTransferred = dayMatches.some(m => m.isTransferred);
+                        const isTransferredGroup = hasTransferred && dayMatches.every(m => m.isTransferred);
 
                         // Hlavička dňa
                         if (isTransferredGroup) {
@@ -606,7 +588,9 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                             'div',
                                             { className: 'flex items-center gap-2' },
                                             React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-500' }),
-                                            React.createElement('span', { className: 'font-semibold text-purple-700 text-sm' }, 'Prenesené zápasy zo základných skupín')
+                                            React.createElement('span', { className: 'font-semibold text-purple-700 text-sm' }, 
+                                                `Prenesené zápasy - ${formatDateHeader(dayDate)}`
+                                            )
                                         )
                                     )
                                 )
