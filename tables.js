@@ -1329,7 +1329,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         
         // V getMatchInfoForForm, po získaní opponentId:
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
-        let opponentDisplayName = '???';
+        let opponentDisplayName = opponentId ? getDisplayTeamName(opponentId) : opponentName || '???';
 
         // Získanie názvu súpera cez teamNames alebo getDisplayTeamName
         if (opponentId && teamNames[opponentId]) {
