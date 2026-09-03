@@ -1161,13 +1161,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16' }, 'Skóre'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '+/-'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Body'),
-                            // 🔥 STĹPEC FORMA - VŠETKY ZÁPASY, BEZ ZALAMOVANIA
-                            React.createElement('th', { 
-                                className: 'flex items-center justify-start gap-0.5 flex-wrap',
-                                style: { minWidth: '100px' }
-                            }, 
-                                'Forma'
-                            )
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Forma'),
                         )
                     ),
                     
