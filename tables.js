@@ -1967,6 +1967,11 @@ const TablesApp = () => {
     const [categoriesList, setCategoriesList] = useState([]);
     const [hallNames, setHallNames] = useState({});
     
+    // 🔥 STAV PRE SLEDOVANIE ZMENY STAVU ZÁPASOV
+    const [matchStatuses, setMatchStatuses] = useState({});
+    const [shouldRecalculate, setShouldRecalculate] = useState(false);
+    const [lastCompletedMatchId, setLastCompletedMatchId] = useState(null);
+    
     // Načítanie farieb kategórií
     const loadCategoryColors = async () => {
         if (!window.db) return;
@@ -2014,6 +2019,141 @@ const TablesApp = () => {
             console.error('Chyba pri načítaní skupín:', err);
         }
     };
+    
+    // 🔥 FUNKCIA NA PREPOČITANIE VŠETKÝCH NÁZVOV TÍMOV
+    const recalculateAllTeamNames = useCallback(async () => {
+        console.log('🔄 Prepočítavam všetky názvy tímov...');
+        
+        if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+            console.log('⚠️ matchTracker nie je dostupný, preskakujem prepočet');
+            return;
+        }
+        
+        const names = { ...teamNames };
+        let needsUpdate = false;
+        
+        for (const match of matches) {
+            let categoryName = match.categoryName;
+            if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+                categoryName = window.categoriesData[match.categoryId];
+            }
+            if (!categoryName) continue;
+            
+            if (match.homeTeamIdentifier) {
+                const currentDisplayName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
+                            names[match.homeTeamIdentifier] = newName;
+                            needsUpdate = true;
+                        }
+                    } catch (err) {}
+                } else if (!names[match.homeTeamIdentifier]) {
+                    names[match.homeTeamIdentifier] = currentDisplayName;
+                }
+            }
+            
+            if (match.awayTeamIdentifier) {
+                const currentDisplayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
+                            names[match.awayTeamIdentifier] = newName;
+                            needsUpdate = true;
+                        }
+                    } catch (err) {}
+                } else if (!names[match.awayTeamIdentifier]) {
+                    names[match.awayTeamIdentifier] = currentDisplayName;
+                }
+            }
+        }
+        
+        if (needsUpdate) {
+            console.log('🔄 Aktualizujem názvy tímov...');
+            setTeamNames(prev => ({ ...prev, ...names }));
+            // Aktualizujeme aj globálnu premennú
+            window.teamNames = { ...window.teamNames, ...names };
+        } else {
+            console.log('ℹ️ Žiadne nové názvy tímov na aktualizáciu');
+        }
+    }, [matches, teamNames]);
+    
+    // 🔥 FUNKCIA NA PREPOČITANIE VŠETKÝCH TABULIEK
+    const recalculateAllTables = useCallback(() => {
+        console.log('🔄 Prepočítavam všetky tabuľky...');
+        setShouldRecalculate(prev => !prev); // Toggle pre spustenie prepočtu v GroupTablesView
+    }, []);
+    
+    // 🔥 REALTIME SLEDOVANIE ZMIEN ZÁPASOV SO ZAMERANÍM NA STAV "completed"
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        let previousStatuses = {};
+        
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const updatedStatuses = {};
+            let hasNewCompleted = false;
+            let completedMatchId = null;
+            let completedMatchData = null;
+            
+            snapshot.docChanges().forEach(change => {
+                const match = {
+                    id: change.doc.id,
+                    ...change.doc.data()
+                };
+                
+                const newStatus = match.status || 'scheduled';
+                const oldStatus = previousStatuses[match.id];
+                
+                updatedStatuses[match.id] = newStatus;
+                
+                // 🔥 DETEKOVALI SME ZMENU STAVU NA "completed"
+                if (change.type === 'modified' && oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
+                    hasNewCompleted = true;
+                    completedMatchId = match.id;
+                    completedMatchData = match;
+                    console.log(`✅ Zápas DOHRANÝ! ID: ${match.id}, Kategória: ${match.categoryName}, Skupina: ${match.groupName}`);
+                }
+            });
+            
+            // Ak sa zmenili statusy, aktualizujeme stav
+            if (Object.keys(updatedStatuses).length > 0) {
+                previousStatuses = { ...previousStatuses, ...updatedStatuses };
+                setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
+            
+            // 🔥 AK BOL ZÁPAS DOHRANÝ - SPUSTÍME PREPOČET
+            if (hasNewCompleted) {
+                setLastCompletedMatchId(completedMatchId);
+                
+                // Počkáme krátko (1s) aby sa stihli aktualizovať dáta v databáze
+                setTimeout(async () => {
+                    console.log('🔄 Spúšťam prepočet tabuliek a názvov tímov kvôli dokončenému zápasu...');
+                    
+                    // 1. Najprv prepočítame názvy tímov
+                    await recalculateAllTeamNames();
+                    
+                    // 2. Potom prepočítame tabuľky
+                    recalculateAllTables();
+                    
+                    // 3. Ak existuje globálna funkcia na aktualizáciu, zavoláme ju
+                    if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
+                        window.updateTeamNamesGlobally();
+                    }
+                    
+                    console.log('✅ Prepočet dokončený');
+                }, 1000);
+            }
+            
+        }, (err) => {
+            console.error('Chyba pri sledovaní zápasov:', err);
+        });
+        
+        return () => unsubscribe();
+    }, [recalculateAllTeamNames, recalculateAllTables]);
     
     // Načítanie mien tímov
     const loadTeamNames = async (matchesList) => {
@@ -2134,9 +2274,11 @@ const TablesApp = () => {
                 const querySnapshot = await getDocs(matchesRef);
                 
                 const allMatches = [];
+                const initialStatuses = {};
                 querySnapshot.forEach((doc) => {
                     const match = { id: doc.id, ...doc.data() };
                     allMatches.push(match);
+                    initialStatuses[doc.id] = match.status || 'scheduled';
                 });
                 
                 // Zoradenie zápasov
@@ -2151,6 +2293,7 @@ const TablesApp = () => {
                 });
                 
                 setMatches(allMatches);
+                setMatchStatuses(initialStatuses);
                 
                 // Načítanie názvov hál
                 await loadHallNames(allMatches);
@@ -2171,7 +2314,7 @@ const TablesApp = () => {
         init();
     }, []);
     
-    // Realtime sledovanie zmien
+    // 🔥 REALTIME SLEDOVANIE ZMIEN (používame na aktualizáciu matches)
     useEffect(() => {
         if (!window.db) return;
         
