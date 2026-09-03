@@ -1787,7 +1787,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             isAdvanced && carryOverEnabled && React.createElement(
                                 'span',
                                 { className: 'text-black-600 font-medium' },
-                                'Vzájomné zápasy sa započítavajú.'
+                                'Vzájomné zápasy zo základných skupín sa započítavajú.'
                             ),
                             React.createElement(
                                 'span',
