@@ -349,6 +349,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 
                 tables.push({
                     category,
+                    categoryId,
                     group,
                     groupType,
                     teams,
@@ -620,9 +621,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
     // Render jednej tabuľky
     const renderGroupTable = (table) => {
-        const { category, group, groupType, teams, totalMatches, completedCount } = table;
+        const { category, categoryId, group, groupType, teams, totalMatches, completedCount } = table;
         
-        const colors = getGroupTypeColors(group, category, groupsDataState);
+        // Správne volanie getGroupTypeColors s categoryId
+        const colors = getGroupTypeColors(group, categoryId, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
         
         // Zistíme, či je táto tabuľka vybraná (či už je filter aktívny)
