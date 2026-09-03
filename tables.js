@@ -626,10 +626,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         // Správne volanie getGroupTypeColors s categoryId
         const colors = getGroupTypeColors(group, categoryId, groupsDataState);
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
-        
-        // Zistíme, či je táto tabuľka vybraná (či už je filter aktívny)
-        const isTableSelected = selectedCategory === category && selectedGroup === group;
-        
+                
         return React.createElement(
             'div',
             { 
