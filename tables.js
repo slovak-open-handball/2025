@@ -1292,9 +1292,40 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             console.log('🔍 [getMatchInfoForForm] Team is away, opponent:', opponentName);
         }
         
-        // 🔥 ZÍSKAME ID SÚPERA VÝHRADNE PODĽA NÁZVU
-        const opponentId = getOpponentIdByName(opponentName);
-        console.log('🔍 [getMatchInfoForForm] opponentId from name lookup:', opponentId);
+        // 🔥 AJ KEĎ JE finalIsHome/finalIsAway FALSE, SKÚSIME URČIŤ SÚPERA PODĽA NÁZVU Z MATCHU
+        // Toto je dôležité pre neodohrané zápasy, kde nemáme priradeného súpera
+        let opponentId = null;
+        
+        // Najprv skúsime nájsť súpera podľa názvu z match objektu
+        if (!opponentName && match.homeTeamName && match.awayTeamName) {
+            // Ak nevieme, ktorý tím je náš, skúsime oba názvy
+            const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
+            const teamNameNorm = normalizeName(teamName);
+            const homeNameNorm = normalizeName(match.homeTeamName || '');
+            const awayNameNorm = normalizeName(match.awayTeamName || '');
+            
+            if (teamNameNorm === homeNameNorm) {
+                opponentName = match.awayTeamName || match.awayTeamIdentifier || '';
+                finalIsHome = true;
+            } else if (teamNameNorm === awayNameNorm) {
+                opponentName = match.homeTeamName || match.homeTeamIdentifier || '';
+                finalIsAway = true;
+            }
+        }
+        
+        // 🔥 ZÍSKAME ID SÚPERA PODĽA NÁZVU
+        if (opponentName) {
+            opponentId = getOpponentIdByName(opponentName);
+            console.log('🔍 [getMatchInfoForForm] opponentId from name lookup:', opponentId);
+        } else {
+            // Ak nemáme opponentName, skúsime použiť ID súpera z matchu
+            if (finalIsHome && match.awayTeamIdentifier) {
+                opponentId = getOpponentIdByName(match.awayTeamName || match.awayTeamIdentifier);
+            } else if (finalIsAway && match.homeTeamIdentifier) {
+                opponentId = getOpponentIdByName(match.homeTeamName || match.homeTeamIdentifier);
+            }
+            console.log('🔍 [getMatchInfoForForm] opponentId from fallback lookup:', opponentId);
+        }
         
         // Získanie názvov tímov
         let teamDisplayName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId || '???';
