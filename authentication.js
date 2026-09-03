@@ -218,14 +218,25 @@ const loadPageVisibilitySettings = async () => {
         const pagesSnapshot = await getDocs(pagesRef);
         
         const visibilitySettings = {};
+        let teamsInGroupsVisible = true; // predvolene viditeľné
+        
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
             if (data.visible === false) {
                 visibilitySettings[doc.id] = false;
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = true;
+                }
             }
         });
+        
+        // Nastavíme tables na rovnakú viditeľnosť ako teams-in-groups
+        visibilitySettings['tables'] = teamsInGroupsVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = now;
@@ -252,14 +263,25 @@ const setupPageVisibilityListener = () => {
     pageVisibilityUnsubscribe = onSnapshot(pagesRef, (snapshot) => {
         
         const visibilitySettings = {};
+        let teamsInGroupsVisible = true;
+        
         snapshot.forEach(doc => {
             const data = doc.data();
             if (data.visible === false) {
                 visibilitySettings[doc.id] = false;
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = true;
+                }
             }
         });
+        
+        // Nastavíme tables na rovnakú viditeľnosť ako teams-in-groups
+        visibilitySettings['tables'] = teamsInGroupsVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = Date.now();
@@ -284,29 +306,9 @@ const checkCurrentPageVisibility = async () => {
         return;
     }
     
-    if (fileName === 'map.html') {
-        const isLoggedIn = isReallyLoggedIn();
-        if (isLoggedIn) {
-            return;
-        }
-    }
-    
-    if (fileName === 'matches.html') {
-        const isLoggedIn = isReallyLoggedIn();
-        if (isLoggedIn) {
-            return;
-        }
-    }
-    
-    if (fileName === 'teams-in-groups.html') {
-        const isLoggedIn = isReallyLoggedIn();
-        if (isLoggedIn) {
-            return;
-        }
-    }
-    
-    // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
-    if (fileName === 'tables.html') {
+    // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
+    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html'];
+    if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return;
@@ -320,11 +322,16 @@ const checkCurrentPageVisibility = async () => {
     
     const pageId = fileName.replace('.html', '');
     
-    if (settings[pageId] === undefined) {
-        return;
+    // Pre tables použijeme viditeľnosť z teams-in-groups
+    let isVisible;
+    if (pageId === 'tables') {
+        isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+    } else {
+        if (settings[pageId] === undefined) {
+            return;
+        }
+        isVisible = settings[pageId];
     }
-    
-    const isVisible = settings[pageId];
     
     if (!isVisible) {        
         const user = auth.currentUser;
@@ -334,19 +341,7 @@ const checkCurrentPageVisibility = async () => {
                 return;
             }
             
-            if (fileName === 'map.html') {
-                return;
-            }
-            
-            if (fileName === 'matches.html') {
-                return;
-            }
-            
-            if (fileName === 'teams-in-groups.html') {
-                return;
-            }
-            
-            if (fileName === 'tables.html') {
+            if (allowedForLoggedIn.includes(fileName)) {
                 return;
             }
         }
@@ -360,6 +355,11 @@ const isPageVisibleInSettings = async (pageId) => {
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return true;
+    }
+    
+    // Ak sa pýtame na tables, vrátime hodnotu pre teams-in-groups
+    if (pageId === 'tables') {
+        return settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
     
     if (settings[pageId] === undefined) {
