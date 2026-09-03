@@ -568,11 +568,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     ),
                     basicGroups.map(group => {
                         const isSelected = selectedGroup === group;
-                        const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
                         // ZELENÉ FARBY pre základné skupiny
-                        const colors = table ? getGroupTypeColors(group, selectedCategory, groupsDataState) : { backgroundColor: '#DCFCE7', textColor: '#166534' };
-                        const bgColor = isSelected ? colors.textColor : colors.backgroundColor;
-                        const textColor = isSelected ? '#FFFFFF' : colors.textColor;
+                        const bgColor = isSelected ? '#166534' : '#DCFCE7';
+                        const textColor = isSelected ? '#FFFFFF' : '#166534';
                         
                         return React.createElement(
                             'button',
@@ -600,11 +598,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     ),
                     advancedGroups.map(group => {
                         const isSelected = selectedGroup === group;
-                        const table = groupTables.find(t => t.category === selectedCategory && t.group === group);
                         // MODRÉ FARBY pre nadstavbové skupiny
-                        const colors = table ? getGroupTypeColors(group, selectedCategory, groupsDataState) : { backgroundColor: '#DBEAFE', textColor: '#1E40AF' };
-                        const bgColor = isSelected ? colors.textColor : colors.backgroundColor;
-                        const textColor = isSelected ? '#FFFFFF' : colors.textColor;
+                        const bgColor = isSelected ? '#1E40AF' : '#DBEAFE';
+                        const textColor = isSelected ? '#FFFFFF' : '#1E40AF';
                         
                         return React.createElement(
                             'button',
@@ -804,10 +800,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
 };
 
 // ============================================================
-// HLAVNÁ APLIKÁCIA - MatchesHallApp (IBA TABUĽKY)
+// HLAVNÁ APLIKÁCIA - TablesApp (IBA TABUĽKY)
 // ============================================================
 
-const MatchesHallApp = () => {
+const TablesApp = () => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -1090,7 +1086,7 @@ const renderApp = () => {
     const rootElement = document.getElementById('root');
     if (rootElement && ReactDOM) {
         const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MatchesHallApp));
+        root.render(React.createElement(TablesApp));
     }
 };
 
