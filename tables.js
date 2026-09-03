@@ -1872,7 +1872,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const showCarryOverInfo = isAdvanced && carryOverEnabled && transferredMatches && transferredMatches.length > 0;
         
         return React.createElement(
-            'div',
+            'div', 
             { 
                 key: `${category}|${group}`,
                 className: 'mb-8 transition-all'
@@ -1925,7 +1925,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     )
                 ),
                 
-                // Telo tabuľky
+                // Telo tabuľky - UPRAVENÉ ŠÍRKY STĹPCOV
                 React.createElement(
                     'div',
                     { className: 'overflow-x-auto' },
@@ -1939,8 +1939,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             React.createElement(
                                 'tr',
                                 null,
+                                // Jednotné šírky pre všetky stĺpce
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, '#'),
-                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Tím'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Tím'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'Z'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'V'),
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10' }, 'R'),
@@ -1977,7 +1978,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                     ),
                                     React.createElement(
                                         'td',
-                                        { className: 'px-4 py-3 font-medium text-gray-800' },
+                                        { className: 'px-4 py-3 font-medium text-gray-800 truncate max-w-xs' },
                                         team.name || '???'
                                     ),
                                     React.createElement(
