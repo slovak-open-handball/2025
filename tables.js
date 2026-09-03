@@ -375,7 +375,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
         const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
         const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
-        return `/matches.html#match/${encodedHome}/${encodedAway}`;
+        return `matches.html#match/${encodedHome}/${encodedAway}`;
     };
 
     // Funkcia na zistenie, či má byť tlačidlo žlté
