@@ -311,7 +311,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                 matchInfo.dateTime && React.createElement(
                     'div',
                     { className: 'text-center text-gray-400 text-xs' },
-                    `${matchInfo.dateTime}`
+                    `${matchInfo.dateTime} hod.`
                 ),
                 matchInfo.score ? (
                     React.createElement(
