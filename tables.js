@@ -214,9 +214,10 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     pointerEvents: 'none',
                     opacity: isHovered ? 1 : 0,
                     display: isHovered ? 'block' : 'none',
-                    zIndex: 9999999999,
+                    zIndex: 2147483647, // Maximálna hodnota z-index
                     top: tooltipPosition.top + 'px',
-                    left: tooltipPosition.left + 'px'
+                    left: tooltipPosition.left + 'px',
+                    willChange: 'top, left'
                 }
             },
             React.createElement(
@@ -232,7 +233,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     { className: 'flex items-center justify-center gap-2' },
                     React.createElement(
                         'span',
-                        { className: 'font-semibold text-gray-300 text-center text-xs' },
+                        { className: 'font-bold text-white text-xs' },
                         matchInfo.awayTeamName || '???'
                     )
                 ),
@@ -272,7 +273,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         'div',
         {
             className: 'relative inline-block',
-            style: { zIndex: 1 },
+            style: { zIndex: 0 },
             onMouseEnter: (e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 setCurrentTargetRect(rect);
@@ -303,7 +304,9 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     backgroundColor: bgColor,
                     color: textColor,
                     fontSize: '10px',
-                    fontWeight: '700'
+                    fontWeight: '700',
+                    position: 'relative',
+                    zIndex: 0
                 }
             },
             label
