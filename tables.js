@@ -169,13 +169,14 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         React.createElement(
             'div',
             { 
-                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 transition-opacity duration-200',
+                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl transition-opacity duration-200',
                 style: { 
                     minWidth: '160px', 
                     maxWidth: '260px',
                     pointerEvents: 'none',
                     opacity: isHovered ? 1 : 0,
-                    display: isHovered ? 'block' : 'none'
+                    display: isHovered ? 'block' : 'none',
+                    zIndex: 9999
                 }
             },
             React.createElement(
@@ -232,6 +233,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         'div',
         {
             className: 'relative inline-block',
+            style: { zIndex: 1 },
             onMouseEnter: () => {
                 setIsHovered(true);
                 if (onHoverStart && teamId) {
