@@ -305,6 +305,14 @@ const checkCurrentPageVisibility = async () => {
         }
     }
     
+    // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
+    if (fileName === 'tables.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return;
+        }
+    }
+    
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return;
@@ -335,6 +343,10 @@ const checkCurrentPageVisibility = async () => {
             }
             
             if (fileName === 'teams-in-groups.html') {
+                return;
+            }
+            
+            if (fileName === 'tables.html') {
                 return;
             }
         }
@@ -405,6 +417,14 @@ const isPageAccessibleForGuest = async () => {
     }
     
     if (fileName === 'teams-in-groups.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return true;
+        }
+    }
+    
+    // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
+    if (fileName === 'tables.html') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
