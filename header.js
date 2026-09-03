@@ -362,28 +362,15 @@ const updateNavigationLinks = () => {
         return;
     }
     
-    // Spracovanie všetkých odkazov s atribútom data-page
     const publicNavLinks = document.querySelectorAll('[data-page]');
-    
-    // ZÍSKAME NASTAVENIE PRE TEAMS-IN-GROUPS (TOTO JE JEDINÝ DOKUMENT V DB)
-    const teamsInGroupsConfig = pagesVisibility['teams-in-groups'];
-    const isVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
     
     publicNavLinks.forEach(link => {
         const pageId = link.getAttribute('data-page');
+        const pageConfig = pagesVisibility[pageId];
         
-        let shouldBeVisible = false;
+        const isVisible = pageConfig && pageConfig.visible === true;
         
-        // PRE TEAMS-IN-GROUPS AJ TABLES POUŽIJEME ROVNAKÉ NASTAVENIE
-        if (pageId === 'teams-in-groups' || pageId === 'tables') {
-            shouldBeVisible = isVisible;
-        } else {
-            // Ostatné stránky sa riadia vlastným nastavením
-            const pageConfig = pagesVisibility[pageId];
-            shouldBeVisible = pageConfig && pageConfig.visible === true;
-        }
-        
-        if (shouldBeVisible) {
+        if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
             link.dataset.visible = 'true';
@@ -438,18 +425,6 @@ const checkCurrentPageAccess = () => {
     // Povolené stránky bez kontroly
     const allowedPages = ['', 'index', 'login', 'admin-register'];
     if (allowedPages.includes(currentPage)) {
-        return true;
-    }
-    
-    // PRE TEAMS-IN-GROUPS AJ TABLES POUŽIJEME ROVNAKÉ NASTAVENIE
-    if (currentPage === 'teams-in-groups' || currentPage === 'tables') {
-        const teamsConfig = pagesVisibility['teams-in-groups'];
-        const isVisible = teamsConfig && teamsConfig.visible === true;
-        
-        if (!isVisible) {
-            window.location.href = 'index.html';
-            return false;
-        }
         return true;
     }
     
