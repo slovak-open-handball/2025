@@ -509,17 +509,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             },
                             groupTypeLabel
                         )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-3 text-sm' },
-                        React.createElement('span', { className: 'font-medium' }, `${statusIcon} ${completedCount}/${totalMatches} odohraných`),
-                        React.createElement(
-                            'span',
-                            { className: 'font-mono text-xs' },
-                            `[${progress.filled}${progress.empty}]`
-                        ),
-                        React.createElement('span', { className: 'font-medium' }, `${Math.round(completionPercentage)}%`)
                     )
                 )
             ),
