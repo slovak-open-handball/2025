@@ -159,18 +159,23 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
             break;
     }
     
-    // Tooltip obsah - ZOBRAZÍ SA LEN AK JE matchInfo A JE DOKONČENÝ ZÁPAS
+    // Tooltip obsah - ZOBRAZÍ SA LEN PRI HOVER
     const showTooltip = matchInfo && matchInfo.score && matchInfo.resultText && matchInfo.resultText !== 'NEODOHRANÉ';
+    
+    // Stav pre zobrazenie tooltipu
+    const [isHovered, setIsHovered] = useState(false);
     
     const tooltipContent = showTooltip ? (
         React.createElement(
             'div',
             { 
-                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50',
+                className: 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 transition-opacity duration-200',
                 style: { 
                     minWidth: '160px', 
                     maxWidth: '260px',
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    opacity: isHovered ? 1 : 0,
+                    display: isHovered ? 'block' : 'none'
                 }
             },
             React.createElement(
@@ -228,11 +233,13 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
         {
             className: 'relative inline-block',
             onMouseEnter: () => {
+                setIsHovered(true);
                 if (onHoverStart && teamId) {
                     onHoverStart(teamId);
                 }
             },
             onMouseLeave: () => {
+                setIsHovered(false);
                 if (onHoverEnd) {
                     onHoverEnd();
                 }
