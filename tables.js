@@ -232,7 +232,7 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
                     { className: 'flex items-center justify-center gap-2' },
                     React.createElement(
                         'span',
-                        { className: 'font-bold text-white text-xs' },
+                        { className: 'font-semibold text-gray-300 text-center text-xs' },
                         matchInfo.awayTeamName || '???'
                     )
                 ),
