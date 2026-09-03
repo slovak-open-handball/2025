@@ -1062,7 +1062,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const transferredMatches = [];
         const processedPairs = new Set();
         
-        // 1. Pridáme zápasy z nadstavbovej skupiny
+        // 1. Pridáme zápasy z nadstavbovej skupiny a spočítame ich štatistiky
         groupMatches.forEach(match => {
             const homeTeam = teamsMap.get(match.homeTeamIdentifier);
             const awayTeam = teamsMap.get(match.awayTeamIdentifier);
@@ -1090,7 +1090,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             };
             allMatchesForComparison.push(matchData);
             
-            // Spracovanie štatistík pre dokončené zápasy
+            // Spracovanie štatistík pre dokončené zápasy v nadstavbovej skupine
             if (match.status === 'completed' && homeTeam && awayTeam) {
                 const pairKey = homeName < awayName ? `${homeName}|${awayName}` : `${awayName}|${homeName}`;
                 if (!processedPairs.has(pairKey)) {
@@ -1166,7 +1166,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             const awayTeam = teamsMap.get(match.awayTeamIdentifier);
                             
                             if (homeTeam && awayTeam) {
-                                // Aplikujeme prenesený výsledok na štatistiky
+                                // 🔥 DÔLEŽITÉ: Aplikujeme prenesený výsledok na štatistiky
+                                // Rovnako ako v druhom kóde (matchTracker)
                                 homeTeam.played++;
                                 awayTeam.played++;
                                 homeTeam.goalsFor += homeScore;
@@ -1205,7 +1206,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                     fromGroup: match.groupName
                                 });
                                 
-                                // Pridáme aj do zoznamu pre porovnanie
+                                // Pridáme aj do zoznamu pre porovnanie (pre vzájomné zápasy)
                                 allMatchesForComparison.push({
                                     ...match,
                                     homeTeamName: homeFinalName,
