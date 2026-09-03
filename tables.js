@@ -1849,18 +1849,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             isAdvanced && carryOverEnabled && React.createElement(
                                 'span',
                                 { className: 'text-purple-600 font-medium' },
-                                '🔄 Prenášanie'
+                                'Prenášanie'
                             )
                         )
                     )
-                ),
-                
-                // Info o prenesených zápasoch
-                showCarryOverInfo && React.createElement(
-                    'div',
-                    { className: 'px-6 py-2 bg-purple-50 border-b border-purple-100 text-xs text-purple-700' },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left mr-1' }),
-                    ` Prenesené výsledky zo základných skupín: ${transferredMatches.length} zápasov`
                 ),
                 
                 // Telo tabuľky
