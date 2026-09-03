@@ -1,3 +1,5 @@
+// Nahraďte celý obsah súboru týmto kódom:
+
 window.isGlobalAuthReady = false;
 window.globalUserProfileData = null;
 window.auth = null;
@@ -88,6 +90,9 @@ const getAppBasePath = () => {
 
 const appBasePath = getAppBasePath();
 
+// ============================================================
+// 🔥 OPRAVA: PRIDANÉ tables.html DO ZOZNAMU VEREJNÝCH STRÁNOK
+// ============================================================
 const publicPages = [
     'account.html',
     'admin-register.html',
@@ -98,7 +103,7 @@ const publicPages = [
     'teams-in-groups.html',
     'matches.html', 
     'map.html',
-    'tables.html'
+    'tables.html'  // ✅ PRIDANÉ
 ];
 
 const guestOnlyPages = [
@@ -305,6 +310,14 @@ const checkCurrentPageVisibility = async () => {
         }
     }
     
+    // 🔥 PRIDANÁ VÝNIMKA PRE tables.html
+    if (fileName === 'tables.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return;
+        }
+    }
+    
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return;
@@ -335,6 +348,11 @@ const checkCurrentPageVisibility = async () => {
             }
             
             if (fileName === 'teams-in-groups.html') {
+                return;
+            }
+            
+            // 🔥 PRIDANÁ VÝNIMKA PRE tables.html
+            if (fileName === 'tables.html') {
                 return;
             }
         }
@@ -405,6 +423,14 @@ const isPageAccessibleForGuest = async () => {
     }
     
     if (fileName === 'teams-in-groups.html') {
+        const isLoggedIn = isReallyLoggedIn();
+        if (isLoggedIn) {
+            return true;
+        }
+    }
+    
+    // 🔥 PRIDANÁ VÝNIMKA PRE tables.html
+    if (fileName === 'tables.html') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
@@ -613,6 +639,13 @@ const handleAuthState = async () => {
                                 }
                                 
                                 if (currentPage === 'teams-in-groups.html') {
+                                    window.globalUserProfileData = userProfileData;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                    return;
+                                }
+                                
+                                // 🔥 PRIDANÁ VÝNIMKA PRE tables.html
+                                if (currentPage === 'tables.html') {
                                     window.globalUserProfileData = userProfileData;
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                                     return;
