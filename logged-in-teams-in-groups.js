@@ -3664,7 +3664,7 @@ const renderSingleCategoryView = () => {
                 }, `Tímy bez skupiny v\u00A0kategórii: ${categoryName}`),
                 React.createElement('div', { 
                     className: 'flex-grow overflow-y-auto min-h-0'
-                }, renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true))
+                }, renderTeamList(teamsWithoutGroupForCategory, null, selectedCategoryId, true, categoryMatchStatus))
             ),
             
             // PRAVÁ ČASŤ - Skupiny (základné + nadstavbové)
@@ -3729,7 +3729,7 @@ const renderSingleCategoryView = () => {
                                     React.createElement('div', { 
                                         className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId)
+                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId, false, categoryMatchStatus)
                                     )
                                 )
                             );
@@ -3792,7 +3792,7 @@ const renderSingleCategoryView = () => {
                                     React.createElement('div', { 
                                         className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId)
+                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId, false, categoryMatchStatus))
                                     )
                                 )
                             );
