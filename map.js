@@ -209,7 +209,6 @@ const MapApp = ({ userProfileData }) => {
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
-                console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
                 leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
             }
         };
@@ -463,9 +462,7 @@ const MapApp = ({ userProfileData }) => {
             mainLayer.addTo(leafletMap.current);
             
             // Ak hlavná vrstva zlyhá, prepnite na fallback
-            mainLayer.on('tileerror', function(e) {
-                console.warn('Tile error on main layer, tile:', e.tile.src);
-                
+            mainLayer.on('tileerror', function(e) {                
                 // Vytvor novú dlaždicu na chybovú
                 const errorImg = e.tile;
                 errorImg.onload = null;
@@ -499,7 +496,6 @@ const MapApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
-                        console.log("DOMČEK – aktuálne default hodnoty:", defaultCenter, defaultZoom);
                         window.goToDefaultView?.();
                     });
                     
@@ -523,14 +519,9 @@ const MapApp = ({ userProfileData }) => {
                         
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
-                console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
             });
             
             setTimeout(() => leafletMap.current?.invalidateSize(), 400);
-            console.log("Mapa inicializovaná na fallback súradniciach");
-            leafletMap.current.on('click', (e) => {
-                console.log("RAW MAP CLICK EVENT FIRED", e.latlng);
-            });
         };
         
         if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
@@ -542,7 +533,6 @@ const MapApp = ({ userProfileData }) => {
         } else {
             // Pridajte listener pre načítanie scriptu
             leafletJS.onload = () => {
-                console.log("Leaflet script načítaný");
                 setTimeout(() => {
                     if (window.L) initMap();
                 }, 100);
@@ -578,7 +568,6 @@ const MapApp = ({ userProfileData }) => {
                     duration: 1.0,
                     easeLinearity: 0.25
                 });
-                console.log(`Zoom na miesto ${selectedPlace.name} → [${lat.toFixed(6)}, ${lng.toFixed(6)}] zoom 18`);
             }
         }, 300);
         
@@ -1141,7 +1130,6 @@ const renderMap = (userProfileData) => {
     const root = document.getElementById('root');
     if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
     
-    console.log("Renderujem mapu, userProfileData:", userProfileData ? 'prihlásený' : 'neprihlásený');
     ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData: userProfileData || null }));
 };
 
