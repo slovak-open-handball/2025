@@ -1225,7 +1225,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             .trim();
     }, []);
     
-    // 🔥 FUNKCIA NA ZÍSKANIE ID SÚPERA - VYHĽADÁVA VÝHRADNE PODĽA NÁZVU
+    // 🔥 FUNKCIA NA ZÍSKANIE ID SÚPERA - VYHĽADÁVA PODĽA NÁZVU AJ ID
     const getOpponentIdByName = useCallback((opponentName) => {
         console.log('🔍 [getOpponentIdByName] Looking for opponentName:', opponentName);
         if (!opponentName) {
@@ -1236,13 +1236,19 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
         const oppNameNorm = normalizeName(opponentName);
         console.log('🔍 [getOpponentIdByName] Normalized opponentName:', oppNameNorm);
         
-        // Prehľadáme všetky tímy v tabuľke a hľadáme zhodu podľa názvu
+        // Prehľadáme všetky tímy v tabuľke
         console.log('🔍 [getOpponentIdByName] Available teams:', teams.map(t => ({ id: t.id, name: t.name, nameNorm: normalizeName(t.name || '') })));
         
         for (const team of teams) {
             const teamNameNorm = normalizeName(team.name || '');
+            // 🔥 POROVNANIE PODĽA NÁZVU
             if (teamNameNorm === oppNameNorm) {
-                console.log('✅ [getOpponentIdByName] Found match! team.id:', team.id, 'team.name:', team.name);
+                console.log('✅ [getOpponentIdByName] Found match by name! team.id:', team.id, 'team.name:', team.name);
+                return team.id;
+            }
+            // 🔥 PRIDANÉ: POROVNANIE PODĽA ID (ak opponentName je ID)
+            if (team.id === opponentName) {
+                console.log('✅ [getOpponentIdByName] Found match by ID! team.id:', team.id, 'team.name:', team.name);
                 return team.id;
             }
         }
