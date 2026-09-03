@@ -665,25 +665,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 style: { backgroundColor: 'rgba(255,255,255,0.6)', color: colors.textColor }
                             },
                             groupTypeLabel
-                        ),
-                        // Indikátor, že hlavička je klikateľná
-                        React.createElement(
-                            'span',
-                            { 
-                                className: 'text-xs px-2 py-0.5 rounded-full font-medium',
-                                style: { backgroundColor: 'rgba(255,255,255,0.4)', color: colors.textColor }
-                            },
-                            '🔍 klikni'
                         )
-                    ),
-                    // Zobrazenie informácie o filtri
-                    isTableSelected && React.createElement(
-                        'span',
-                        { 
-                            className: 'text-xs px-2 py-1 rounded-full font-medium bg-white/50',
-                            style: { color: colors.textColor }
-                        },
-                        '✅ Zobrazená iba táto tabuľka'
                     )
                 )
             ),
