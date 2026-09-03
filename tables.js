@@ -1467,7 +1467,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
             isHome: finalIsHome,
             isAway: finalIsAway,
             opponentId: opponentId,
-            opponentName: opponentNameForHighlight || opponentRawName,
+            opponentName: opponentNameForHighlight,
             result: result,
             isTransferred: isTransferred
         };
