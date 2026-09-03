@@ -333,7 +333,7 @@ const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
 // KOMPONENT PRE ZOBRAZENIE ZOZNAMU ZÁPASOV SKUPINY
 // ============================================================
 
-const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNames }) => {
+const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNames, transferredMatches = [] }) => {
     // Zoradenie zápasov podľa dátumu a času
     const sortedMatches = useMemo(() => {
         return [...matches].sort((a, b) => {
@@ -347,11 +347,69 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         });
     }, [matches]);
 
+    // Pridáme prenesené zápasy do zoznamu
+    const allMatches = useMemo(() => {
+        const result = [...sortedMatches];
+        
+        // Pridáme prenesené zápasy (označíme ich ako prenesené)
+        if (transferredMatches && transferredMatches.length > 0) {
+            transferredMatches.forEach(transferred => {
+                // Skontrolujeme, či už neexistuje rovnaký zápas (podľa ID)
+                const exists = result.some(m => m.id === transferred.id);
+                if (!exists) {
+                    // Pridáme prenesený zápas s indikátorom
+                    result.push({
+                        ...transferred,
+                        isTransferred: true,
+                        // Prenesené zápasy nemajú scheduledTime, dáme im dátum z pôvodného zápasu
+                        scheduledTime: transferred.scheduledTime || null,
+                        // Ak nemáme homeScore/awayScore, použijeme z transferred
+                        homeScore: transferred.homeScore !== undefined ? transferred.homeScore : 0,
+                        awayScore: transferred.awayScore !== undefined ? transferred.awayScore : 0,
+                        status: 'completed'
+                    });
+                }
+            });
+        }
+        
+        // Zoradenie: najprv normálne zápasy (podľa dátumu), potom prenesené na koniec
+        result.sort((a, b) => {
+            // Prenesené zápasy dávame na koniec
+            if (a.isTransferred && !b.isTransferred) return 1;
+            if (!a.isTransferred && b.isTransferred) return -1;
+            
+            // Oba sú normálne alebo oba prenesené
+            if (!a.scheduledTime && !b.scheduledTime) return 0;
+            if (!a.scheduledTime) return 1;
+            if (!b.scheduledTime) return -1;
+            try {
+                return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
+            } catch (e) {
+                return 0;
+            }
+        });
+        
+        return result;
+    }, [sortedMatches, transferredMatches]);
+
     // Zoskupenie podľa dní
     const matchesByDay = useMemo(() => {
         const groups = {};
         
-        sortedMatches.forEach(match => {
+        allMatches.forEach(match => {
+            // Prenesené zápasy dávame do samostatnej skupiny
+            if (match.isTransferred) {
+                if (!groups['__transferred__']) {
+                    groups['__transferred__'] = {
+                        date: null,
+                        matches: [],
+                        isTransferredGroup: true
+                    };
+                }
+                groups['__transferred__'].matches.push(match);
+                return;
+            }
+            
             if (match.scheduledTime) {
                 try {
                     const date = match.scheduledTime.toDate();
@@ -359,7 +417,8 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                     if (!groups[dateKey]) {
                         groups[dateKey] = {
                             date: date,
-                            matches: []
+                            matches: [],
+                            isTransferredGroup: false
                         };
                     }
                     groups[dateKey].matches.push(match);
@@ -367,8 +426,29 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
             }
         });
         
-        return Object.values(groups).sort((a, b) => a.date - b.date);
-    }, [sortedMatches]);
+        // Zoradenie: najprv normálne dni, potom prenesené
+        const result = Object.values(groups).sort((a, b) => {
+            if (a.isTransferredGroup) return 1;
+            if (b.isTransferredGroup) return -1;
+            return a.date - b.date;
+        });
+        
+        return result;
+    }, [allMatches]);
+
+    // Funkcia na vytvorenie URL pre detail zápasu
+    const createMatchDetailUrl = (match) => {
+        if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
+        const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
+        const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
+        return `matches.html#match/${encodedHome}/${encodedAway}`;
+    };
+
+    // Funkcia na zistenie, či má byť tlačidlo žlté
+    const isMatchActive = (match) => {
+        const status = matchStatuses[match.id] || match.status || 'scheduled';
+        return status === 'in-progress' || status === 'paused';
+    };
 
     // --- REALTIME SLEDOVANIE SKÓRE Z UDALOSTÍ ---
     const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
@@ -453,21 +533,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return () => unsubscribe();
     }, []);
 
-    // Funkcia na vytvorenie URL pre detail zápasu
-    const createMatchDetailUrl = (match) => {
-        if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
-        const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
-        const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
-        return `matches.html#match/${encodedHome}/${encodedAway}`;
-    };
-
-    // Funkcia na zistenie, či má byť tlačidlo žlté
-    const isMatchActive = (match) => {
-        const status = matchStatuses[match.id] || match.status || 'scheduled';
-        return status === 'in-progress' || status === 'paused';
-    };
-
-    if (matches.length === 0) {
+    if (allMatches.length === 0) {
         return React.createElement(
             'div',
             { className: 'text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-gray-200' },
@@ -512,30 +578,51 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                     matchesByDay.map((dayGroup, dayIndex) => {
                         const dayDate = dayGroup.date;
                         const dayMatches = dayGroup.matches;
+                        const isTransferredGroup = dayGroup.isTransferredGroup;
                         const dayRows = [];
 
                         // Hlavička dňa
-                        dayRows.push(
-                            React.createElement(
-                                'tr',
-                                { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                        if (isTransferredGroup) {
+                            dayRows.push(
                                 React.createElement(
-                                    'td',
-                                    { colSpan: 6, className: 'px-4 py-3 text-left' },
+                                    'tr',
+                                    { key: `day-${dayIndex}`, className: 'bg-purple-50' },
                                     React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-2' },
-                                        React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
-                                        React.createElement('span', { className: 'font-semibold text-gray-800 text-sm' }, formatDateHeader(dayDate))
+                                        'td',
+                                        { colSpan: 6, className: 'px-4 py-3 text-left' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-500' }),
+                                            React.createElement('span', { className: 'font-semibold text-purple-700 text-sm' }, 'Prenesené zápasy zo základných skupín')
+                                        )
                                     )
                                 )
-                            )
-                        );
+                            );
+                        } else {
+                            dayRows.push(
+                                React.createElement(
+                                    'tr',
+                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                                    React.createElement(
+                                        'td',
+                                        { colSpan: 6, className: 'px-4 py-3 text-left' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
+                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-sm' }, formatDateHeader(dayDate))
+                                        )
+                                    )
+                                )
+                            );
+                        }
 
                         dayMatches.forEach((match) => {
-                            const dateTime = formatMatchDateTime(match.scheduledTime);
+                            const dateTime = match.scheduledTime ? formatMatchDateTime(match.scheduledTime) : null;
                             const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
                             const isActive = isMatchActive(match);
+                            const isTransferred = match.isTransferred || false;
                             
                             // --- ZÍSKANIE SKÓRE Z REALTIME DÁT ---
                             const eventsScore = matchScoresFromEvents[match.id];
@@ -571,9 +658,15 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 displayAwayScore = dbScore.away;
                                 showScore = true;
                             }
+                            // Ak je to prenesený zápas, použijeme jeho skóre
+                            else if (isTransferred && match.homeScore !== undefined && match.awayScore !== undefined) {
+                                displayHomeScore = match.homeScore;
+                                displayAwayScore = match.awayScore;
+                                showScore = true;
+                            }
 
-                            const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
-                            const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                            const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamName || match.homeTeamIdentifier || '???';
+                            const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamName || match.awayTeamIdentifier || '???';
                             
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
 
@@ -585,24 +678,38 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                 ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
+                            // Pre prenesené zápasy - iný riadok (purple background)
+                            const rowClass = isTransferred 
+                                ? 'hover:bg-purple-50 transition-colors bg-purple-50' 
+                                : 'hover:bg-gray-50 transition-colors';
+
                             dayRows.push(
                                 React.createElement(
                                     'tr',
-                                    { key: `match-${dayIndex}-${match.id}`, className: 'hover:bg-gray-50 transition-colors' },
+                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: rowClass },
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                                            React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
+                                        isTransferred ? (
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-400 text-xs' }),
+                                                React.createElement('span', { className: 'font-mono font-medium text-purple-600 text-sm' }, 'Prenesený')
+                                            )
+                                        ) : (
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
+                                            )
                                         )
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-right' },
-                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
+                                        React.createElement('span', { className: `font-medium ${isTransferred ? 'text-purple-800' : 'text-gray-800'} text-sm` }, homeTeamDisplay)
                                     ),
                                     React.createElement(
                                         'td',
@@ -610,7 +717,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                         showScore ?
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center gap-1' },
+                                                { className: `flex items-center justify-center gap-1 ${isTransferred ? 'text-purple-800' : ''}` },
                                                 React.createElement('span', { className: 'font-bold text-gray-800' }, displayHomeScore),
                                                 React.createElement('span', { className: 'text-gray-400' }, ':'),
                                                 React.createElement('span', { className: 'font-bold text-gray-800' }, displayAwayScore)
@@ -620,28 +727,45 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
+                                        React.createElement('span', { className: `font-medium ${isTransferred ? 'text-purple-800' : 'text-gray-800'} text-sm` }, awayTeamDisplay)
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
-                                            React.createElement('span', { className: 'text-gray-600 text-sm max-w-32 truncate' }, matchHallName)
+                                        isTransferred ? (
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-purple-400 text-xs' }),
+                                                React.createElement('span', { className: 'text-purple-600 text-sm' }, match.fromGroup || 'základná skupina')
+                                            )
+                                        ) : (
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-400 text-xs' }),
+                                                React.createElement('span', { className: 'text-gray-600 text-sm max-w-32 truncate' }, matchHallName)
+                                            )
                                         )
                                     ),
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                        React.createElement(
-                                            'a',
-                                            {
-                                                href: detailUrl,
-                                                className: buttonClass
-                                            },
-                                            'Detail'
+                                        isTransferred ? (
+                                            React.createElement(
+                                                'span',
+                                                { className: 'inline-block text-xs px-2 py-1 rounded-full bg-green-100 text-green-700' },
+                                                'Dokončený'
+                                            )
+                                        ) : (
+                                            React.createElement(
+                                                'a',
+                                                {
+                                                    href: detailUrl,
+                                                    className: buttonClass
+                                                },
+                                                'Detail'
+                                            )
                                         )
                                     )
                                 )
@@ -1837,7 +1961,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         groupName: group,
                         categoryName: category,
                         teamNames: teamNames,
-                        hallNames: hallNames
+                        hallNames: hallNames,
+                        transferredMatches: transferredMatches || []  // 🔥 PRIDANÉ: odovzdáme prenesené zápasy
                     }
                 )
             )
