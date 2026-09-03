@@ -527,7 +527,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const colors = getGroupTypeColors(group, category, groupsDataState);
         const progress = generateProgressBar(completionPercentage);
         const statusIcon = isFullyCompleted ? '✅' : '⏳';
-        const groupTypeLabel = groupType === 'nadstavbová' ? '🏆 NADSTAVBOVÁ' : '📚 ZÁKLADNÁ';
+        const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
         
         return React.createElement(
             'div',
