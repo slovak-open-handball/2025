@@ -1367,7 +1367,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                     awayScore: awayScore,
                                     status: 'completed',
                                     isTransferred: true,
-                                    fromGroup: match.groupName
+                                    fromGroup: match.groupName,
+                                    scheduledTime: match.scheduledTime || null,
+                                    hallId: match.hallId || null,
+                                    categoryName: match.categoryName,
+                                    categoryId: match.categoryId
                                 });
                                 
                                 // Pridáme aj do zoznamu pre porovnanie
