@@ -411,7 +411,6 @@ const FormIndicator = ({ result, matchInfo, onHoverStart, onHoverEnd, teamId }) 
 
 // ============================================================
 // FUNKCIA: Výpočet formy tímu - VŠETKY ZÁPASY
-// (presunuté na začiatok, aby bola dostupná pre všetky komponenty)
 // ============================================================
 
 const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
@@ -424,7 +423,42 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
         const isHome = match.homeTeamIdentifier === teamId;
         const isAway = match.awayTeamIdentifier === teamId;
         
-        if (isHome || isAway) {
+        // 🔥 PRIDANÉ: Ak je to prenesený zápas, skúsime porovnať aj podľa názvu
+        let isTransferredMatch = match.isTransferred || false;
+        let isTeamInMatch = isHome || isAway;
+        
+        // 🔥 AK NENAŠLI SME PODĽA ID, SKÚSIME PODĽA NÁZVU (pre prenesené zápasy)
+        if (!isTeamInMatch && isTransferredMatch) {
+            const teamName = teamNames[teamId] || getDisplayTeamName(teamId) || teamId;
+            const homeName = match.homeTeamName || match.homeTeamIdentifier || '';
+            const awayName = match.awayTeamName || match.awayTeamIdentifier || '';
+            
+            // Porovnanie názvov (bez diakritiky, malé písmená)
+            const normalize = (name) => {
+                if (!name) return '';
+                return name
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .trim();
+            };
+            
+            const teamNameNorm = normalize(teamName);
+            const homeNameNorm = normalize(homeName);
+            const awayNameNorm = normalize(awayName);
+            
+            if (teamNameNorm === homeNameNorm || teamNameNorm === awayNameNorm) {
+                isTeamInMatch = true;
+                // Nastavíme správne isHome/isAway pre ďalšie spracovanie
+                if (teamNameNorm === homeNameNorm) {
+                    match.homeTeamIdentifier = teamId; // Dočasne nastavíme
+                } else {
+                    match.awayTeamIdentifier = teamId;
+                }
+            }
+        }
+        
+        if (isTeamInMatch) {
             // Získame skóre
             let homeScore = match.homeScore || 0;
             let awayScore = match.awayScore || 0;
@@ -449,12 +483,18 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
             
             // Zistíme výsledok pre tím
             let result = 'N'; // N = neodohrané
-            if (match.status === 'completed') {
-                if (isHome) {
+            const isMatchCompleted = match.status === 'completed' || match.isTransferred === true;
+            
+            if (isMatchCompleted) {
+                // Zistíme, či je tím domáci alebo hostia (môže sa zmeniť po úprave vyššie)
+                const finalIsHome = match.homeTeamIdentifier === teamId;
+                const finalIsAway = match.awayTeamIdentifier === teamId;
+                
+                if (finalIsHome) {
                     if (homeScore > awayScore) result = 'V';
                     else if (homeScore < awayScore) result = 'P';
                     else result = 'R';
-                } else {
+                } else if (finalIsAway) {
                     if (awayScore > homeScore) result = 'V';
                     else if (awayScore < homeScore) result = 'P';
                     else result = 'R';
@@ -468,7 +508,9 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
                 isTransferred: match.isTransferred || false,
                 scheduledTime: match.scheduledTime,
                 homeTeamName: match.homeTeamName || match.homeTeamIdentifier,
-                awayTeamName: match.awayTeamName || match.awayTeamIdentifier
+                awayTeamName: match.awayTeamName || match.awayTeamIdentifier,
+                homeTeamIdentifier: match.homeTeamIdentifier,
+                awayTeamIdentifier: match.awayTeamIdentifier
             });
         }
     });
@@ -485,7 +527,6 @@ const getTeamForm = (teamId, groupMatches, teamNames, matches) => {
         return a.date.getTime() - b.date.getTime();
     });
     
-    // 🔥 VRÁTIME VŠETKY ZÁPASY (nie len posledných 5)
     return teamMatches;
 };
 
