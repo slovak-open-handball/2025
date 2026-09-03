@@ -3792,7 +3792,7 @@ const renderSingleCategoryView = () => {
                                     React.createElement('div', { 
                                         className: 'mt-2 space-y-1 flex-grow overflow-hidden'
                                     },
-                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId, false, categoryMatchStatus))
+                                        renderTeamList(teamsInGroup, group.name, selectedCategoryId, false, categoryMatchStatus)
                                     )
                                 )
                             );
