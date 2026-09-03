@@ -607,8 +607,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 'div',
                 { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between' },
                 React.createElement('span', {}, `Celkom ${totalMatches} zápasov`),
-                React.createElement('span', {}, `${completedCount} odohraných (${Math.round(completionPercentage)}%)`),
-                React.createElement('span', {}, `${isFullyCompleted ? '✅ Kompletné' : '⏳ Prebieha'}`)
             )
         );
     };
