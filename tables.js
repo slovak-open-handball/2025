@@ -346,8 +346,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 // Počty zápasov
                 const totalMatches = groupMatches.length;
                 const completedCount = completedMatches.length;
-                const completionPercentage = totalMatches > 0 ? (completedCount / totalMatches * 100) : 0;
-                const isFullyCompleted = completionPercentage === 100;
                 
                 tables.push({
                     category,
@@ -356,8 +354,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     teams,
                     totalMatches,
                     completedCount,
-                    completionPercentage,
-                    isFullyCompleted,
                     matches: groupMatches
                 });
             }
@@ -403,16 +399,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             .forEach(t => groups.add(t.group));
         return Array.from(groups).sort();
     }, [groupTables, selectedCategory]);
-    
-    // Generovanie progress baru
-    const generateProgressBar = (percentage) => {
-        const barLength = 20;
-        const filledLength = Math.round(percentage / 100 * barLength);
-        const emptyLength = barLength - filledLength;
-        const filled = '█'.repeat(filledLength);
-        const empty = '░'.repeat(emptyLength);
-        return { filled, empty, filledLength, emptyLength };
-    };
     
     if (loading) {
         return React.createElement(
@@ -622,11 +608,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
     // Render jednej tabuľky
     const renderGroupTable = (table) => {
-        const { category, group, groupType, teams, totalMatches, completedCount, completionPercentage, isFullyCompleted } = table;
+        const { category, group, groupType, teams, totalMatches, completedCount } = table;
         
         const colors = getGroupTypeColors(group, category, groupsDataState);
-        const progress = generateProgressBar(completionPercentage);
-        const statusIcon = isFullyCompleted ? '✅' : '⏳';
         const groupTypeLabel = groupType === 'nadstavbová' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
         
         return React.createElement(
