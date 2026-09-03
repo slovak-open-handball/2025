@@ -370,6 +370,20 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [sortedMatches]);
 
+    // Funkcia na vytvorenie URL pre detail zápasu
+    const createMatchDetailUrl = (match) => {
+        if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) return '#';
+        const encodedHome = encodeURIComponent(match.homeTeamIdentifier.replace(/ /g, '-'));
+        const encodedAway = encodeURIComponent(match.awayTeamIdentifier.replace(/ /g, '-'));
+        return `/matches.html#match/${encodedHome}/${encodedAway}`;
+    };
+
+    // Funkcia na zistenie, či má byť tlačidlo žlté
+    const isMatchActive = (match) => {
+        const status = match.status || 'scheduled';
+        return status === 'in-progress' || status === 'paused';
+    };
+
     if (matches.length === 0) {
         return React.createElement(
             'div',
@@ -381,7 +395,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
 
     return React.createElement(
         'div',
-        { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' }, // Pridaný mt-8 pre väčší odstup
+        { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement(
             'div',
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
@@ -407,7 +421,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
-                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'Stav')
+                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, '')
                     )
                 ),
                 React.createElement(
@@ -439,6 +453,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                         dayMatches.forEach((match) => {
                             const dateTime = formatMatchDateTime(match.scheduledTime);
                             const matchStatus = match.status || 'scheduled';
+                            const isActive = isMatchActive(match);
                             
                             // Získanie skóre
                             let homeScore = match.homeScore;
@@ -460,27 +475,6 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                             
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
-
-                            // Stav zápasu
-                            let statusDisplay = '';
-                            let statusColor = '';
-                            switch (matchStatus) {
-                                case 'in-progress':
-                                    statusDisplay = 'Prebieha';
-                                    statusColor = 'text-green-600 bg-green-50';
-                                    break;
-                                case 'paused':
-                                    statusDisplay = 'Pozastavený';
-                                    statusColor = 'text-yellow-600 bg-yellow-50';
-                                    break;
-                                case 'completed':
-                                    statusDisplay = 'Ukončený';
-                                    statusColor = 'text-blue-600 bg-blue-50';
-                                    break;
-                                default:
-                                    statusDisplay = 'Naplánovaný';
-                                    statusColor = 'text-gray-500 bg-gray-50';
-                            }
 
                             // Info tagy
                             const infoTags = [];
@@ -537,6 +531,14 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                     categoryDisplayTag
                                 ));
                             }
+
+                            // Vytvorenie URL pre detail
+                            const detailUrl = createMatchDetailUrl(match);
+                            
+                            // Tlačidlo Detail - žlté ak je zápas aktívny
+                            const buttonClass = isActive
+                                ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium'
+                                : 'bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer font-medium';
 
                             dayRows.push(
                                 React.createElement(
@@ -598,9 +600,16 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-center' },
                                         React.createElement(
-                                            'span',
-                                            { className: `inline-block text-xs px-2 py-1 rounded-full ${statusColor}` },
-                                            statusDisplay
+                                            'a',
+                                            {
+                                                href: detailUrl,
+                                                className: buttonClass,
+                                                onClick: (e) => {
+                                                    // Povolíme normálnu navigáciu na /matches.html
+                                                    // Necháme to fungovať ako bežný odkaz
+                                                }
+                                            },
+                                            'Detail'
                                         )
                                     )
                                 )
