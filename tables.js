@@ -2800,16 +2800,19 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
                 groupsMap.get(key).matches.push(match);
             });
+
+            console.log('groupsMap size:', groupsMap.size);
+            console.log('groupsMap keys:', Array.from(groupsMap.keys()));
         
             const baseGroupTables = [];
             const advancedGroupData = [];
         
             for (const [key, groupData] of groupsMap) {
                 const { category, group, matches: groupMatches } = groupData;
-                
+            
                 let isAdvanced = false;
                 let categoryId = null;
-                
+            
                 if (window.categoriesData) {
                     for (const [catId, catName] of Object.entries(window.categoriesData)) {
                         if (catName === category) {
@@ -2818,18 +2821,18 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         }
                     }
                 }
-                
+            
                 if (categoryId && groupsDataState[categoryId]) {
                     const found = groupsDataState[categoryId].find(g => g.name === group);
                     if (found && found.type === 'nadstavbová skupina') {
                         isAdvanced = true;
                     }
                 }
-                
+            
                 if (!isAdvanced && group.toLowerCase().includes('nadstavbová')) {
                     isAdvanced = true;
                 }
-                
+            
                 if (isAdvanced) {
                     advancedGroupData.push({
                         category,
@@ -2839,9 +2842,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         key
                     });
                 } else {
-                    const table = calculateGroupTable(category, group, groupMatches);
-                    if (table) {
-                        baseGroupTables.push(table);
+                    try {
+                        const table = calculateGroupTable(category, group, groupMatches);
+                        if (table) {
+                            baseGroupTables.push(table);
+                        } else {
+                            console.warn('calculateGroupTable vrátilo null/undefined pre', category, group);
+                        }
+                    } catch (err) {
+                        console.error('Chyba pri výpočte tabuľky pre skupinu:', category, group, err);
                     }
                 }
             }
@@ -2858,12 +2867,17 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
             for (const advData of advancedGroupData) {
                 const { category, group, matches: groupMatches } = advData;
-                
                 const baseGroups = baseGroupsByCategory[category] || [];
-                
-                const table = calculateAdvancedGroupTable(category, group, groupMatches, baseGroups);
-                if (table) {
-                    allTables.push(table);
+            
+                try {
+                    const table = calculateAdvancedGroupTable(category, group, groupMatches, baseGroups);
+                    if (table) {
+                        allTables.push(table);
+                    } else {
+                        console.warn('calculateAdvancedGroupTable vrátilo null/undefined pre', category, group);
+                    }
+                } catch (err) {
+                    console.error('Chyba pri výpočte nadstavbovej tabuľky pre skupinu:', category, group, err);
                 }
             }
             
