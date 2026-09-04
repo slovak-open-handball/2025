@@ -4281,7 +4281,7 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
     );
 };
 
-const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch }) => {
+const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
