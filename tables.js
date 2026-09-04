@@ -911,7 +911,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
         { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement(
             'div',
-            { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
+            { className: 'bg-gray-50 px-6 py-4 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 
                 `Zápasy skupiny`
             )
@@ -1741,7 +1741,7 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData, cat
         React.createElement(
             'div',
             { 
-                className: 'bg-red-200 px-6 py-3 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
+                className: 'bg-red-200 px-6 py-4 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
                 onClick: () => onHeaderClick && onHeaderClick(category)
             },
             React.createElement('h3', { className: 'font-semibold text-red-700' }, 'Play-off a zápasy o umiestnenie')
@@ -3234,7 +3234,7 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
         React.createElement(
             'div',
             { 
-                className: 'bg-red-200 px-6 py-3 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
+                className: 'bg-red-200 px-6 py-4 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
                 onClick: () => onHeaderClick && onHeaderClick(selectedCategory)
             },
             React.createElement('h3', { className: 'font-semibold text-red-700' }, `Pavúk - ${categoryName}`)
