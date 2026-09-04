@@ -1962,6 +1962,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         }
         if (urlFilter.view === 'playoff') {
             setShowPlayoff(true);
+            setSelectedGroup(null); // skupina sa pri Playoff ignoruje
         } else {
             setShowPlayoff(false);
         }
@@ -2660,9 +2661,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const handlePlayoffClick = () => {
         const newState = !showPlayoff;
         setShowPlayoff(newState);
-        // Pri zapnutí aj vypnutí Playoff zrušíme filtre, aby sa zobrazili buď všetky pavúky, alebo všetky tabuľky
-        setSelectedCategory(null);
-        setSelectedGroup(null);
+        // Pri zapnutí Playoff zrušíme výber skupiny (lebo skupina sa v Playoff nepoužíva)
+        if (newState) {
+            setSelectedGroup(null);
+        }
     };
     
     const handleTableHeaderClick = (category, group) => {
@@ -2702,20 +2704,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const renderFilters = () => {
         const getGroupsByType = (category) => {
             if (!category) return { basic: [], advanced: [] };
-            
             const groups = [];
             groupTables
                 .filter(t => t.category === category)
                 .forEach(t => groups.push(t.group));
-            
             groups.sort();
-            
             const basic = [];
             const advanced = [];
-            
             groups.forEach(groupName => {
                 let groupType = 'základná';
-                
                 let categoryId = null;
                 if (window.categoriesData) {
                     for (const [catId, catName] of Object.entries(window.categoriesData)) {
@@ -2725,26 +2722,23 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         }
                     }
                 }
-                
                 if (categoryId && groupsDataState[categoryId]) {
                     const found = groupsDataState[categoryId].find(g => g.name === groupName);
                     if (found && found.type) {
                         groupType = found.type === 'nadstavbová skupina' ? 'nadstavbová' : 'základná';
                     }
                 }
-                
                 if (groupType === 'nadstavbová') {
                     advanced.push(groupName);
                 } else {
                     basic.push(groupName);
                 }
             });
-            
             return { basic, advanced };
         };
-        
+    
         const { basic: basicGroups, advanced: advancedGroups } = getGroupsByType(selectedCategory);
-        
+    
         const getCategoryIdByName = (categoryName) => {
             if (!categoryName) return null;
             if (window.categoriesData) {
@@ -2756,11 +2750,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
             return null;
         };
-        
+    
         return React.createElement(
             'div',
             { className: 'mb-6 space-y-3' },
-            
+    
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap gap-2 justify-center' },
@@ -2769,8 +2763,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     {
                         onClick: clearFilters,
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                            selectedCategory === null 
-                                ? 'bg-blue-600 text-white shadow-md' 
+                            selectedCategory === null
+                                ? 'bg-blue-600 text-white shadow-md'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`
                     },
@@ -2788,14 +2782,14 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 if (isSelected) {
                                     clearFilters();
                                 } else {
-                                    setShowPlayoff(false); // VYPNE PLAYOFF
+                                    setShowPlayoff(false);
                                     setSelectedCategory(cat);
                                     setSelectedGroup(null);
                                 }
                             },
                             className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                                isSelected 
-                                    ? 'text-white shadow-md' 
+                                isSelected
+                                    ? 'text-white shadow-md'
                                     : 'text-gray-700 hover:bg-gray-300'
                             }`,
                             style: isSelected ? { backgroundColor: color } : { backgroundColor: getLighterColor(color) }
@@ -2804,11 +2798,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     );
                 })
             ),
-            
+    
             selectedCategory && (basicGroups.length > 0 || advancedGroups.length > 0) && React.createElement(
                 'div',
                 { className: 'border-t border-gray-200 pt-3 space-y-2' },
-                
+    
                 basicGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'flex flex-wrap items-center gap-2 justify-center' },
@@ -2821,13 +2815,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         const isSelected = selectedGroup === group;
                         const bgColor = isSelected ? '#166534' : '#DCFCE7';
                         const textColor = isSelected ? '#FFFFFF' : '#166534';
-                        
                         return React.createElement(
                             'button',
                             {
                                 key: group,
                                 onClick: () => {
-                                    setShowPlayoff(false); // VYPNE PLAYOFF
+                                    setShowPlayoff(false);
                                     setSelectedGroup(isSelected ? null : group);
                                 },
                                 className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -2839,7 +2832,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         );
                     })
                 ),
-                
+    
                 advancedGroups.length > 0 && React.createElement(
                     'div',
                     { className: 'flex flex-wrap items-center gap-2 justify-center' },
@@ -2852,13 +2845,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         const isSelected = selectedGroup === group;
                         const bgColor = isSelected ? '#1E40AF' : '#DBEAFE';
                         const textColor = isSelected ? '#FFFFFF' : '#1E40AF';
-                        
                         return React.createElement(
                             'button',
                             {
                                 key: group,
                                 onClick: () => {
-                                    setShowPlayoff(false); // VYPNE PLAYOFF
+                                    setShowPlayoff(false);
                                     setSelectedGroup(isSelected ? null : group);
                                 },
                                 className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
