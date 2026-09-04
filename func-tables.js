@@ -1605,8 +1605,8 @@ let isTeamNameReplacerInitialized = false;
             
                     for (const match of advGroupMatches) {
                         // Získame mapované názvy tímov – použijeme priamo getTeamNameByDisplayId
-                        const homeName = getTeamNameByDisplayId(match.homeTeamIdentifier);
-                        const awayName = getTeamNameByDisplayId(match.awayTeamIdentifier);
+                        const homeName = teamNameMap.get(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+                        const awayName = teamNameMap.get(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                         if (!homeName || !awayName) continue;
             
                         // Overíme, či tieto názvy patria do aktuálnej skupiny (porovnávame reťazce)
