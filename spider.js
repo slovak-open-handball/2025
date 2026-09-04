@@ -4237,8 +4237,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             const homeId = match.homeTeamIdentifier || match.homeTeam;
             const awayId = match.awayTeamIdentifier || match.awayTeam;
         
-            if (homeId && homeId !== '---' && !displayNames[homeId]) identifiers.push(homeId);
-            if (awayId && awayId !== '---' && !displayNames[awayId]) identifiers.push(awayId);
+            if (displayNames && homeId && homeId !== '---' && !displayNames[homeId]) identifiers.push(homeId);
+            if (displayNames && awayId && awayId !== '---' && !displayNames[awayId]) identifiers.push(awayId);
         
             if (identifiers.length === 0) return;
     
@@ -4284,8 +4284,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     // Získanie identifikátorov tímov
     const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
     const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-    const homeTeamDisplay = displayNames[homeTeam] || homeTeam;
-    const awayTeamDisplay = displayNames[awayTeam] || awayTeam;
+    const homeTeamDisplay = (displayNames && displayNames[homeTeam]) || homeTeam;
+    const awayTeamDisplay = (displayNames && displayNames[awayTeam]) || awayTeam;
 
     // Skutočný názov pre zobrazenie (použijeme displayNames, ak existujú)
     const homeScore = match.homeScore !== undefined ? match.homeScore : '';
