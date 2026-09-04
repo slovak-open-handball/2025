@@ -2921,6 +2921,11 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     
     // Získame Playoff bloky (generujeme vždy, keď existujú play-off zápasy)
     const playoffContent = (() => {
+        // Ak je vybraná konkrétna skupina, playoff bloky sa NESMIE zobrazovať
+        if (selectedGroup) {
+            return null;
+        }
+
         let playoffMatches = matches.filter(m => isEliminationMatch(m));
         if (selectedCategory) {
             playoffMatches = playoffMatches.filter(m => {
@@ -2930,6 +2935,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 return false;
             });
         }
+        
         const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
         const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
         const allPlayoffMatches = [...spiderMatches, ...placementMatches];
