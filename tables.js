@@ -2719,13 +2719,43 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             
             matches.forEach(match => {
                 if (match.isPlacementMatch) return;
-                if (!match.categoryName || !match.groupName) return;
-                
-                const key = `${match.categoryName}|${match.groupName}`;
+            
+                // 1. Získanie názvu kategórie
+                let categoryName = match.categoryName;
+                if (!categoryName && match.categoryId && categoriesData) {
+                    categoryName = categoriesData[match.categoryId];
+                }
+            
+                // 2. Získanie názvu skupiny
+                let groupName = match.groupName || match.group;   // skúsime aj pole 'group'
+                if (!groupName && match.groupId) {
+                    // Prehľadáme groupsData podľa ID skupiny
+                    for (const catId in groupsData) {
+                        const groups = groupsData[catId];
+                        if (Array.isArray(groups)) {
+                            const found = groups.find(g => g.id === match.groupId);
+                            if (found) {
+                                groupName = found.name;
+                                break;
+                            }
+                        }
+                    }
+                }
+            
+                // 3. Fallback – ak stále nemáme názov, použijeme ID (alebo predvolený text)
+                if (!categoryName) {
+                    categoryName = match.categoryId || 'Neznáma kategória';
+                }
+                if (!groupName) {
+                    groupName = match.groupId || match.group || 'Neznáma skupina';
+                }
+            
+                // 4. Vytvorenie kľúča a uloženie do groupsMap
+                const key = `${categoryName}|${groupName}`;
                 if (!groupsMap.has(key)) {
                     groupsMap.set(key, {
-                        category: match.categoryName,
-                        group: match.groupName,
+                        category: categoryName,
+                        group: groupName,
                         matches: []
                     });
                 }
