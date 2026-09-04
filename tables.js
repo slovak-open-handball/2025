@@ -2802,6 +2802,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                                 if (isSelected) {
                                     clearFilters();
                                 } else {
+                                    setShowPlayoff(false); // VYPNE PLAYOFF
                                     setSelectedCategory(cat);
                                     setSelectedGroup(null);
                                 }
@@ -2839,7 +2840,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             'button',
                             {
                                 key: group,
-                                onClick: () => setSelectedGroup(isSelected ? null : group),
+                                onClick: () => {
+                                    setShowPlayoff(false); // VYPNE PLAYOFF
+                                    setSelectedGroup(isSelected ? null : group);
+                                },
                                 className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                     isSelected ? 'shadow-md' : 'hover:opacity-80'
                                 }`,
@@ -2867,7 +2871,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             'button',
                             {
                                 key: group,
-                                onClick: () => setSelectedGroup(isSelected ? null : group),
+                                onClick: () => {
+                                    setShowPlayoff(false); // VYPNE PLAYOFF
+                                    setSelectedGroup(isSelected ? null : group);
+                                },
                                 className: `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                     isSelected ? 'shadow-md' : 'hover:opacity-80'
                                 }`,
@@ -2878,14 +2885,14 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     })
                 )
             ),
-
+    
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
                 React.createElement(
                     'button',
                     {
-                        onClick: () => setShowPlayoff(!showPlayoff),
+                        onClick: handlePlayoffClick,
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                             showPlayoff
                                 ? 'bg-red-600 text-white shadow-md scale-105'
