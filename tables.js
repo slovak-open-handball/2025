@@ -2884,25 +2884,107 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         );
     };
     
-    // Získame tabuľky (filtrované)
-    const tablesContent = (() => {
-        if (filteredTables.length === 0) {
-            return React.createElement(
-                'div',
-                { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
-                React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
-                React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne tabuľky'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: clearFilters,
-                        className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
-                    },
-                    'Zrušiť filtre'
-                )
-            );
+    // Získame zoznam kategórií, ktoré majú tabuľky alebo play-off zápasy (ak je Playoff aktívny)
+    const getCategoriesWithContent = () => {
+        const categoriesSet = new Set();
+        
+        // Pridáme kategórie z tabuliek
+        filteredTables.forEach(table => {
+            categoriesSet.add(table.category);
+        });
+        
+        // Ak je Playoff aktívny, pridáme kategórie z play-off zápasov
+        if (showPlayoff) {
+            let playoffMatches = matches.filter(m => isEliminationMatch(m));
+            if (selectedCategory) {
+                playoffMatches = playoffMatches.filter(m => {
+                    if (m.categoryId === selectedCategory) return true;
+                    if (m.categoryName === selectedCategory) return true;
+                    if (m.categoryId && categoriesData[m.categoryId] === selectedCategory) return true;
+                    return false;
+                });
+            }
+            playoffMatches.forEach(m => {
+                const cat = getMatchCategory(m);
+                if (cat) categoriesSet.add(cat);
+            });
         }
-        return filteredTables.map(table => 
+        
+        // Ak je vybraná kategória, použijeme len tú
+        if (selectedCategory) {
+            return categoriesSet.has(selectedCategory) ? [selectedCategory] : [];
+        }
+        
+        // Inak vrátime všetky kategórie zoradené
+        return Array.from(categoriesSet).sort();
+    };
+    
+    const getMatchCategory = (match) => {
+        if (match.categoryId && categoriesData[match.categoryId]) return categoriesData[match.categoryId];
+        if (match.categoryName) return match.categoryName;
+        return null;
+    };
+    
+    // Získame Playoff bloky pre konkrétnu kategóriu
+    const getPlayoffContentForCategory = (category) => {
+        if (!showPlayoff) return null;
+        
+        let playoffMatches = matches.filter(m => isEliminationMatch(m));
+        playoffMatches = playoffMatches.filter(m => {
+            const cat = getMatchCategory(m);
+            return cat === category;
+        });
+        
+        if (playoffMatches.length === 0) return null;
+        
+        const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
+        const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
+        const allPlayoffMatches = [...spiderMatches, ...placementMatches];
+        
+        const spiderByCategory = {};
+        spiderMatches.forEach(m => {
+            const cat = getMatchCategory(m);
+            if (!cat) return;
+            if (!spiderByCategory[cat]) spiderByCategory[cat] = [];
+            spiderByCategory[cat].push(m);
+        });
+        
+        const catSpiderMatches = spiderByCategory[category] || [];
+        
+        return React.createElement(
+            'div',
+            { key: `playoff-block-${category}`, className: 'mb-12' },
+            catSpiderMatches.length > 0 && React.createElement(PlayoffSpider, {
+                key: `spider-${category}`,
+                matches: catSpiderMatches,
+                selectedCategory: category,
+                teamNames: teamNames,
+                hallNames: hallNames,
+                categoriesData: categoriesData
+            }),
+            React.createElement(PlayoffMatchesList, {
+                key: `matches-${category}`,
+                matches: allPlayoffMatches,
+                teamNames: teamNames,
+                hallNames: hallNames,
+                categoriesData: categoriesData
+            })
+        );
+    };
+    
+    // Získame tabuľky pre konkrétnu kategóriu (základné a nadstavbové oddelene)
+    const getTablesForCategory = (category) => {
+        const categoryTables = filteredTables.filter(t => t.category === category);
+        if (categoryTables.length === 0) return null;
+        
+        // Rozdelíme na základné a nadstavbové
+        const basicTables = categoryTables.filter(t => t.groupType === 'základná');
+        const advancedTables = categoryTables.filter(t => t.groupType === 'nadstavbová');
+        
+        // Zoradíme: najprv základné, potom nadstavbové
+        const sortedTables = [...basicTables, ...advancedTables];
+        
+        return sortedTables.map(table => 
             React.createElement(GroupTable, {
                 key: `${table.category}|${table.group}`,
                 table: table,
@@ -2917,73 +2999,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 hallNames: hallNames
             })
         );
-    })();
+    };
     
-    // Získame Playoff bloky (ak je Playoff zapnutý)
-    const playoffContent = (() => {
-        if (!showPlayoff) return null;
-        let playoffMatches = matches.filter(m => isEliminationMatch(m));
-        if (selectedCategory) {
-            playoffMatches = playoffMatches.filter(m => {
-                if (m.categoryId === selectedCategory) return true;
-                if (m.categoryName === selectedCategory) return true;
-                if (m.categoryId && categoriesData[m.categoryId] === selectedCategory) return true;
-                return false;
-            });
-        }
-        const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
-        const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
-        const allPlayoffMatches = [...spiderMatches, ...placementMatches];
-        if (allPlayoffMatches.length === 0) return React.createElement('div', { className: 'text-center py-12 text-gray-500' }, 'Žiadne play-off zápasy');
-    
-        const getMatchCategory = (match) => {
-            if (match.categoryId && categoriesData[match.categoryId]) return categoriesData[match.categoryId];
-            if (match.categoryName) return match.categoryName;
-            return null;
-        };
-    
-        const matchesByCategory = {};
-        allPlayoffMatches.forEach(m => {
-            const cat = getMatchCategory(m);
-            if (!cat) return;
-            if (!matchesByCategory[cat]) matchesByCategory[cat] = [];
-            matchesByCategory[cat].push(m);
-        });
-    
-        const spiderByCategory = {};
-        spiderMatches.forEach(m => {
-            const cat = getMatchCategory(m);
-            if (!cat) return;
-            if (!spiderByCategory[cat]) spiderByCategory[cat] = [];
-            spiderByCategory[cat].push(m);
-        });
-    
-        const categoryComponents = Object.keys(matchesByCategory).map(cat => {
-            const catAllMatches = matchesByCategory[cat];
-            const catSpiderMatches = spiderByCategory[cat] || [];
-            return React.createElement(
-                'div',
-                { key: `playoff-block-${cat}`, className: 'mb-12' },
-                catSpiderMatches.length > 0 && React.createElement(PlayoffSpider, {
-                    key: `spider-${cat}`,
-                    matches: catSpiderMatches,
-                    selectedCategory: cat,
-                    teamNames: teamNames,
-                    hallNames: hallNames,
-                    categoriesData: categoriesData
-                }),
-                React.createElement(PlayoffMatchesList, {
-                    key: `matches-${cat}`,
-                    matches: catAllMatches,
-                    teamNames: teamNames,
-                    hallNames: hallNames,
-                    categoriesData: categoriesData
-                })
-            );
-        });
-    
-        return categoryComponents.length > 0 ? categoryComponents : React.createElement('div', { className: 'text-center py-12 text-gray-500' }, 'Žiadne play-off zápasy');
-    })();
+    // Získame kategórie, ktoré budeme zobrazovať
+    const categoriesToShow = getCategoriesWithContent();
     
     // Hlavný návrat
     return React.createElement(
@@ -2995,20 +3014,33 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Tabuľky skupín'),
         ),
         renderFilters(),
-        (() => {
-            if (selectedCategory && showPlayoff) {
-                // Vybraná kategória + Playoff → zobraziť iba Playoff bloky
-                return playoffContent;
-            } else {
-                // Inak zobraziť tabuľky a ak nie je vybraná kategória a Playoff je aktívny, pridať Playoff bloky pod tabuľky
+        categoriesToShow.length === 0 ? (
+            React.createElement(
+                'div',
+                { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
+                React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
+                React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne dáta'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: clearFilters,
+                        className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
+                    },
+                    'Zrušiť filtre'
+                )
+            )
+        ) : (
+            categoriesToShow.map(category => {
+                const tables = getTablesForCategory(category);
+                const playoffBlock = getPlayoffContentForCategory(category);
                 return React.createElement(
-                    React.Fragment,
-                    null,
-                    tablesContent,
-                    !selectedCategory && showPlayoff && playoffContent
+                    'div',
+                    { key: `category-${category}`, className: 'mb-12' },
+                    tables,
+                    playoffBlock
                 );
-            }
-        })()
+            })
+        )
     );
 };
 
