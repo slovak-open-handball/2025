@@ -53,7 +53,6 @@ let initialMappingDone = false;
 const replacementCallbacks = [];
 
 let groupCheckCache = new Set();
-let processedCarryOverGroups = new Set();
 let isInitialDataLoaded = false;
 let processedGroupsInitial = new Set();
 
@@ -671,9 +670,18 @@ let isTeamNameReplacerInitialized = false;
             if (match.isPlacementMatch) continue;
             if (match.categoryName !== categoryName) continue;
             if (!match.groupName || match.groupName === currentGroupName) continue;
-            // Zisti, či ide o nadstavbovú skupinu
+            
+            // Kontrola, či ide o nadstavbovú skupinu
+            let isAdvanced = false;
             const groupType = getGroupTypeSync(categoryName, match.groupName);
             if (groupType === 'nadstavbová skupina') {
+                isAdvanced = true;
+            } else if (match.groupName.toLowerCase().includes('nadstavbová')) {
+                // Fallback – ak cache nebola načítaná, použijeme kontrolu názvu
+                isAdvanced = true;
+            }
+            
+            if (isAdvanced) {
                 result.push(match);
             }
         }
@@ -1635,11 +1643,15 @@ let isTeamNameReplacerInitialized = false;
                     if (currentMatchIds.has(match.id)) continue;
     
                     // Vytvoríme kľúč pre dvojicu skupín
+                    const processedGroupPairs = new Set();
+
+                    // Pri spracovaní inej nadstavbovej skupiny:
                     const groupPairKey = `${categoryName}|${groupName}|${match.groupName}`;
-                    if (processedCarryOverGroups.has(groupPairKey)) {
-                        // Už sme tieto dve skupiny spracovali, preskočíme
+                    if (processedGroupPairs.has(groupPairKey)) {
                         continue;
                     }
+                    // ... spracovanie ...
+                    processedGroupPairs.add(groupPairKey);
         
                     // Získame názvy tímov (mapovanie)
                     let homeTeamName = match.homeTeamIdentifier;
