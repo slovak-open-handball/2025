@@ -2509,17 +2509,23 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         // Prenos zápasov z iných nadstavbových skupín
         if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
             for (const match of otherAdvancedMatches) {
-                // Preskočiť zápasy z rovnakej skupiny (už spracované)
+                // Preskočiť zápasy, ktoré už sú v aktuálnej skupine
                 if (currentMatchIds.has(match.id)) continue;
         
-                const homeId = match.homeTeamIdentifier;
-                const awayId = match.awayTeamIdentifier;
+                // Získame názvy tímov (pomocou globálnej funkcie getDisplayTeamName)
+                const homeTeamName = getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+                const awayTeamName = getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
         
-                // Overiť, či oba tímy sú v aktuálnej nadstavbovej skupine
-                if (!teamsMap.has(homeId) || !teamsMap.has(awayId)) continue;
+                // Nájdeme tímy v aktuálnej skupine podľa názvu
+                let homeTeam = null, awayTeam = null;
+                for (const team of teamsMap.values()) {
+                    if (team.name === homeTeamName) homeTeam = team;
+                    if (team.name === awayTeamName) awayTeam = team;
+                }
         
-                const homeTeam = teamsMap.get(homeId);
-                const awayTeam = teamsMap.get(awayId);
+                // Ak oba tímy nie sú v aktuálnej skupine, preskočíme
+                if (!homeTeam || !awayTeam) continue;
+        
                 const pairKey = homeTeam.name < awayTeam.name
                     ? `${homeTeam.name}|${awayTeam.name}`
                     : `${awayTeam.name}|${homeTeam.name}`;
@@ -2568,8 +2574,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     // Uloženie do prenesených zápasov pre zobrazenie
                     transferredMatches.push({
                         id: `transferred_adv_${match.id}`,
-                        homeTeamIdentifier: homeId,
-                        awayTeamIdentifier: awayId,
+                        homeTeamIdentifier: homeTeam.id,   // použijeme aktuálny identifikátor v skupine
+                        awayTeamIdentifier: awayTeam.id,
                         homeTeamName: homeTeam.name,
                         awayTeamName: awayTeam.name,
                         homeScore: homeScore,
