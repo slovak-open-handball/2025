@@ -1890,23 +1890,6 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) =
     );
 };
 
-const formatDateWithDay = (date) => {
-    const dayName = getDayName(date);
-    const formattedDate = date.toLocaleDateString('sk-SK', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-    return `${dayName} ${formattedDate}`;
-};
-
-// Získanie názvu haly podľa ID (používa window.hallNames)
-const getHallNameById = (hallId) => {
-    if (!hallId) return '';
-    const hall = (window.hallNames || {})[hallId];
-    return hall || '';
-};
-
 // ===== KOMPONENT PRE ZOBRAZENIE PAVÚKA (POUŽÍVA IMPORTY Z logged-in-spider.js) =====
 const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, categoriesData }) => {
     // Ak nie sú žiadne zápasy, vrátime null
