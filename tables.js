@@ -2905,9 +2905,13 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         return false;
                     });
                 }
-                // ROZDELENIE: o 3. miesto patrí do pavúka, ostatné umiestnenia do zoznamu
+        
+                // Rozdelíme na pavúkové (vrátane o 3. miesto) a o umiestnenie
                 const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
                 const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
+        
+                // Všetky play-off zápasy spolu
+                const allPlayoffMatches = [...spiderMatches, ...placementMatches];
         
                 const getMatchCategory = (match) => {
                     if (match.categoryId && categoriesData[match.categoryId]) return categoriesData[match.categoryId];
@@ -2915,7 +2919,16 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     return null;
                 };
         
-                // Zoskupiť pavúkové zápasy podľa kategórie
+                // Zoskupiť všetky play-off zápasy podľa kategórie
+                const matchesByCategory = {};
+                allPlayoffMatches.forEach(m => {
+                    const cat = getMatchCategory(m);
+                    if (!cat) return;
+                    if (!matchesByCategory[cat]) matchesByCategory[cat] = [];
+                    matchesByCategory[cat].push(m);
+                });
+        
+                // Zoskupiť pavúkové zápasy podľa kategórie pre PlayoffSpider
                 const spiderByCategory = {};
                 spiderMatches.forEach(m => {
                     const cat = getMatchCategory(m);
@@ -2924,23 +2937,24 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     spiderByCategory[cat].push(m);
                 });
         
-                // Vytvoriť bloky (pavúk + zoznam zápasov) pre každú kategóriu
-                const spiderComponents = Object.keys(spiderByCategory).map(cat => {
-                    const catMatches = spiderByCategory[cat];
+                // Vytvoriť bloky pre každú kategóriu (pavúk + spoločný zoznam zápasov)
+                const categoryComponents = Object.keys(matchesByCategory).map(cat => {
+                    const catAllMatches = matchesByCategory[cat];
+                    const catSpiderMatches = spiderByCategory[cat] || [];
                     return React.createElement(
                         'div',
-                        { key: `spider-block-${cat}`, className: 'mb-12' },
-                        React.createElement(PlayoffSpider, {
+                        { key: `playoff-block-${cat}`, className: 'mb-12' },
+                        catSpiderMatches.length > 0 && React.createElement(PlayoffSpider, {
                             key: `spider-${cat}`,
-                            matches: catMatches,
+                            matches: catSpiderMatches,
                             selectedCategory: cat,
                             teamNames: teamNames,
                             hallNames: hallNames,
                             categoriesData: categoriesData
                         }),
                         React.createElement(PlayoffMatchesList, {
-                            key: `spider-matches-${cat}`,
-                            matches: catMatches,
+                            key: `matches-${cat}`,
+                            matches: catAllMatches,
                             teamNames: teamNames,
                             hallNames: hallNames,
                             categoriesData: categoriesData
@@ -2948,21 +2962,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     );
                 });
         
-                const hasSpider = spiderComponents.length > 0;
-                const hasPlacement = placementMatches.length > 0;
+                const hasAny = categoryComponents.length > 0;
         
                 return React.createElement(
                     React.Fragment,
                     null,
-                    hasSpider && spiderComponents,
-                    hasPlacement && React.createElement(PlayoffMatchesList, {
-                        key: `placement-${selectedCategory || 'all'}`,
-                        matches: placementMatches,
-                        teamNames: teamNames,
-                        hallNames: hallNames,
-                        categoriesData: categoriesData
-                    }),
-                    !hasSpider && !hasPlacement && React.createElement(
+                    hasAny ? categoryComponents : React.createElement(
                         'div',
                         { className: 'text-center py-12 text-gray-500' },
                         'Žiadne play-off zápasy'
