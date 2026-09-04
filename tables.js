@@ -16,6 +16,68 @@ const ELIMINATION_COLORS = {
     textColor: '#92400E'
 };
 
+// ===== CHÝBAJÚCE POMOCNÉ FUNKCIE =====
+
+const formatMatchDateTime = (timestamp) => {
+    if (!timestamp) return null;
+    try {
+        const date = timestamp.toDate();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return { time: `${hours}:${minutes}`, dateObj: date };
+    } catch (e) {
+        return null;
+    }
+};
+
+const formatDateHeader = (date) => {
+    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+    const dayName = days[date.getDay()];
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${dayName} ${day}. ${month}. ${year}`;
+};
+
+const getCategoryDrawColor = (categoryId) => {
+    if (!window.categoryDrawColors || !categoryId) return '#3B82F6';
+    const color = window.categoryDrawColors[categoryId];
+    if (color && color !== '#3B82F6') return color;
+    return '#3B82F6';
+};
+
+const getLighterColor = (color) => {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.8));
+    const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.8));
+    const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.8));
+    return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+};
+
+const getDisplayTeamName = (teamIdentifier) => {
+    if (!teamIdentifier) return '???';
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        const teamName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+        if (teamName && teamName !== teamIdentifier) return teamName;
+    }
+    return teamIdentifier;
+};
+
+const getCategoryNameById = (categoryId) => {
+    if (!categoryId) return null;
+    if (window.categoriesData && window.categoriesData[categoryId]) {
+        return window.categoriesData[categoryId];
+    }
+    if (window.categoriesList) {
+        const found = window.categoriesList.find(cat => cat.id === categoryId);
+        if (found) return found.name;
+    }
+    return null;
+};
+
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     let result = { backgroundColor: '#DCFCE7', textColor: '#166534' };
     if (!groupsData || !categoryId) return result;
