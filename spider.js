@@ -4439,7 +4439,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                    }, homeTeamDisplay + (homeScore !== '' ? ` – ${homeScore}` : ''))
+                    }, homeTeamDisplay),
+                    homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
                 // Ikony pre adminov
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
@@ -4510,7 +4511,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                    }, awayTeamDisplay + (awayScore !== '' ? ` – ${awayScore}` : ''))
+                    }, awayTeamDisplay),
+                    awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                 ),
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                     'div',
