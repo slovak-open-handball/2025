@@ -1638,12 +1638,12 @@ let isTeamNameReplacerInitialized = false;
                 // (pozor: carryOverEnabled už je true, takže netreba znova kontrolovať)
                 const otherAdvancedMatches = getOtherAdvancedMatches(categoryName, groupName);
                 const currentMatchIds = new Set(advancedMatches.map(m => m.id));
+                    
+                // Vytvoríme kľúč pre dvojicu skupín
+                const processedGroupPairs = new Set();
                 
                 for (const match of otherAdvancedMatches) {
                     if (currentMatchIds.has(match.id)) continue;
-    
-                    // Vytvoríme kľúč pre dvojicu skupín
-                    const processedGroupPairs = new Set();
 
                     // Pri spracovaní inej nadstavbovej skupiny:
                     const groupPairKey = `${categoryName}|${groupName}|${match.groupName}`;
@@ -1719,7 +1719,6 @@ let isTeamNameReplacerInitialized = false;
                         }
     
                         processedPairs.add(pairKey);
-                        processedCarryOverGroups.add(groupPairKey);
     
                         // Pridáme do zoznamu prenesených zápasov
                         transferredMatches.push({
