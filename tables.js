@@ -2670,8 +2670,17 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             .forEach(t => groups.add(t.group));
         return Array.from(groups).sort();
     }, [groupTables, selectedCategory]);
+
+    const handlePlayoffClick = () => {
+        const newState = !showPlayoff;
+        setShowPlayoff(newState);
+        // Pri zapnutí aj vypnutí Playoff zrušíme filtre, aby sa zobrazili buď všetky pavúky, alebo všetky tabuľky
+        setSelectedCategory(null);
+        setSelectedGroup(null);
+    };
     
     const handleTableHeaderClick = (category, group) => {
+        setShowPlayoff(false);
         if (selectedCategory === category && selectedGroup === group) {
             setSelectedCategory(null);
             setSelectedGroup(null);
@@ -2682,6 +2691,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     };
     
     const clearFilters = () => {
+        setShowPlayoff(false);
         setSelectedCategory(null);
         setSelectedGroup(null);
     };
