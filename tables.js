@@ -3,21 +3,7 @@ import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, add
 
 const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
 
-import {
-    renderLevel1,
-    renderLevel2,
-    renderLevel3,
-    renderLevel4,
-    MatchCell,
-    ELIMINATION_COLORS,
-    isEliminationMatch,
-    getCategoryDrawColor,
-    getLighterColor,
-    formatDateHeader,
-    formatMatchDateTime,
-    getDisplayTeamName,
-    getCategoryNameById
-} from './logged-in-spider.js';
+import { renderLevel1, renderLevel2, renderLevel3, renderLevel4, MatchCell } from './logged-in-spider.js';
 
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     let result = { backgroundColor: '#DCFCE7', textColor: '#166534' };
@@ -1885,6 +1871,29 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) =
             )
         )
     );
+};
+
+// ===== POMOCNÉ FUNKCIE PRE PAVÚKA =====
+const getDayName = (date) => {
+    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+    return days[date.getDay()];
+};
+
+const formatDateWithDay = (date) => {
+    const dayName = getDayName(date);
+    const formattedDate = date.toLocaleDateString('sk-SK', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    return `${dayName} ${formattedDate}`;
+};
+
+// Získanie názvu haly podľa ID (používa window.hallNames)
+const getHallNameById = (hallId) => {
+    if (!hallId) return '';
+    const hall = (window.hallNames || {})[hallId];
+    return hall || '';
 };
 
 // ===== KOMPONENT PRE ZOBRAZENIE PAVÚKA (POUŽÍVA IMPORTY Z logged-in-spider.js) =====
