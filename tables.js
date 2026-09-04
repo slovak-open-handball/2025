@@ -3371,7 +3371,8 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
                         null,
                         true,
                         matches,
-                        false
+                        false,
+                        teamNamesCache
                     )
                 )
             )
