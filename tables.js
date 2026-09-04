@@ -1906,12 +1906,6 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) =
     );
 };
 
-// ===== POMOCNÉ FUNKCIE PRE PAVÚKA =====
-const getDayName = (date) => {
-    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
-    return days[date.getDay()];
-};
-
 const formatDateWithDay = (date) => {
     const dayName = getDayName(date);
     const formattedDate = date.toLocaleDateString('sk-SK', {
