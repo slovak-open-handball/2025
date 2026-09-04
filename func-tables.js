@@ -668,7 +668,6 @@ let processedCarryOverGroups = new Set();
         const allMatches = Object.values(matchesData);
         const result = [];
     
-        // Získame ID kategórie
         let categoryId = null;
         if (window.categoryIdMap) {
             categoryId = window.categoryIdMap[categoryName];
@@ -685,7 +684,6 @@ let processedCarryOverGroups = new Set();
             }
         }
     
-        // Získame názvy nadstavbových skupín
         const advancedGroupNames = [];
         if (categoryId && groupsCache && groupsCache[categoryId]) {
             advancedGroupNames.push(...groupsCache[categoryId]
@@ -693,15 +691,22 @@ let processedCarryOverGroups = new Set();
                 .map(g => g.name));
         }
     
+        // 🔍 LOGOVANIE
+        log(`🔍 getOtherAdvancedMatches: category="${categoryName}", currentGroup="${currentGroupName}", categoryId=${categoryId}`);
+        log(`   advancedGroupNames: [${advancedGroupNames.join(', ')}]`);
+    
         for (const match of allMatches) {
             if (match.isPlacementMatch) continue;
             if (match.categoryName !== categoryName) continue;
             if (!match.groupName || match.groupName === currentGroupName) continue;
-    
-            // Kontrola podľa cache
             if (advancedGroupNames.includes(match.groupName)) {
                 result.push(match);
             }
+        }
+    
+        log(`📊 getOtherAdvancedMatches vrátila ${result.length} zápasov`);
+        if (result.length > 0) {
+            log(`   Príklad: ${result[0].homeTeamIdentifier} vs ${result[0].awayTeamIdentifier} (skupina ${result[0].groupName})`);
         }
         return result;
     }
@@ -1644,7 +1649,9 @@ let processedCarryOverGroups = new Set();
                     }
                 }
 
+                log(`🔍 Volám getOtherAdvancedMatches pre kategóriu ${categoryName}, aktuálna skupina ${groupName}`);
                 const otherAdvancedMatches = getOtherAdvancedMatches(categoryName, groupName);
+                log(`📊 otherAdvancedMatches má ${otherAdvancedMatches.length} zápasov`);
                 const currentMatchIds = new Set(advancedMatches.map(m => m.id));
                 const teamsMap = new Map();
                 for (const team of teamsInAdvanced) {
