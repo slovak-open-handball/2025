@@ -2995,15 +2995,13 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         ),
         renderFilters(),
         (() => {
-            // Ak je vybraná kategória a Playoff je aktívny → zobraziť iba Playoff bloky
+            // 1. Ak je zapnutý prepínač Playoff a máme vybranú kategóriu → zobrazíme len playoff bloky
             if (selectedCategory && showPlayoff) {
                 return playoffContent;
             }
-            
-            // Inak zobraziť tabuľky
-            // Ak nie je vybraná kategória (Všetky kategórie) a existujú play-off zápasy,
-            // vložíme playoff bloky za každú kategóriu, ktorá má nadstavbové tabuľky
-            if (!selectedCategory && playoffContent) {
+    
+            // 2. Ak existujú playoff bloky a máme nejaké tabuľky (filteredTables)
+            if (playoffContent && filteredTables.length > 0) {
                 // Zoskupíme tabuľky podľa kategórie
                 const tablesByCategory = {};
                 filteredTables.forEach(table => {
@@ -3013,17 +3011,15 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     tablesByCategory[table.category].push(table);
                 });
     
-                // Pre každú kategóriu vykreslíme jej tabuľky a za ňou playoff bloky (ak kategória má nadstavbové tabuľky)
                 const categoryOrder = Object.keys(tablesByCategory).sort();
                 const content = [];
-                
+    
                 categoryOrder.forEach(cat => {
                     const catTables = tablesByCategory[cat];
-                    // Oddelíme základné a nadstavbové tabuľky
                     const basicTables = catTables.filter(t => t.groupType !== 'nadstavbová');
                     const advancedTables = catTables.filter(t => t.groupType === 'nadstavbová');
-                    
-                    // Najprv základné
+    
+                    // Základné tabuľky
                     basicTables.forEach(table => {
                         content.push(React.createElement(GroupTable, {
                             key: `${table.category}|${table.group}`,
@@ -3039,8 +3035,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             hallNames: hallNames
                         }));
                     });
-                    
-                    // Potom nadstavbové
+    
+                    // Nadstavbové tabuľky
                     advancedTables.forEach(table => {
                         content.push(React.createElement(GroupTable, {
                             key: `${table.category}|${table.group}`,
@@ -3056,22 +3052,23 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                             hallNames: hallNames
                         }));
                     });
-                    
-                    // Ak má kategória nadstavbové tabuľky a existujú play-off zápasy pre túto kategóriu,
-                    // pridáme playoff bloky za ne
+    
+                    // Ak má kategória nadstavbové tabuľky a existujú playoff bloky pre túto kategóriu,
+                    // pridáme ich hneď za poslednú nadstavbovú tabuľku
                     if (advancedTables.length > 0 && playoffContent) {
-                        // Nájdeme playoff bloky pre túto kategóriu
-                        const catPlayoffBlocks = playoffContent.filter(block => block.key === `playoff-block-${cat}`);
+                        const catPlayoffBlocks = playoffContent.filter(
+                            block => block.key === `playoff-block-${cat}`
+                        );
                         if (catPlayoffBlocks.length > 0) {
                             content.push(catPlayoffBlocks[0]);
                         }
                     }
                 });
-                
+    
                 return content;
             }
-            
-            // Inak zobraziť len tabuľky (ak nie je Playoff a je vybraná kategória)
+    
+            // 3. Inak zobrazíme len tabuľky (žiadny playoff, alebo žiadne nadstavbové)
             return tablesContent;
         })()
     );
