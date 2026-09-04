@@ -2892,8 +2892,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         
         renderFilters(),
         
-        // ===== NOVÁ PODMIENKA: Playoff =====
         showPlayoff ? (
+            // Iba playoff (žiadne tabuľky)
             (() => {
                 let playoffMatches = matches.filter(m => isEliminationMatch(m));
                 if (selectedCategory) {
@@ -2912,37 +2912,63 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 });
             })()
         ) : (
-            filteredTables.length === 0 ? (
-                React.createElement(
-                    'div',
-                    { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
-                    React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
-                    React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne tabuľky'),
+            // Tabuľky + playoff blok (ak existujú nadstavbové skupiny)
+            React.createElement(
+                React.Fragment,
+                null,
+                // Tabuľky
+                filteredTables.length === 0 ? (
                     React.createElement(
-                        'button',
-                        {
-                            onClick: clearFilters,
-                            className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
-                        },
-                        'Zrušiť filtre'
+                        'div',
+                        { className: 'text-center py-12 bg-gray-50 rounded-xl border border-gray-200' },
+                        React.createElement('i', { className: 'fa-solid fa-filter text-4xl mb-4 text-gray-400' }),
+                        React.createElement('p', { className: 'text-lg font-medium text-gray-700' }, 'Pre zvolený filter neexistujú žiadne tabuľky'),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: clearFilters,
+                                className: 'mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer'
+                            },
+                            'Zrušiť filtre'
+                        )
                     )
-                )
-            ) : (
-                filteredTables.map(table => 
-                    React.createElement(GroupTable, {
-                        key: `${table.category}|${table.group}`,
-                        table: table,
-                        filteredTables: filteredTables,
-                        groupMatches: table.matches,
-                        transferredMatches: table.transferredMatches || [],
+                ) : (
+                    filteredTables.map(table => 
+                        React.createElement(GroupTable, {
+                            key: `${table.category}|${table.group}`,
+                            table: table,
+                            filteredTables: filteredTables,
+                            groupMatches: table.matches,
+                            transferredMatches: table.transferredMatches || [],
+                            teamNames: teamNames,
+                            matches: matches,
+                            groupsDataState: groupsDataState,
+                            handleTableHeaderClick: handleTableHeaderClick,
+                            getTeamForm: getTeamForm,
+                            hallNames: hallNames
+                        })
+                    )
+                ),
+                // Playoff blok (vždy po tabuľkách, ak existujú playoff zápasy)
+                (() => {
+                    let playoffMatches = matches.filter(m => isEliminationMatch(m));
+                    if (selectedCategory) {
+                        playoffMatches = playoffMatches.filter(m => {
+                            if (m.categoryId === selectedCategory) return true;
+                            if (m.categoryName === selectedCategory) return true;
+                            if (m.categoryId && categoriesData[m.categoryId] === selectedCategory) return true;
+                            return false;
+                        });
+                    }
+                    // Zobraziť playoff blok iba ak existujú zápasy
+                    if (playoffMatches.length === 0) return null;
+                    return React.createElement(PlayoffMatchesList, {
+                        matches: playoffMatches,
                         teamNames: teamNames,
-                        matches: matches,
-                        groupsDataState: groupsDataState,
-                        handleTableHeaderClick: handleTableHeaderClick,
-                        getTeamForm: getTeamForm,
-                        hallNames: hallNames
-                    })
-                )
+                        hallNames: hallNames,
+                        categoriesData: categoriesData
+                    });
+                })()
             )
         )
     );
