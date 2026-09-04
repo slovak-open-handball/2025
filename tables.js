@@ -2981,11 +2981,11 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
         import('./logged-in-spider.js')
             .then(module => {
                 console.log('Modul načítaný:', Object.keys(module));
+                // Odstrániť event listener, ktorý spúšťa renderovanie
+                window.removeEventListener('globalDataUpdated', module.handleDataUpdateAndRender);
                 setSpiderModule(module);
             })
-            .catch(err => {
-                console.error('Chyba pri načítaní pavúka:', err);
-            });
+            .catch(err => console.error('Chyba pri načítaní pavúka:', err));
     }, []);
 
     useEffect(() => {
