@@ -2683,16 +2683,21 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     };
 
     const handleCategoryPlayoffClick = useCallback((category) => {
-        setSelectedCategory(category);
-        setShowPlayoff(true);
-        setSelectedGroup(null);
-    }, []);
+        // Ak je už vybraná táto kategória a Playoff je aktívny, zrušíme filter
+        if (selectedCategory === category && showPlayoff) {
+            clearFilters();
+        } else {
+            setSelectedCategory(category);
+            setShowPlayoff(true);
+            setSelectedGroup(null);
+        }
+    }, [selectedCategory, showPlayoff, clearFilters]);
     
-    const clearFilters = () => {
+    const clearFilters = useCallback(() => {
         setShowPlayoff(false);
         setSelectedCategory(null);
         setSelectedGroup(null);
-    };
+    }, []);
     
     if (loading) {
         return React.createElement(
