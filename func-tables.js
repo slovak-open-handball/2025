@@ -16,6 +16,7 @@ let localDebug = originalConsoleDebug;
 let localInfo = originalConsoleInfo;
 let localWarn = originalConsoleWarn;
 let localError = originalConsoleError;
+let processedAdvancedGroups = new Set();
 
 // Podľa DEBUG_MODE prepíšeme LOKÁLNE funkcie, nie globálne
 if (!DEBUG_MODE) {
@@ -1312,6 +1313,14 @@ let isTeamNameReplacerInitialized = false;
     // OPRAVENÁ FUNKCIA: createAdvancedGroupTable - SPRÁVNE MAPOVANIE NÁZVOV PRE ZÁPASY
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
+        const cacheKey = `${categoryName}|${groupName}`;
+    
+        // Už raz spracovaná skupina – vrátime null, aby sme zabránili rekurzii
+        if (processedAdvancedGroups.has(cacheKey)) {
+            log(`⏭️ [${categoryName} - ${groupName}] už bola spracovaná, preskakujem`);
+            return null;
+        }
+        
         // NAJPRV NAČÍTAME TYPY SKUPÍN
         if (!groupsCache) {
             log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
@@ -1782,6 +1791,7 @@ let isTeamNameReplacerInitialized = false;
         const totalAdvancedMatches = advancedMatches.length;
         const completedAdvancedCount = allMatchesForComparison.filter(m => !m.isTransferred && m.status === 'completed').length;
         const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
+        processedAdvancedGroups.add(cacheKey);
         
         return {
             category: categoryName,
