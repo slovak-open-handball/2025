@@ -2111,7 +2111,7 @@ let isTeamNameReplacerInitialized = false;
                 }
                 
                 if (transferred.length > 0) {
-                    log(`\n🔄 PRENESENÉ ZÁPASY (zo základných skupín):`);
+                    log(`\n🔄 PRENESENÉ ZÁPASY:`);
                     transferred.forEach((match, idx) => {
                         log(`   ${idx+1}. ${match.homeTeamName} ${match.homeScore}:${match.awayScore} ${match.awayTeamName} (z ${match.fromGroup || 'základnej skupiny'})`);
                     });
