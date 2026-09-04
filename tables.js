@@ -1649,7 +1649,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
     );
 };
 
-const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) => {
+const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData, category, onHeaderClick }) => {
     const [matchScoresFromEvents, setMatchScoresFromEvents] = useState({});
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
     const [matchStatuses, setMatchStatuses] = useState({});
@@ -1740,8 +1740,11 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) =
         { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement(
             'div',
-            { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-            React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Play-off a zápasy o umiestnenie')
+            { 
+                className: 'bg-red-200 px-6 py-3 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
+                onClick: () => onHeaderClick && onHeaderClick(category)
+            },
+            React.createElement('h3', { className: 'font-semibold text-red-700' }, 'Play-off a zápasy o umiestnenie')
         ),
         React.createElement(
             'div',
@@ -1993,6 +1996,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
         loadSettings();
     }, []);    
+    
     const getCurrentPointsForWin = useCallback(() => {
         return pointsForWin;
     }, [pointsForWin]);
@@ -2677,6 +2681,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             setSelectedGroup(group);
         }
     };
+
+    const handleCategoryPlayoffClick = useCallback((category) => {
+        setSelectedCategory(category);
+        setShowPlayoff(true);
+        setSelectedGroup(null);
+    }, []);
     
     const clearFilters = () => {
         setShowPlayoff(false);
@@ -2874,7 +2884,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                             showPlayoff
                                 ? 'bg-red-600 text-white shadow-md scale-105'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                : 'bg-red-200 text-red-700 hover:bg-red-300'
                         }`
                     },
                     React.createElement('i', { className: 'fa-solid fa-trophy mr-1' }),
@@ -2975,14 +2985,17 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     selectedCategory: cat,
                     teamNames: teamNames,
                     hallNames: hallNames,
-                    categoriesData: categoriesData
+                    categoriesData: categoriesData,
+                    onHeaderClick: handleCategoryPlayoffClick
                 }),
                 React.createElement(PlayoffMatchesList, {
                     key: `matches-${cat}`,
                     matches: catAllMatches,
                     teamNames: teamNames,
                     hallNames: hallNames,
-                    categoriesData: categoriesData
+                    categoriesData: categoriesData,
+                    category: cat,
+                    onHeaderClick: handleCategoryPlayoffClick
                 })
             );
         });
@@ -3080,7 +3093,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     );
 };
 
-const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, categoriesData }) => {
+const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, categoriesData, onHeaderClick }) => {
 
     console.log('PlayoffSpider volaný, matches:', matches.length, 'selectedCategory:', selectedCategory);
     
@@ -3220,8 +3233,11 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
         { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement(
             'div',
-            { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-            React.createElement('h3', { className: 'font-semibold text-gray-800' }, `Pavúk - ${categoryName}`)
+            { 
+                className: 'bg-red-200 px-6 py-3 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
+                onClick: () => onHeaderClick && onHeaderClick(selectedCategory)
+            },
+            React.createElement('h3', { className: 'font-semibold text-red-700' }, `Pavúk - ${categoryName}`)
         ),
         React.createElement(
             'div',
