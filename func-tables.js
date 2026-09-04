@@ -1700,9 +1700,12 @@ let processedCarryOverGroups = new Set();
     
                     // Nájdeme tímy v aktuálnej nadstavbovej skupine podľa názvu (použijeme normalizáciu)
                     let homeTeam = null, awayTeam = null;
+                    const homeNorm = normalizeName(homeTeamName);
+                    const awayNorm = normalizeName(awayTeamName);
                     for (const team of teamsInAdvanced) {
-                        if (team.name === homeTeamName) homeTeam = team;
-                        if (team.name === awayTeamName) awayTeam = team;
+                        const teamNorm = normalizeName(team.name);
+                        if (teamNorm === homeNorm) homeTeam = team;
+                        if (teamNorm === awayNorm) awayTeam = team;
                     }
     
                     if (!homeTeam || !awayTeam) {
