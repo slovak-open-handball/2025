@@ -2915,6 +2915,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     return null;
                 };
         
+                // Zoskupiť pavúkové zápasy podľa kategórie
                 const spiderByCategory = {};
                 spiderMatches.forEach(m => {
                     const cat = getMatchCategory(m);
@@ -2923,15 +2924,28 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     spiderByCategory[cat].push(m);
                 });
         
+                // Vytvoriť bloky (pavúk + zoznam zápasov) pre každú kategóriu
                 const spiderComponents = Object.keys(spiderByCategory).map(cat => {
-                    return React.createElement(PlayoffSpider, {
-                        key: `spider-${cat}`,
-                        matches: spiderByCategory[cat],
-                        selectedCategory: cat,
-                        teamNames: teamNames,
-                        hallNames: hallNames,
-                        categoriesData: categoriesData
-                    });
+                    const catMatches = spiderByCategory[cat];
+                    return React.createElement(
+                        'div',
+                        { key: `spider-block-${cat}`, className: 'mb-12' },
+                        React.createElement(PlayoffSpider, {
+                            key: `spider-${cat}`,
+                            matches: catMatches,
+                            selectedCategory: cat,
+                            teamNames: teamNames,
+                            hallNames: hallNames,
+                            categoriesData: categoriesData
+                        }),
+                        React.createElement(PlayoffMatchesList, {
+                            key: `spider-matches-${cat}`,
+                            matches: catMatches,
+                            teamNames: teamNames,
+                            hallNames: hallNames,
+                            categoriesData: categoriesData
+                        })
+                    );
                 });
         
                 const hasSpider = spiderComponents.length > 0;
