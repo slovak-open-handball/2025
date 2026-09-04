@@ -4377,7 +4377,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         },
                         className: 'w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-200',
                         style: { color: 'white' },
-                        title: 'Odstrániť celý zápas'
                     },
                     React.createElement('i', { 
                         className: 'fa-solid fa-trash-can text-sm',
@@ -4405,8 +4404,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                        title: isMatchReference(homeTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
-                               (homeTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                     }, homeTeam),
                     homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
@@ -4428,7 +4425,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             },
                             className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Priradiť tím'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-pencil text-xs',
@@ -4441,7 +4437,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             onClick: (e) => handleRemoveTeamClick(e, homeTeam, 'home'),
                             className: 'w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Odstrániť priradenie tímu'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-trash-can text-xs',
@@ -4457,7 +4452,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             },
                             className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Zmeniť tím'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-pencil text-xs',
@@ -4482,8 +4476,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                        title: isMatchReference(awayTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
-                               (awayTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                     }, awayTeam),
                     awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                 ),
@@ -4504,7 +4496,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             },
                             className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Priradiť tím'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-pencil text-xs',
@@ -4517,7 +4508,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             onClick: (e) => handleRemoveTeamClick(e, awayTeam, 'away'),
                             className: 'w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Odstrániť priradenie tímu'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-trash-can text-xs',
@@ -4533,7 +4523,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             },
                             className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                             style: { color: 'white' },
-                            title: 'Zmeniť tím'
                         },
                         React.createElement('i', { 
                             className: 'fa-solid fa-pencil text-xs',
@@ -4562,7 +4551,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     'div',
                     { className: 'flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-location-dot text-gray-400 text-xs' }),
-                    React.createElement('span', { className: 'truncate', title: hallName }, hallName)
+                    React.createElement('span', { className: 'truncate' }, hallName)
                 )
             )
         ),
@@ -7161,7 +7150,6 @@ const SpiderApp = ({ userProfileData }) => {
                                     }
                                 },
                                 className: 'px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap',
-                                title: 'Prejsť do zobrazenia zápasov'
                             },
                             'Zápasy'
                         )
@@ -7348,11 +7336,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         clipPath: 'polygon(0 0, 100% 0, 0 100%)',
                                     },
                                     onClick: generateSpider,
-                                    disabled: false,
-                                    title: spiderLevel === 1 ? 'Generovať štvrťfinále' : 
-                                           (spiderLevel === 2 ? 'Generovať osemfinále' : 
-                                            (spiderLevel === 3 ? 'Generovať šestnásťfinále' : 
-                                             'Generovať pavúka'))
+                                    disabled: false
                                 },
                                 React.createElement(
                                     'span',
@@ -7379,8 +7363,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
                                     },
                                     onClick: () => setIsDeleteMatchesModalOpen(true),
-                                    disabled: false,
-                                    title: 'Zmazať pavúka'
+                                    disabled: false
                                 },
                                 React.createElement(
                                     'span',
