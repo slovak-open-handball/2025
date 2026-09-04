@@ -3207,12 +3207,14 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     // Rozdelíme zápasy na pavúkové (majú matchType) a ostatné (napr. o umiestnenie)
                     const spiderMatches = playoffMatches.filter(m => m.matchType && m.matchType !== 'o 3. miesto');
                     const placementMatches = playoffMatches.filter(m => m.isPlacementMatch || (m.matchType && m.matchType.includes('miesto')));
+                    const playoffMatchesKey = playoffMatches.map(m => m.id).join('-');
                 
                     return React.createElement(
                         React.Fragment,
                         null,
                         // Pavúk (ak existujú pavúkové zápasy)
                         spiderMatches.length > 0 && React.createElement(PlayoffSpider, {
+                            key: `spider-${selectedCategory || 'all'}-${spiderMatches.length}-${spiderMatches.map(m => m.id).join('-')}`,
                             matches: spiderMatches,
                             selectedCategory: selectedCategory,
                             teamNames: teamNames,
@@ -3221,6 +3223,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         }),
                         // Zápasy o umiestnenie (ak existujú)
                         placementMatches.length > 0 && React.createElement(PlayoffMatchesList, {
+                            key: `placement-${selectedCategory || 'all'}-${placementMatches.length}-${placementMatches.map(m => m.id).join('-')}`,
                             matches: placementMatches,
                             teamNames: teamNames,
                             hallNames: hallNames,
