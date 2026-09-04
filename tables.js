@@ -2503,12 +2503,14 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
             }
         }
+
+        const currentMatchIds = new Set(groupMatches.map(m => m.id));
         
         // Prenos zápasov z iných nadstavbových skupín
         if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
             for (const match of otherAdvancedMatches) {
                 // Preskočiť zápasy z rovnakej skupiny (už spracované)
-                if (match.groupName === group) continue;
+                if (currentMatchIds.has(match.id)) continue;
         
                 const homeId = match.homeTeamIdentifier;
                 const awayId = match.awayTeamIdentifier;
@@ -2719,7 +2721,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 const baseGroups = baseGroupsByCategory[category] || [];
                 // ---- Získanie zápasov z iných nadstavbových skupín rovnakej kategórie ----
                 const otherAdvancedMatches = (advancedMatchesByCategory[category] || [])
-                    .filter(m => m.groupName !== group); // vylúčime zápasty z aktuálnej skupiny
+                    .filter(m => m.groupName && m.groupName.trim() !== group.trim());
             
                 // ---- Volanie s novým parametrom ----
                 const table = calculateAdvancedGroupTable(
