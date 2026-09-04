@@ -688,6 +688,34 @@ let processedCarryOverGroups = new Set();
         }
         return result;
     }
+
+    // ========== POMOCNÁ FUNKCIA: Získanie nadstavbových skupín pre kategóriu ==========
+    function getAdvancedGroupsForCategory(categoryName) {
+        if (!groupsCache) return [];
+        
+        // Získame ID kategórie
+        let categoryId = window.categoryIdMap?.[categoryName];
+        if (!categoryId) {
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                for (const group of groups) {
+                    if (group.name === categoryName) {
+                        categoryId = catId;
+                        break;
+                    }
+                }
+                if (categoryId) break;
+            }
+        }
+        if (!categoryId || !groupsCache[categoryId]) return [];
+        
+        // Filtrujeme nadstavbové skupiny a vrátime ich názvy zoradené abecedne
+        const advancedGroups = groupsCache[categoryId]
+            .filter(g => g.type === 'nadstavbová skupina')
+            .map(g => g.name)
+            .sort();
+        
+        return advancedGroups;
+    }
     
     // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
     function getTeamsInGroupFromAllMatches(groupMatches) {
@@ -2506,57 +2534,57 @@ let processedCarryOverGroups = new Set();
                 
                 log('📋 Teraz spracujem NADSTAVBOVÉ SKUPINY...');
                 
-                const advancedGroups = new Set();
+                // Zozbierame názvy nadstavbových skupín pre každú kategóriu
+                const advancedGroupsByCategory = new Map();
                 allMatchesArray.forEach(match => {
                     if (match.isPlacementMatch) return;
-                    const isAdvancedGroup = match.groupName && match.groupName.toLowerCase().includes('nadstavbová');
-                    if (isAdvancedGroup && match.categoryName && match.groupName) {
-                        advancedGroups.add(`${match.categoryName}|${match.groupName}`);
+                    if (match.categoryName && match.groupName) {
+                        const isAdvancedGroup = match.groupName.toLowerCase().includes('nadstavbová');
+                        if (isAdvancedGroup) {
+                            if (!advancedGroupsByCategory.has(match.categoryName)) {
+                                advancedGroupsByCategory.set(match.categoryName, new Set());
+                            }
+                            advancedGroupsByCategory.get(match.categoryName).add(match.groupName);
+                        }
                     }
                 });
                 
-                log(`📊 Nájdených ${advancedGroups.size} nadstavbových skupín`);
-                
-                for (const groupKey of advancedGroups) {
-                    const [category, group] = groupKey.split('|');
-                    let baseGroupName = null;
-                    const groupLower = group.toLowerCase();
-                    const matchGroupLetter = groupLower.replace('nadstavbová', '').trim().toUpperCase();
+                // Pre každú kategóriu zoradíme skupiny abecedne a spracujeme ich
+                for (const [category, groupSet] of advancedGroupsByCategory) {
+                    const sortedGroups = Array.from(groupSet).sort();  // ← abecedné zoradenie
+                    log(`📊 Kategória ${category}: ${sortedGroups.length} nadstavbových skupín`);
                     
-                    if (matchGroupLetter) {
-                        baseGroupName = `skupina ${matchGroupLetter}`;
-                    }
-                    
-                    if (baseGroupName) {
-                        const baseGroupKey = `${category}|${baseGroupName}`;
-                        if (processedGroupsInitial.has(baseGroupKey)) {
-                            log(`   ✅ ${category} - ${group} (základná ${baseGroupName} je hotová) - vyhodnocujem...`);
-                            createAdvancedGroupTable(category, group, baseGroupName);
-                        } else {
-                            log(`   ⏳ ${category} - ${group} čaká na dokončenie základnej skupiny ${baseGroupName}`);
+                    for (const group of sortedGroups) {
+                        // Extrahujeme písmeno pre základnú skupinu (napr. "nadstavbová A" → "A")
+                        const matchGroupLetter = group.replace('nadstavbová', '').trim().toUpperCase();
+                        let baseGroupName = matchGroupLetter ? `skupina ${matchGroupLetter}` : null;
+                        
+                        if (baseGroupName) {
+                            const baseGroupKey = `${category}|${baseGroupName}`;
+                            if (processedGroupsInitial.has(baseGroupKey)) {
+                                log(`   ✅ ${category} - ${group} (základná ${baseGroupName} je hotová) - vyhodnocujem...`);
+                                createAdvancedGroupTable(category, group, baseGroupName);
+                            } else {
+                                log(`   ⏳ ${category} - ${group} čaká na dokončenie základnej skupiny ${baseGroupName}`);
+                            }
                         }
                     }
                 }
             }
             
-            // ========== SPRACOVANIE ZMENY: IBA KEĎ SA ZÁPAS UKONČIL ==========
             if (isInitialDataLoaded && completedMatchChanged && changedMatches.length > 0) {
                 log(`🏁 Spúšťam prepočet tabuliek (${changedMatches.length} zápasov bolo dohraných)...`);
-                
-                const affectedGroups = new Set();
+            
                 const affectedCategories = new Set();
-                
                 for (const changedMatch of changedMatches) {
-                    if (changedMatch.category && changedMatch.group) {
-                        const groupKey = `${changedMatch.category}|${changedMatch.group}`;
-                        affectedGroups.add(groupKey);
+                    if (changedMatch.category) {
                         affectedCategories.add(changedMatch.category);
                     }
                 }
-                
-                log(`📋 Ovplyvnené skupiny: ${Array.from(affectedGroups).join(', ')}`);
-                
-                // 1. Najprv prepočítame ovplyvnené ZÁKLADNÉ SKUPINY
+            
+                log(`📋 Ovplyvnené kategórie: ${Array.from(affectedCategories).join(', ')}`);
+            
+                // 1. Najprv prepočítame ZÁKLADNÉ skupiny (pôvodná logika - necháme ju)
                 for (const groupKey of affectedGroups) {
                     const [category, group] = groupKey.split('|');
                     const isAdvancedGroup = group.toLowerCase().includes('nadstavbová');
@@ -2577,32 +2605,36 @@ let processedCarryOverGroups = new Set();
                         }
                     }
                 }
-                
-                // 2. Potom prepočítame NADSTAVBOVÉ SKUPINY
-                for (const groupKey of affectedGroups) {
-                    const [category, group] = groupKey.split('|');
-                    const isAdvancedGroup = group.toLowerCase().includes('nadstavbová');
-                    
-                    if (isAdvancedGroup) {
-                        const groupLetter = group.replace('nadstavbová', '').trim().toUpperCase();
-                        const baseGroupName = `skupina ${groupLetter}`;
+            
+                // 2. Potom prepočítame NADSTAVBOVÉ skupiny v abecednom poradí
+                for (const category of affectedCategories) {
+                    const advancedGroups = getAdvancedGroupsForCategory(category);
+                    if (advancedGroups.length === 0) continue;
+            
+                    log(`📋 Prepočítavam nadstavbové skupiny pre kategóriu ${category} (${advancedGroups.length})`);
+            
+                    for (const group of advancedGroups) {
+                        // Extrahujeme písmeno pre základnú skupinu
+                        const matchGroupLetter = group.replace('nadstavbová', '').trim().toUpperCase();
+                        const baseGroupName = matchGroupLetter ? `skupina ${matchGroupLetter}` : null;
                         const baseGroupKey = `${category}|${baseGroupName}`;
-                        
-                        if (processedGroupsInitial.has(baseGroupKey)) {
+            
+                        if (baseGroupName && processedGroupsInitial.has(baseGroupKey)) {
                             log(`   🔄 Prepočítavam nadstavbovú skupinu: ${category} - ${group}`);
                             createAdvancedGroupTable(category, group, baseGroupName);
+                        } else {
+                            log(`   ⏳ ${category} - ${group} čaká na dokončenie základnej skupiny ${baseGroupName}`);
                         }
                     }
                 }
-                
+            
                 printAllGroupTables();
-                
+            
                 if (window.dispatchEvent) {
                     window.dispatchEvent(new CustomEvent('groupTablesUpdated', {
-                        detail: { 
-                            reason: 'match_completed', 
+                        detail: {
+                            reason: 'match_completed',
                             timestamp: Date.now(),
-                            affectedGroups: Array.from(affectedGroups),
                             affectedCategories: Array.from(affectedCategories)
                         }
                     }));
