@@ -2277,7 +2277,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         };
     }, [teamNames, pointsForWin, sortingConditions]);
     
-    const calculateAdvancedGroupTable = useCallback((category, group, groupMatches, allBaseGroupTables, otherAdvancedMatches) => {
+    const calculateAdvancedGroupTable = useCallback((category, group, groupMatches, allBaseGroupTables, otherAdvancedMatches, teamNames) => {
         const groupType = 'nadstavbová';
         
         let categoryId = null;
@@ -2295,7 +2295,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const teamsMap = new Map();
         groupMatches.forEach(match => {
             if (match.homeTeamIdentifier && !teamsMap.has(match.homeTeamIdentifier)) {
-                const teamName = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                const teamName = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
                 teamsMap.set(match.homeTeamIdentifier, {
                     id: match.homeTeamIdentifier,
                     name: teamName,
@@ -2310,7 +2310,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 });
             }
             if (match.awayTeamIdentifier && !teamsMap.has(match.awayTeamIdentifier)) {
-                const teamName = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                const teamName = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                 teamsMap.set(match.awayTeamIdentifier, {
                     id: match.awayTeamIdentifier,
                     name: teamName,
@@ -2326,20 +2326,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             }
         });
         
-        const teamNameMap = new Map();
-        for (const [id, team] of teamsMap) {
-            teamNameMap.set(id, team.name);
-            if (team.name !== id) {
-                teamNameMap.set(team.name, team.name);
-            }
-        }
-        
         const currentPointsForWin = pointsForWin;
-        
         const allMatchesForComparison = [];
         const transferredMatches = [];
         const processedPairs = new Set();
         
+        // Spracovanie vlastných zápasov skupiny
         groupMatches.forEach(match => {
             const homeTeam = teamsMap.get(match.homeTeamIdentifier);
             const awayTeam = teamsMap.get(match.awayTeamIdentifier);
@@ -2396,7 +2388,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
             }
         });
-
+    
         // Prenos zápasov zo základných skupín (ak je povolený)
         if (carryOverEnabled && allBaseGroupTables && allBaseGroupTables.length > 0) {
             for (const baseTable of allBaseGroupTables) {
@@ -2503,42 +2495,37 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
             }
         }
-
+    
         const currentMatchIds = new Set(groupMatches.map(m => m.id));
         
-        // Prenos zápasov z iných nadstavbových skupín
+        // ---- OPRAVENÝ PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
         if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
             for (const match of otherAdvancedMatches) {
-                // Preskočiť zápasy, ktoré už sú v aktuálnej skupine
                 if (currentMatchIds.has(match.id)) continue;
         
-                // Získame názvy tímov (pomocou globálnej funkcie getDisplayTeamName)
-                const homeTeamName = getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
-                const awayTeamName = getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
+                // Získame názvy tímov z teamNames (predaného parametra)
+                const homeTeamName = teamNames[match.homeTeamIdentifier] || match.homeTeamIdentifier;
+                const awayTeamName = teamNames[match.awayTeamIdentifier] || match.awayTeamIdentifier;
         
-                // Nájdeme tímy v aktuálnej skupine podľa názvu
+                // Nájdeme tímy v aktuálnej skupine podľa názvu (porovnávame reťazce)
                 let homeTeam = null, awayTeam = null;
                 for (const team of teamsMap.values()) {
                     if (team.name === homeTeamName) homeTeam = team;
                     if (team.name === awayTeamName) awayTeam = team;
                 }
         
-                // Ak oba tímy nie sú v aktuálnej skupine, preskočíme
                 if (!homeTeam || !awayTeam) continue;
         
                 const pairKey = homeTeam.name < awayTeam.name
                     ? `${homeTeam.name}|${awayTeam.name}`
                     : `${awayTeam.name}|${homeTeam.name}`;
         
-                // Ak už bol pár spracovaný (napr. zo základnej skupiny), preskočiť
                 if (processedPairs.has(pairKey)) continue;
         
-                // Spracovať iba dokončené zápasy
                 if (match.status === 'completed') {
                     let homeScore = match.homeScore || 0;
                     let awayScore = match.awayScore || 0;
         
-                    // Pokus o získanie aktuálneho skóre z udalostí (ak existujú)
                     if (homeScore === 0 && awayScore === 0 && match.id) {
                         const events = window.matchTracker?.getEvents?.(match.id) || [];
                         const score = getCurrentScoreFromEvents(events);
@@ -2546,7 +2533,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         awayScore = score.away;
                     }
         
-                    // Aktualizácia štatistík
                     homeTeam.played++;
                     awayTeam.played++;
                     homeTeam.goalsFor += homeScore;
@@ -2571,10 +2557,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         
                     processedPairs.add(pairKey);
         
-                    // Uloženie do prenesených zápasov pre zobrazenie
+                    // Pridáme do zoznamu prenesených zápasov (pre zobrazenie v GroupMatchesList)
                     transferredMatches.push({
                         id: `transferred_adv_${match.id}`,
-                        homeTeamIdentifier: homeTeam.id,   // použijeme aktuálny identifikátor v skupine
+                        homeTeamIdentifier: homeTeam.id,
                         awayTeamIdentifier: awayTeam.id,
                         homeTeamName: homeTeam.name,
                         awayTeamName: awayTeam.name,
@@ -2582,14 +2568,13 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         awayScore: awayScore,
                         status: 'completed',
                         isTransferred: true,
-                        fromGroup: match.groupName,
+                        fromGroup: match.groupName || 'iná nadstavbová',
                         scheduledTime: match.scheduledTime || null,
                         hallId: match.hallId || null,
                         categoryName: match.categoryName,
                         categoryId: match.categoryId
                     });
         
-                    // Pridanie do zoznamu zápasov pre porovnávanie (napr. pre head‑to‑head)
                     allMatchesForComparison.push({
                         ...match,
                         homeTeamName: homeTeam.name,
@@ -2597,7 +2582,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         homeScore: homeScore,
                         awayScore: awayScore,
                         isTransferred: true,
-                        fromGroup: match.groupName
+                        fromGroup: match.groupName || 'iná nadstavbová'
                     });
                 }
             }
@@ -2735,7 +2720,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     group,
                     groupMatches,
                     baseGroups,
-                    otherAdvancedMatches
+                    otherAdvancedMatches,
+                    teamNames
                 );
             
                 if (table) {
