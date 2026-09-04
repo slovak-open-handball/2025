@@ -3,7 +3,23 @@ import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, add
 
 const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
 
-import { renderLevel1, renderLevel2, renderLevel3, renderLevel4, MatchCell } from './logged-in-spider.js';
+import {
+    renderLevel1,
+    renderLevel2,
+    renderLevel3,
+    renderLevel4,
+    MatchCell,
+    ELIMINATION_COLORS,
+    getCategoryDrawColor,
+    getLighterColor,
+    formatDateHeader,
+    formatMatchDateTime,
+    getDisplayTeamName,
+    getCategoryNameById,
+    formatDateWithDay,
+    getHallNameById,
+    getDayName
+} from './logged-in-spider.js';
 
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     let result = { backgroundColor: '#DCFCE7', textColor: '#166534' };
