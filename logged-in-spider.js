@@ -8074,21 +8074,11 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Získanie názvu aktuálneho súboru
-const fileName = window.location.pathname.split('/').pop();
-
-// Aktivujeme len na logged-in-matches.html (prípadne aj matches.html)
-const isMatchesPage = fileName === 'logged-in-matches.html' || fileName === 'matches.html';
-
-if (isMatchesPage) {
-    window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-    if (window.globalUserProfileData) {
-        handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-    }
-} else {
-    window.removeEventListener('globalDataUpdated', handleDataUpdateAndRender);
-}
+// window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+// 
+// if (window.globalUserProfileData) {
+//    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+// }
 
 export {
     renderLevel1,
