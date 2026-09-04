@@ -1,5 +1,5 @@
 // ========== LOKÁLNY PREPÍNAČ PRE LOGOVANIE LEN PRE TENTO SÚBOR ==========
-const DEBUG_MODE = false;  // false = nevypisuje sa, true = vypisuje sa
+const DEBUG_MODE = true;  // false = nevypisuje sa, true = vypisuje sa
 
 // Uložíme pôvodné globálne funkcie PREDTÝM, než ich niekto prepíše
 const originalConsoleLog = console.log;
