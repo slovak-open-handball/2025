@@ -72,6 +72,12 @@ const isEliminationMatch = (match) => {
     ].includes(match.matchType)) return true;
     return false;
 };
+
+const ELIMINATION_COLORS = {
+    backgroundColor: '#FEF3C7',
+    textColor: '#92400E'
+};
+
 window.isEliminationMatch = isEliminationMatch;
 
 const getDisplayTeamName = (teamIdentifier) => {
