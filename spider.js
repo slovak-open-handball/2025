@@ -1,4 +1,4 @@
-// spider.js (upravený - symetrické rozloženie s osemfinále a šestnásťfinále)
+// spider.js
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { createPortal } = ReactDOM;
@@ -232,7 +232,7 @@ const findCategoryIdByName = (categories, categoryName) => {
     return category ? category.id : '';
 };
 
-const renderLevel1 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
+const renderLevel1 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache) => {
     return React.createElement(
         React.Fragment,
         null,
@@ -411,7 +411,7 @@ const renderLevel1 = (spiderData, userProfileData, generationInProgress, generat
 };
 
 // Funkcia pre vykreslenie úrovne 2 (so štvrťfinále)
-const renderLevel2 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
+const renderLevel2 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache) => {
     return React.createElement(
         React.Fragment,
         null,
@@ -849,7 +849,7 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
 };
 
 // Funkcia pre vykreslenie úrovne 3 (s osemfinále)
-const renderLevel3 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
+const renderLevel3 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache) => {
     return React.createElement(
         React.Fragment,
         null,
@@ -1943,7 +1943,7 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
 };
 
 // Funkcia pre vykreslenie úrovne 4 (so šestnásťfinále)
-const renderLevel4 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch) => {
+const renderLevel4 = (spiderData, userProfileData, generationInProgress, generateSingleMatch, deleteSingleMatch, handleTeamClick, removeTeamAssignment, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache) => {
     return React.createElement(
         React.Fragment,
         null,
@@ -4344,8 +4344,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     // Získanie identifikátorov tímov
     const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
     const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-    const homeTeamDisplay = (displayNames && displayNames[homeTeam]) || homeTeam;
-    const awayTeamDisplay = (displayNames && displayNames[awayTeam]) || awayTeam;
+    const homeTeamDisplay = (teamNamesCache && teamNamesCache[homeTeam]) || homeTeam;
+    const awayTeamDisplay = (teamNamesCache && teamNamesCache[awayTeam]) || awayTeam;
 
     // Skutočný názov pre zobrazenie (použijeme displayNames, ak existujú)
     const homeScore = match.homeScore !== undefined ? match.homeScore : '';
