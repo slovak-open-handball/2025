@@ -113,27 +113,28 @@ const decodeFromURL = (text) => {
 
 const getFilterFromURL = () => {
     const hash = window.location.hash;
-    if (!hash || hash === '#') return { category: null, group: null };
-    
+    if (!hash || hash === '#') return { category: null, group: null, view: null };
     try {
         const params = new URLSearchParams(hash.substring(1));
         const category = params.get('category');
         const group = params.get('group');
+        const view = params.get('view');
         return { 
             category: category ? decodeFromURL(category) : null, 
-            group: group ? decodeFromURL(group) : null 
+            group: group ? decodeFromURL(group) : null,
+            view: view ? decodeFromURL(view) : null
         };
     } catch (e) {
-        return { category: null, group: null };
+        return { category: null, group: null, view: null };
     }
 };
 
-const updateURLFilter = (category, group) => {
+const updateURLFilter = (category, group, view) => {
     try {
         const params = new URLSearchParams();
         if (category) params.set('category', encodeForURL(category));
         if (group) params.set('group', encodeForURL(group));
-        
+        if (view) params.set('view', encodeForURL(view));
         const newHash = params.toString() ? `#${params.toString()}` : '#';
         if (window.location.hash !== newHash) {
             history.replaceState(null, '', newHash);
@@ -1973,13 +1974,19 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         if (urlFilter.group) {
             setSelectedGroup(urlFilter.group);
         }
+        if (urlFilter.view === 'playoff') {
+            setShowPlayoff(true);
+        } else {
+            setShowPlayoff(false);
+        }
         setIsInitialized(true);
     }, []);
     
     useEffect(() => {
         if (!isInitialized) return;
-        updateURLFilter(selectedCategory, selectedGroup);
-    }, [selectedCategory, selectedGroup, isInitialized]);
+        const view = showPlayoff ? 'playoff' : null;
+        updateURLFilter(selectedCategory, selectedGroup, view);
+    }, [selectedCategory, selectedGroup, showPlayoff, isInitialized]);
     
     useEffect(() => {
         const loadSettings = async () => {
