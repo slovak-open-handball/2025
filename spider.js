@@ -4221,45 +4221,55 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
     );
 };
 
-// UPRAVENÝ MatchCell KOMPONENT - PRIDANÁ PODPORA PRE STATUS 'completed'
 const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
+    const [displayNames, setDisplayNames] = useState({}); // Ukladá preložené názvy tímov
 
-    // ZMENA: Získanie aktuálneho stavu zápasu z allMatches
+    // Získanie aktuálneho stavu zápasu z allMatches
     const currentMatch = allMatches?.find(m => m.id === match.id);
     const isMatchCompleted = currentMatch?.status === 'completed';
 
-    const getTeamDisplayName = (teamIdentifier) => {
-        if (!teamIdentifier || teamIdentifier === '---') return teamIdentifier;
-        // 1. Skúsime získať názov z window.teamNames (najrýchlejšie)
-        if (window.teamNames && window.teamNames[teamIdentifier]) {
-            return window.teamNames[teamIdentifier];
-        }
-        // 2. Ak nie je dostupný, skúsime cez matchTracker (sync verzia)
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayIdSync === 'function') {
-            try {
-                const name = window.matchTracker.getTeamNameByDisplayIdSync(teamIdentifier);
-                if (name && name !== teamIdentifier) return name;
-            } catch (e) {
-                // ticho ignorujeme
+    // Asynchrónne načítanie názvov tímov
+    useEffect(() => {
+        const fetchNames = async () => {
+            const identifiers = [];
+            const homeId = match.homeTeamIdentifier || match.homeTeam;
+            const awayId = match.awayTeamIdentifier || match.awayTeam;
+            
+            if (homeId && homeId !== '---' && !displayNames[homeId]) identifiers.push(homeId);
+            if (awayId && awayId !== '---' && !displayNames[awayId]) identifiers.push(awayId);
+            
+            if (identifiers.length === 0) return;
+
+            const newNames = {};
+            for (const id of identifiers) {
+                try {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        const name = await window.matchTracker.getTeamNameByDisplayId(id);
+                        if (name && name !== id) {
+                            newNames[id] = name;
+                        }
+                    }
+                } catch (e) {
+                    // ticho ignorovať
+                }
             }
-        }
-        // 3. Fallback – vrátime pôvodný identifikátor
-        return teamIdentifier;
-    };
+            if (Object.keys(newNames).length > 0) {
+                setDisplayNames(prev => ({ ...prev, ...newNames }));
+            }
+        };
+        fetchNames();
+    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam]);
 
     const isMatchReference = (teamName) => {
         if (teamName === '---') return false;
-        const matchRefPatterns = [
-            'WSF', 'LSF', 'WQF', 'W8F', 'W16F'
-        ];
+        const matchRefPatterns = ['WSF', 'LSF', 'WQF', 'W8F', 'W16F'];
         return matchRefPatterns.some(pattern => teamName.includes(pattern));
     };
 
     const handleTeamClick = (teamName, position) => {
-        // Povoliť kliknutie len pre adminov, len pre tímy, ktoré nie sú odkazmi na zápasy a zápas NIE JE ukončený
         if (userProfileData?.role === 'admin' && !isMatchReference(teamName) && !isMatchCompleted) {
             onTeamClick(match, position);
         }
@@ -4267,15 +4277,26 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
 
     const handleRemoveTeamClick = (e, teamName, position) => {
         e.stopPropagation();
-        // Povoliť odstránenie len pre adminov, ak tím nie je '---', nie je odkaz na zápas a zápas NIE JE ukončený
         if (userProfileData?.role === 'admin' && teamName !== '---' && !isMatchReference(teamName) && !isMatchCompleted) {
             setTeamToRemove({ position, teamName });
         }
     };
 
-    // Kontrola, či zápas existuje v databáze
+    // Získanie identifikátorov tímov
+    const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+    const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+    const homeTeamDisplay = displayNames[homeTeam] || homeTeam;
+    const awayTeamDisplay = displayNames[awayTeam] || awayTeam;
+
+    // Skutočný názov pre zobrazenie (použijeme displayNames, ak existujú)
+    const homeScore = match.homeScore !== undefined ? match.homeScore : '';
+    const awayScore = match.awayScore !== undefined ? match.awayScore : '';
+    const matchDisplayName = `${title} - ${homeTeamDisplay} vs ${awayTeamDisplay}`;
+
+    // Zvyšok kódu (renderovanie) – používame homeTeamDisplay a awayTeamDisplay namiesto pôvodných volaní
+
     if (!match.exists) {
-        // Chýbajúci zápas - sivý čiarkovaný box s možnosťou generovania
+        // Chýbajúci zápas – sivý čiarkovaný box
         return React.createElement(
             'div',
             { 
@@ -4351,18 +4372,11 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
         );
     }
 
-    // Existujúci zápas - normálne zobrazenie
+    // Existujúci zápas – normálne zobrazenie
     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
     const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
     const matchTime = matchDate ? `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}` : '';
     const hallName = getHallNameById(match.hallId);
-    const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
-    const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-    const homeTeamDisplay = getTeamDisplayName(homeTeam);
-    const awayTeamDisplay = getTeamDisplayName(awayTeam);
-    const homeScore = match.homeScore !== undefined ? match.homeScore : '';
-    const awayScore = match.awayScore !== undefined ? match.awayScore : '';
-    const matchDisplayName = `${title} - ${homeTeamDisplay} vs ${awayTeamDisplay}`;
 
     return React.createElement(
         React.Fragment,
@@ -4380,7 +4394,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                 onMouseEnter: () => setIsHovered(true),
                 onMouseLeave: () => setIsHovered(false)
             },
-            // Ikona koša pre adminov pre celý zápas - NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
+            // Ikona koša pre adminov (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS)
             userProfileData?.role === 'admin' && match.exists && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                 'div',
                 { 
@@ -4410,7 +4424,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                 { className: 'text-sm font-semibold text-center mb-2 pb-1 border-b border-gray-200' },
                 title
             ),
-            // Domáci tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME)
+            // Domáci tím – s ikonami pre úpravu a odstránenie
             React.createElement(
                 'div',
                 { 
@@ -4428,7 +4442,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     }, homeTeamDisplay),
                     homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
-                // Ikony pre adminov - NEBUDÚ SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
+                // Ikony pre adminov
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                     'div',
                     { 
@@ -4482,7 +4496,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                 )
             ),
             
-            // Hosťovský tím - s ikonami pre úpravu a odstránenie (NEBUDE SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME)
+            // Hosťovský tím – s ikonami pre úpravu a odstránenie
             React.createElement(
                 'div',
                 { 
@@ -4553,6 +4567,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                 )
             ),
             
+            // Dátum, čas a miesto
             (formattedDate || matchTime || hallName) && React.createElement(
                 'div',
                 { className: 'flex flex-col gap-1 mt-2 pt-2 border-t border-gray-200 text-xs text-gray-600' },
@@ -4577,7 +4592,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             )
         ),
         
-        // Modálne okno pre potvrdenie zmazania celého zápasu
+        // Modál pre zmazanie celého zápasu
         isDeleteModalOpen && createPortal(
             React.createElement(
                 'div',
@@ -4609,13 +4624,11 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
                         )
                     ),
-                    
                     React.createElement(
                         'p',
                         { className: 'text-gray-600 mb-2' },
                         'Naozaj chcete zmazať tento zápas?'
                     ),
-                    
                     React.createElement(
                         'div',
                         { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
@@ -4640,7 +4653,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             `Miesto: ${hallName}`
                         )
                     ),
-                    
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-2' },
@@ -4674,7 +4686,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             document.body
         ),
 
-        // Modálne okno pre potvrdenie odstránenia priradenia tímu
+        // Modál pre odstránenie priradenia tímu
         teamToRemove && createPortal(
             React.createElement(
                 'div',
@@ -4706,13 +4718,11 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
                         )
                     ),
-                    
                     React.createElement(
                         'p',
                         { className: 'text-gray-600 mb-4' },
                         `Naozaj chcete odstrániť tím "${teamToRemove.teamName}" z pozície ${teamToRemove.position === 'home' ? 'domáci' : 'hostia'}?`
                     ),
-                    
                     React.createElement(
                         'div',
                         { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
@@ -4727,7 +4737,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                             `Tím bude nahradený "---"`
                         )
                     ),
-                    
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-2' },
