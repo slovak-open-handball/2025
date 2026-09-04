@@ -9,7 +9,6 @@ import {
     renderLevel3,
     renderLevel4,
     MatchCell,
-    ELIMINATION_COLORS,
     getCategoryDrawColor,
     getLighterColor,
     formatDateHeader,
