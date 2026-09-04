@@ -1649,6 +1649,10 @@ let processedCarryOverGroups = new Set();
                 const teamsMap = new Map();
                 for (const team of teamsInAdvanced) {
                     teamsMap.set(team.name, team);
+                    teamsMap.set(team.originalId, team);
+                    if (team.id !== team.originalId) {
+                        teamsMap.set(team.id, team);
+                    }
                 }
     
                 // ---- OPRAVENÝ PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
