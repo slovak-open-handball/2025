@@ -4859,9 +4859,7 @@ const SpiderApp = ({ userProfileData }) => {
                 
                 // Filtrujeme len športové haly
                 const filteredHalls = loadedHalls.filter(place => place.type === 'sportova_hala');
-                setSportHalls(filteredHalls);
-                
-                console.log(`SpiderApp: Načítaných ${filteredHalls.length} športových hál`);
+                setSportHalls(filteredHalls);                
             }, (error) => {
                 console.error("SpiderApp: Chyba pri načítaní miest:", error);
             });
@@ -4885,7 +4883,6 @@ const SpiderApp = ({ userProfileData }) => {
                 });
                 setAllMatches(loadedMatches);
                 setHasCompletedMatch(completedExists);
-                console.log('Načítané všetky zápasy:', loadedMatches.length);
             }, (error) => {
                 console.error('Chyba pri načítaní zápasov:', error);
             });
@@ -4953,12 +4950,6 @@ const SpiderApp = ({ userProfileData }) => {
                     allTeams: [...userTeams, ...superstructureTeams]
                 });
                 
-                console.log('Načítané tímy:', {
-                    userTeams: userTeams.length,
-                    superstructureTeams: superstructureTeams.length,
-                    total: userTeams.length + superstructureTeams.length
-                });
-                
             } catch (error) {
                 console.error('Chyba pri načítaní tímov:', error);
             }
@@ -4972,7 +4963,6 @@ const SpiderApp = ({ userProfileData }) => {
                 
                 if (groupsSnap.exists()) {
                     setGroupsData(groupsSnap.data() || {});
-                    console.log('Načítané skupiny:', groupsSnap.data());
                 }
             } catch (error) {
                 console.error('Chyba pri načítaní skupín:', error);
@@ -5179,9 +5169,7 @@ const SpiderApp = ({ userProfileData }) => {
                  'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
                  'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
                  'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
-            );
-            
-            console.log('Nájdené pavúkové zápasy pre kategóriu:', spiderMatches);
+            );            
             
             // Zistíme, či existujú nejaké pavúkové zápasy a aká je úroveň
             const hasSemifinalMatches = spiderMatches.some(m => ['semifinále 1', 'semifinále 2'].includes(m.matchType));
