@@ -8070,3 +8070,5 @@ window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
+
+export { renderLevel1, renderLevel2, renderLevel3, renderLevel4, MatchCell, ELIMINATION_COLORS, isEliminationMatch };
