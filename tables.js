@@ -22,22 +22,6 @@ import {
     isEliminationMatch
 } from './logged-in-spider.js';
 
-const isEliminationMatch = (match) => {
-    if (!match) return false;
-    if (match.isPlacementMatch) return true;
-    if (match.matchType && [
-        'finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto',
-        'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
-        'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-        'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
-        'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
-        'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
-        'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
-        'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'
-    ].includes(match.matchType)) return true;
-    return false;
-};
-
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     let result = { backgroundColor: '#DCFCE7', textColor: '#166534' };
     if (!groupsData || !categoryId) return result;
