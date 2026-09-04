@@ -2680,10 +2680,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     
     const handleTableHeaderClick = (category, group) => {
         setShowPlayoff(false);
+        // Ak je už vybraná táto skupina, zrušíme len výber skupiny, kategória ostáva
         if (selectedCategory === category && selectedGroup === group) {
-            setSelectedCategory(null);
             setSelectedGroup(null);
+            // selectedCategory sa nemení
         } else {
+            // Inak nastavíme novú kategóriu a skupinu
             setSelectedCategory(category);
             setSelectedGroup(group);
         }
