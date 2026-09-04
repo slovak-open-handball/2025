@@ -8074,11 +8074,11 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-}
+// window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+// 
+// if (window.globalUserProfileData) {
+//     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+// }
 
 export {
     renderLevel1,
