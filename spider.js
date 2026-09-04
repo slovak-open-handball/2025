@@ -4260,7 +4260,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             }
         };
         fetchNames();
-    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam, currentMatch?.status]);
+    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam, currentMatch?.status, allMatches]);
 
     const isMatchReference = (teamName) => {
         if (teamName === '---') return false;
