@@ -1664,27 +1664,40 @@ let processedCarryOverGroups = new Set();
     
                 // ---- OPRAVENÝ PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
                 if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
+                    log(`🔄 Spracovávam ${otherAdvancedMatches.length} zápasov z iných nadstavbových skupín`);
                     for (const match of otherAdvancedMatches) {
                         if (currentMatchIds.has(match.id)) continue;
                 
-                        // Získame názvy tímov z teamNameMap (už existuje)
-                        const homeTeamName = teamNameMap.get(match.homeTeamIdentifier) || match.homeTeamIdentifier;
-                        const awayTeamName = teamNameMap.get(match.awayTeamIdentifier) || match.awayTeamIdentifier;
+                        const homeId = match.homeTeamIdentifier;
+                        const awayId = match.awayTeamIdentifier;
                 
-                        // Nájdeme tímy v aktuálnej nadstavbovej skupine
-                        let homeTeam = null, awayTeam = null;
-                        for (const team of teamsMap.values()) {
-                            if (team.name === homeTeamName) homeTeam = team;
-                            if (team.name === awayTeamName) awayTeam = team;
+                        // 1. Pokus: priamo podľa identifikátora
+                        let homeTeam = teamsMap.get(homeId);
+                        let awayTeam = teamsMap.get(awayId);
+                
+                        // 2. Pokus: cez teamNameMap na finálny názov
+                        if (!homeTeam) {
+                            const homeName = teamNameMap.get(homeId);
+                            if (homeName) homeTeam = teamsMap.get(homeName);
+                        }
+                        if (!awayTeam) {
+                            const awayName = teamNameMap.get(awayId);
+                            if (awayName) awayTeam = teamsMap.get(awayName);
                         }
                 
-                        if (!homeTeam || !awayTeam) continue;
+                        if (!homeTeam || !awayTeam) {
+                            log(`   ⚠️ Nenašiel sa tím pre zápas ${homeId} vs ${awayId}`);
+                            continue;
+                        }
                 
                         const pairKey = homeTeam.name < awayTeam.name
                             ? `${homeTeam.name}|${awayTeam.name}`
                             : `${awayTeam.name}|${homeTeam.name}`;
                 
-                        if (processedPairs.has(pairKey)) continue;
+                        if (processedPairs.has(pairKey)) {
+                            log(`   ⏩ Zápas ${homeTeam.name} vs ${awayTeam.name} už bol spracovaný`);
+                            continue;
+                        }
                 
                         if (match.status === 'completed') {
                             let homeScore = match.homeScore || 0;
@@ -1697,6 +1710,7 @@ let processedCarryOverGroups = new Set();
                                 awayScore = score.away;
                             }
                 
+                            // Aktualizácia štatistík
                             homeTeam.played++;
                             awayTeam.played++;
                             homeTeam.goalsFor += homeScore;
@@ -1721,7 +1735,6 @@ let processedCarryOverGroups = new Set();
                 
                             processedPairs.add(pairKey);
                 
-                            // Pridáme do zoznamu prenesených zápasov
                             transferredMatches.push({
                                 id: `transferred_adv_${match.id}`,
                                 homeTeamIdentifier: homeTeam.id,
@@ -1748,9 +1761,13 @@ let processedCarryOverGroups = new Set();
                                 isTransferred: true,
                                 fromGroup: match.groupName || 'iná nadstavbová'
                             });
+                
+                            log(`   ✅ Pridaný prenesený zápas: ${homeTeam.name} ${homeScore}:${awayScore} ${awayTeam.name} (z ${match.groupName})`);
+                        } else {
+                            log(`   ⏳ Zápas ${homeTeam.name} vs ${awayTeam.name} nie je dokončený (${match.status})`);
                         }
                     }
-                }            
+                }
             }
     
             // Spracovanie zápasov v nadstavbovej skupine pre štatistiky (už máme v allMatchesForComparison)
