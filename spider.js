@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - symetrické rozloženie s osemfinále a šestnásťfinále)
+// spider.js (upravený - symetrické rozloženie s osemfinále a šestnásťfinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { createPortal } = ReactDOM;
