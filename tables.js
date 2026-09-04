@@ -2905,18 +2905,16 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         return false;
                     });
                 }
-                // Rozdelíme na pavúkové a ostatné
-                const spiderMatches = playoffMatches.filter(m => m.matchType && m.matchType !== 'o 3. miesto');
-                const placementMatches = playoffMatches.filter(m => m.isPlacementMatch || (m.matchType && m.matchType.includes('miesto')));
+                // ROZDELENIE: o 3. miesto patrí do pavúka, ostatné umiestnenia do zoznamu
+                const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
+                const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
         
-                // Získanie kategórie zo zápasu
                 const getMatchCategory = (match) => {
                     if (match.categoryId && categoriesData[match.categoryId]) return categoriesData[match.categoryId];
                     if (match.categoryName) return match.categoryName;
                     return null;
                 };
         
-                // Zoskupiť spiderMatches podľa kategórie
                 const spiderByCategory = {};
                 spiderMatches.forEach(m => {
                     const cat = getMatchCategory(m);
@@ -2925,7 +2923,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     spiderByCategory[cat].push(m);
                 });
         
-                // Vytvoriť komponenty pre každú kategóriu
                 const spiderComponents = Object.keys(spiderByCategory).map(cat => {
                     return React.createElement(PlayoffSpider, {
                         key: `spider-${cat}`,
