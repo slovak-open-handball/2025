@@ -3104,7 +3104,7 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
     const [spiderLevel, setSpiderLevel] = useState(1);
 
     useEffect(() => {
-        import('./logged-in-spider.js')
+        import('./spider.js')
             .then(module => {
                 // Odstrániť event listener, ktorý spúšťa renderovanie
                 window.removeEventListener('globalDataUpdated', module.handleDataUpdateAndRender);
