@@ -4440,7 +4440,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
                     }, homeTeamDisplay),
-                    homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
+                    homeScore !== '' && React.createElement('span', { className: 'text-sm font-medium ml-2' }, homeScore)
                 ),
                 // Ikony pre adminov
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
@@ -4512,7 +4512,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
                     }, awayTeamDisplay),
-                    awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
+                    awayScore !== '' && React.createElement('span', { className: 'text-sm font-medium ml-2' }, awayScore)
                 ),
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
                     'div',
@@ -4590,184 +4590,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     React.createElement('span', { className: 'truncate' }, hallName)
                 )
             )
-        ),
-        
-        // Modál pre zmazanie celého zápasu
-        isDeleteModalOpen && createPortal(
-            React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center',
-                    onClick: () => setIsDeleteModalOpen(false),
-                    style: { backdropFilter: 'blur(4px)' }
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
-                        onClick: (e) => e.stopPropagation()
-                    },
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-between items-center mb-4' },
-                        React.createElement(
-                            'h3',
-                            { className: 'text-xl font-semibold text-gray-800' },
-                            'Potvrdenie zmazania zápasu'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setIsDeleteModalOpen(false),
-                                className: 'text-gray-400 hover:text-gray-600 transition-colors'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
-                        )
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-600 mb-2' },
-                        'Naozaj chcete zmazať tento zápas?'
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-medium text-gray-800 mb-1' },
-                            matchDisplayName
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Typ: ${matchType}`
-                        ),
-                        formattedDate && React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Dátum: ${formattedDate} ${matchTime ? 'v ' + matchTime : ''}`
-                        ),
-                        hallName && React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Miesto: ${hallName}`
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-2' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setIsDeleteModalOpen(false),
-                                className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => {
-                                    onDelete(match.id, matchType);
-                                    setIsDeleteModalOpen(false);
-                                },
-                                disabled: generationInProgress,
-                                className: `px-4 py-2 text-sm rounded-lg transition-colors ${
-                                    generationInProgress
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-600 hover:bg-red-700 text-white'
-                                }`
-                            },
-                            'Zmazať zápas'
-                        )
-                    )
-                )
-            ),
-            document.body
-        ),
-
-        // Modál pre odstránenie priradenia tímu
-        teamToRemove && createPortal(
-            React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center',
-                    onClick: () => setTeamToRemove(null),
-                    style: { backdropFilter: 'blur(4px)' }
-                },
-                React.createElement(
-                    'div',
-                    {
-                        className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
-                        onClick: (e) => e.stopPropagation()
-                    },
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-between items-center mb-4' },
-                        React.createElement(
-                            'h3',
-                            { className: 'text-xl font-semibold text-gray-800' },
-                            'Potvrdenie odstránenia tímu'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setTeamToRemove(null),
-                                className: 'text-gray-400 hover:text-gray-600 transition-colors'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
-                        )
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-600 mb-4' },
-                        `Naozaj chcete odstrániť tím "${teamToRemove.teamName}" z pozície ${teamToRemove.position === 'home' ? 'domáci' : 'hostia'}?`
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-medium text-gray-800 mb-1' },
-                            matchDisplayName
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Tím bude nahradený "---"`
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-2' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setTeamToRemove(null),
-                                className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: async () => {
-                                    await onRemoveTeam(match.id, teamToRemove.position);
-                                    setTeamToRemove(null);
-                                },
-                                disabled: generationInProgress,
-                                className: `px-4 py-2 text-sm rounded-lg transition-colors ${
-                                    generationInProgress
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-600 hover:bg-red-700 text-white'
-                                }`
-                            },
-                            'Odstrániť tím'
-                        )
-                    )
-                )
-            ),
-            document.body
         )
     );
 };
