@@ -667,21 +667,44 @@ let processedCarryOverGroups = new Set();
     function getOtherAdvancedMatches(categoryName, currentGroupName) {
         const allMatches = Object.values(matchesData);
         const result = [];
+    
+        // Získame zoznam nadstavbových skupín pre túto kategóriu
+        let categoryId = null;
+        if (window.categoryIdMap) {
+            categoryId = window.categoryIdMap[categoryName];
+        }
+        if (!categoryId && groupsCache) {
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                for (const group of groups) {
+                    if (group.name === currentGroupName) {
+                        categoryId = catId;
+                        break;
+                    }
+                }
+                if (categoryId) break;
+            }
+        }
+    
+        const advancedGroupNames = [];
+        if (categoryId && groupsCache && groupsCache[categoryId]) {
+            advancedGroupNames.push(...groupsCache[categoryId]
+                .filter(g => g.type === 'nadstavbová skupina')
+                .map(g => g.name));
+        }
+    
         for (const match of allMatches) {
             if (match.isPlacementMatch) continue;
             if (match.categoryName !== categoryName) continue;
             if (!match.groupName || match.groupName === currentGroupName) continue;
-            
-            // Kontrola, či ide o nadstavbovú skupinu
+    
+            // Kontrola, či ide o nadstavbovú skupinu (buď podľa cache alebo podľa názvu)
             let isAdvanced = false;
-            const groupType = getGroupTypeSync(categoryName, match.groupName);
-            if (groupType === 'nadstavbová skupina') {
+            if (advancedGroupNames.includes(match.groupName)) {
                 isAdvanced = true;
             } else if (match.groupName.toLowerCase().includes('nadstavbová')) {
-                // Fallback – ak cache nebola načítaná, použijeme kontrolu názvu
                 isAdvanced = true;
             }
-            
+    
             if (isAdvanced) {
                 result.push(match);
             }
@@ -1452,67 +1475,26 @@ let processedCarryOverGroups = new Set();
             // ============================================================
             let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
     
-            // OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
+            // V createAdvancedGroupTable, po získaní teamsInAdvanced:
             for (const team of teamsInAdvanced) {
                 team.originalId = team.id;
                 let mappedName = null;
-    
-                // Najprv skúsime cez getTeamNameByDisplayId
-                if (looksLikeIdentifier(team.name)) {
+            
+                // 1. Skúsime použiť globálne teamNames (ak sú dostupné)
+                if (window.teamNames && window.teamNames[team.id]) {
+                    mappedName = window.teamNames[team.id];
+                }
+            
+                // 2. Ak nie, skúsime getTeamNameByDisplayId (ak je to identifikátor)
+                if (!mappedName && looksLikeIdentifier(team.name)) {
                     mappedName = getTeamNameByDisplayId(team.name);
-                    if (mappedName && mappedName !== team.name) {
-                        team.name = mappedName;
-                        team.id = mappedName;
-                    }
                 }
-    
-                // Ak nenašlo, skúsime cez základné skupiny
-                if (!mappedName || mappedName === team.originalId) {
-                    for (const baseGroup of allBaseGroupsFullyCompleted) {
-                        const baseTable = createGroupTable(categoryName, baseGroup);
-                        if (baseTable && baseTable.teams) {
-                            const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
-                            if (foundTeam && foundTeam.name) {
-                                let finalName = foundTeam.name;
-                                if (looksLikeIdentifier(finalName)) {
-                                    const mappedAgain = getTeamNameByDisplayId(finalName);
-                                    if (mappedAgain && mappedAgain !== finalName) {
-                                        finalName = mappedAgain;
-                                    }
-                                }
-                                team.name = finalName;
-                                team.id = finalName;
-                                break;
-                            }
-                        }
-                    }
+            
+                // 3. Ak stále nič, ponecháme pôvodný názov
+                if (mappedName && mappedName !== team.name) {
+                    team.name = mappedName;
+                    team.id = mappedName;
                 }
-    
-                // Ešte jeden pokus - cez displayId
-                if (!mappedName || mappedName === team.originalId) {
-                    const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
-                    const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
-                    if (mappedAgain && mappedAgain !== possibleDisplayId) {
-                        team.name = mappedAgain;
-                        team.id = mappedAgain;
-                    }
-                }
-    
-                if (team.name && categoryName && team.name.includes(categoryName)) {
-                    log(`   🔄 Názov "${team.name}" obsahuje názov kategórie "${categoryName}", posielam na dodatočné mapovanie...`);
-                    const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-                    if (remappedName && remappedName !== team.name) {
-                        log(`   ✅ Dodatočné mapovanie: "${team.name}" → "${remappedName}"`);
-                        team.name = remappedName;
-                        team.id = remappedName;
-                    } else if (remappedName === team.name) {
-                        log(`   ℹ️ Dodatočné mapovanie neprinieslo zmenu: "${team.name}"`);
-                    } else if (!remappedName) {
-                        log(`   ⚠️ Dodatočné mapovanie vrátilo null pre "${team.name}"`);
-                    }
-                }
-    
-                log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
             }
     
             const pointsForWin = getPointsForWinSync();
@@ -1718,12 +1700,9 @@ let processedCarryOverGroups = new Set();
     
                     // Nájdeme tímy v aktuálnej nadstavbovej skupine podľa názvu (použijeme normalizáciu)
                     let homeTeam = null, awayTeam = null;
-                    const homeNorm = normalizeName(homeTeamName);
-                    const awayNorm = normalizeName(awayTeamName);
                     for (const team of teamsInAdvanced) {
-                        const teamNorm = normalizeName(team.name);
-                        if (teamNorm === homeNorm) homeTeam = team;
-                        if (teamNorm === awayNorm) awayTeam = team;
+                        if (team.name === homeTeamName) homeTeam = team;
+                        if (team.name === awayTeamName) awayTeam = team;
                     }
     
                     if (!homeTeam || !awayTeam) {
