@@ -45,6 +45,8 @@ function error(...args) {
     if (localError) localError(...args); 
 }
 
+let currentlyProcessingGroups = new Set();
+
 let hasReplacedAnyTeams = false;
 let mappingCompleted = false;
 let initialMappingDone = false;
@@ -1345,6 +1347,13 @@ let isTeamNameReplacerInitialized = false;
     // OPRAVENÁ FUNKCIA: createAdvancedGroupTable - SPRÁVNE MAPOVANIE NÁZVOV PRE ZÁPASY
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
+        const groupKey = `${categoryName}|${groupName}`;
+        if (currentlyProcessingGroups.has(groupKey)) {
+            log(`⚠️ Zacyklenie detekované pre skupinu ${groupKey}, preskakujem.`);
+            return null;
+        }
+        currentlyProcessingGroups.add(groupKey);
+        
         // NAJPRV NAČÍTAME TYPY SKUPÍN
         if (!groupsCache) {
             log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
@@ -1623,8 +1632,16 @@ let isTeamNameReplacerInitialized = false;
             if (carryOverEnabled) {
                 const otherAdvancedMatches = getOtherAdvancedMatches(categoryName, groupName);
                 const currentMatchIds = new Set(advancedMatches.map(m => m.id));
+                
                 for (const match of otherAdvancedMatches) {
                     if (currentMatchIds.has(match.id)) continue;
+
+                    // Vytvoríme kľúč pre dvojicu skupín
+                    const groupPairKey = `${categoryName}|${groupName}|${match.groupName}`;
+                    if (processedCarryOverGroups.has(groupPairKey)) {
+                        // Už sme tieto dve skupiny spracovali, preskočíme
+                        continue;
+                    }
         
                     // Získame názvy tímov (mapovanie)
                     let homeTeamName = match.homeTeamIdentifier;
@@ -1847,6 +1864,9 @@ let isTeamNameReplacerInitialized = false;
         const totalAdvancedMatches = advancedMatches.length;
         const completedAdvancedCount = allMatchesForComparison.filter(m => !m.isTransferred && m.status === 'completed').length;
         const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
+
+        currentlyProcessingGroups.delete(groupKey);
+        return result;
         
         return {
             category: categoryName,
