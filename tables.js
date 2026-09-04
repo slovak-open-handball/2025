@@ -2854,6 +2854,24 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                         );
                     })
                 )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap gap-2 justify-center border-t border-gray-200 pt-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setShowPlayoff(!showPlayoff),
+                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            showPlayoff
+                                ? 'bg-red-600 text-white shadow-md scale-105'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-trophy mr-1' }),
+                    'Playoff'
+                )
             )
         );
     };
