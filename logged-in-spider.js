@@ -196,23 +196,6 @@ const getDeletionMessage = (count) => {
 // Stav pre aktuálny režim zobrazenia (globálny)
 window.currentViewMode = window.currentViewMode || 'matches';
 
-// Funkcia na získanie názvu dňa v týždni v slovenčine
-const getDayName = (date) => {
-    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
-    return days[date.getDay()];
-};
-
-// Funkcia na formátovanie dátumu s dňom v týždni
-const formatDateWithDay = (date) => {
-    const dayName = getDayName(date);
-    const formattedDate = date.toLocaleDateString('sk-SK', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-    return `${dayName} ${formattedDate}`;
-};
-
 // Pomocná funkcia na aktualizáciu URL s hash parametrom (názov kategórie)
 const updateUrlWithCategoryName = (categoryName) => {
     if (categoryName) {
