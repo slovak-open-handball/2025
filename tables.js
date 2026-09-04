@@ -3343,7 +3343,7 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
                 className: 'bg-red-200 px-6 py-4 border-b border-gray-200 cursor-pointer hover:bg-red-300 transition-colors',
                 onClick: () => onHeaderClick && onHeaderClick(selectedCategory)
             },
-            React.createElement('h3', { className: 'font-semibold text-red-700' }, `Pavúk - ${categoryName}`)
+            React.createElement('h3', { className: 'font-semibold text-red-700' }, `Playoff - ${categoryName}`)
         ),
         React.createElement(
             'div',
