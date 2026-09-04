@@ -1645,16 +1645,24 @@ let processedCarryOverGroups = new Set();
                 }
 
                 const otherAdvancedMatches = getOtherAdvancedMatches(categoryName, groupName);
+                const currentMatchIds = new Set(advancedMatches.map(m => m.id));
+                const teamsMap = new Map();
+                for (const team of teamsInAdvanced) {
+                    teamsMap.set(team.name, team);
+                }
     
+                // ---- OPRAVENÝ PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
                 if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
                     for (const match of otherAdvancedMatches) {
-                        // Získame názvy tímov z mapy (teamNameMap)
+                        if (currentMatchIds.has(match.id)) continue;
+                
+                        // Získame názvy tímov z teamNameMap (už existuje)
                         const homeTeamName = teamNameMap.get(match.homeTeamIdentifier) || match.homeTeamIdentifier;
                         const awayTeamName = teamNameMap.get(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                 
-                        // Nájdeme tímy v aktuálnej nadstavbovej skupine (teamsInAdvanced)
+                        // Nájdeme tímy v aktuálnej nadstavbovej skupine
                         let homeTeam = null, awayTeam = null;
-                        for (const team of teamsInAdvanced) {
+                        for (const team of teamsMap.values()) {
                             if (team.name === homeTeamName) homeTeam = team;
                             if (team.name === awayTeamName) awayTeam = team;
                         }
@@ -1687,7 +1695,7 @@ let processedCarryOverGroups = new Set();
                 
                             if (homeScore > awayScore) {
                                 homeTeam.wins++;
-                                homeTeam.points += pointsForWin;          // použite pointsForWin
+                                homeTeam.points += pointsForWin;
                                 awayTeam.losses++;
                             } else if (awayScore > homeScore) {
                                 awayTeam.wins++;
@@ -1731,7 +1739,7 @@ let processedCarryOverGroups = new Set();
                             });
                         }
                     }
-                }                    
+                }            
             }
     
             // Spracovanie zápasov v nadstavbovej skupine pre štatistiky (už máme v allMatchesForComparison)
