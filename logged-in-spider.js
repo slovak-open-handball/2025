@@ -8071,4 +8071,18 @@ if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
 
-export { renderLevel1, renderLevel2, renderLevel3, renderLevel4, MatchCell, ELIMINATION_COLORS, isEliminationMatch };
+export {
+    renderLevel1,
+    renderLevel2,
+    renderLevel3,
+    renderLevel4,
+    MatchCell,
+    ELIMINATION_COLORS,
+    isEliminationMatch,
+    getCategoryDrawColor,
+    getLighterColor,
+    formatDateHeader,
+    formatMatchDateTime,
+    getDisplayTeamName,
+    getCategoryNameById
+};
