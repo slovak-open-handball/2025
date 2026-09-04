@@ -4221,7 +4221,7 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
     );
 };
 
-const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch }) => {
+const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam, isFilterActive, allMatches, hasCompletedMatch, teamNamesCache }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
@@ -4284,8 +4284,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     // Získanie identifikátorov tímov
     const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
     const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-    const homeTeamDisplay = displayNames[homeTeam] || homeTeam;
-    const awayTeamDisplay = displayNames[awayTeam] || awayTeam;
+    const homeTeamDisplay = teamNamesCache[homeTeam] || homeTeam;
+    const awayTeamDisplay = teamNamesCache[awayTeam] || awayTeam;
 
     // Skutočný názov pre zobrazenie (použijeme displayNames, ak existujú)
     const homeScore = match.homeScore !== undefined ? match.homeScore : '';
@@ -4621,6 +4621,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [selectedOrder, setSelectedOrder] = useState(null); // Zmenené z selectedTeam na selectedOrder
     const [maxOrderInGroup, setMaxOrderInGroup] = useState(0); // Nový stav pre maximálne order
     const [isAssigningTeam, setIsAssigningTeam] = useState(false);
+    const [teamNamesCache, setTeamNamesCache] = useState({});
     
     // NOVÝ STAV: Dáta tímov pre debug a výber
     const [teamsData, setTeamsData] = useState({
@@ -4820,6 +4821,65 @@ const SpiderApp = ({ userProfileData }) => {
             if (unsubscribeHalls) unsubscribeHalls(); // NOVÉ: Odhlásenie odberu hál
         };
     }, []);
+
+    useEffect(() => {
+        const fetchTeamNames = async () => {
+            // Získame všetky pavúkové zápasy pre aktuálnu kategóriu
+            const spiderMatches = allMatches.filter(m => 
+                m.categoryId === selectedCategory && 
+                m.matchType && 
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                 'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'
+                ].includes(m.matchType)
+            );
+    
+            if (spiderMatches.length === 0) return;
+    
+            // Zozbierame unikátne identifikátory (okrem '---' a referencií na zápasy)
+            const identifiers = new Set();
+            const refPatterns = ['WSF', 'LSF', 'WQF', 'W8F', 'W16F'];
+            for (const match of spiderMatches) {
+                const homeId = match.homeTeamIdentifier || match.homeTeam;
+                const awayId = match.awayTeamIdentifier || match.awayTeam;
+                if (homeId && homeId !== '---' && !refPatterns.some(p => homeId.includes(p))) {
+                    identifiers.add(homeId);
+                }
+                if (awayId && awayId !== '---' && !refPatterns.some(p => awayId.includes(p))) {
+                    identifiers.add(awayId);
+                }
+            }
+    
+            if (identifiers.size === 0) return;
+    
+            // Načítame názvy pre všetky identifikátory
+            const newNames = {};
+            for (const id of identifiers) {
+                try {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        const name = await window.matchTracker.getTeamNameByDisplayId(id);
+                        if (name && name !== id) {
+                            newNames[id] = name;
+                        }
+                    }
+                } catch (e) {
+                    // ticho
+                }
+            }
+    
+            // Aktualizujeme cache (zachováme existujúce názvy, pridáme nové)
+            if (Object.keys(newNames).length > 0) {
+                setTeamNamesCache(prev => ({ ...prev, ...newNames }));
+            }
+        };
+    
+        fetchTeamNames();
+    }, [allMatches, selectedCategory]);
 
     // Načítanie kategórie z URL hash po načítaní kategórií
     useEffect(() => {
@@ -7819,7 +7879,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 2 (so štvrťfinále) =====
@@ -7833,7 +7894,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 3 (s osemfinále) =====
@@ -7847,7 +7909,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
@@ -7861,7 +7924,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     )
                                 )
                             )
