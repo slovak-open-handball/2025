@@ -1425,20 +1425,38 @@ let processedCarryOverGroups = new Set();
             let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
             
             // 🔥 KROK 2: OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
+            const currentGroupKey = `${categoryName}|${groupName}`;
             for (const team of teamsInAdvanced) {
                 team.originalId = team.id;
                 let mappedName = null;
                 
-                // Najprv skúsime cez getTeamNameByDisplayId
-                if (looksLikeIdentifier(team.name)) {
-                    mappedName = getTeamNameByDisplayId(team.name);
+                // 1. NAJPRV SKÚSIME Z window.teamNames (ak existuje)
+                if (window.teamNames && window.teamNames[team.originalId]) {
+                    mappedName = window.teamNames[team.originalId];
                     if (mappedName && mappedName !== team.name) {
                         team.name = mappedName;
                         team.id = mappedName;
+                        continue; // už máme názov, preskočíme ďalšie pokusy
                     }
                 }
                 
-                // Ak nenašlo, skúsime cez základné skupiny
+                // 2. Ak nie je v teamNames a ide o identifikátor, skúsime getTeamNameByDisplayId
+                //    LEN AK SKUPINA NIE JE PRÁVE SPRACOVÁVANÁ (aby sme predišli rekurzii)
+                if (looksLikeIdentifier(team.name)) {
+                    // Kontrola: ak je aktuálna skupina v currentlyProcessingGroups, NESMIEme volať getTeamNameByDisplayId
+                    if (!currentlyProcessingGroups.has(currentGroupKey)) {
+                        mappedName = getTeamNameByDisplayId(team.name);
+                        if (mappedName && mappedName !== team.name) {
+                            team.name = mappedName;
+                            team.id = mappedName;
+                        }
+                    } else {
+                        // Ak sme v rekurzii, použijeme pôvodný názov (identifikátor) a neskúsime mapovať
+                        log(`   ⚠️ Preskakujem getTeamNameByDisplayId pre "${team.name}" (skupina ${currentGroupKey} sa už spracúva)`);
+                    }
+                }
+                
+                // 3. Ak stále nemáme mapovaný názov, skúsime cez základné skupiny
                 if (!mappedName || mappedName === team.originalId) {
                     for (const baseGroup of allBaseGroupsFullyCompleted) {
                         const baseTable = createGroupTable(categoryName, baseGroup);
@@ -1446,10 +1464,13 @@ let processedCarryOverGroups = new Set();
                             const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
                             if (foundTeam && foundTeam.name) {
                                 let finalName = foundTeam.name;
+                                // Ak je to identifikátor, skúsime ho zmapovať (ale opäť s kontrolou rekurzie)
                                 if (looksLikeIdentifier(finalName)) {
-                                    const mappedAgain = getTeamNameByDisplayId(finalName);
-                                    if (mappedAgain && mappedAgain !== finalName) {
-                                        finalName = mappedAgain;
+                                    if (!currentlyProcessingGroups.has(currentGroupKey)) {
+                                        const mappedAgain = getTeamNameByDisplayId(finalName);
+                                        if (mappedAgain && mappedAgain !== finalName) {
+                                            finalName = mappedAgain;
+                                        }
                                     }
                                 }
                                 team.name = finalName;
@@ -1460,27 +1481,34 @@ let processedCarryOverGroups = new Set();
                     }
                 }
                 
-                // Ešte jeden pokus - cez displayId
+                // 4. Posledný pokus - cez displayId (s kontrolou rekurzie)
                 if (!mappedName || mappedName === team.originalId) {
                     const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
-                    const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
-                    if (mappedAgain && mappedAgain !== possibleDisplayId) {
-                        team.name = mappedAgain;
-                        team.id = mappedAgain;
+                    if (!currentlyProcessingGroups.has(currentGroupKey)) {
+                        const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
+                        if (mappedAgain && mappedAgain !== possibleDisplayId) {
+                            team.name = mappedAgain;
+                            team.id = mappedAgain;
+                        }
                     }
                 }
             
+                // Dodatočné mapovanie (ak názov obsahuje kategóriu) - tiež s kontrolou rekurzie
                 if (team.name && categoryName && team.name.includes(categoryName)) {
                     log(`   🔄 Názov "${team.name}" obsahuje názov kategórie "${categoryName}", posielam na dodatočné mapovanie...`);
-                    const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-                    if (remappedName && remappedName !== team.name) {
-                        log(`   ✅ Dodatočné mapovanie: "${team.name}" → "${remappedName}"`);
-                        team.name = remappedName;
-                        team.id = remappedName;
-                    } else if (remappedName === team.name) {
-                        log(`   ℹ️ Dodatočné mapovanie neprinieslo zmenu: "${team.name}"`);
-                    } else if (!remappedName) {
-                        log(`   ⚠️ Dodatočné mapovanie vrátilo null pre "${team.name}"`);
+                    if (!currentlyProcessingGroups.has(currentGroupKey)) {
+                        const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+                        if (remappedName && remappedName !== team.name) {
+                            log(`   ✅ Dodatočné mapovanie: "${team.name}" → "${remappedName}"`);
+                            team.name = remappedName;
+                            team.id = remappedName;
+                        } else if (remappedName === team.name) {
+                            log(`   ℹ️ Dodatočné mapovanie neprinieslo zmenu: "${team.name}"`);
+                        } else if (!remappedName) {
+                            log(`   ⚠️ Dodatočné mapovanie vrátilo null pre "${team.name}"`);
+                        }
+                    } else {
+                        log(`   ⚠️ Preskakujem dodatočné mapovanie (skupina ${currentGroupKey} sa už spracúva)`);
                     }
                 }
                 
