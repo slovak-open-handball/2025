@@ -8085,15 +8085,5 @@ export {
     renderLevel2,
     renderLevel3,
     renderLevel4,
-    MatchCell,
-    ELIMINATION_COLORS,
-    getCategoryDrawColor,
-    getLighterColor,
-    formatDateHeader,
-    formatMatchDateTime,
-    getDisplayTeamName,
-    getCategoryNameById,
-    formatDateWithDay,
-    getHallNameById,
-    getDayName
+    MatchCell
 };
