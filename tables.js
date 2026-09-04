@@ -11,7 +11,6 @@ import {
     MatchCell,
     getCategoryDrawColor,
     getLighterColor,
-    formatDateHeader,
     formatMatchDateTime,
     getDisplayTeamName,
     getCategoryNameById,
