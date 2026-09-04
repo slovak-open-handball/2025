@@ -3333,7 +3333,7 @@ function extractIdentifiersFromText(text) {
     }
     
     // Regulárny výraz na nájdenie identifikátorov - musí začínať písmenom a obsahovať medzeru pred číslom+písmenom
-    const teamIdPattern = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9\s]*?)\s+(\d+[A-Za-z])(?![A-Za-z0-9])/g;
+    const teamIdPattern = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9\s]*?)\s+(\d+[A-Za-z]|[A-Za-z]+\d{2})(?![A-Za-z0-9])/g;
     const identifiers = [];
     let match;
     
