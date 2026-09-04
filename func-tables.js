@@ -1662,7 +1662,6 @@ let processedCarryOverGroups = new Set();
                     }
                 }
     
-                // ---- OPRAVENÝ PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
                 if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
                     log(`🔄 Spracovávam ${otherAdvancedMatches.length} zápasov z iných nadstavbových skupín`);
                     for (const match of otherAdvancedMatches) {
@@ -1671,18 +1670,26 @@ let processedCarryOverGroups = new Set();
                         const homeId = match.homeTeamIdentifier;
                         const awayId = match.awayTeamIdentifier;
                 
-                        // 1. Pokus: priamo podľa identifikátora
+                        // 1. Pokus: priamo podľa identifikátora (z aktuálnej skupiny)
                         let homeTeam = teamsMap.get(homeId);
                         let awayTeam = teamsMap.get(awayId);
                 
-                        // 2. Pokus: cez teamNameMap na finálny názov
+                        // 2. Pokus: cez globálne mapovanie identifikátora na finálny názov
                         if (!homeTeam) {
-                            const homeName = teamNameMap.get(homeId);
+                            const homeName = window.matchTracker?.getTeamNameByDisplayId?.(homeId);
                             if (homeName) homeTeam = teamsMap.get(homeName);
                         }
                         if (!awayTeam) {
-                            const awayName = teamNameMap.get(awayId);
+                            const awayName = window.matchTracker?.getTeamNameByDisplayId?.(awayId);
                             if (awayName) awayTeam = teamsMap.get(awayName);
+                        }
+                
+                        // 3. Pokus: ak ani to nepomohlo, skúsime porovnať názvy priamo (ak už máme finálny názov v match objekte)
+                        if (!homeTeam && match.homeTeamName) {
+                            homeTeam = teamsMap.get(match.homeTeamName);
+                        }
+                        if (!awayTeam && match.awayTeamName) {
+                            awayTeam = teamsMap.get(match.awayTeamName);
                         }
                 
                         if (!homeTeam || !awayTeam) {
