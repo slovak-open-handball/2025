@@ -3,7 +3,21 @@ import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, add
 
 const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
 
-import { renderLevel1, renderLevel2, renderLevel3, renderLevel4, MatchCell } from './logged-in-spider.js';
+import {
+    renderLevel1,
+    renderLevel2,
+    renderLevel3,
+    renderLevel4,
+    MatchCell,
+    ELIMINATION_COLORS,
+    isEliminationMatch,
+    getCategoryDrawColor,
+    getLighterColor,
+    formatDateHeader,
+    formatMatchDateTime,
+    getDisplayTeamName,
+    getCategoryNameById
+} from './logged-in-spider.js';
 
 const formatMatchDateTime = (timestamp) => {
     if (!timestamp) return null;
