@@ -4290,37 +4290,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const currentMatch = allMatches?.find(m => m.id === match.id);
     const isMatchCompleted = currentMatch?.status === 'completed';
 
-    useEffect(() => {
-        const fetchNames = async () => {
-            const identifiers = [];
-            const homeId = match.homeTeamIdentifier || match.homeTeam;
-            const awayId = match.awayTeamIdentifier || match.awayTeam;
-        
-            if (displayNames && homeId && homeId !== '---' && !displayNames[homeId]) identifiers.push(homeId);
-            if (displayNames && awayId && awayId !== '---' && !displayNames[awayId]) identifiers.push(awayId);
-        
-            if (identifiers.length === 0) return;
-    
-            const newNames = {};
-            for (const id of identifiers) {
-                try {
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        const name = await window.matchTracker.getTeamNameByDisplayId(id);
-                        if (name && name !== id) {
-                            newNames[id] = name;
-                        }
-                    }
-                } catch (e) {
-                    // ticho ignorovať
-                }
-            }
-            if (Object.keys(newNames).length > 0) {
-                setDisplayNames(prev => ({ ...prev, ...newNames }));
-            }
-        };
-        fetchNames();
-    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam, currentMatch?.status, allMatches]);
-
     const isMatchReference = (teamName) => {
         if (teamName === '---') return false;
         const matchRefPatterns = ['WSF', 'LSF', 'WQF', 'W8F', 'W16F'];
