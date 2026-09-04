@@ -269,7 +269,8 @@ const renderLevel1 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu bunky do spodného okraja
@@ -322,7 +323,8 @@ const renderLevel1 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara z ľavej bunky doprava (od stredu)
@@ -356,7 +358,8 @@ const renderLevel1 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara z pravej bunky doľava (od stredu)
@@ -396,7 +399,8 @@ const renderLevel1 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu bunky do horného okraja
@@ -444,7 +448,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V ľavej hornej bunke vodorovná čiara od stredu doprava
@@ -492,7 +497,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V hornej prostrednej bunke zvislá čiara od stredu po spodný okraj
@@ -538,7 +544,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V pravej hornej bunke vodorovná čiara od stredu doľava
@@ -602,7 +609,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     }),
                     React.createElement(MatchCell, { 
                         match: spiderData.semiFinals[1], 
@@ -616,7 +624,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 
@@ -730,7 +739,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V ľavej dolnej bunke vodorovná čiara od stredu doprava
@@ -778,7 +788,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V spodnej prostrednej bunke zvislá čiara od stredu po horný okraj
@@ -812,7 +823,8 @@ const renderLevel2 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // V pravej dolnej bunke vodorovná čiara od stredu doľava
@@ -874,7 +886,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po pravý okraj
@@ -958,7 +971,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1012,7 +1026,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1089,7 +1104,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1159,7 +1175,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1224,7 +1241,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu bunky po jej spodný okraj (pridanie)
@@ -1281,7 +1299,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1347,7 +1366,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1421,7 +1441,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1482,7 +1503,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1547,7 +1569,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu bunky po jej horný okraj (pridanie)
@@ -1604,7 +1627,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1659,7 +1683,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1736,7 +1761,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara presne doprostred na celú výšku bunky
@@ -1806,7 +1832,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po pravý okraj
@@ -1890,7 +1917,8 @@ const renderLevel3 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -1953,7 +1981,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -2010,7 +2039,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -2061,7 +2091,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -2127,7 +2158,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -2185,7 +2217,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -2300,7 +2333,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -2363,7 +2397,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -2422,7 +2457,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -2487,7 +2523,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -2594,7 +2631,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -2645,7 +2683,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -2720,7 +2759,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -2787,7 +2827,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -2867,7 +2908,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu po spodný okraj
@@ -2944,7 +2986,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -3008,7 +3051,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -3083,7 +3127,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -3145,7 +3190,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -3227,7 +3273,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara od stredu po horný okraj (ponechaná, lebo má height: '50%')
@@ -3304,7 +3351,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -3355,7 +3403,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -3430,7 +3479,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Zvislá čiara v strede
@@ -3492,7 +3542,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -3621,7 +3672,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -3684,7 +3736,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -3743,7 +3796,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -3803,7 +3857,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -3913,7 +3968,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 React.createElement('div', {
@@ -3963,7 +4019,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 React.createElement('div', { className: 'spider-line-vertical' }),
@@ -4024,7 +4081,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         userProfileData: userProfileData,
                         generationInProgress: generationInProgress,
                         onGenerate: generateSingleMatch,
-                        onDelete: deleteSingleMatch
+                        onDelete: deleteSingleMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),                                           
                 React.createElement('div', {
@@ -4087,7 +4145,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po pravý okraj
@@ -4202,7 +4261,8 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
                         onRemoveTeam: removeTeamAssignment,
                         isFilterActive: isFilterActive,
                         allMatches: allMatches,
-                        hasCompletedMatch: hasCompletedMatch
+                        hasCompletedMatch: hasCompletedMatch,
+                        teamNamesCache: teamNamesCache
                     })
                 ),
                 // Vodorovná čiara od stredu po ľavý okraj
@@ -4621,6 +4681,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [selectedOrder, setSelectedOrder] = useState(null); // Zmenené z selectedTeam na selectedOrder
     const [maxOrderInGroup, setMaxOrderInGroup] = useState(0); // Nový stav pre maximálne order
     const [isAssigningTeam, setIsAssigningTeam] = useState(false);
+    const [teamNamesCache, setTeamNamesCache] = useState({});
     
     // NOVÝ STAV: Dáta tímov pre debug a výber
     const [teamsData, setTeamsData] = useState({
@@ -7819,7 +7880,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 2 (so štvrťfinále) =====
@@ -7833,7 +7895,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 3 (s osemfinále) =====
@@ -7847,7 +7910,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     ),
                                     
                                     // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
@@ -7861,7 +7925,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         removeTeamAssignment,
                                         isFilterActive,
                                         allMatches,
-                                        hasCompletedMatch
+                                        hasCompletedMatch,
+                                        teamNamesCache
                                     )
                                 )
                             )
