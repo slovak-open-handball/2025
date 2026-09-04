@@ -3334,6 +3334,8 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
     const dummyUserProfile = { role: 'user' };
     const categoryName = categoriesData[selectedCategory] || selectedCategory;
 
+    const teamNamesCache = teamNames || window.teamNames || {};
+
     return React.createElement(
         'div',
         { className: 'mt-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
