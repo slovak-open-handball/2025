@@ -2919,9 +2919,8 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         );
     })();
     
-    // Získame Playoff bloky (ak je Playoff zapnutý)
+    // Získame Playoff bloky (generujeme vždy, keď existujú play-off zápasy)
     const playoffContent = (() => {
-        if (!showPlayoff) return null;
         let playoffMatches = matches.filter(m => isEliminationMatch(m));
         if (selectedCategory) {
             playoffMatches = playoffMatches.filter(m => {
@@ -2934,7 +2933,7 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         const spiderMatches = playoffMatches.filter(m => m.matchType && !m.isPlacementMatch);
         const placementMatches = playoffMatches.filter(m => m.isPlacementMatch);
         const allPlayoffMatches = [...spiderMatches, ...placementMatches];
-        if (allPlayoffMatches.length === 0) return React.createElement('div', { className: 'text-center py-12 text-gray-500' }, 'Žiadne play-off zápasy');
+        if (allPlayoffMatches.length === 0) return null;
     
         const getMatchCategory = (match) => {
             if (match.categoryId && categoriesData[match.categoryId]) return categoriesData[match.categoryId];
@@ -2982,9 +2981,9 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             );
         });
     
-        return categoryComponents.length > 0 ? categoryComponents : React.createElement('div', { className: 'text-center py-12 text-gray-500' }, 'Žiadne play-off zápasy');
+        return categoryComponents.length > 0 ? categoryComponents : null;
     })();
-    
+        
     // Hlavný návrat
     return React.createElement(
         'div',
@@ -2996,18 +2995,84 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         ),
         renderFilters(),
         (() => {
+            // Ak je vybraná kategória a Playoff je aktívny → zobraziť iba Playoff bloky
             if (selectedCategory && showPlayoff) {
-                // Vybraná kategória + Playoff → zobraziť iba Playoff bloky
                 return playoffContent;
-            } else {
-                // Inak zobraziť tabuľky a ak nie je vybraná kategória a Playoff je aktívny, pridať Playoff bloky pod tabuľky
-                return React.createElement(
-                    React.Fragment,
-                    null,
-                    tablesContent,
-                    !selectedCategory && showPlayoff && playoffContent
-                );
             }
+            
+            // Inak zobraziť tabuľky
+            // Ak nie je vybraná kategória (Všetky kategórie) a existujú play-off zápasy,
+            // vložíme playoff bloky za každú kategóriu, ktorá má nadstavbové tabuľky
+            if (!selectedCategory && playoffContent) {
+                // Zoskupíme tabuľky podľa kategórie
+                const tablesByCategory = {};
+                filteredTables.forEach(table => {
+                    if (!tablesByCategory[table.category]) {
+                        tablesByCategory[table.category] = [];
+                    }
+                    tablesByCategory[table.category].push(table);
+                });
+    
+                // Pre každú kategóriu vykreslíme jej tabuľky a za ňou playoff bloky (ak kategória má nadstavbové tabuľky)
+                const categoryOrder = Object.keys(tablesByCategory).sort();
+                const content = [];
+                
+                categoryOrder.forEach(cat => {
+                    const catTables = tablesByCategory[cat];
+                    // Oddelíme základné a nadstavbové tabuľky
+                    const basicTables = catTables.filter(t => t.groupType !== 'nadstavbová');
+                    const advancedTables = catTables.filter(t => t.groupType === 'nadstavbová');
+                    
+                    // Najprv základné
+                    basicTables.forEach(table => {
+                        content.push(React.createElement(GroupTable, {
+                            key: `${table.category}|${table.group}`,
+                            table: table,
+                            filteredTables: filteredTables,
+                            groupMatches: table.matches,
+                            transferredMatches: table.transferredMatches || [],
+                            teamNames: teamNames,
+                            matches: matches,
+                            groupsDataState: groupsDataState,
+                            handleTableHeaderClick: handleTableHeaderClick,
+                            getTeamForm: getTeamForm,
+                            hallNames: hallNames
+                        }));
+                    });
+                    
+                    // Potom nadstavbové
+                    advancedTables.forEach(table => {
+                        content.push(React.createElement(GroupTable, {
+                            key: `${table.category}|${table.group}`,
+                            table: table,
+                            filteredTables: filteredTables,
+                            groupMatches: table.matches,
+                            transferredMatches: table.transferredMatches || [],
+                            teamNames: teamNames,
+                            matches: matches,
+                            groupsDataState: groupsDataState,
+                            handleTableHeaderClick: handleTableHeaderClick,
+                            getTeamForm: getTeamForm,
+                            hallNames: hallNames
+                        }));
+                    });
+                    
+                    // Ak má kategória nadstavbové tabuľky a existujú play-off zápasy pre túto kategóriu,
+                    // pridáme playoff bloky za ne
+                    if (advancedTables.length > 0 && playoffContent) {
+                        // Nájdeme playoff bloky pre túto kategóriu
+                        const catPlayoffBlocks = playoffContent.filter(block => block.key === `playoff-block-${cat}`);
+                        if (catPlayoffBlocks.length > 0) {
+                            content.push(catPlayoffBlocks[0]);
+                        }
+                    }
+                });
+                
+                return content;
+            }
+            
+            // Inak zobraziť len tabuľky (ak nie je Playoff a je vybraná kategória)
+            return tablesContent;
         })()
     );
 };
