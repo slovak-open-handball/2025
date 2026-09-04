@@ -2749,6 +2749,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
         }
     
         const calculateAllTables = () => {
+            
+            console.log('matches count:', matches.length);
+            console.log('categoriesData:', categoriesData);
+            console.log('groupsDataState:', groupsDataState);
+            console.log('sample match:', matches[0]);
+            
             const groupsMap = new Map();
     
             matches.forEach(match => {
