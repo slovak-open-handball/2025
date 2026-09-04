@@ -4231,18 +4231,17 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const currentMatch = allMatches?.find(m => m.id === match.id);
     const isMatchCompleted = currentMatch?.status === 'completed';
 
-    // Asynchrónne načítanie názvov tímov
     useEffect(() => {
         const fetchNames = async () => {
             const identifiers = [];
             const homeId = match.homeTeamIdentifier || match.homeTeam;
             const awayId = match.awayTeamIdentifier || match.awayTeam;
-            
+        
             if (homeId && homeId !== '---' && !displayNames[homeId]) identifiers.push(homeId);
             if (awayId && awayId !== '---' && !displayNames[awayId]) identifiers.push(awayId);
-            
+        
             if (identifiers.length === 0) return;
-
+    
             const newNames = {};
             for (const id of identifiers) {
                 try {
@@ -4261,7 +4260,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             }
         };
         fetchNames();
-    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam]);
+    }, [match.homeTeamIdentifier, match.awayTeamIdentifier, match.homeTeam, match.awayTeam, currentMatch?.status]);
 
     const isMatchReference = (teamName) => {
         if (teamName === '---') return false;
