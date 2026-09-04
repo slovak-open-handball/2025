@@ -8074,11 +8074,20 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-// 
-// if (window.globalUserProfileData) {
-//     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-// }
+// Detekcia stránky – aktivujeme len na logged-in-matches.html
+const isMatchesPage = window.location.pathname.includes('logged-in-matches.html') || 
+                      window.location.pathname.endsWith('logged-in-matches.html');
+
+if (isMatchesPage) {
+    window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+    if (window.globalUserProfileData) {
+        handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+    }
+} else {
+    // Pre prípad, že by listener zostal z iného miesta, ho odstránime
+    window.removeEventListener('globalDataUpdated', handleDataUpdateAndRender);
+}
 
 export {
     renderLevel1,
