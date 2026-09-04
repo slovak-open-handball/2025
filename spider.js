@@ -7785,7 +7785,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                 removeTeamAssignment,
                                                 isFilterActive,
                                                 allMatches,
-                                                hasCompletedMatch
+                                                hasCompletedMatch,
+                                                teamNamesCache
                                             )
                                         )
                                     )
