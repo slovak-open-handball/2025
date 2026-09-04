@@ -2945,14 +2945,23 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
 };
 
 const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, categoriesData }) => {
+
+    console.log('PlayoffSpider volaný, matches:', matches.length, 'selectedCategory:', selectedCategory);
+    
     const [spiderModule, setSpiderModule] = useState(null);
     const [spiderData, setSpiderData] = useState(null);
     const [spiderLevel, setSpiderLevel] = useState(1);
 
     useEffect(() => {
+        console.log('Spúšťam import logged-in-spider.js');
         import('./logged-in-spider.js')
-            .then(module => setSpiderModule(module))
-            .catch(err => console.error('Chyba pri načítaní pavúka:', err));
+            .then(module => {
+                console.log('Modul načítaný:', Object.keys(module));
+                setSpiderModule(module);
+            })
+            .catch(err => {
+                console.error('Chyba pri načítaní pavúka:', err);
+            });
     }, []);
 
     useEffect(() => {
