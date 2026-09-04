@@ -1952,8 +1952,13 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const [isInitialized, setIsInitialized] = useState(false);
     const [categorySettings, setCategorySettings] = useState({});
     const [showPlayoff, setShowPlayoff] = useState(false);
-    
     const [processedCarryOverGroups, setProcessedCarryOverGroups] = useState(new Set());
+
+    const clearFilters = () => {
+        setShowPlayoff(false);
+        setSelectedCategory(null);
+        setSelectedGroup(null);
+    };
     
     useEffect(() => {
         const urlFilter = getFilterFromURL();
