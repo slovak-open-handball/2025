@@ -668,14 +668,38 @@ let processedCarryOverGroups = new Set();
         const allMatches = Object.values(matchesData);
         const result = [];
     
+        // Získame ID kategórie
+        let categoryId = null;
+        if (window.categoryIdMap) {
+            categoryId = window.categoryIdMap[categoryName];
+        }
+        if (!categoryId && groupsCache) {
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                for (const group of groups) {
+                    if (group.name === currentGroupName) {
+                        categoryId = catId;
+                        break;
+                    }
+                }
+                if (categoryId) break;
+            }
+        }
+    
+        // Získame názvy nadstavbových skupín
+        const advancedGroupNames = [];
+        if (categoryId && groupsCache && groupsCache[categoryId]) {
+            advancedGroupNames.push(...groupsCache[categoryId]
+                .filter(g => g.type === 'nadstavbová skupina')
+                .map(g => g.name));
+        }
+    
         for (const match of allMatches) {
             if (match.isPlacementMatch) continue;
             if (match.categoryName !== categoryName) continue;
             if (!match.groupName || match.groupName === currentGroupName) continue;
-        
-            // Kontrola, či ide o nadstavbovú skupinu (podľa názvu)
-            const groupNameLower = match.groupName.toLowerCase();
-            if (groupNameLower.includes('nadstavbová')) {
+    
+            // Kontrola podľa cache
+            if (advancedGroupNames.includes(match.groupName)) {
                 result.push(match);
             }
         }
