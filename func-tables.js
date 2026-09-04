@@ -70,6 +70,7 @@ let groupCompletionSnapshot = new Map();
 
 let isMappingNotificationSent = false;
 let isTeamNameReplacerInitialized = false;
+let processedCarryOverGroups = new Set();
 
 (function() {
     'use strict';
