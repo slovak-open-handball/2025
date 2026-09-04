@@ -1854,21 +1854,7 @@ const PlayoffMatchesList = ({ matches, teamNames, hallNames, categoriesData }) =
                                     }, `o ${match.placementRank}. miesto`)
                                 );
                             }
-                            if (match.categoryName) {
-                                const catColor = getCategoryDrawColor(match.categoryId);
-                                const lighterCatColor = getLighterColor(catColor);
-                                infoTags.push(
-                                    React.createElement('span', {
-                                        key: 'category',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: {
-                                            backgroundColor: lighterCatColor,
-                                            color: catColor,
-                                            fontWeight: '500'
-                                        }
-                                    }, match.categoryName)
-                                );
-                            }
+                            // Štítok kategórie bol odstránený – už sa nepridáva
 
                             const detailUrl = createMatchDetailUrl(match);
                             const buttonClass = isActive
