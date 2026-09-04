@@ -8074,9 +8074,11 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Detekcia stránky – aktivujeme len na logged-in-matches.html
-const isMatchesPage = window.location.pathname.includes('logged-in-matches.html') || 
-                      window.location.pathname.endsWith('logged-in-matches.html');
+// Získanie názvu aktuálneho súboru
+const fileName = window.location.pathname.split('/').pop();
+
+// Aktivujeme len na logged-in-matches.html (prípadne aj matches.html)
+const isMatchesPage = fileName === 'logged-in-matches.html' || fileName === 'matches.html';
 
 if (isMatchesPage) {
     window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
@@ -8085,7 +8087,6 @@ if (isMatchesPage) {
         handleDataUpdateAndRender({ detail: window.globalUserProfileData });
     }
 } else {
-    // Pre prípad, že by listener zostal z iného miesta, ho odstránime
     window.removeEventListener('globalDataUpdated', handleDataUpdateAndRender);
 }
 
