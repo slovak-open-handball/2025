@@ -1581,37 +1581,33 @@ let processedCarryOverGroups = new Set();
                 for (const baseGroup of allBaseGroupsFullyCompleted) {
                     const baseTable = createGroupTable(categoryName, baseGroup);
                     if (!baseTable || !baseTable.matches) continue;
-    
+
                     const completedBaseMatches = baseTable.matches.filter(m => m.status === 'completed');
-    
+            
                     for (const match of completedBaseMatches) {
                         let homeFinalName = null;
                         let awayFinalName = null;
-    
+            
                         for (const team of baseTable.teams) {
-                            if (team.id === match.homeTeamIdentifier) {
-                                homeFinalName = team.name;
-                            }
-                            if (team.id === match.awayTeamIdentifier) {
-                                awayFinalName = team.name;
-                            }
+                            if (team.id === match.homeTeamIdentifier) homeFinalName = team.name;
+                            if (team.id === match.awayTeamIdentifier) awayFinalName = team.name;
                         }
-    
                         if (!homeFinalName || !awayFinalName) continue;
-    
+            
                         const homeInAdvanced = teamsInAdvanced.some(t => t.name === homeFinalName);
                         const awayInAdvanced = teamsInAdvanced.some(t => t.name === awayFinalName);
-    
+            
                         if (homeInAdvanced && awayInAdvanced) {
                             const pairKey = homeFinalName < awayFinalName ?
                                 `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
-    
+            
                             if (!processedPairs.has(pairKey)) {
+                                // Získanie skóre
                                 let homeScore = 0, awayScore = 0;
                                 if (match.finalScore && !match.forfeitResult) {
                                     homeScore = match.finalScore.home || 0;
                                     awayScore = match.finalScore.away || 0;
-                                } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                                } else if (match.forfeitResult?.isForfeit) {
                                     homeScore = match.forfeitResult.home || 0;
                                     awayScore = match.forfeitResult.away || 0;
                                 } else {
@@ -1620,24 +1616,53 @@ let processedCarryOverGroups = new Set();
                                     homeScore = score.home;
                                     awayScore = score.away;
                                 }
-    
-                                const transferredMatch = {
-                                    matchId: match.id,
-                                    fromGroup: match.groupName,
-                                    homeScore: homeScore,
-                                    awayScore: awayScore,
-                                    homeTeam: homeFinalName,
-                                    awayTeam: awayFinalName,
-                                    isTransferred: true,
-                                    homeTeamIdentifier: homeFinalName,
-                                    awayTeamIdentifier: awayFinalName,
-                                    homeTeamName: homeFinalName,
-                                    awayTeamName: awayFinalName,
-                                    status: 'completed'
-                                };
-                                transferredMatches.push(transferredMatch);
-                                allMatchesForComparison.push(transferredMatch);
-                                processedPairs.add(pairKey);
+            
+                                // Nájdenie tímov v aktuálnej nadstavbovej skupine
+                                const homeTeam = teamsInAdvanced.find(t => t.name === homeFinalName);
+                                const awayTeam = teamsInAdvanced.find(t => t.name === awayFinalName);
+            
+                                if (homeTeam && awayTeam) {
+                                    // ⭐ AKTUALIZÁCIA ŠTATISTÍK (pridané)
+                                    homeTeam.played++;
+                                    awayTeam.played++;
+                                    homeTeam.goalsFor += homeScore;
+                                    homeTeam.goalsAgainst += awayScore;
+                                    awayTeam.goalsFor += awayScore;
+                                    awayTeam.goalsAgainst += homeScore;
+            
+                                    if (homeScore > awayScore) {
+                                        homeTeam.wins++;
+                                        awayTeam.losses++;
+                                        homeTeam.points += pointsForWin;
+                                    } else if (awayScore > homeScore) {
+                                        awayTeam.wins++;
+                                        homeTeam.losses++;
+                                        awayTeam.points += pointsForWin;
+                                    } else {
+                                        homeTeam.draws++;
+                                        awayTeam.draws++;
+                                        homeTeam.points += 1;
+                                        awayTeam.points += 1;
+                                    }
+            
+                                    processedPairs.add(pairKey);
+            
+                                    const transferredMatch = {
+                                        matchId: match.id,
+                                        fromGroup: match.groupName,
+                                        homeScore, awayScore,
+                                        homeTeam: homeFinalName,
+                                        awayTeam: awayFinalName,
+                                        isTransferred: true,
+                                        homeTeamIdentifier: homeFinalName,
+                                        awayTeamIdentifier: awayFinalName,
+                                        homeTeamName: homeFinalName,
+                                        awayTeamName: awayFinalName,
+                                        status: 'completed'
+                                    };
+                                    transferredMatches.push(transferredMatch);
+                                    allMatchesForComparison.push(transferredMatch);
+                                }
                             }
                         }
                     }
