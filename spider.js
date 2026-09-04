@@ -4285,7 +4285,6 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const [isHovered, setIsHovered] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
-    const [displayNames, setDisplayNames] = useState({}); // Ukladá preložené názvy tímov
 
     // Získanie aktuálneho stavu zápasu z allMatches
     const currentMatch = allMatches?.find(m => m.id === match.id);
