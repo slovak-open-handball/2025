@@ -3125,7 +3125,7 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
     else if (spiderLevel === 2) renderFunction = spiderModule.renderLevel2;
     else renderFunction = spiderModule.renderLevel1;
 
-    const dummyUserProfile = { role: 'admin' };
+    const dummyUserProfile = { role: 'user' };
     const categoryName = categoriesData[selectedCategory] || selectedCategory;
 
     return React.createElement(
