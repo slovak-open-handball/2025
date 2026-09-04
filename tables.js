@@ -3209,6 +3209,8 @@ const PlayoffSpider = ({ matches, selectedCategory, teamNames, hallNames, catego
     const [spiderData, setSpiderData] = useState(null);
     const [spiderLevel, setSpiderLevel] = useState(1);
 
+    const teamNamesCache = teamNames || {};
+
     useEffect(() => {
         import('./spider.js')
             .then(module => {
