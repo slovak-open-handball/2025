@@ -4362,7 +4362,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const awayTeamDisplay = getTeamDisplayName(awayTeam);
     const homeScore = match.homeScore !== undefined ? match.homeScore : '';
     const awayScore = match.awayScore !== undefined ? match.awayScore : '';
-    const matchDisplayName = `${title} - ${homeTeam} vs ${awayTeam}`;
+    const matchDisplayName = `${title} - ${homeTeamDisplay} vs ${awayTeamDisplay}`;
 
     return React.createElement(
         React.Fragment,
