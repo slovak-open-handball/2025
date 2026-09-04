@@ -750,22 +750,6 @@ let processedCarryOverGroups = new Set();
             !match.isPlacementMatch  // ← PRIDANÉ: VYNEChÁME ZÁPASY O UMIESTNENIE
         );
     }
-
-    function getOtherAdvancedMatches(categoryName, currentGroupName) {
-        const allMatches = Object.values(matchesData);
-        const result = [];
-        for (const match of allMatches) {
-            if (match.isPlacementMatch) continue;
-            if (match.categoryName !== categoryName) continue;
-            if (!match.groupName || match.groupName === currentGroupName) continue;
-            // Zisti, či ide o nadstavbovú skupinu
-            const groupType = getGroupTypeSync(categoryName, match.groupName);
-            if (groupType === 'nadstavbová skupina') {
-                result.push(match);
-            }
-        }
-        return result;
-    }
     
     // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
     function getTeamsInGroupFromAllMatches(groupMatches) {
@@ -1638,6 +1622,7 @@ let processedCarryOverGroups = new Set();
                 // ---- PRENOS ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN ----
                 // (pozor: carryOverEnabled už je true, takže netreba znova kontrolovať)
                 const otherAdvancedMatches = getOtherAdvancedMatches(categoryName, groupName);
+                log(`🔍 otherAdvancedMatches pre ${categoryName} - ${groupName}: ${otherAdvancedMatches.length} zápasov`);
                 const currentMatchIds = new Set(advancedMatches.map(m => m.id));
                     
                 // Vytvoríme kľúč pre dvojicu skupín
