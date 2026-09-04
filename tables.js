@@ -1953,12 +1953,12 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
     const [categorySettings, setCategorySettings] = useState({});
     const [showPlayoff, setShowPlayoff] = useState(false);
     const [processedCarryOverGroups, setProcessedCarryOverGroups] = useState(new Set());
-
-    const clearFilters = () => {
+        
+    const clearFilters = useCallback(() => {
         setShowPlayoff(false);
         setSelectedCategory(null);
         setSelectedGroup(null);
-    };
+    }, []);
     
     useEffect(() => {
         const urlFilter = getFilterFromURL();
@@ -2697,12 +2697,6 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
             setSelectedGroup(null);
         }
     }, [selectedCategory, showPlayoff]);
-    
-    const clearFilters = useCallback(() => {
-        setShowPlayoff(false);
-        setSelectedCategory(null);
-        setSelectedGroup(null);
-    }, []);
     
     if (loading) {
         return React.createElement(
