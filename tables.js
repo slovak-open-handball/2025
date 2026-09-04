@@ -1,3 +1,4 @@
+// tables.js
 import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc, Timestamp, addDoc, query, where, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
