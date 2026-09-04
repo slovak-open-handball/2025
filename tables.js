@@ -1018,7 +1018,7 @@ const GroupMatchesList = ({ matches, groupName, categoryName, teamNames, hallNam
                             dayRows.push(
                                 React.createElement(
                                     'tr',
-                                    { key: `match-${dayIndex}-${match.id || match._id || Math.random()}`, className: rowClass },
+                                    { key: match.id || match._id || `match-${dayIndex}-${Math.random()}`, className: rowClass },
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap' },
