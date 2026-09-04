@@ -4231,6 +4231,25 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const currentMatch = allMatches?.find(m => m.id === match.id);
     const isMatchCompleted = currentMatch?.status === 'completed';
 
+    const getTeamDisplayName = (teamIdentifier) => {
+        if (!teamIdentifier || teamIdentifier === '---') return teamIdentifier;
+        // 1. Skúsime získať názov z window.teamNames (najrýchlejšie)
+        if (window.teamNames && window.teamNames[teamIdentifier]) {
+            return window.teamNames[teamIdentifier];
+        }
+        // 2. Ak nie je dostupný, skúsime cez matchTracker (sync verzia)
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                const name = window.matchTracker.getTeamNameByDisplayIdSync(teamIdentifier);
+                if (name && name !== teamIdentifier) return name;
+            } catch (e) {
+                // ticho ignorujeme
+            }
+        }
+        // 3. Fallback – vrátime pôvodný identifikátor
+        return teamIdentifier;
+    };
+
     const isMatchReference = (teamName) => {
         if (teamName === '---') return false;
         const matchRefPatterns = [
@@ -4339,6 +4358,8 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
     const hallName = getHallNameById(match.hallId);
     const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
     const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+    const homeTeamDisplay = getTeamDisplayName(homeTeam);
+    const awayTeamDisplay = getTeamDisplayName(awayTeam);
     const homeScore = match.homeScore !== undefined ? match.homeScore : '';
     const awayScore = match.awayScore !== undefined ? match.awayScore : '';
     const matchDisplayName = `${title} - ${homeTeam} vs ${awayTeam}`;
@@ -4404,7 +4425,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                    }, homeTeam),
+                    }, homeTeamDisplay),
                     homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
                 // Ikony pre adminov - NEBUDÚ SA ZOBRAZOVAŤ PRE UKONČENÝ ZÁPAS ALEBO AK EXISTUJE AKÝKOĽVEK UKONČENÝ ZÁPAS V SYSTÉME
@@ -4476,7 +4497,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     },
                     React.createElement('span', { 
                         className: 'text-sm font-medium',
-                    }, awayTeam),
+                    }, awayTeamDisplay),
                     awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                 ),
                 userProfileData?.role === 'admin' && isFilterActive && !hasCompletedMatch && !isMatchCompleted && React.createElement(
