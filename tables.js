@@ -2396,6 +2396,113 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                 }
             }
         });
+
+        // Prenos zápasov zo základných skupín (ak je povolený)
+        if (carryOverEnabled && allBaseGroupTables && allBaseGroupTables.length > 0) {
+            for (const baseTable of allBaseGroupTables) {
+                const baseCompletedMatches = baseTable.matches.filter(m => m.status === 'completed');
+                for (const match of baseCompletedMatches) {
+                    let homeFinalName = null;
+                    let awayFinalName = null;
+        
+                    for (const team of baseTable.teams) {
+                        if (team.id === match.homeTeamIdentifier) {
+                            homeFinalName = team.name;
+                        }
+                        if (team.id === match.awayTeamIdentifier) {
+                            awayFinalName = team.name;
+                        }
+                    }
+        
+                    if (!homeFinalName || !awayFinalName) continue;
+        
+                    const homeInAdvanced = teamsMap.has(match.homeTeamIdentifier) ||
+                                           Array.from(teamsMap.values()).some(t => t.name === homeFinalName);
+                    const awayInAdvanced = teamsMap.has(match.awayTeamIdentifier) ||
+                                           Array.from(teamsMap.values()).some(t => t.name === awayFinalName);
+        
+                    if (homeInAdvanced && awayInAdvanced) {
+                        const pairKey = homeFinalName < awayFinalName ?
+                            `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
+        
+                        if (!processedPairs.has(pairKey)) {
+                            let homeScore = match.homeScore || 0;
+                            let awayScore = match.awayScore || 0;
+        
+                            if (homeScore === 0 && awayScore === 0 && match.id) {
+                                const events = window.matchTracker?.getEvents?.(match.id) || [];
+                                const score = getCurrentScoreFromEvents(events);
+                                homeScore = score.home;
+                                awayScore = score.away;
+                            }
+        
+                            let homeTeam = teamsMap.get(match.homeTeamIdentifier);
+                            let awayTeam = teamsMap.get(match.awayTeamIdentifier);
+        
+                            if (!homeTeam) {
+                                homeTeam = Array.from(teamsMap.values()).find(t => t.name === homeFinalName);
+                            }
+                            if (!awayTeam) {
+                                awayTeam = Array.from(teamsMap.values()).find(t => t.name === awayFinalName);
+                            }
+        
+                            if (homeTeam && awayTeam) {
+                                homeTeam.played++;
+                                awayTeam.played++;
+                                homeTeam.goalsFor += homeScore;
+                                homeTeam.goalsAgainst += awayScore;
+                                awayTeam.goalsFor += awayScore;
+                                awayTeam.goalsAgainst += homeScore;
+        
+                                if (homeScore > awayScore) {
+                                    homeTeam.wins++;
+                                    homeTeam.points += currentPointsForWin;
+                                    awayTeam.losses++;
+                                } else if (awayScore > homeScore) {
+                                    awayTeam.wins++;
+                                    awayTeam.points += currentPointsForWin;
+                                    homeTeam.losses++;
+                                } else {
+                                    homeTeam.draws++;
+                                    homeTeam.points += 1;
+                                    awayTeam.draws++;
+                                    awayTeam.points += 1;
+                                }
+        
+                                processedPairs.add(pairKey);
+        
+                                transferredMatches.push({
+                                    id: `transferred_${match.id}`,
+                                    homeTeamIdentifier: match.homeTeamIdentifier,
+                                    awayTeamIdentifier: match.awayTeamIdentifier,
+                                    homeTeamName: homeFinalName,
+                                    awayTeamName: awayFinalName,
+                                    homeScore: homeScore,
+                                    awayScore: awayScore,
+                                    status: 'completed',
+                                    isTransferred: true,
+                                    fromGroup: match.groupName,
+                                    scheduledTime: match.scheduledTime || null,
+                                    hallId: match.hallId || null,
+                                    categoryName: match.categoryName,
+                                    categoryId: match.categoryId
+                                });
+        
+                                allMatchesForComparison.push({
+                                    ...match,
+                                    homeTeamName: homeFinalName,
+                                    awayTeamName: awayFinalName,
+                                    homeScore: homeScore,
+                                    awayScore: awayScore,
+                                    isTransferred: true,
+                                    fromGroup: match.groupName
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         // Prenos zápasov z iných nadstavbových skupín
         if (carryOverEnabled && otherAdvancedMatches && otherAdvancedMatches.length > 0) {
