@@ -2561,8 +2561,10 @@ const GroupTablesView = ({ matches, categoriesData, groupsData, teamNames, hallN
                     // Pridáme do zoznamu prenesených zápasov (pre zobrazenie v GroupMatchesList)
                     transferredMatches.push({
                         id: `transferred_adv_${match.id}`,
-                        homeTeamIdentifier: homeTeam.id,
-                        awayTeamIdentifier: awayTeam.id,
+//                        homeTeamIdentifier: homeTeam.id,
+//                        awayTeamIdentifier: awayTeam.id,
+                        homeTeamIdentifier: match.homeTeamIdentifier,
+                        awayTeamIdentifier: match.awayTeamIdentifier,
                         homeTeamName: homeTeam.name,
                         awayTeamName: awayTeam.name,
                         homeScore: homeScore,
