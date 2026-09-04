@@ -1586,9 +1586,8 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
 
-            // ===== PRENOS Z INÝCH NADSTAVBOVÝCH SKUPÍN =====
+            // PRENÁŠANIE Z INÝCH NADSTAVBOVÝCH SKUPÍN
             if (carryOverEnabled) {
-                // Získame všetky ostatné nadstavbové skupiny v tej istej kategórii
                 let otherAdvancedGroups = [];
                 if (categoryId && groupsCache[categoryId]) {
                     otherAdvancedGroups = groupsCache[categoryId]
@@ -1597,25 +1596,28 @@ let isTeamNameReplacerInitialized = false;
                 }
             
                 for (const advGroup of otherAdvancedGroups) {
-                    // Získame zápasy z tejto inej nadstavbovej skupiny
                     const advGroupMatches = getGroupMatches(categoryName, advGroup);
                     const total = advGroupMatches.length;
                     const completed = advGroupMatches.filter(m => m.status === 'completed').length;
                     if (total === 0 || completed !== total) continue; // musí byť 100%
             
                     for (const match of advGroupMatches) {
-                        // Zistíme, či oba tímy sú v aktuálnej nadstavbovej skupine
-                        const homeInAdvanced = teamsInAdvanced.some(t => t.id === match.homeTeamIdentifier || t.originalId === match.homeTeamIdentifier);
-                        const awayInAdvanced = teamsInAdvanced.some(t => t.id === match.awayTeamIdentifier || t.originalId === match.awayTeamIdentifier);
+                        // Získame mapované názvy tímov pomocou getTeamNameByDisplayId
+                        const homeName = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+                        const awayName = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                        if (!homeName || !awayName) continue;
+            
+                        // Overíme, či tieto názvy patria do aktuálnej skupiny
+                        const homeInAdvanced = teamsInAdvanced.some(t => t.name === homeName);
+                        const awayInAdvanced = teamsInAdvanced.some(t => t.name === awayName);
                         if (!homeInAdvanced || !awayInAdvanced) continue;
             
-                        // Nájdeme ich mená v aktuálnej skupine (už zmapované)
-                        const homeTeam = teamsInAdvanced.find(t => t.id === match.homeTeamIdentifier || t.originalId === match.homeTeamIdentifier);
-                        const awayTeam = teamsInAdvanced.find(t => t.id === match.awayTeamIdentifier || t.originalId === match.awayTeamIdentifier);
+                        const homeTeam = teamsInAdvanced.find(t => t.name === homeName);
+                        const awayTeam = teamsInAdvanced.find(t => t.name === awayName);
                         if (!homeTeam || !awayTeam) continue;
             
-                        const pairKey = [homeTeam.name, awayTeam.name].sort().join('|');
-                        if (processedPairs.has(pairKey)) continue; // už spracované
+                        const pairKey = [homeName, awayName].sort().join('|');
+                        if (processedPairs.has(pairKey)) continue;
             
                         // Získame skóre
                         let homeScore = 0, awayScore = 0;
@@ -1632,19 +1634,18 @@ let isTeamNameReplacerInitialized = false;
                             awayScore = score.away;
                         }
             
-                        // Vytvoríme prenesený zápas
                         const transferredMatch = {
                             matchId: match.id,
                             fromGroup: advGroup,
                             homeScore: homeScore,
                             awayScore: awayScore,
-                            homeTeam: homeTeam.name,
-                            awayTeam: awayTeam.name,
+                            homeTeam: homeName,
+                            awayTeam: awayName,
                             isTransferred: true,
-                            homeTeamIdentifier: homeTeam.name,
-                            awayTeamIdentifier: awayTeam.name,
-                            homeTeamName: homeTeam.name,
-                            awayTeamName: awayTeam.name,
+                            homeTeamIdentifier: homeName,
+                            awayTeamIdentifier: awayName,
+                            homeTeamName: homeName,
+                            awayTeamName: awayName,
                             status: 'completed'
                         };
             
