@@ -21,6 +21,11 @@ import {
     isEliminationMatch
 } from './logged-in-spider.js';
 
+const ELIMINATION_COLORS = {
+    backgroundColor: '#FEF3C7',
+    textColor: '#92400E'
+};
+
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     let result = { backgroundColor: '#DCFCE7', textColor: '#166534' };
     if (!groupsData || !categoryId) return result;
