@@ -8,16 +8,7 @@ import {
     renderLevel2,
     renderLevel3,
     renderLevel4,
-    MatchCell,
-    getCategoryDrawColor,
-    getLighterColor,
-    formatMatchDateTime,
-    getDisplayTeamName,
-    getCategoryNameById,
-    formatDateWithDay,
-    getHallNameById,
-    getDayName,
-    isEliminationMatch
+    MatchCell
 } from './logged-in-spider.js';
 
 const ELIMINATION_COLORS = {
