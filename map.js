@@ -316,8 +316,10 @@ const MapApp = ({ userProfileData }) => {
     }, []);
     
     // Pomocné funkcie
-    const closeDetail = () => {
-        // 1. Najprv odstránime hash z URL (hneď na začiatku)
+    const closeDetail = () => {      
+        // 1. Odstránime hash z URL (najprv priamo)
+        window.location.hash = '';
+        // Alebo pomocou history API
         const currentPath = window.location.pathname + window.location.search;
         window.history.replaceState(null, '', currentPath);
     
