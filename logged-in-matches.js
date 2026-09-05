@@ -6308,6 +6308,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return 0;
             }
         });
+
+        console.log('getMatchesForHallAndDay - selectedCategoriesFilter:', selectedCategoriesFilter);
+        console.log('getMatchesForHallAndDay - matches count before filter:', allHallDayMatches.length);
     
         // Filtrovanie zápasov podľa aktívnych filtrov (PRE ZOBRAZENIE)
         const filteredMatches = allHallDayMatches.filter(match => {
