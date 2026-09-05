@@ -8617,7 +8617,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                            { className: 'flex-1 flex flex-col' },
                            (() => {
                                // Zistíme, či je aktívny filter
-                               const isFilterActiveLocal = selectedCategoriesFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
+                               const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
                         
                                // Zistíme, či existujú nejaké haly na zobrazenie
                                const hasVisibleHalls = !loading && sportHalls.length > 0 &&
@@ -8968,7 +8968,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
                                                    const showEmptyMessage = isEmpty && isFilterActiveLocal;
                                                    
-                                                   const isFilterActiveForDay = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                   const isFilterActiveForDay = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
                                                    
                                                    const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
                                                    const groupsCount = uniqueGroups.length;
