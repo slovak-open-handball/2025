@@ -315,7 +315,10 @@ const MapApp = ({ userProfileData }) => {
     
     // Pomocné funkcie
     const closeDetail = () => {
+        // 1. Najprv zresetujeme vybrané miesto
         setSelectedPlace(null);
+    
+        // 2. Resetujeme všetky editačné stavy
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
@@ -325,30 +328,37 @@ const MapApp = ({ userProfileData }) => {
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
     
+        // 3. Odstránime edit marker
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
-                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+                leafletMap.current?.off('click', editMarkerRef.current._clickHandler);
             }
             editMarkerRef.current.remove();
             editMarkerRef.current = null;
         }
-    
-        // Reset markerov na normálnu ikonu
-        Object.keys(markersRef.current).forEach(placeId => {
-            const markerObj = markersRef.current[placeId];
-            if (markerObj && markerObj.marker) {
-                markerObj.marker.setIcon(markerObj.normalIcon);
-                markerObj.marker.setZIndexOffset(0);
-            }
+
+        // 4. Reset markerov na normálnu ikonu - použijeme requestAnimationFrame pre istotu
+        requestAnimationFrame(() => {
+            Object.keys(markersRef.current).forEach(placeId => {
+                const markerObj = markersRef.current[placeId];
+                if (markerObj && markerObj.marker) {
+                    markerObj.marker.setIcon(markerObj.normalIcon);
+                    markerObj.marker.setZIndexOffset(0);
+                }
+            });
         });
+
+        // 5. Reset mapy na pôvodné zobrazenie - s oneskorením aby sa stihli zresetovať markery
+        setTimeout(() => {
+            if (leafletMap.current) {
+                leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+            }
+        }, 50);
     
-        // Reset mapy na pôvodné zobrazenie
-        if (leafletMap.current) {
-            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-        }
+        // 6. Odstránime hash z URL
         setPlaceHash(null);
-    
-        // Scroll na začiatok zoznamu miest
+
+        // 7. Scroll na začiatok zoznamu miest
         setTimeout(() => {
             if (placesListRef.current) {
                 placesListRef.current.scrollTo({
@@ -356,7 +366,7 @@ const MapApp = ({ userProfileData }) => {
                     behavior: 'smooth'
                 });
             }
-        }, 100);
+        }, 150);
     };
     
     // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
