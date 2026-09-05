@@ -1,7 +1,9 @@
+// Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
+// Leaflet + Font Awesome
 const leafletCSS = document.createElement('link');
 leafletCSS.rel = 'stylesheet';
 leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -13,8 +15,10 @@ const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
 document.head.appendChild(faCSS);
+// Globálne predvolené hodnoty (fallback)
 const DEFAULT_CENTER = [49.195340, 18.786106];
 const DEFAULT_ZOOM = 13;
+// Typy a ikony značiek
 const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
     stravovanie: { icon: 'fa-utensils', color: '#16a34a' },
@@ -28,6 +32,7 @@ const typeLabels = {
     zastavka: "Zastávka",
 };
 
+// Global notification helper
 window.showGlobalNotification = (message, type = 'success') => {
     let el = document.getElementById('global-notification');
     if (!el) {
@@ -51,6 +56,7 @@ const MapApp = ({ userProfileData }) => {
     const leafletMap = useRef(null);
     const placesLayerRef = useRef(null);
     const editMarkerRef = useRef(null);
+    const [showModal, setShowModal] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState('');
     const [newPlaceType, setNewPlaceType] = useState('');
     const [places, setPlaces] = useState([]);
@@ -67,8 +73,17 @@ const MapApp = ({ userProfileData }) => {
     const [activeFilter, setActiveFilter] = useState(null);
     const globalViewRef = doc(window.db, 'settings', 'mapDefaultView');
     const [hashProcessed, setHashProcessed] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const markersRef = useRef({});
     const currentSelectedIdRef = useRef(null);
+    const [newCapacity, setNewCapacity] = useState('');
+    const [isAddingPlace, setIsAddingPlace] = useState(false);
+    const [tempAddPosition, setTempAddPosition] = useState(null);
+    const tempMarkerRef = useRef(null);
+    const moveHandlerRef = useRef(null);
+    const addClickHandlerRef = useRef(null);
+    const [selectedAddPosition, setSelectedAddPosition] = useState(null);
+    const [editCapacity, setEditCapacity] = useState('');
     const [nameTypeError, setNameTypeError] = useState(null);
     const [accommodationTypes, setAccommodationTypes] = useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = useState('');
@@ -77,21 +92,121 @@ const MapApp = ({ userProfileData }) => {
     const [allPlaces, setAllPlaces] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [placeToDelete, setPlaceToDelete] = useState(null);
+    const [isModalOpening, setIsModalOpening] = useState(false);
     const [newPlaceNote, setNewPlaceNote] = useState('');
     const [editNote, setEditNote] = useState('');
+    // Premenné pre cenu ubytovania
+    const [newPricePerNight, setNewPricePerNight] = useState('');
+    const [editPricePerNight, setEditPricePerNight] = useState('');
+    const [newCostPerNight, setNewCostPerNight] = useState(''); 
+    const [editCostPerNight, setEditCostPerNight] = useState('');
+    const [priceError, setPriceError] = useState(null);
   
+    const [newBreakfastPrice, setNewBreakfastPrice] = useState('');
+    const [newLunchPrice, setNewLunchPrice] = useState('');
+    const [newDinnerPrice, setNewDinnerPrice] = useState('');
+    const [editBreakfastPrice, setEditBreakfastPrice] = useState('');
+    const [editLunchPrice, setEditLunchPrice] = useState('');
+    const [editDinnerPrice, setEditDinnerPrice] = useState('');
+    const [mealPriceError, setMealPriceError] = useState(null);
+
+    const [hallRentalPrices, setHallRentalPrices] = useState({});
+    const [editHallRentalPrices, setEditHallRentalPrices] = useState({});
     const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
+    // NOVÉ: Premenná pre rozbaľovacie menu typov ubytovania
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
+
+    const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
+    const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
+
+    const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
+    const [editHeaderColor, setEditHeaderColor] = useState('#1e40af');
+    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
+    const [editHeaderTextColor, setEditHeaderTextColor] = useState('#000000');
+
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-');
+        return `${day}. ${month}. ${year}`;
+    };
+
+    const formatPrice = (price) => {
+        if (price == null) return '';
+        return price.toFixed(2).replace('.', ',');
+    };
+
+    const waitForMarkerRender = () => {
+      return new Promise((resolve) => {
+        const check = () => {
+          if (tempMarkerRef.current && mapRef.current && leafletMap.current) {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          } else {
+            setTimeout(check, 50);
+          }
+        };
+        check();
+      });
+    };
+  
+    const accommodationAvailabilityEdit = useMemo(() => {
+      if (!accommodationTypes.length || !selectedPlace) return {};
+ 
+      const result = {};
+      accommodationTypes.forEach((accType) => {
+        const total = accType.capacity || 0;
+        let occupied = places
+          .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
+          .reduce((sum, p) => sum + (p.capacity || 0), 0);
+ 
+        if (
+          selectedPlace?.type === 'ubytovanie' &&
+          selectedPlace?.accommodationType === accType.type
+        ) {
+          occupied -= selectedPlace?.capacity || 0;
+        }
+        const free = total - occupied;
+        result[accType.type] = {
+          free,
+          isFull: free <= 0,
+          total,
+        };
+      });
+      return result;
+    }, [accommodationTypes, places, selectedPlace]);
     
+    const accommodationAvailabilityAdd = useMemo(() => {
+        if (!accommodationTypes.length) return {};
+        const result = {};
+        accommodationTypes.forEach((accType) => {
+          const total = accType.capacity || 0;
+          const occupied = places
+            .filter(p => p.type === 'ubytovanie' && p.accommodationType === accType.type)
+            .reduce((sum, p) => sum + (p.capacity || 0), 0);
+          const free = total - occupied;
+          result[accType.type] = {
+            free,
+            isFull: free <= 0,
+            total,
+          };
+        });
+        return result;
+      }, [accommodationTypes, places]);
+    
+    // Ref pre kontajner zoznamu miest
     const placesListRef = useRef(null);
     
+    // Ref pre rozbaľovacie menu
     const dropdownRef = useRef(null);
     
+    // Funkcia na scrollovanie k vybranému miestu v zozname
     const scrollToSelectedPlace = useCallback(() => {
         if (!selectedPlace || !placesListRef.current) return;
     
+        // Počkáme na renderovanie DOM
         setTimeout(() => {
             if (placesListRef.current) {
                 const selectedElement = placesListRef.current.querySelector(`[data-place-id="${selectedPlace.id}"]`);
@@ -148,6 +263,7 @@ const MapApp = ({ userProfileData }) => {
         
         fetchTournamentDates();
         
+        // Počúvanie na zmeny v settings/registration
         const unsubscribe = onSnapshot(doc(window.db, 'settings', 'registration'), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -182,6 +298,80 @@ const MapApp = ({ userProfileData }) => {
     }, []);
 
     useEffect(() => {
+        const checkIfSportHallHasMatches = async () => {
+            if (!selectedPlace || !window.db || selectedPlace.type !== 'sportova_hala') {
+                setIsSportHallAssigned(false);
+                return;
+            }
+            
+            try {
+                // Načítaj všetky zápasy, ktoré majú priradenú túto halu
+                const matchesRef = collection(window.db, 'matches');
+                const matchesSnapshot = await getDocs(matchesRef);
+                
+                let hasMatches = false;
+                
+                matchesSnapshot.forEach((matchDoc) => {
+                    const matchData = matchDoc.data();
+                    if (matchData.hallId === selectedPlace.id) {
+                        hasMatches = true;
+                    }
+                });
+                
+                setIsSportHallAssigned(hasMatches);
+                
+                if (hasMatches) {
+                    console.log(`Športová hala ${selectedPlace.name} má priradené zápasy - tlačidlo na odstránenie bude zablokované`);
+                }
+            } catch (err) {
+                console.error("Chyba pri kontrole priradenia zápasov pre športovú halu:", err);
+                setIsSportHallAssigned(false);
+            }
+        };
+        
+        checkIfSportHallHasMatches();
+    }, [selectedPlace, places]);
+
+    useEffect(() => {
+      const checkIfPlaceIsAssigned = async () => {
+        if (!selectedPlace || !window.db) return;
+        
+        try {
+          // Načítaj všetkých používateľov a skontroluj, či niektorý tím má priradené toto miesto
+          const allUsers = await getDocs(collection(window.db, 'users'));
+          let assigned = false;
+          
+          for (const userDoc of allUsers.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const category in teams) {
+              const teamArray = teams[category];
+              if (!Array.isArray(teamArray)) continue;
+              
+              for (const team of teamArray) {
+                if (team.accommodation?.name === selectedPlace.name) {
+                  assigned = true;
+                  break;
+                }
+              }
+              if (assigned) break;
+            }
+            if (assigned) break;
+          }
+          
+          setIsPlaceAssigned(assigned);
+        } catch (err) {
+          console.error("Chyba pri kontrole priradenia miesta:", err);
+          setIsPlaceAssigned(false);
+        }
+      };
+      
+      checkIfPlaceIsAssigned();
+    }, [selectedPlace, places]);
+
+    // NOVÉ: Effect pre zatváranie dropdownu pri kliknutí mimo
+    useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setShowAccommodationTypesDropdown(false);
@@ -197,6 +387,7 @@ const MapApp = ({ userProfileData }) => {
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
+                console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
                 leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
             }
         };
@@ -209,10 +400,12 @@ const MapApp = ({ userProfileData }) => {
         scrollToSelectedPlace();
     }, [selectedPlace, scrollToSelectedPlace]);
     
+    // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
     const handlePlaceClick = useCallback((place) => {
         setSelectedPlace(place);
         setPlaceHash(place.id);
     
+        // Reset filtrov, ak klikáme na miesto
         if (activeFilter !== place.type) {
             setActiveFilter(null);
             setSelectedAccommodationTypeFilter(null);
@@ -224,14 +417,544 @@ const MapApp = ({ userProfileData }) => {
         }  
     }, [activeFilter]);
     
-    const setPlaceHash = (placeId) => {
-        if (placeId) {
-            window.history.replaceState(null, '', `#place-${placeId}`);
-        } else {
-            const currentPath = window.location.pathname + window.location.search;
-            window.history.replaceState(null, '', currentPath);
+    // Samostatná funkcia – vytvorí sa iba raz
+    const handleAddClick = useCallback(async (e) => {
+      console.log("CLICK NA MAPE zachytený!", e.latlng);
+      const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
+    
+      setSelectedAddPosition(pos);
+      setTempAddPosition(pos);
+    
+      leafletMap.current?.off('mousemove', moveHandlerRef.current);
+      leafletMap.current?.off('click', addClickHandlerRef.current);
+      moveHandlerRef.current = null;
+      addClickHandlerRef.current = null;
+    
+      if (tempMarkerRef.current) {
+        tempMarkerRef.current.remove();
+        tempMarkerRef.current = null;
+      }
+    
+      setNewPlaceName('');
+      setNewPlaceType('');
+      setNewCapacity('');
+      setSelectedAccommodationType('');
+      setNameTypeError(null);
+      setCapacityError(null);
+      setNewPricePerNight('');
+      setNewCostPerNight('');
+      setPriceError(null);
+      // NOVÉ: Vynulovať ceny stravovania
+      setNewBreakfastPrice('');
+      setNewLunchPrice('');
+      setNewDinnerPrice('');
+      setMealPriceError(null);
+    
+      setIsAddingPlace(false);
+      window.lastAddedPosition = pos;
+    
+      // Vytvor marker
+      if (leafletMap.current) {
+        tempMarkerRef.current = L.marker([pos.lat, pos.lng], {
+          icon: L.divIcon({
+            className: 'adding-marker',
+            html: `
+              <div style="
+                background: #ef4444;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: 5px solid white;
+                box-shadow: 0 0 15px rgba(0,0,0,0.7);
+                z-index: 99999 !important;
+                position: relative;
+              "></div>
+            `,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+          }),
+          pane: 'markerPane',
+          interactive: false,
+          keyboard: false,
+          riseOnHover: false
+        }).addTo(leafletMap.current);
+    
+        await waitForMarkerRender();
+    
+        requestAnimationFrame(() => {
+          if (leafletMap.current) {
+            leafletMap.current.invalidateSize(false);
+          }
+          setShowModal(true);
+        });
+      } else {
+        setShowModal(true);
+      }
+    }, []);
+    
+    useEffect(() => {
+      if (!showModal || !tempAddPosition || !leafletMap.current) return;
+
+      if (tempMarkerRef.current) {
+        tempMarkerRef.current.remove();
+        tempMarkerRef.current = null;
+      }
+    
+      tempMarkerRef.current = L.marker([tempAddPosition.lat, tempAddPosition.lng], {
+        icon: L.divIcon({
+          className: 'adding-marker',
+          html: `
+            <div style="
+              background: #ef4444;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              border: 5px solid white;
+              box-shadow: 0 0 15px rgba(0,0,0,0.7);
+              z-index: 99999 !important;
+              position: relative;
+            "></div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        }),
+        pane: 'markerPane',
+        interactive: false,
+        keyboard: false,
+        riseOnHover: false
+      }).addTo(leafletMap.current);
+    
+      setIsModalOpening(true);
+    
+      const timeoutId = setTimeout(() => {
+        if (leafletMap.current) {
+          leafletMap.current.invalidateSize(false);
+        }
+        setTimeout(() => {
+          setIsModalOpening(false);
+          setShowModal(true);
+        }, 500);
+      }, 500);
+    
+      return () => {
+        clearTimeout(timeoutId);
+        if (tempMarkerRef.current) {
+          tempMarkerRef.current.remove();
+          tempMarkerRef.current = null;
+        }
+      };
+    }, [showModal, tempAddPosition]);
+    
+    const startAddingPlace = () => {
+        if (isAddingPlace) return;
+        console.log("Spúšťam režim pridávania");
+        setIsAddingPlace(true);
+        setTempAddPosition(null);
+        setShowModal(false);
+        
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+        }
+        
+        const onMouseMove = (e) => {
+            setTempAddPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
+        };
+        leafletMap.current.on('mousemove', onMouseMove);
+        moveHandlerRef.current = onMouseMove;
+        
+        if (addClickHandlerRef.current) {
+            leafletMap.current.off('click', addClickHandlerRef.current);
+        }
+        addClickHandlerRef.current = handleAddClick;
+        leafletMap.current.on('click', handleAddClick);
+        console.log("→ pridávací click handler (handleAddClick) pridaný");
+    };
+    
+    const cancelAddingPlace = () => {
+        console.log("Ruším režim pridávania");
+        setIsAddingPlace(false);
+        setTempAddPosition(null);
+        setShowModal(false);
+        setSelectedAddPosition(null);
+        window.lastAddedPosition = null;
+        
+        if (moveHandlerRef.current) {
+            leafletMap.current?.off('mousemove', moveHandlerRef.current);
+            moveHandlerRef.current = null;
+        }
+        
+        if (leafletMap.current && addClickHandlerRef.current) {
+            leafletMap.current.off('click', addClickHandlerRef.current);
+            addClickHandlerRef.current = null;
+            console.log("→ pridávací click handler odstránený");
+        }
+        
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
         }
     };
+    
+    const setPlaceHash = (placeId) => {
+      if (placeId) {
+        window.history.replaceState(null, '', `#place-${placeId}`);
+      } else {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+    
+    const handleAddPlace = async () => {
+        console.log("handleAddPlace volané");
+        console.log("selectedAddPosition:", selectedAddPosition);
+        console.log("window.lastAddedPosition:", window.lastAddedPosition);
+        
+        if (!newPlaceName.trim() || !newPlaceType) return;
+        
+        let position = selectedAddPosition;
+        if (!position && window.lastAddedPosition) {
+            position = window.lastAddedPosition;
+            console.log("Používam fallback window.lastAddedPosition:", position);
+        }
+        
+        if (!position) {
+            window.showGlobalNotification('Najprv kliknite na mapu pre výber polohy', 'error');
+            return;
+        }
+
+        const nameTrimmed = newPlaceName.trim();
+    
+        const alreadyExists = allPlaces.some(
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
+              && p.type === newPlaceType
+          );
+          
+        if (alreadyExists) {
+            setNameTypeError(
+                React.createElement('span', null,
+                    "Miesto s názvom ",
+                    React.createElement('strong', { className: "font-bold text-red-900" }, nameTrimmed),
+                    " a typom ",
+                    React.createElement('strong', { className: "font-bold text-red-900" },
+                        typeLabels[newPlaceType] || newPlaceType
+                    ),
+                    " už existuje."
+                )
+            );
+            window.showGlobalNotification("Duplicitné miesto – nepridávam", "error");
+            return;
+        }
+        
+        setNameTypeError(null);
+        
+        try {
+            const placeData = {
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
+                lat: position.lat,
+                lng: position.lng,
+            };
+            
+            // Ubytovanie - cena pre kluby a náklady
+            if (newPlaceType === 'ubytovanie') {
+                if (!selectedAccommodationType) {
+                    window.showGlobalNotification('Vyberte typ ubytovania', 'error');
+                    return;
+                }
+                placeData.accommodationType = selectedAccommodationType;
+                
+                const price = parseFloat(newPricePerNight);
+                if (isNaN(price) || price <= 0) {
+                    setPriceError('Cena musí byť kladné číslo');
+                    return;
+                }
+                placeData.pricePerNight = price;
+                
+                // NOVÉ: Pridanie nákladov
+                const cost = parseFloat(newCostPerNight);
+                if (isNaN(cost) || cost <= 0) {
+                    setPriceError('Náklady musia byť kladné číslo');
+                    return;
+                }
+                placeData.costPerNight = cost;
+
+                placeData.headerColor = newHeaderColor || '#1e40af';
+                placeData.headerTextColor = newHeaderTextColor || '#000000';
+            }
+
+            if (newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0) {
+                const prices = {};
+                tournamentDates.days.forEach(date => {
+                    const price = hallRentalPrices[date];
+                    if (price && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+                        prices[date] = parseFloat(price);
+                    }
+                });
+                if (Object.keys(prices).length > 0) {
+                    placeData.hallRentalPrices = prices;
+                }
+            }
+            
+            // Stravovanie - ceny za jedlá
+            if (newPlaceType === 'stravovanie') {
+                // Validácia cien pre stravovanie
+                const breakfastPrice = newBreakfastPrice ? parseFloat(newBreakfastPrice) : null;
+                const lunchPrice = newLunchPrice ? parseFloat(newLunchPrice) : null;
+                const dinnerPrice = newDinnerPrice ? parseFloat(newDinnerPrice) : null;
+                
+                if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
+                    setMealPriceError('Cena za raňajky musí byť kladné číslo');
+                    return;
+                }
+                if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
+                    setMealPriceError('Cena za obed musí byť kladné číslo');
+                    return;
+                }
+                if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
+                    setMealPriceError('Cena za večeru musí byť kladné číslo');
+                    return;
+                }
+                
+                // Uloženie cien do placeData
+                if (breakfastPrice !== null) placeData.breakfastPrice = breakfastPrice;
+                if (lunchPrice !== null) placeData.lunchPrice = lunchPrice;
+                if (dinnerPrice !== null) placeData.dinnerPrice = dinnerPrice;
+            }
+            
+            // Kapacita...
+            let cap = parseInt(newCapacity, 10);
+            if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
+                if (isNaN(cap) || cap <= 0) {
+                    window.showGlobalNotification('Kapacita musí byť kladné číslo', 'error');
+                    return;
+                }
+                placeData.capacity = cap;
+            }
+            
+            if (newPlaceType === 'ubytovanie' && selectedAccommodationType) {
+                const selectedTypeConfig = accommodationTypes.find(t => t.type === selectedAccommodationType);
+                const total = selectedTypeConfig ? selectedTypeConfig.capacity || 0 : 0;
+                const occupied = places
+                    .filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationType)
+                    .reduce((sum, p) => sum + (p.capacity || 0), 0);
+                const free = total - occupied;
+                if (cap > free) {
+                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ ${selectedAccommodationType} (max ${free})`, 'error');
+                    return;
+                }
+            }
+            
+            if (!isNaN(cap) && cap > 0) {
+                placeData.capacity = cap;
+            }
+            
+            // Poznámka
+            if (newPlaceNote.trim()) {
+                placeData.note = newPlaceNote.trim();
+            }
+            
+            const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
+            
+            // Zostavenie správy pre notifikáciu
+            let addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'`;
+            
+            if (placeData.capacity != null) {
+                addMessage += `, kapacita: ${placeData.capacity}`;
+            }
+            
+            if (placeData.accommodationType) {
+                addMessage += `, typ ubytovania: ${placeData.accommodationType}`;
+            }
+            
+            if (placeData.note) {
+                addMessage += `, poznámka: ${placeData.note}`;
+            }
+            
+            await createPlaceChangeNotification('place_created', [addMessage], {
+                id: newPlaceDoc.id,
+                name: newPlaceName.trim(),
+                type: newPlaceType,
+            });
+            
+            window.showGlobalNotification('Miesto bolo pridané', 'success');
+  
+            // Vyčistenie
+            setShowModal(false);
+            setNewPlaceName('');
+            setNewPlaceType('');
+            setNewCapacity('');
+            setSelectedAccommodationType('');
+            setTempAddPosition(null);
+            setSelectedAddPosition(null);
+            window.lastAddedPosition = null;
+            setNewPricePerNight('');
+            // NOVÉ: Vynulovať ceny stravovania
+            setNewBreakfastPrice('');
+            setNewLunchPrice('');
+            setNewDinnerPrice('');
+            setNewPlaceNote('');
+            
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+        } catch (err) {
+            console.error("Chyba pri pridávaní:", err);
+            window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
+        }
+    };
+
+    useEffect(() => {
+        if (newPlaceType !== 'ubytovanie') {
+            setPriceError(null);
+            return;
+        }
+    
+        const price = parseFloat(newPricePerNight);
+        const cost = parseFloat(newCostPerNight);
+        
+        if (!newPricePerNight || !newCostPerNight) {
+            setPriceError(null);
+            return;
+        }
+      
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena pre kluby musí byť kladné číslo');
+        } else if (isNaN(cost) || cost <= 0) {
+            setPriceError('Náklady musia byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [newPricePerNight, newCostPerNight, newPlaceType]);
+
+    // Validácia ceny a nákladov pre ubytovanie (editácia)
+    useEffect(() => {
+        if (!isEditingNameAndType || editType !== 'ubytovanie') {
+            setPriceError(null);
+            return;
+        }
+
+        const price = parseFloat(editPricePerNight);
+        const cost = parseFloat(editCostPerNight);
+    
+        if (!editPricePerNight || !editCostPerNight) {
+            setPriceError(null);
+            return;
+        }
+    
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena pre kluby musí byť kladné číslo');
+        } else if (isNaN(cost) || cost <= 0) {
+            setPriceError('Náklady musia byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [editPricePerNight, editCostPerNight, editType, isEditingNameAndType]);
+      
+    useEffect(() => {
+        if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType || !newCapacity) {
+            setCapacityError(null);
+            return;
+        }
+ 
+        const cap = parseInt(newCapacity, 10);
+        if (isNaN(cap) || cap <= 0) {
+            setCapacityError('Kapacita musí byť kladné číslo');
+            return;
+        }
+ 
+        const avail = accommodationAvailabilityAdd[selectedAccommodationType];
+        if (!avail) {
+            setCapacityError('Neviem zistiť dostupnú kapacitu');
+            return;
+        }
+ 
+        if (cap > avail.free) {
+            setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
+        } else {
+            setCapacityError(null);
+        }
+    }, [newCapacity, selectedAccommodationType, newPlaceType, accommodationAvailabilityAdd]);
+    
+    useEffect(() => {
+        if (!isEditingNameAndType) {
+            setCapacityError(null);
+            return;
+        }
+ 
+        if (editType !== 'ubytovanie' || !editAccommodationType || !editCapacity) {
+            setCapacityError(null);
+            return;
+        }
+ 
+        const cap = parseInt(editCapacity, 10);
+        if (isNaN(cap) || cap <= 0) {
+            setCapacityError('Kapacita musí byť kladné číslo');
+            return;
+        }
+ 
+        const avail = accommodationAvailabilityEdit[editAccommodationType];
+        if (!avail) {
+            setCapacityError('Neviem zistiť dostupnú kapacitu');
+            return;
+        }
+ 
+        if (cap > avail.free) {
+            setCapacityError(`Maximálne môžete zadať ${avail.free} lôžok (voľných je ${avail.free}/${avail.total})`);
+        } else {
+            setCapacityError(null);
+        }
+    }, [editCapacity, editAccommodationType, editType, isEditingNameAndType, accommodationAvailabilityEdit]);
+    
+    // NOVÉ: Validácia cien pre stravovanie (pridávanie)
+    useEffect(() => {
+        if (newPlaceType !== 'stravovanie') {
+            setMealPriceError(null);
+            return;
+        }
+ 
+        const breakfastPrice = newBreakfastPrice ? parseFloat(newBreakfastPrice) : null;
+        const lunchPrice = newLunchPrice ? parseFloat(newLunchPrice) : null;
+        const dinnerPrice = newDinnerPrice ? parseFloat(newDinnerPrice) : null;
+        
+        let error = null;
+        
+        if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
+            error = 'Cena za raňajky musí byť kladné číslo';
+        } else if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
+            error = 'Cena za obed musí byť kladné číslo';
+        } else if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
+            error = 'Cena za večeru musí byť kladné číslo';
+        }
+        
+        setMealPriceError(error);
+    }, [newBreakfastPrice, newLunchPrice, newDinnerPrice, newPlaceType]);
+    
+    // NOVÉ: Validácia cien pre stravovanie (editácia)
+    useEffect(() => {
+        if (!isEditingNameAndType || editType !== 'stravovanie') {
+            setMealPriceError(null);
+            return;
+        }
+ 
+        const breakfastPrice = editBreakfastPrice ? parseFloat(editBreakfastPrice) : null;
+        const lunchPrice = editLunchPrice ? parseFloat(editLunchPrice) : null;
+        const dinnerPrice = editDinnerPrice ? parseFloat(editDinnerPrice) : null;
+        
+        let error = null;
+        
+        if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
+            error = 'Cena za raňajky musí byť kladné číslo';
+        } else if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
+            error = 'Cena za obed musí byť kladné číslo';
+        } else if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
+            error = 'Cena za večeru musí byť kladné číslo';
+        }
+        
+        setMealPriceError(error);
+    }, [editBreakfastPrice, editLunchPrice, editDinnerPrice, editType, isEditingNameAndType]);
     
     useEffect(() => {
       if (!window.db) return;
@@ -252,16 +975,74 @@ const MapApp = ({ userProfileData }) => {
 
             setAccommodationTypes(validTypes);
          
+          console.log("Načítané typy ubytovania:", validTypes);
           } else {
+            console.warn("Dokument settings/accommodation neexistuje");
             setAccommodationTypes([]);
           }
           },
         (error) => {
+          console.error("Chyba pri načítaní accommodation types:", error);
           setAccommodationTypes([]);
         }
       );
       return () => unsubscribe();
     }, []);
+    
+    useEffect(() => {
+        if (!showModal && !isAddingPlace) {
+            if (tempMarkerRef.current) {
+                tempMarkerRef.current.remove();
+                tempMarkerRef.current = null;
+            }
+            
+            setNewPlaceName('');
+            setNewPlaceType('');
+            setNewCapacity('');
+            setSelectedAccommodationType('');
+            setNameTypeError(null);
+            setCapacityError(null);
+            setNewPlaceNote('');
+            setNewPricePerNight('');
+            setNewCostPerNight('');
+            setPriceError(null);
+            // NOVÉ: Vynulovať ceny stravovania
+            setNewBreakfastPrice('');
+            setNewLunchPrice('');
+            setNewDinnerPrice('');
+            setMealPriceError(null);
+        }
+    }, [showModal, isAddingPlace]);
+    
+    useEffect(() => {
+        if (!newPlaceName.trim() || !newPlaceType || !showModal) {
+            setNameTypeError(null);
+            return;
+        }
+    
+        const nameTrimmed = newPlaceName.trim();
+    
+        const duplicate = allPlaces.some(
+            p => p.name.trim().toLowerCase() === nameTrimmed.toLowerCase()
+              && p.type === newPlaceType
+        );
+    
+        if (duplicate) {
+            setNameTypeError(
+                React.createElement('span', null,
+                    "Miesto s názvom ",
+                    React.createElement('strong', { className: "font-bold text-red-900" }, nameTrimmed),
+                    " a typom ",
+                    React.createElement('strong', { className: "font-bold text-red-900" },
+                        typeLabels[newPlaceType] || newPlaceType
+                    ),
+                    " už existuje."
+                )
+            );
+        } else {
+            setNameTypeError(null);
+        }
+    }, [newPlaceName, newPlaceType, showModal, allPlaces]);
     
     useEffect(() => {
         const handleHashChange = () => {
@@ -289,77 +1070,544 @@ const MapApp = ({ userProfileData }) => {
               const newCenter = [data.center.lat, data.center.lng];
               setDefaultCenter(newCenter);
               setDefaultZoom(data.zoom);
+              console.log("Načítané default view z DB:", newCenter, data.zoom);
               if (leafletMap.current) {
                 leafletMap.current.setView(newCenter, data.zoom, { animate: true });
+                console.log("Mapa presunutá hneď po načítaní z DB");
               }
             }
           }
         } catch (err) {
+          console.error("CHYBA pri čítaní default view:", err);
         }
       };
       loadGlobalView();
     }, []);
     
-    const closeDetail = () => {      
-        const currentPath = window.location.pathname + window.location.search;
-        window.history.replaceState(null, '', currentPath);
-
+    // Pomocné funkcie
+    const closeDetail = () => {
         setSelectedPlace(null);
-
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
         setEditCapacity('');
         setEditNote('');
+        setEditPricePerNight('');
+        setEditCostPerNight('');
+        setEditBreakfastPrice('');
+        setEditLunchPrice('');
+        setEditDinnerPrice('');
+        setMealPriceError(null);
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
-    
+        setHallRentalPrices({});
+        setEditHallRentalPrices({});
+        
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
-                leafletMap.current?.off('click', editMarkerRef.current._clickHandler);
+                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
             }
             editMarkerRef.current.remove();
             editMarkerRef.current = null;
         }
+    
+        if (leafletMap.current) {
+            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+        }
+        setPlaceHash(null);
 
         Object.keys(markersRef.current).forEach(placeId => {
             const markerObj = markersRef.current[placeId];
             if (markerObj && markerObj.marker) {
-                markerObj.marker.setIcon(markerObj.normalIcon);
-                markerObj.marker.setZIndexOffset(0);
+              markerObj.marker.setIcon(markerObj.normalIcon);
+              markerObj.marker.setZIndexOffset(0);
             }
         });
-
-        if (leafletMap.current) {
-            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-        }
-
-        requestAnimationFrame(() => {
+    
+        // NOVÉ: Scroll na začátek seznamu míst
+        setTimeout(() => {
             if (placesListRef.current) {
                 placesListRef.current.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
             }
-        });
-
-        setTimeout(() => {
-            const listElement = placesListRef.current;
-            if (listElement) {
-                listElement.scrollTop = 0;
-                listElement.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            } else {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }, 50);
+        }, 100);
     };
     
+    const handleSaveNameAndType = async () => {
+        if (!selectedPlace || !window.db) return;
+        if (!editName.trim() || !editType) {
+            window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
+            return;
+        }
+    
+        const oldName = selectedPlace.name;
+        const newName = editName.trim();
+        let totalTransferredTeams = 0;
+    
+        const updates = {
+            name: newName,
+            type: editType,
+            updatedAt: Timestamp.now(),
+        };
+        
+        if (editType === 'ubytovanie' && !editAccommodationType) {
+            window.showGlobalNotification('Vyberte typ ubytovania', 'error');
+            return;
+        }
+        
+        // Validácia ceny pre ubytovanie
+        if (editType === 'ubytovanie') {
+            updates.accommodationType = editAccommodationType || null;
+            const price = parseFloat(editPricePerNight);
+            const cost = parseFloat(editCostPerNight);
+            if (!isNaN(price) && price > 0) {
+                updates.pricePerNight = price;
+            }
+            if (!isNaN(cost) && cost > 0) {
+                updates.costPerNight = cost;
+            }
+            // Pridanie farieb
+            if (editHeaderColor) {
+                updates.headerColor = editHeaderColor;
+            }
+            if (editHeaderTextColor) {
+                updates.headerTextColor = editHeaderTextColor;
+            }
+        } else {
+            updates.accommodationType = null;
+            updates.pricePerNight = null;
+            updates.costPerNight = null;
+        }
+    
+        if (editType === 'sportova_hala' && tournamentDates.days.length > 0) {
+            const prices = {};
+            tournamentDates.days.forEach(date => {
+                const price = editHallRentalPrices[date];
+                if (price && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+                    prices[date] = parseFloat(price);
+                }
+            });
+            if (Object.keys(prices).length > 0) {
+                updates.hallRentalPrices = prices;
+            } else {
+                updates.hallRentalPrices = null;
+            }
+        } else {
+            updates.hallRentalPrices = null;
+        }     
+        
+        // Validácia cien pre stravovanie
+        if (editType === 'stravovanie') {
+            const breakfastPrice = editBreakfastPrice ? parseFloat(editBreakfastPrice) : null;
+            const lunchPrice = editLunchPrice ? parseFloat(editLunchPrice) : null;
+            const dinnerPrice = editDinnerPrice ? parseFloat(editDinnerPrice) : null;
+            
+            if (breakfastPrice !== null && (isNaN(breakfastPrice) || breakfastPrice < 0)) {
+                setMealPriceError('Cena za raňajky musí byť kladné číslo');
+                return;
+            }
+            if (lunchPrice !== null && (isNaN(lunchPrice) || lunchPrice < 0)) {
+                setMealPriceError('Cena za obed musí byť kladné číslo');
+                return;
+            }
+            if (dinnerPrice !== null && (isNaN(dinnerPrice) || dinnerPrice < 0)) {
+                setMealPriceError('Cena za večeru musí byť kladné číslo');
+                return;
+            }
+        }
+    
+        try {            
+            // Ak sa mení názov ubytovne, aktualizuj všetky priradené tímy
+            if (oldName !== newName && editType === 'ubytovanie') {
+                const allUsers = await getDocs(collection(window.db, 'users'));
+                const userUpdates = [];
+                
+                for (const userDoc of allUsers.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+                    let userTransferredCount = 0;
+                    let needsUpdate = false;
+                    // Opravené: definujeme updatedTeams na základe teams
+                    const updatedTeams = { ...teams };
+                    
+                    for (const category in teams) {
+                        const teamArray = teams[category];
+                        if (!Array.isArray(teamArray)) continue;
+                        
+                        const updatedTeamArray = teamArray.map(team => {
+                            if (team.accommodation?.name === oldName) {
+                                needsUpdate = true;
+                                userTransferredCount++;
+                                return {
+                                    ...team,
+                                    accommodation: {
+                                        ...team.accommodation,
+                                        name: newName
+                                    }
+                                };
+                            }
+                            return team;
+                        });
+                        
+                        if (needsUpdate) {
+                            updatedTeams[category] = updatedTeamArray;
+                        }
+                    }
+                    
+                    if (needsUpdate) {
+                        userUpdates.push({
+                            userId: userDoc.id,
+                            teams: updatedTeams,
+                            transferredCount: userTransferredCount
+                        });
+                        totalTransferredTeams += userTransferredCount;
+                    }
+                }
+                
+                for (const update of userUpdates) {
+                    await updateDoc(doc(window.db, 'users', update.userId), {
+                        teams: update.teams  // Opravené: používame update.teams namiesto updatedTeams
+                    });
+                    console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z '${oldName}' na '${newName}'`);
+                }
+            }
+    
+            if (editType === 'ubytovanie') {
+                updates.accommodationType = editAccommodationType || null;
+                const price = parseFloat(editPricePerNight);
+                const cost = parseFloat(editCostPerNight);
+                if (!isNaN(price) && price > 0) {
+                    updates.pricePerNight = price;
+                }
+                if (!isNaN(cost) && cost > 0) {
+                    updates.costPerNight = cost;
+                }
+            } else {
+                updates.accommodationType = null;
+                updates.pricePerNight = null;
+                updates.costPerNight = null;
+            }
+            
+            // NOVÉ: Ceny pre stravovanie
+            if (editType === 'stravovanie') {
+                const breakfastPrice = editBreakfastPrice ? parseFloat(editBreakfastPrice) : null;
+                const lunchPrice = editLunchPrice ? parseFloat(editLunchPrice) : null;
+                const dinnerPrice = editDinnerPrice ? parseFloat(editDinnerPrice) : null;
+                
+                if (breakfastPrice !== null) {
+                    updates.breakfastPrice = breakfastPrice;
+                } else {
+                    updates.breakfastPrice = null;
+                }
+                
+                if (lunchPrice !== null) {
+                    updates.lunchPrice = lunchPrice;
+                } else {
+                    updates.lunchPrice = null;
+                }
+                
+                if (dinnerPrice !== null) {
+                    updates.dinnerPrice = dinnerPrice;
+                } else {
+                    updates.dinnerPrice = null;
+                }
+            } else {
+                // Ak sa zmení typ z 'stravovanie' na iný, vymaž ceny
+                updates.breakfastPrice = null;
+                updates.lunchPrice = null;
+                updates.dinnerPrice = null;
+            }
+    
+            let cap = parseInt(editCapacity, 10);
+            if (editType === 'ubytovanie' || editType === 'stravovanie') {
+                if (isNaN(cap) || cap <= 0) {
+                    window.showGlobalNotification('Kapacita musí byť kladné číslo', 'error');
+                    return;
+                }
+            }
+            
+            if (editType === 'ubytovanie' && editAccommodationType) {
+                const selectedTypeConfig = accommodationTypes.find(t => t.type === editAccommodationType);
+                const total = selectedTypeConfig ? selectedTypeConfig.capacity || 0 : 0;
+                let occupied = places
+                    .filter(p => p.type === 'ubytovanie' && p.accommodationType === editAccommodationType)
+                    .reduce((sum, p) => sum + (p.capacity || 0), 0);
+                const oldType = selectedPlace.type;
+                const oldAccType = selectedPlace.accommodationType;
+                const oldCap = selectedPlace.capacity || 0;
+                if (oldType === 'ubytovanie' && oldAccType === editAccommodationType) {
+                    occupied -= oldCap;
+                }
+                const free = total - occupied;
+                if (cap > free) {
+                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ ${editAccommodationType} (max ${free})`, 'error');
+                    return;
+                }
+            }
+            
+            if (!isNaN(cap) && cap > 0) {
+                updates.capacity = cap;
+            } else {
+                updates.capacity = null;
+            }
+    
+            updates.note = editNote.trim() || null;
+    
+            const placeRef = doc(window.db, 'places', selectedPlace.id);
+            const original = {
+                name: selectedPlace.name || '',
+                type: selectedPlace.type || '',
+                capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
+                accommodationType: selectedPlace.accommodationType || null,
+                pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
+                costPerNight: selectedPlace.costPerNight != null ? selectedPlace.costPerNight : null,
+                breakfastPrice: selectedPlace.breakfastPrice != null ? selectedPlace.breakfastPrice : null,
+                lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
+                dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
+                note: selectedPlace.note || null,
+                headerColor: selectedPlace.headerColor || '#1e40af',
+                headerTextColor: selectedPlace.headerTextColor || '#000000',
+            };
+    
+            await updateDoc(placeRef, updates);
+    
+            // ZBER ZMIEN
+            const changesList = [];
+            const placeTypeLabel = typeLabels[original.type] || original.type || 'neznámy typ';
+            changesList.push(`Úprava miesta: '''${original.name || '(bez názvu)'} (${placeTypeLabel})'`);
+    
+            if (original.name.trim() !== updates.name.trim()) {
+                changesList.push(
+                    `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
+                );
+                
+                if (editType === 'ubytovanie' && totalTransferredTeams > 0) {
+                    changesList.push(
+                        `Automaticky prenesených ${totalTransferredTeams} tímov z ubytovne '${original.name}' na '${updates.name}'`
+                    );
+                }
+            }
+    
+            if (original.type !== updates.type) {
+                changesList.push(
+                    `Zmena typu miesta z '${typeLabels[original.type] || original.type}' na '${typeLabels[updates.type] || updates.type}'`
+                );
+            }
+    
+            if (original.capacity !== updates.capacity) {
+                const oldCapStr = original.capacity != null ? original.capacity : '–';
+                const newCapStr = updates.capacity != null ? updates.capacity : '–';
+                changesList.push(
+                    `Zmena kapacity z '${oldCapStr}' na '${newCapStr}'`
+                );
+            }
+    
+            if (original.note !== updates.note) {
+                const oldNote = original.note ? `${original.note}` : '–';
+                const newNote = updates.note ? `${updates.note}` : '–';
+                changesList.push(
+                    `Zmena poznámky z '${oldNote}' na '${newNote}'`
+                );
+            }
+
+            if (original.headerColor !== updates.headerColor) {
+                const oldColor = original.headerColor || '#1e40af';
+                const newColor = updates.headerColor || '#1e40af';
+                changesList.push(
+                    `Zmena farby pozadia z '${oldColor}' na '${newColor}'`
+                );
+            }
+            
+            // Zmena farby textu
+            if (original.headerTextColor !== updates.headerTextColor) {
+                const oldColor = original.headerTextColor || '#000000';
+                const newColor = updates.headerTextColor || '#000000';
+                changesList.push(
+                    `Zmena farby textu z '${oldColor}' na '${newColor}'`
+                );
+            }
+    
+            // Ak sa niečo zmenilo → uložíme jedno upozornenie s viacerými riadkami
+            if (changesList.length > 1) {
+                await createPlaceChangeNotification('place_field_updated', changesList, {
+                    id: selectedPlace.id,
+                    name: updates.name,
+                    type: updates.type,
+                });
+            }
+    
+            // Ak boli prenesené tímy, pošli samostatnú notifikáciu (iba raz)
+            if (totalTransferredTeams > 0) {
+                await createPlaceChangeNotification('accommodation_name_updated', [
+                    `Automatická aktualizácia tímov: ${totalTransferredTeams} tímov bolo prenesených z ubytovne '${oldName}' do ubytovne '${newName}'`
+                ], {
+                    id: selectedPlace.id,
+                    name: newName,
+                    type: editType
+                });
+            }
+    
+            // Aktualizácia lokálneho stavu
+            setSelectedPlace(prev => ({
+                ...prev,
+                name: updates.name,
+                type: updates.type,
+                capacity: updates.capacity,
+                accommodationType: updates.accommodationType || undefined,
+                pricePerNight: updates.pricePerNight || undefined,
+                costPerNight: updates.costPerNight || undefined,
+                breakfastPrice: updates.breakfastPrice || undefined,
+                lunchPrice: updates.lunchPrice || undefined,
+                dinnerPrice: updates.dinnerPrice || undefined,
+                note: updates.note || undefined,
+            }));
+    
+            setPlaces(prevPlaces =>
+                prevPlaces.map(p =>
+                    p.id === selectedPlace.id
+                        ? { ...p, 
+                            name: updates.name, 
+                            type: updates.type, 
+                            capacity: updates.capacity, 
+                            accommodationType: updates.accommodationType || undefined,
+                            pricePerNight: updates.pricePerNight || undefined,
+                            costPerNight: updates.costPerNight || undefined,
+                            breakfastPrice: updates.breakfastPrice || undefined,
+                            lunchPrice: updates.lunchPrice || undefined,
+                            dinnerPrice: updates.dinnerPrice || undefined,
+                            note: updates.note || undefined
+                          }
+                        : p
+                )
+            );
+    
+            setAllPlaces(prevPlaces =>
+                prevPlaces.map(p =>
+                    p.id === selectedPlace.id
+                        ? { ...p, 
+                            name: updates.name, 
+                            type: updates.type, 
+                            capacity: updates.capacity, 
+                            accommodationType: updates.accommodationType || undefined,
+                            pricePerNight: updates.pricePerNight || undefined,
+                            costPerNight: updates.costPerNight || undefined,
+                            breakfastPrice: updates.breakfastPrice || undefined,
+                            lunchPrice: updates.lunchPrice || undefined,
+                            dinnerPrice: updates.dinnerPrice || undefined,
+                            note: updates.note || undefined
+                          }
+                        : p
+                )
+            );
+    
+            let successMessage = 'Údaje boli aktualizované';
+            if (totalTransferredTeams > 0) {
+                successMessage += ` a ${totalTransferredTeams} tímov bolo automaticky prenesených`;
+            }
+            window.showGlobalNotification(successMessage, 'success');
+            
+            setIsEditingNameAndType(false);
+            setEditCapacity('');
+            setEditNote('');
+            setEditPricePerNight('');
+            setEditCostPerNight('');
+            setEditBreakfastPrice('');
+            setEditLunchPrice('');
+            setEditDinnerPrice('');
+            setMealPriceError(null);
+    
+        } catch (err) {
+            console.error("Chyba pri ukladaní:", err);
+            window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
+        }
+    };
+    
+    const handleSaveNewLocation = async () => {
+        if (!selectedPlace || !tempLocation || !window.db) return;
+  
+        try {
+            const placeRef = doc(window.db, 'places', selectedPlace.id);
+  
+            const originalLocation = {
+                lat: selectedPlace.lat,
+                lng: selectedPlace.lng,
+            };
+  
+            const newLocation = {
+                lat: tempLocation.lat,
+                lng: tempLocation.lng,
+            };
+  
+            await updateDoc(placeRef, {
+                location: new GeoPoint(tempLocation.lat, tempLocation.lng),
+                lat: tempLocation.lat,
+                lng: tempLocation.lng,
+                updatedAt: Timestamp.now(),
+            });
+  
+            // Notifikácia iba ak sa súradnice zmenili
+            if (originalLocation.lat !== newLocation.lat || originalLocation.lng !== newLocation.lng) {
+                const changesList = [];
+                const placeTypeLabel = typeLabels[selectedPlace.type] || selectedPlace.type || 'neznámy typ';
+                changesList.push(`Úprava miesta: '''${selectedPlace.name || '(bez názvu)'} (${placeTypeLabel})'`);
+                changesList.push(`Zmena polohy z '[${originalLocation.lat?.toFixed(6)}, ${originalLocation.lng?.toFixed(6)}]' na '[${newLocation.lat?.toFixed(6)}, ${newLocation.lng?.toFixed(6)}]'`);
+          
+                await createPlaceChangeNotification('place_field_updated', changesList, {
+                    id: selectedPlace.id,
+                    name: selectedPlace.name,
+                    type: selectedPlace.type,
+                });
+            }
+  
+            setSelectedPlace(prev => prev ? {
+                ...prev,
+                lat: tempLocation.lat,
+                lng: tempLocation.lng
+            } : null);
+  
+            window.showGlobalNotification('Poloha bola aktualizovaná', 'success');
+            setIsEditingLocation(false);
+            setTempLocation(null);
+  
+            if (editMarkerRef.current) {
+                if (editMarkerRef.current._clickHandler) {
+                    leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+                }
+                editMarkerRef.current.remove();
+                editMarkerRef.current = null;
+            }
+        } catch (err) {
+            console.error("Chyba pri ukladaní novej polohy:", err);
+            window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
+        }
+    };
+    
+    const handleCancelEditLocation = () => {
+        setIsEditingLocation(false);
+        setTempLocation(null);
+        if (editMarkerRef.current) {
+            if (editMarkerRef.current._clickHandler) {
+                leafletMap.current.off('click', editMarkerRef.current._clickHandler);
+            }
+            editMarkerRef.current.remove();
+            editMarkerRef.current = null;
+        }
+    };
+    
+    const handleDeletePlace = () => {
+        if (!selectedPlace) return;
+      
+        setPlaceToDelete(selectedPlace);
+        setShowDeleteConfirm(true);
+    };  
+    
+    // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
     const handleAccommodationButtonClick = () => {
         if (activeFilter === 'ubytovanie') {
+            // Ak už je filter aktívny, zruš ho (zobraz všetky miesta)
             setActiveFilter(null);
             setSelectedAccommodationTypeFilter(null);
             setShowAccommodationTypesDropdown(false);
@@ -367,6 +1615,7 @@ const MapApp = ({ userProfileData }) => {
             setPlaceHash(null);
             window.goToDefaultView?.();
         } else {  
+            // Ak filter nie je aktívny, aktivuj filter ubytovanie (všetky typy)
             setActiveFilter('ubytovanie');
             setSelectedAccommodationTypeFilter(null);
             setShowAccommodationTypesDropdown(false);
@@ -376,9 +1625,11 @@ const MapApp = ({ userProfileData }) => {
         }
     };
 
+    // NOVÉ: Funkcia pre kliknutie na šipku (len rozbalenie/zatvorenie dropdownu)
     const handleAccommodationArrowClick = (e) => {
-        e.stopPropagation(); 
+        e.stopPropagation(); // Zastaví event aby sa nespustil handleAccommodationButtonClick
         
+        // Ak filter ešte nie je aktivovaný, aktivuj ho
         if (activeFilter !== 'ubytovanie') {
             setActiveFilter('ubytovanie');
             setSelectedAccommodationTypeFilter(null);
@@ -387,9 +1638,11 @@ const MapApp = ({ userProfileData }) => {
             window.goToDefaultView?.();
         }
         
+        // Toggle dropdown menu
         setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
     }; 
 
+    // NOVÉ: Funkcia pre výber všetkých ubytovní
     const handleSelectAllAccommodations = () => {
         setSelectedAccommodationTypeFilter(null);
         setActiveFilter('ubytovanie');
@@ -399,8 +1652,10 @@ const MapApp = ({ userProfileData }) => {
         window.goToDefaultView?.();
     };
 
+    // NOVÉ: Upravená funkcia pre výber typu ubytovania
     const handleSelectAccommodationTypeFilter = (type) => {
         if (type === selectedAccommodationTypeFilter) {
+            // Ak klikneme na už vybraný typ, zrušíme filter typu, ale ponecháme filter ubytovanie
             setSelectedAccommodationTypeFilter(null);
         } else {
             setSelectedAccommodationTypeFilter(type);
@@ -410,10 +1665,12 @@ const MapApp = ({ userProfileData }) => {
         window.goToDefaultView?.();
     };
     
+    // NOVÉ: Výpočet počtu ubytovní podľa typu
     const getAccommodationCountByType = (type) => {
         return allPlaces.filter(p => p.type === 'ubytovanie' && p.accommodationType === type).length;
     };
     
+    // Inicializácia mapy
     useEffect(() => {
         if (leafletMap.current) return;
         const initMap = () => {
@@ -427,37 +1684,46 @@ const MapApp = ({ userProfileData }) => {
               })
               .setView(defaultCenter, defaultZoom);
     
+            // Hlavná vrstva
             const mainLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                detectRetina: false,
-                crossOrigin: 'anonymous',
-                noWrap: true,
-                errorTileUrl: '',
-                updateWhenIdle: true,
-                reuseTiles: false,
-                updateWhenZooming: false
+                detectRetina: false, // Zmena z true na false
+                crossOrigin: 'anonymous', // Upresnenie crossOrigin
+                noWrap: true, // Zabrániť opakovaniu dlaždíc
+                errorTileUrl: '', // Prázdna URL pre chybové dlaždice
+                updateWhenIdle: true, // Optimizácia aktualizácie
+                reuseTiles: false, // Zmena z true na false
+                updateWhenZooming: false // Zmena z true na false
             });
     
+            // Fallback vrstva (len pre prípad potreby)
             const fallbackLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap contributors',
-                subdomains: ['a', 'b', 'c'], 
+                subdomains: ['a', 'b', 'c'], // Pridané subdomény pre lepšiu dostupnosť
                 detectRetina: false
             });
     
+            // Skúste pridať hlavnú vrstvu
             mainLayer.addTo(leafletMap.current);
             
-            mainLayer.on('tileerror', function(e) {                
+            // Ak hlavná vrstva zlyhá, prepnite na fallback
+            mainLayer.on('tileerror', function(e) {
+                console.warn('Tile error on main layer, tile:', e.tile.src);
+                
+                // Vytvor novú dlaždicu na chybovú
                 const errorImg = e.tile;
                 errorImg.onload = null;
                 errorImg.onerror = null;
                 
+                // Skús alternatívnu URL
                 const originalSrc = e.tile.src;
                 const altSrc = originalSrc.replace('tile.openstreetmap.org', '{s}.tile.openstreetmap.org');
                 e.tile.src = altSrc.replace('{s}', 'a');
             });  
             
+            // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
@@ -479,6 +1745,7 @@ const MapApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
+                        console.log("DOMČEK – aktuálne default hodnoty:", defaultCenter, defaultZoom);
                         window.goToDefaultView?.();
                     });
                     
@@ -499,12 +1766,46 @@ const MapApp = ({ userProfileData }) => {
                 return new L.Control.ZoomHome(options);
             };
             L.control.zoomHome().addTo(leafletMap.current);
-                        
+            
+            // Tlačidlo ★
+            const setGlobalHome = L.control({ position: 'topright' });
+            setGlobalHome.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                div.innerHTML = '<a href="#" title="Nastaviť aktuálne zobrazenie ako východzie pre všetkých" style="width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;">★</a>';
+                div.firstChild.onclick = async function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const center = map.getCenter();
+                    const zoom = map.getZoom();
+                    try {
+                        await setDoc(globalViewRef, {
+                            center: { lat: center.lat, lng: center.lng },
+                            zoom: zoom,
+                            updatedAt: Timestamp.now()
+                        }, { merge: true });
+                        setDefaultCenter([center.lat, center.lng]);
+                        setDefaultZoom(zoom);
+                        map.setView([center.lat, center.lng], zoom, { animate: true });
+                        window.showGlobalNotification('Globálne východzie uložené a nastavené!', 'success');
+                    } catch (err) {
+                        console.error('Chyba pri ukladaní:', err);
+                        window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
+                    }
+                };
+                return div;
+            };
+            setGlobalHome.addTo(leafletMap.current);
+            
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
+                console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
             });
             
             setTimeout(() => leafletMap.current?.invalidateSize(), 400);
+            console.log("Mapa inicializovaná na fallback súradniciach");
+            leafletMap.current.on('click', (e) => {
+                console.log("RAW MAP CLICK EVENT FIRED", e.latlng);
+            });
         };
         
         if (defaultCenter !== DEFAULT_CENTER || defaultZoom !== DEFAULT_ZOOM) {
@@ -514,7 +1815,9 @@ const MapApp = ({ userProfileData }) => {
         if (window.L) {
             initMap();
         } else {
+            // Pridajte listener pre načítanie scriptu
             leafletJS.onload = () => {
+                console.log("Leaflet script načítaný");
                 setTimeout(() => {
                     if (window.L) initMap();
                 }, 100);
@@ -550,12 +1853,14 @@ const MapApp = ({ userProfileData }) => {
                     duration: 1.0,
                     easeLinearity: 0.25
                 });
+                console.log(`Zoom na miesto ${selectedPlace.name} → [${lat.toFixed(6)}, ${lng.toFixed(6)}] zoom 18`);
             }
         }, 300);
         
         return () => clearTimeout(timer);
     }, [selectedPlace, leafletMap.current]);
     
+    // Načítanie a filtrovanie miest
     useEffect(() => {
       let unsubscribePlaces = null;
       if (window.db) {
@@ -573,7 +1878,15 @@ const MapApp = ({ userProfileData }) => {
               createdAt: data.createdAt,
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
+              pricePerNight: data.pricePerNight || null,
+              costPerNight: data.costPerNight || null,
+              breakfastPrice: data.breakfastPrice || null,
+              lunchPrice: data.lunchPrice || null,
+              dinnerPrice: data.dinnerPrice || null,
               note: data.note || null,
+              hallRentalPrices: data.hallRentalPrices || null,
+              headerColor: data.headerColor || '#1e40af',
+              headerTextColor: data.headerTextColor || '#000000' 
             });
           });
           
@@ -582,6 +1895,7 @@ const MapApp = ({ userProfileData }) => {
           let filteredPlaces = loadedPlaces;
           if (activeFilter) {
             if (activeFilter === 'ubytovanie' && selectedAccommodationTypeFilter) {
+              // Filter podľa typu ubytovania
               filteredPlaces = loadedPlaces.filter(place => 
                 place.type === 'ubytovanie' && place.accommodationType === selectedAccommodationTypeFilter
               );
@@ -591,7 +1905,8 @@ const MapApp = ({ userProfileData }) => {
           }
           setPlaces(filteredPlaces);
           
-          if (!leafletMap.current) return;
+          // Přidejte podmínku - nerefreshujte markery pokud máme otevřený detail
+          if (!leafletMap.current || selectedPlace) return;
           
           if (placesLayerRef.current) {
             placesLayerRef.current.clearLayers();
@@ -677,6 +1992,7 @@ const MapApp = ({ userProfileData }) => {
             };
           });
           
+          // Po pridaní všetkých markerov, nastav vybraný marker (ak existuje)
           if (selectedPlace && markersRef.current[selectedPlace.id]) {
             const selectedMarker = markersRef.current[selectedPlace.id];
             if (selectedMarker && selectedMarker.marker) {
@@ -688,15 +2004,18 @@ const MapApp = ({ userProfileData }) => {
       }
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
+        // Nemažeme vrstvu pokud máme otevřený detail
         if (placesLayerRef.current && !selectedPlace) {
           placesLayerRef.current.clearLayers();
         }
       };
-    }, [activeFilter, selectedAccommodationTypeFilter, selectedPlace]);
+    }, [activeFilter, selectedAccommodationTypeFilter]); // Odstraňte handlePlaceClick z dependency array
     
+    // Potom přidejte samostatný efekt pro aktualizaci ikon při změně selectedPlace:
     useEffect(() => {
         if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
 
+        // Reset všetkých markerov na normálnu ikonu
         Object.keys(markersRef.current).forEach(placeId => {
             const markerObj = markersRef.current[placeId];
             if (markerObj && markerObj.marker) {
@@ -705,6 +2024,7 @@ const MapApp = ({ userProfileData }) => {
             }
         });
     
+        // Nastav vybranému markeru selected ikonu
         if (selectedPlace && markersRef.current[selectedPlace.id]) {
             const selectedMarker = markersRef.current[selectedPlace.id];
             if (selectedMarker && selectedMarker.marker) {
@@ -714,19 +2034,52 @@ const MapApp = ({ userProfileData }) => {
         }
     }, [selectedPlace]);
     
+    const addFreeCapacity = useMemo(() => {
+      if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType) return null;
+      const selectedTypeConfig = accommodationTypes.find(t => t.type === selectedAccommodationType);
+      if (!selectedTypeConfig) return 0;
+      const total = selectedTypeConfig.capacity || 0;
+      const occupied = places
+        .filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationType)
+        .reduce((sum, p) => sum + (p.capacity || 0), 0);
+      return total - occupied;
+    }, [newPlaceType, selectedAccommodationType, accommodationTypes, places]);
+ 
+    const editFreeCapacity = useMemo(() => {
+      if (editType !== 'ubytovanie' || !editAccommodationType) return null;
+      const selectedTypeConfig = accommodationTypes.find(t => t.type === editAccommodationType);
+      if (!selectedTypeConfig) return 0;
+      const total = selectedTypeConfig.capacity || 0;
+      let occupied = places
+        .filter(p => p.type === 'ubytovanie' && p.accommodationType === editAccommodationType)
+        .reduce((sum, p) => sum + (p.capacity || 0), 0);
+      const oldType = selectedPlace?.type;
+      const oldAccType = selectedPlace?.accommodationType;
+      const oldCap = selectedPlace?.capacity || 0;
+      if (oldType === 'ubytovanie' && oldAccType === editAccommodationType) {
+        occupied -= oldCap;
+      }
+      return total - occupied;
+    }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
+    
+    // NOVÉ: Získanie názvu vybraného typu ubytovania pre zobrazenie v tlačidle
     const getSelectedAccommodationTypeLabel = () => {
         if (!selectedAccommodationTypeFilter) return 'Všetky typy';
         const type = accommodationTypes.find(t => t.type === selectedAccommodationTypeFilter);
         return type ? type.type : selectedAccommodationTypeFilter;
     };
     
+    // RENDER
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-0 sm:p-2 relative' },
       React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-2 sm:p-4 lg:p-6' },
+        // NADPIS A ŠTATISTIKY PREHĽADU
         React.createElement('div', { className: 'flex flex-col items-center justify-center mb-1 md:mb-2 p-3 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 rounded-t-xl bg-white text-black' },
           React.createElement('h2', { className: 'text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-center mb-3' }, 'Mapa'),
           
+          // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
           React.createElement('div', { className: 'w-full mb-2' },
             React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
+              // Športové haly
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); 
@@ -758,6 +2111,7 @@ const MapApp = ({ userProfileData }) => {
                 )
               ),
               
+              // Ubytovanie (s rozbaľovacím menu)
               React.createElement('div', { 
                   ref: dropdownRef,
                   className: 'relative'
@@ -803,9 +2157,11 @@ const MapApp = ({ userProfileData }) => {
                       )
                   ),
                   
+                  // Rozbaľovacie menu typov ubytovania (zobrazené iba keď je filter aktívny)
                   showAccommodationTypesDropdown && React.createElement('div', {
                       className: 'absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'
                   },
+                      // Položka "Všetky typy"
                       React.createElement('button', {
                           onClick: () => {
                               handleSelectAllAccommodations();
@@ -823,8 +2179,10 @@ const MapApp = ({ userProfileData }) => {
                           )
                       ),
                       
+                      // Oddeľovač
                       React.createElement('div', { className: 'border-t border-gray-200' }),
                       
+                      // Typy ubytovania
                       accommodationTypes.map((item, index) => {
                           const count = getAccommodationCountByType(item.type);
                           const isSelected = selectedAccommodationTypeFilter === item.type;
@@ -849,6 +2207,7 @@ const MapApp = ({ userProfileData }) => {
                   )
               ),
               
+              // Stravovanie
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); 
@@ -879,6 +2238,7 @@ const MapApp = ({ userProfileData }) => {
                 )
               ),
               
+              // Zastávky
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); 
@@ -912,15 +2272,19 @@ const MapApp = ({ userProfileData }) => {
           )
         ),
 
+        // ZMENENÉ: Main content s flex layoutom
         React.createElement('div', { className: 'flex flex-col lg:flex-row gap-3 lg:gap-4' },
+          // Ľavá časť - Mapa a jej kontroly
           React.createElement('div', { className: 'lg:w-3/4 relative' },
             React.createElement('div', { className: 'relative' },
+              // Mapa
               React.createElement('div', {
                 id: 'map',
                 ref: mapRef,
                 className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px] z-0'
               }),
 
+              // Detail vybraného miesta (sidebar)
               selectedPlace && React.createElement(
                 'div',
                 {
@@ -941,6 +2305,27 @@ const MapApp = ({ userProfileData }) => {
                     React.createElement('strong', null, 'Typ: '),
                     selectedPlace.type === 'ubytovanie' && selectedPlace.accommodationType ? `${typeLabels[selectedPlace.type]} (${selectedPlace.accommodationType})` : typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                   ),
+                  (selectedPlace.capacity && (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
+                    React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
+                      React.createElement('strong', null,
+                        selectedPlace.type === 'ubytovanie' ? 'Počet lôžok:' : 'Kapacita:'
+                      ),
+                      selectedPlace.capacity
+                    ),
+
+                    // Farby pre ubytovanie
+                    selectedPlace.type === 'ubytovanie' && (
+                      React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
+                        React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
+                        React.createElement('div', { 
+                          className: 'px-4 py-2 rounded-lg text-sm font-medium shadow-sm',
+                          style: { 
+                            backgroundColor: selectedPlace.headerColor || '#1e40af',
+                            color: selectedPlace.headerTextColor || '#000000'
+                          }
+                        }, '')
+                      )
+                    ),
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
@@ -970,15 +2355,131 @@ const MapApp = ({ userProfileData }) => {
                   },
                     React.createElement('i', { className: 'fa-solid fa-directions text-lg' }),
                     'Navigovať'
-                  )
+                  ),
+                  React.createElement('button', {
+                      onClick: () => {
+                          setIsEditingNameAndType(true);
+                          setEditName(selectedPlace.name || '');
+                          setEditType(selectedPlace.type || '');
+                          setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
+                          setEditAccommodationType(selectedPlace.accommodationType || '');
+                          setEditPricePerNight(selectedPlace.pricePerNight != null ? String(selectedPlace.pricePerNight) : '');
+                          setEditCostPerNight(selectedPlace.costPerNight != null ? String(selectedPlace.costPerNight) : '');
+                          setEditBreakfastPrice(selectedPlace.breakfastPrice != null ? String(selectedPlace.breakfastPrice) : '');
+                          setEditLunchPrice(selectedPlace.lunchPrice != null ? String(selectedPlace.lunchPrice) : '');
+                          setEditDinnerPrice(selectedPlace.dinnerPrice != null ? String(selectedPlace.dinnerPrice) : '');
+                          setEditNote(selectedPlace.note || '');
+                          setEditHeaderColor(selectedPlace.headerColor || '#1e40af');
+                          setEditHeaderTextColor(selectedPlace.headerTextColor || '#000000');
+        
+                          // Naplnenie cien prenájmu haly pre editáciu
+                          if (selectedPlace.type === 'sportova_hala') {
+                              const prices = {};
+                              tournamentDates.days.forEach(date => {
+                                  prices[date] = selectedPlace.hallRentalPrices?.[date]?.toString() || '';
+                              });
+                              setEditHallRentalPrices(prices);
+                          } else {
+                              setEditHallRentalPrices({});
+                          }
+                      },
+                      className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
+                  },
+                      (() => {
+                          if (selectedPlace?.type === 'ubytovanie') {
+                              return isPlaceAssigned 
+                                  ? 'Upraviť názov/kapacitu/cenu/farbu/poznámku'
+                                  : 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                          } else if (selectedPlace?.type === 'stravovanie') {
+                              return 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                          } else if (selectedPlace?.type === 'sportova_hala') {
+                              return 'Upraviť názov/typ/cenu/poznámku';
+                          } else {
+                              return 'Upraviť názov/typ/poznámku';
+                          }
+                      })()
+                  ),
+                  isEditingLocation
+                    ? React.createElement('div', { className: 'flex gap-2' },
+                        React.createElement('button', {
+                          onClick: handleSaveNewLocation,
+                          className: 'flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition'
+                        }, 'Uložiť novú polohu'),
+                        React.createElement('button', {
+                          onClick: handleCancelEditLocation,
+                          className: 'flex-1 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition'
+                        }, 'Zrušiť')
+                      )
+                    : React.createElement('button', {
+                        onClick: () => {
+                          setIsEditingLocation(true);
+                          setTempLocation({ lat: selectedPlace.lat, lng: selectedPlace.lng });
+                          if (leafletMap.current) {
+                            editMarkerRef.current = L.marker([selectedPlace.lat, selectedPlace.lng], {
+                              draggable: true,
+                              icon: L.divIcon({
+                                className: 'editing-marker',
+                                html: '<div style="background:red;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>'
+                              })
+                            }).addTo(leafletMap.current);
+                            editMarkerRef.current.on('dragend', e => {
+                              const pos = e.target.getLatLng();
+                              setTempLocation({ lat: pos.lat, lng: pos.lng });
+                            });
+                            const clickHandler = e => {
+                              setTempLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+                              if (editMarkerRef.current) editMarkerRef.current.setLatLng(e.latlng);
+                            };
+                            leafletMap.current.on('click', clickHandler);
+                            editMarkerRef.current._clickHandler = clickHandler;
+                          }
+                        },
+                        className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
+                      }, 'Upraviť polohu'),
+                      React.createElement('button', {
+                          onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ? 
+                                   null : handleDeletePlace,
+                          disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                    (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned),
+                          className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                              ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                 (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
+                                  ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
+                                  : 'bg-red-600 hover:bg-red-700 text-white'
+                              }`,
+                          title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
+                                 ? 'Miesto nie je možné odstrániť (priradené tímy)'
+                                 : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
+                                   ? 'Halu nie je možné odstrániť (priradené zápasy)'
+                                   : 'Odstrániť miesto'
+                      }, 
+                      ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                       (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
+                      ? React.createElement(React.Fragment, null,
+                          React.createElement('i', { 
+                            className: 'fa-solid fa-trash-alt mr-2',
+                            style: { color: 'inherit' }
+                          }),
+                          'Odstrániť miesto'
+                        )
+                      : React.createElement(React.Fragment, null,
+                          React.createElement('i', { 
+                            className: 'fa-solid fa-trash-alt mr-2' 
+                          }),
+                          'Odstrániť miesto'
+                        )
+                  ),
                 )
-              )
-            )
+              ),
+            ),
           ),
           
+          // Pravá časť - ZOZNAM MIEST (teraz už bez štatistík)
           React.createElement('div', { className: 'lg:w-1/4' },
             React.createElement('div', { className: 'bg-gray-50 rounded-xl p-6 shadow-inner h-full flex flex-col' },
               
+              // ZOZNAM MIEST
               React.createElement('div', { className: 'flex-1' },
                 React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-gray-800 border-b pb-3' }, 
                   React.createElement('i', { className: 'fa-solid fa-list mr-3' }),
@@ -997,12 +2498,14 @@ const MapApp = ({ userProfileData }) => {
                     ref: placesListRef,
                     className: 'overflow-y-auto h-[60vh] md:h-[60vh] min-h-[300px] pr-2'
                   },
+                    // Filtrovanie miest podľa aktívneho filtra a typu ubytovania
                     (() => {
                       let filtered = allPlaces;
                       
                       if (activeFilter) {
                         filtered = filtered.filter(p => p.type === activeFilter);
                         
+                        // Ak je aktívny filter ubytovanie a máme vybratý konkrétny typ
                         if (activeFilter === 'ubytovanie' && selectedAccommodationTypeFilter) {
                           filtered = filtered.filter(p => p.accommodationType === selectedAccommodationTypeFilter);
                         }
@@ -1022,6 +2525,7 @@ const MapApp = ({ userProfileData }) => {
                             }`,
                             onClick: () => handlePlaceClick(place)
                           },
+                            // JEDNOTNÁ HLAVIČKA PRE VŠETKY TYPY MIEST (vrátane ubytovania)
                             React.createElement('div', { className: 'p-4' },
                               React.createElement('div', { className: 'flex justify-between items-start' },
                                 React.createElement('div', null,
@@ -1055,13 +2559,14 @@ const MapApp = ({ userProfileData }) => {
                               )
                             ),
                             
+                            // Obsah karty (kapacity, ceny, atď.)
                             React.createElement('div', { className: 'px-4 pb-4' },
                               React.createElement('div', { className: "text-sm text-gray-600 space-y-1" },
                                 place.capacity && (place.type === 'ubytovanie' || place.type === 'stravovanie') &&
                                   React.createElement('div', null,
                                     React.createElement('span', { className: 'font-medium' }, place.type === 'ubytovanie' ? 'Lôžok: ' : 'Kapacita: '),
                                     place.capacity
-                                  )
+                                  ),
                               )
                             )
                           );
@@ -1071,35 +2576,408 @@ const MapApp = ({ userProfileData }) => {
               )
             )
           )
+        ),
+
+        // Edit modál (názov, typ, kapacita, cena, typ ubytovania)
+        isEditingNameAndType && React.createElement(
+          'div',
+          { className: 'fixed inset-0 z-[2100] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+          React.createElement(
+            'div',
+            { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
+            React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Upraviť údaje miesta'),
+            // Názov
+            React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
+              React.createElement('input', {
+                type: 'text',
+                value: editName,
+                onChange: e => setEditName(e.target.value),
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+              })
+            ),
+            // Typ
+            React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
+              React.createElement('select', {
+                value: editType,
+                onChange: e => setEditType(e.target.value),
+                disabled: isPlaceAssigned, 
+                className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white ${
+                    isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''
+                }`
+              },
+                React.createElement('option', { value: '' }, 'Vyberte typ'),
+                React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+              )
+            ),
+            // Typ ubytovania + obsadenosť
+            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ ubytovania'),
+              React.createElement('select', {
+                value: editAccommodationType,
+                onChange: e => setEditAccommodationType(e.target.value),
+                disabled: isPlaceAssigned,
+                className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white ${
+                    isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''  // ← PRIDAJTE TÚTO PODMIENKU
+                }`
+              },
+                React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
+                accommodationTypes.map((item, i) => {
+                  const avail = accommodationAvailabilityEdit[item.type] || { isFull: false, free: 0 };
+                  const isDisabled = avail.isFull && item.type !== selectedPlace?.accommodationType;
+                  return React.createElement('option', {
+                    key: i,
+                    value: item.type,
+                    disabled: isDisabled,
+                    className: isDisabled ? 'text-gray-400 cursor-not-allowed' : ''
+                  },
+                    `${item.type} (${item.capacity} lôžok celkom)${isDisabled ? ' (naplnená kapacita)' : ''}`
+                  );
+                })
+              ),
+              editAccommodationType && accommodationAvailabilityEdit[editAccommodationType] && (() => {
+                const avail = accommodationAvailabilityEdit[editAccommodationType];
+                const capNum = parseInt(editCapacity, 10) || 0;
+                const occupiedWithoutThis = avail.total - avail.free;
+                const predictedOccupied = occupiedWithoutThis + capNum;
+                const predictedFree = avail.total - predictedOccupied;
+                const isFull = predictedFree <= 0;
+                return React.createElement('div', { className: 'mt-3 text-sm flex items-center gap-2' },
+                  React.createElement('span', { className: 'font-medium text-gray-700' }, 'Obsadenosť:'),
+                  React.createElement('span', {
+                    className: isFull
+                      ? 'text-red-600 font-semibold'
+                      : 'text-gray-700'
+                  },
+                    `${predictedOccupied} / ${avail.total} lôžok`
+                  ),
+                  React.createElement('span', { className: 'text-gray-500' },
+                    `(voľných: ${predictedFree})`
+                  )
+                );
+              })()
+            ),
+            // Kapacita + chyba
+            (editType === 'ubytovanie' || editType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                editType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita (miesta / porcie)'
+              ),
+              React.createElement('input', {
+                type: 'number',
+                min: '1',
+                value: editCapacity,
+                onChange: e => setEditCapacity(e.target.value),
+                placeholder: editType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+              }),
+              capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
+            ),
+
+            // Farba pozadia pre ubytovanie
+            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: editHeaderColor,
+                  onChange: e => setEditHeaderColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: editHeaderColor,
+                  onChange: e => setEditHeaderColor(e.target.value),
+                  placeholder: '#1e40af',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              )
+            ),
+
+            // Farba textu pre ubytovanie
+            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: editHeaderTextColor,
+                  onChange: e => setEditHeaderTextColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: editHeaderTextColor,
+                  onChange: e => setEditHeaderTextColor(e.target.value),
+                  placeholder: '#000000',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              ),
+              React.createElement('div', { className: 'mt-3 p-3 rounded-lg', style: { backgroundColor: editHeaderColor, color: editHeaderTextColor } },
+                React.createElement('span', { className: 'text-sm font-medium' }, 'Ukážka: ', editName || '(názov miesta)')
+              )
+            ),
+
+            // Poznámka
+            React.createElement('div', { className: 'mb-6' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka'),
+              React.createElement('textarea', {
+                value: editNote,
+                onChange: e => setEditNote(e.target.value),
+                placeholder: 'text poznámky, informácia...',
+                rows: 3,
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none'
+              })
+            ),
+            // Tlačidlá
+            React.createElement('div', { className: 'flex justify-end gap-3 mt-6' },
+              React.createElement('button', {
+                onClick: () => setIsEditingNameAndType(false),
+                className: 'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition'
+              }, 'Zrušiť'),
+              React.createElement('button', {
+                onClick: handleSaveNameAndType,
+                disabled: !editName.trim() ||
+                         !editType ||
+                         !!capacityError ||
+                         !!priceError ||
+                         !!mealPriceError ||
+                         (editType === 'ubytovanie' && !editAccommodationType),
+                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-white disabled:text-blue-600 disabled:border-2 disabled:border-blue-600 disabled:hover:bg-white disabled:cursor-not-allowed transition font-medium'
+              }, 'Uložiť zmeny')
+            )
+          )
+        ),
+
+        // Pridať nové miesto modál
+        (showModal && !isModalOpening) && React.createElement(
+          'div',
+          { className: 'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm' },
+          React.createElement(
+            'div',
+            { className: 'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all duration-300 scale-100 relative' },
+            React.createElement('h3', { className: 'text-xl font-bold mb-5 text-gray-800' }, 'Pridať nové miesto'),
+            tempAddPosition && React.createElement('div', { className: 'mb-5 text-sm text-gray-600' },
+              React.createElement('strong', null, 'Vybraná poloha: '),
+              `${tempAddPosition.lat.toFixed(6)}, ${tempAddPosition.lng.toFixed(6)}`
+            ),
+            // Názov
+            React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Názov miesta'),
+              React.createElement('input', {
+                type: 'text',
+                value: newPlaceName,
+                onChange: e => setNewPlaceName(e.target.value),
+                placeholder: 'napr. ŠH Rosinská',
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+              })
+            ),
+            // Typ
+            React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ miesta'),
+              React.createElement('select', {
+                value: newPlaceType,
+                onChange: e => setNewPlaceType(e.target.value),
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
+              },
+                React.createElement('option', { value: '' }, 'Vyberte typ'),
+                React.createElement('option', { value: 'sportova_hala' }, 'Športová hala'),
+                React.createElement('option', { value: 'ubytovanie' }, 'Ubytovanie'),
+                React.createElement('option', { value: 'stravovanie' }, 'Stravovanie'),
+                React.createElement('option', { value: 'zastavka' }, 'Zastávka')
+              )
+            ),
+            // Typ ubytovania + obsadenosť
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Typ ubytovania'),
+              React.createElement('select', {
+                value: selectedAccommodationType,
+                onChange: e => setSelectedAccommodationType(e.target.value),
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white'
+              },
+                React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
+                accommodationTypes.map(item => {
+                  const avail = accommodationAvailabilityAdd[item.type] || { isFull: false, free: 0, total: 0 };
+                  const isDisabled = avail.isFull;
+                  const label = `${item.type} (${item.capacity} lôžok celkom)${isDisabled ? ' (naplnená kapacita)' : ''}`;
+            
+                  return React.createElement('option', {
+                    key: item.type,
+                    value: item.type,
+                    disabled: isDisabled,
+                    className: isDisabled ? 'text-gray-400 cursor-not-allowed' : ''
+                  }, label);
+                })
+              ),
+              selectedAccommodationType && accommodationAvailabilityAdd[selectedAccommodationType] && React.createElement('div', { className: 'mt-3 text-sm flex items-center gap-2' },
+                React.createElement('span', { className: 'font-medium text-gray-700' }, 'Obsadenosť:'),
+                React.createElement('span', {
+                  className: accommodationAvailabilityAdd[selectedAccommodationType].isFull
+                    ? 'text-red-600 font-semibold'
+                    : 'text-gray-700'
+                },
+                  `${accommodationAvailabilityAdd[selectedAccommodationType].total - accommodationAvailabilityAdd[selectedAccommodationType].free} / ${accommodationAvailabilityAdd[selectedAccommodationType].total} lôžok`
+                ),
+                React.createElement('span', { className: 'text-gray-500' },
+                  `(voľných: ${accommodationAvailabilityAdd[selectedAccommodationType].free})`
+                )
+              )
+            ),
+            nameTypeError && React.createElement(
+                'div',
+                { 
+                    className: 'mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm' 
+                },
+                nameTypeError
+            ),
+            // Kapacita
+            (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                newPlaceType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita'
+              ),
+              React.createElement('input', {
+                type: 'number',
+                min: '1',
+                value: newCapacity,
+                onChange: e => setNewCapacity(e.target.value),
+                placeholder: newPlaceType === 'ubytovanie' ? 'napr. 48' : 'napr. 120',
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+              }),
+              capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
+            ),
+
+            // FARBY PRE UBYTOVANIE (PRIDAJ TOTO)
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: newHeaderColor,
+                  onChange: e => setNewHeaderColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: newHeaderColor,
+                  onChange: e => setNewHeaderColor(e.target.value),
+                  placeholder: '#1e40af',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              )
+            ),
+
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
+              React.createElement('div', { className: 'flex gap-3 items-center' },
+                React.createElement('input', {
+                  type: 'color',
+                  value: newHeaderTextColor,
+                  onChange: e => setNewHeaderTextColor(e.target.value),
+                  className: 'w-16 h-10 rounded border border-gray-300 cursor-pointer'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  value: newHeaderTextColor,
+                  onChange: e => setNewHeaderTextColor(e.target.value),
+                  placeholder: '#000000',
+                  className: 'flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition font-mono text-sm'
+                })
+              ),
+              React.createElement('div', { className: 'mt-3 p-3 rounded-lg', style: { backgroundColor: newHeaderColor, color: newHeaderTextColor } },
+                React.createElement('span', { className: 'text-sm font-medium' }, 'Ukážka: ', newPlaceName || '(názov miesta)')
+              )
+            ),
+
+            // Poznámka
+            React.createElement('div', { className: 'mb-6' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka (voliteľné)'),
+              React.createElement('textarea', {
+                value: newPlaceNote,
+                onChange: e => setNewPlaceNote(e.target.value),
+                placeholder: 'text poznámky, informácia...',
+                rows: 3,
+                className: 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none'
+              })
+            )
+          )
         )
     )
   );
 };
 
-let isEmailSyncListenerSetup = false;
-
-const renderMap = (userProfileData) => {
-    const root = document.getElementById('root');
-    if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
+const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
+    if (!window.db || !changesArray?.length) return;
+    const currentUserEmail = window.globalUserProfileData?.email || null;
     
-    ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData: userProfileData || null }));
+    const placeType = placeData?.type ? typeLabels[placeData.type] || placeData.type : 'neznámy typ';
+    
+    try {
+        await addDoc(collection(window.db, 'notifications'), {
+            userEmail: currentUserEmail || "",
+            performedBy: currentUserEmail || null,
+            changes: changesArray,
+            timestamp: Timestamp.now(),
+            actionType: actionType,
+            relatedPlaceId: placeData.id || null,
+            relatedPlaceName: placeData.name || null,
+            relatedPlaceType: placeData.type || null,
+        });
+        console.log("[NOTIFIKÁCIA – viaceré zmeny]", changesArray);
+    } catch (err) {
+        console.error("[CHYBA pri ukladaní notifikácie]", err);
+    }
 };
 
+let isEmailSyncListenerSetup = false;
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
-    renderMap(userProfileData);
-};
-
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-if (document.getElementById('root')) {
-    const waitForLeaflet = () => {
-        if (typeof L !== 'undefined') {
-            renderMap(window.globalUserProfileData || null);
-        } else {
-            setTimeout(waitForLeaflet, 100);
+    const root = document.getElementById('root');
+    if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
+    if (userProfileData) {
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {
+            onAuthStateChanged(window.auth, async user => {
+                if (user) {
+                    try {
+                        const ref = doc(window.db, 'users', user.uid);
+                        const snap = await getDoc(ref);
+                        if (snap.exists()) {
+                            const oldEmail = snap.data().email;
+                            if (user.email !== oldEmail) {
+                                await updateDoc(ref, { email: user.email });
+                                await addDoc(collection(window.db, 'notifications'), {
+                                    userEmail: user.email,
+                                    changes: `Zmena e-mailu z '${oldEmail}' na '${user.email}'`,
+                                    timestamp: new Date(),
+                                });
+                                window.showGlobalNotification('E-mail aktualizovaný', 'success');
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Chyba synchronizácie emailu:", err);
+                        window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
+                    }
+                }
+            });
+            isEmailSyncListenerSetup = true;
         }
-    };
-    
-    waitForLeaflet();
+        ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData }));
+    } else {
+        ReactDOM.createRoot(root).render(
+            React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            )
+        );
+    }
+};
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+if (window.globalUserProfileData) {
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+} else if (document.getElementById('root')) {
+    ReactDOM.createRoot(document.getElementById('root')).render(
+        React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        )
+    );
 }
