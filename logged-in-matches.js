@@ -4431,6 +4431,7 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
 };
 
 const AddMatchesApp = ({ userProfileData }) => {
+    const [selectedCategoriesFilter, setSelectedCategoriesFilter] = useState([]);
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState([]);
@@ -4517,6 +4518,84 @@ const AddMatchesApp = ({ userProfileData }) => {
         const saved = localStorage.getItem('filtersPanelPinned');
         return saved === 'true';
     });
+
+    const MultiSelectDropdown = ({ options, selectedValues, onToggle, label, getOptionLabel, getOptionCount }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        const dropdownRef = useRef(null);
+    
+        useEffect(() => {
+            const handleClickOutside = (event) => {
+                if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                    setIsOpen(false);
+                }
+            };
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }, []);
+    
+        const selectedCount = selectedValues.length;
+        const displayText = selectedCount === 0 
+            ? label 
+            : selectedCount === 1 
+                ? getOptionLabel(selectedValues[0])
+                : `${selectedCount} kategórie`;
+    
+        return React.createElement(
+            'div',
+            { className: 'relative', ref: dropdownRef },
+            React.createElement(
+                'button',
+                {
+                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px] flex items-center justify-between bg-white hover:bg-gray-50 transition-colors ${selectedCount > 0 ? 'border-blue-500 bg-blue-50' : ''}`,
+                    onClick: () => setIsOpen(!isOpen)
+                },
+                React.createElement(
+                    'span',
+                    { className: 'truncate' },
+                    displayText
+                ),
+                React.createElement('i', { 
+                    className: `fa-solid fa-chevron-${isOpen ? 'up' : 'down'} text-xs text-gray-400 ml-2 flex-shrink-0` 
+                })
+            ),
+            isOpen && React.createElement(
+                'div',
+                {
+                    className: 'absolute top-full left-0 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg z-[60]'
+                },
+                options.map(option => {
+                    const isSelected = selectedValues.includes(option.id);
+                    const count = getOptionCount ? getOptionCount(option.id) : 0;
+                    return React.createElement(
+                        'div',
+                        {
+                            key: option.id,
+                            className: `px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors flex items-center justify-between ${isSelected ? 'bg-blue-100' : ''}`,
+                            onClick: () => onToggle(option.id)
+                        },
+                        React.createElement(
+                            'span',
+                            { className: 'text-sm text-gray-700' },
+                            option.name
+                        ),
+                        React.createElement(
+                            'span',
+                            { className: 'flex items-center gap-2' },
+                            count > 0 && React.createElement(
+                                'span',
+                                { className: 'text-xs text-gray-400' },
+                                `(${count})`
+                            ),
+                            isSelected && React.createElement(
+                                'i',
+                                { className: 'fa-solid fa-check text-blue-600 text-sm' }
+                            )
+                        )
+                    );
+                })
+            )
+        );
+    };
 
     const measureDayCardsHeights = () => {
         setTimeout(() => {
@@ -4762,11 +4841,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Aktualizujte funkciu getFilteredMatches
+    // Upravená funkcia getFilteredMatches pre podporu viacnásobných kategórií
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
-            // Filter podľa kategórie
-            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+            // Filter podľa kategórií - ak je vybraných viac kategórií, zápas musí patriť do jednej z nich
+            if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) {
                 return false;
             }
             
@@ -4775,9 +4854,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return false;
             }
             
-            // Filter podľa ID tímu - TOTO BY MALO VŽDY FUNGOVAŤ
+            // Filter podľa ID tímu
             if (selectedTeamIdFilter) {
-                // Zápas vyhovuje, ak sa vybrané ID zhoduje s domácim ALEBO hosťovským tímom
                 if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
                     return false;
                 }
@@ -4790,7 +4868,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             // Filter podľa dňa - aplikujeme len ak nie je ignoreDayFilter = true
             if (!ignoreDayFilter && selectedDayFilter) {
-                // Ak zápas nemá naplánovaný čas, nevyhovuje (lebo nemá dátum)
                 if (!match.scheduledTime) {
                     return false;
                 }
@@ -5282,24 +5359,26 @@ const AddMatchesApp = ({ userProfileData }) => {
         const params = new URLSearchParams(window.location.search);
     
         // Načítame názvy z URL
-        const categoryName = params.get('category') || '';
+        const categoryNames = params.getAll('category') || [];
         const groupName = params.get('group') || '';
-        const teamId = params.get('teamId') || ''; // NOVÉ: načítanie ID tímu
+        const teamId = params.get('teamId') || '';
         const hallName = params.get('hall') || '';
-        const day = params.get('day') || ''; // Toto je string YYYY-MM-DD
+        const day = params.get('day') || '';
     
-        console.log('Načítavam filtre z URL:', { categoryName, groupName, teamId, hallName, day });
+        console.log('Načítavam filtre z URL:', { categoryNames, groupName, teamId, hallName, day });
     
-        // Nájdeme ID podľa názvu - s kontrolou, či existujú dáta
-        let categoryId = '';
-        if (categoryName && categories.length > 0) {
-            const category = categories.find(c => c.name === categoryName);
-            if (category) {
-                categoryId = category.id;
-                console.log('Nájdená kategória:', categoryId);
-            } else {
-                console.warn('Kategória s názvom', categoryName, 'nebola nájdená');
-            }
+        // Nájdeme ID podľa názvu
+        let categoryIds = [];
+        if (categoryNames.length > 0 && categories.length > 0) {
+            categoryNames.forEach(catName => {
+                const category = categories.find(c => c.name === catName);
+                if (category) {
+                    categoryIds.push(category.id);
+                    console.log('Nájdená kategória:', category.id);
+                } else {
+                    console.warn('Kategória s názvom', catName, 'nebola nájdená');
+                }
+            });
         }
         
         let hallId = '';
@@ -5314,24 +5393,26 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     
         return {
-            category: categoryId,
+            categories: categoryIds,
             group: groupName,
             teamId: teamId,
             hall: hallId,
             day: day
         };
     };
-
-    // Aktualizujte funkciu updateURLWithFilters
+    
+    // Upravená funkcia updateURLWithFilters pre podporu viacnásobných kategórií
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
     
-        // Nájdeme názov kategórie podľa ID
-        if (filters.category) {
-            const category = categories.find(c => c.id === filters.category);
-            if (category) {
-                params.set('category', category.name);
-            }
+        // Nájdeme názvy kategórií podľa ID
+        if (filters.categories && filters.categories.length > 0) {
+            filters.categories.forEach(catId => {
+                const category = categories.find(c => c.id === catId);
+                if (category) {
+                    params.append('category', category.name);
+                }
+            });
         }
     
         // Skupinu ukladáme priamo (už je to názov)
@@ -5647,9 +5728,8 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [tournamentStartDate, tournamentEndDate]);
 
-    // Aktualizujte useEffect pre načítanie filtrov z URL
+    // Upravený useEffect pre načítanie filtrov z URL
     useEffect(() => {
-        // Počkáme, kým sú načítané všetky potrebné dáta
         if (categories.length > 0 && 
             sportHalls.length > 0 && 
             Object.keys(groupsByCategory).length > 0 && 
@@ -5659,12 +5739,11 @@ const AddMatchesApp = ({ userProfileData }) => {
             console.log('Inicializujem filtre z URL...');
             const filters = loadFiltersFromURL();
             
-            // Skontrolujeme, či máme platné hodnoty
             let shouldSetFilters = false;
             
-            if (filters.category) {
-                console.log('Nastavujem filter kategórie:', filters.category);
-                setSelectedCategoryFilter(filters.category);
+            if (filters.categories && filters.categories.length > 0) {
+                console.log('Nastavujem filter kategórií:', filters.categories);
+                setSelectedCategoriesFilter(filters.categories);
                 shouldSetFilters = true;
             }
             
@@ -5692,14 +5771,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 shouldSetFilters = true;
             }
             
-            // Označíme, že filtre boli inicializované
             setFiltersInitialized(true);
             
-            // Ak boli nastavené nejaké filtre, aktualizujeme URL (pre prípad, že by sa zmenila)
             if (shouldSetFilters) {
                 setTimeout(() => {
                     updateURLWithFilters({
-                        category: filters.category,
+                        categories: filters.categories,
                         group: filters.group,
                         teamId: filters.teamId,
                         hall: filters.hall,
@@ -5710,22 +5787,22 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [categories, sportHalls, groupsByCategory, matches, filtersInitialized]);
 
+    // Upravený useEffect pre aktualizáciu URL
     useEffect(() => {
-        // Ak ešte neboli filtre inicializované, nerobíme nič
         if (!filtersInitialized) return;
     
         const timeoutId = setTimeout(() => {
             updateURLWithFilters({
-                category: selectedCategoryFilter,
+                categories: selectedCategoriesFilter,
                 group: selectedGroupFilter,
                 teamId: selectedTeamIdFilter,
                 hall: selectedHallFilter,
                 day: selectedDayFilter
             });
-        }, 300); // 300ms oneskorenie
+        }, 300);
     
         return () => clearTimeout(timeoutId);
-    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, filtersInitialized]);
+    }, [selectedCategoriesFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, filtersInitialized]);
 
     // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
@@ -5747,9 +5824,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     }, []);
 
     const handleMatchCardClick = (match) => {
-        // Ak existuje ukončený zápas, neotvárame modálne okno
         if (hasCompletedMatch) {
-//            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
             return;
         }
         setSelectedMatchForAssign(match);
@@ -5788,7 +5863,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         if (hasCompletedMatch) {
-//            window.showGlobalNotification('Nie je možné upraviť zápas, pretože už existuje ukončený zápas v systéme.', 'error');
             return;
         }
     
@@ -6051,6 +6125,20 @@ const AddMatchesApp = ({ userProfileData }) => {
         // Ak nič nenašlo, vrátime extrahovaný názov
         console.warn(`Nenašiel sa tím s kategóriou "${categoryName}" a názvom "${extractedName}"`);
         return extractedName;
+    };
+
+    const toggleCategory = (categoryId) => {
+        setSelectedCategoriesFilter(prev => {
+            if (prev.includes(categoryId)) {
+                const newSelection = prev.filter(id => id !== categoryId);
+                if (newSelection.length === 0) {
+                    setSelectedGroupFilter('');
+                }
+                return newSelection;
+            } else {
+                return [...prev, categoryId];
+            }
+        });
     };
     
     // Funkcia na získanie zobrazovaného textu pre tím
@@ -7680,34 +7768,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                             })
                         ),
                         
-                        // Filter Kategória
+                        // V paneli filtrov nahraďte existujúci select pre Kategória týmto kódom:
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
                             React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedCategoryFilter,
-                                    onChange: (e) => {
-                                        setSelectedCategoryFilter(e.target.value);
-                                        setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
-                                        e.target.blur(); // Odstránime focus po výbere
-                                    },
-                                    className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                                [...categories]
-                                    .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map(cat => {
-                                        // Spočítame zápasy pre túto kategóriu
-                                        const matchesInCategory = matches.filter(m => m.categoryId === cat.id).length;
-                                        return React.createElement('option', { 
-                                            key: cat.id, 
-                                            value: cat.id 
-                                        }, `${cat.name} (${matchesInCategory} ${matchesInCategory === 1 ? 'zápas' : matchesInCategory < 5 ? 'zápasy' : 'zápasov'})`);
-                                    })
-                            )
+                            React.createElement(MultiSelectDropdown, {
+                                options: [...categories].sort((a, b) => a.name.localeCompare(b.name)),
+                                selectedValues: selectedCategoriesFilter,
+                                onToggle: toggleCategory,
+                                label: 'Všetky kategórie',
+                                getOptionLabel: (id) => categories.find(c => c.id === id)?.name || id,
+                                getOptionCount: (id) => matches.filter(m => m.categoryId === id).length
+                            })
                         ),
                         
                         // Filter Skupina (zablokovaný ak nie je vybratá kategória)
@@ -7814,12 +7887,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Tlačidlo pre reset filtrov
+                        // Upravené tlačidlo Reset
                         React.createElement(
                             'button',
                             {
                                 onClick: () => {
-                                    setSelectedCategoryFilter('');
+                                    setSelectedCategoriesFilter([]);
                                     setSelectedGroupFilter('');
                                     setSelectedHallFilter('');
                                     setSelectedDayFilter('');
