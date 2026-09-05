@@ -2074,7 +2074,7 @@ const AddTeamsGroupApp = (props) => {
         setIsDuplicate(isDuplicate);
       }, [teamName, selectedCategory, allTeams, categoryIdToNameMap, teamToEdit, originalTeamName]);
     
-      // 🔥 UPRAVENÁ FUNKCIA: Filtrovanie skupín podľa posledného písmena
+      // 🔥 UPRAVENÁ FUNKCIA: Filtrovanie skupín podľa posledného písmena - IBA NESKOR V ABECEDE
       const getFilteredGroups = () => {
         if (!selectedCategory || !allGroupsByCategoryId[selectedCategory]) {
           return [];
@@ -2091,12 +2091,12 @@ const AddTeamsGroupApp = (props) => {
         // Filtrujeme podľa typu
         let filteredByType = allGroups.filter(group => group.type === selectedGroupType);
         
-        // 🔥 AK MÁME ZADANÉ PÍSMENO, FILTRUJEME SKUPINY, KTORÉ SÚ ABECEDNE NESKOR
+        // 🔥 AK MÁME ZADANÉ PÍSMENO, FILTRUJEME SKUPINY, KTORÉ SÚ ABECEDNE NESKOR (NIE ROVNAKÉ)
         if (lastLetter && !teamToEdit) {
           filteredByType = filteredByType.filter(group => {
             const groupLetter = group.name.slice(-1).toUpperCase();
-            // Skupina musí byť abecedne neskôr alebo rovnaká
-            return groupLetter >= lastLetter;
+            // Skupina musí byť abecedne neskôr (NIE rovnaká)
+            return groupLetter > lastLetter;
           });
         }
         
@@ -2482,15 +2482,15 @@ const AddTeamsGroupApp = (props) => {
               ),
               !selectedCategory ? 
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Najprv vyberte kategóriu') : null,
-              // 🔥 NOVÁ SPRÁVA - informácia o filtrovaní skupín podľa písmena
+              // 🔥 NOVÁ SPRÁVA - informácia o filtrovaní skupín podľa písmena (IBA NESKOR)
               (selectedGroupType && lastLetter && !teamToEdit) ? React.createElement(
                 'p',
                 { className: 'text-xs text-blue-600 mt-1 italic' },
-                `Zobrazujú sa iba skupiny s písmenom ${lastLetter} alebo neskôr v abecede.`
+                `Zobrazujú sa iba skupiny s písmenom neskôr v abecede ako ${lastLetter}.`
               ) : null
             ),
     
-            // PÔVODNÝ SELECTBOX: SKUPINA (TERAZ FILTROVANÁ PODĽA TYPU A PÍSMENA)
+            // PÔVODNÝ SELECTBOX: SKUPINA (TERAZ FILTROVANÁ PODĽA TYPU A PÍSMENA - IBA NESKOR)
             React.createElement(
               'div',
               { className: 'flex flex-col' },
@@ -2523,7 +2523,7 @@ const AddTeamsGroupApp = (props) => {
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Vyberte typ skupiny') :
               filteredGroups.length === 0 && selectedGroupType && selectedCategory ?
                 React.createElement('p', { className: 'text-xs text-amber-600 mt-1 italic' }, 
-                  lastLetter ? `Žiadne skupiny s písmenom ${lastLetter} alebo neskôr v abecede.` :
+                  lastLetter ? `Žiadne skupiny s písmenom neskôr v abecede ako ${lastLetter}.` :
                   `V tejto kategórii nie sú skupiny typu "${selectedGroupType}"`
                 ) : null,
               isGroupFixed ? React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`) : null
