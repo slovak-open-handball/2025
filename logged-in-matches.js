@@ -8815,7 +8815,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    const matchesCount = filteredMatches.length;
                                                    
                                                    // Vytvorenie matchesWithColors - nájdite túto časť v kóde (približne okolo riadku 4300-4400)
-                                                   const matchesWithColors = hallMatchesForDay.map(match => {
+                                                   const matchesWithColors = filteredMatches.map(match => {
                                                        const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                                        let homeTeamColor = '#f3f4f6';
                                                        let awayTeamColor = '#f3f4f6';
