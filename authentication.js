@@ -334,23 +334,9 @@ const checkCurrentPageVisibility = async () => {
     }
     
     if (!isVisible) {        
-        const user = auth.currentUser;
-        if (user) {
-            const userProfileData = window.globalUserProfileData;
-            if (userProfileData && userProfileData.role && hasAccessToPage(userProfileData.role, fileName)) {
-                return;
-            }
-            
-            if (allowedForLoggedIn.includes(fileName)) {
-                // Ak je používateľ prihlásený a stránka nie je viditeľná, presmerujeme na login.html
-                const loginUrl = `${appBasePath}/login.html`;
-                window.location.href = loginUrl;
-                return;
-            }
-        }
-        
-        const indexUrl = `${appBasePath}/index.html`;
-        window.location.href = indexUrl;
+        const loginUrl = `${appBasePath}/login.html`;
+        window.location.href = loginUrl;
+        return;
     }
 };
 
