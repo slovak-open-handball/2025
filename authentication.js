@@ -306,18 +306,18 @@ const checkCurrentPageVisibility = async () => {
         return;
     }
     
-    // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
+    // Povolené stránky pre prihlásených používateľov
     const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
-            // Skontrolujeme či je používateľ admin
+            // Pre prihlásených používateľov skontrolujeme viditeľnosť (vrátane admina)
             const userProfileData = window.globalUserProfileData;
-            if (userProfileData && userProfileData.role === 'admin') {
-                // Admin má prístup vždy
-                return;
+            const isVisible = await checkPageVisibilityForUser(fileName, userProfileData);
+            if (isVisible) {
+                return; // Ak je viditeľná, necháme ho na stránke
             }
-            // Pre ostatných prihlásených používateľov necháme pokračovať na kontrolu viditeľnosti
+            // Ak nie je viditeľná, pokračujeme na presmerovanie
         }
     }
     
@@ -340,13 +340,7 @@ const checkCurrentPageVisibility = async () => {
     }
     
     if (!isVisible) {
-        // Skontrolujeme či je používateľ admin (ešte raz pre istotu)
-        const userProfileData = window.globalUserProfileData;
-        if (userProfileData && userProfileData.role === 'admin') {
-            // Admin má prístup aj keď stránka nie je viditeľná
-            return;
-        }
-        
+        // Admin nemá výnimku - presmerujeme ho rovnako ako ostatných
         const loginUrl = `${appBasePath}/login.html`;
         window.location.href = loginUrl;
         return;
@@ -369,6 +363,29 @@ const isPageVisibleInSettings = async (pageId) => {
     }
     
     const isVisible = settings[pageId];
+    return isVisible;
+};
+
+const checkPageVisibilityForUser = async (pageName, userProfileData) => {
+    // Admin NEMÁ výnimku - rešpektuje viditeľnosť v databáze
+    const settings = await loadPageVisibilitySettings();
+    if (!settings) {
+        return true;
+    }
+    
+    const pageId = pageName.replace('.html', '');
+    
+    // Pre tables použijeme viditeľnosť z matches
+    let isVisible;
+    if (pageId === 'tables') {
+        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
+    } else {
+        if (settings[pageId] === undefined) {
+            return true;
+        }
+        isVisible = settings[pageId];
+    }
+    
     return isVisible;
 };
 
@@ -625,30 +642,8 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
-                                if (currentPage === 'map.html') {
-                                    window.globalUserProfileData = userProfileData;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                    return;
-                                }
-                    
-                                if (currentPage === 'matches.html') {
-                                    window.globalUserProfileData = userProfileData;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                    return;
-                                }
-                                
-                                if (currentPage === 'teams-in-groups.html') {
-                                    window.globalUserProfileData = userProfileData;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                    return;
-                                }
-                                
-                                // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
-                                if (currentPage === 'tables.html') {
-                                    window.globalUserProfileData = userProfileData;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                    return;
-                                }
+                                // ODSTRÁNTE Tieto špeciálne podmienky pre map, matches, teams-in-groups, tables
+                                // a nechajte to riešiť cez bežnú kontrolu prístupu
                                 
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
@@ -660,10 +655,23 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
+                                // Kontrola prístupu - ak stránka nie je verejná a používateľ nemá prístup
                                 if (isHtmlPage() && !isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
                                     window.location.href = targetPathMyData;
                                     return;
-                                }                                
+                                }
+                                
+                                // PRE VEREJNÉ STRÁNKY (map, matches, teams-in-groups, tables) 
+                                // spustíme kontrolu viditeľnosti
+                                if (isCurrentPagePublic && publicPages.includes(currentPage)) {
+                                    // Skontrolujeme viditeľnosť stránky - admin nemá výnimku
+                                    const isVisible = await checkPageVisibilityForUser(currentPage, userProfileData);
+                                    if (!isVisible) {
+                                        // Ak nie je viditeľná, presmerujeme na login.html
+                                        window.location.href = `${appBasePath}/login.html`;
+                                        return;
+                                    }
+                                }
                             }
             
                             window.globalUserProfileData = userProfileData;
@@ -726,6 +734,7 @@ const handleAuthState = async () => {
             }
         });
     });
+
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
