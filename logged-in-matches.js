@@ -9339,7 +9339,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
                                                                                                            width: '100%',
-                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                           backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb',
+                                                                                                           minHeight: '18px'
                                                                                                        }
                                                                                                    },
                                                                                                    React.createElement(
@@ -9852,7 +9853,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    className: 'p-0 rounded border border-dashed border-amber-400 ' + (hasCompletedMatch ? '' : 'hover:border-amber-500') + ' transition-all relative group/gap',
                                                                                                    style: { 
                                                                                                        width: '100%',
-                                                                                                       backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                                       backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb',
+                                                                                                       minHeight: '18px'
                                                                                                    }
                                                                                                },
                                                                                                React.createElement(
