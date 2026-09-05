@@ -7795,7 +7795,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             })
                         ),
                         
-                        // Filter Skupina (zablokovaný ak nie je vybratá kategória)
+                        // Filter Skupina (zablokovaný ak nie je vybratá kategória alebo ak je vybraných viac kategórií)
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -7806,10 +7806,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     value: selectedGroupFilter,
                                     onChange: (e) => {
                                         setSelectedGroupFilter(e.target.value);
-                                        e.target.blur(); // Odstránime focus po výbere
+                                        e.target.blur();
                                     },
-                                    disabled: selectedCategoriesFilter.length === 0,
-                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${selectedCategoriesFilter.length === 0 ? 'bg-gray-100 cursor-not-allowed' : ''}`
+                                    disabled: selectedCategoriesFilter.length !== 1,
+                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${selectedCategoriesFilter.length !== 1 ? 'bg-gray-100 cursor-not-allowed' : ''}`
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky skupiny'),
                                 availableGroupsForFilter.map(group => 
