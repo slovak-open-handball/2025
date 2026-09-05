@@ -1672,6 +1672,25 @@ const AddTeamsGroupApp = (props) => {
       
       // Nový stav pre typ skupiny
       const [selectedGroupType, setSelectedGroupType] = useState('');
+      
+      // NOVÝ STAV: Posledné písmeno názvu tímu
+      const [lastLetter, setLastLetter] = useState('');
+    
+      // Efekt na extrahovanie posledného písmena z názvu tímu
+      useEffect(() => {
+        const trimmed = teamName.trim();
+        if (trimmed.length > 0) {
+          const lastChar = trimmed.slice(-1).toUpperCase();
+          // Kontrola, či je to písmeno (s diakritikou)
+          if (/^[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/.test(lastChar)) {
+            setLastLetter(lastChar);
+          } else {
+            setLastLetter('');
+          }
+        } else {
+          setLastLetter('');
+        }
+      }, [teamName]);
     
       // NOVÁ FUNKCIA: Kontrola, či už pre túto skupinu existujú zápasy
       const hasMatchesInGroup = (categoryName, groupName) => {
@@ -1681,7 +1700,7 @@ const AddTeamsGroupApp = (props) => {
           match.groupName === groupName
         );
       };
-    
+      
       // Zobrazí sa náhľad len pre superstructure tímy
       const shouldShowPreview = teamToEdit?.isSuperstructureTeam || (!teamToEdit);
       
@@ -1830,7 +1849,7 @@ const AddTeamsGroupApp = (props) => {
           setTeamNameError('');
         }
       };  
-
+    
       useEffect(() => {
         if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
           setGroupEndingMismatch(false);
@@ -2055,7 +2074,7 @@ const AddTeamsGroupApp = (props) => {
         setIsDuplicate(isDuplicate);
       }, [teamName, selectedCategory, allTeams, categoryIdToNameMap, teamToEdit, originalTeamName]);
     
-      // Funkcia na získanie dostupných skupín podľa vybraného typu
+      // 🔥 UPRAVENÁ FUNKCIA: Filtrovanie skupín podľa posledného písmena
       const getFilteredGroups = () => {
         if (!selectedCategory || !allGroupsByCategoryId[selectedCategory]) {
           return [];
@@ -2064,25 +2083,30 @@ const AddTeamsGroupApp = (props) => {
         const allGroups = allGroupsByCategoryId[selectedCategory];
         const categoryName = categoryIdToNameMap[selectedCategory];
         
-        // Ak nie je vybratý typ skupiny, vrátime všetky skupiny
+        // Ak nie je vybratý typ skupiny, vrátime prázdny zoznam
         if (!selectedGroupType) {
-          return allGroups.sort((a, b) => a.name.localeCompare(b.name));
+          return [];
         }
         
-        // Filtrujeme podľa typu A podľa toho, či už pre skupinu existujú zápasy
-        return allGroups
-          .filter(group => group.type === selectedGroupType)
+        // Filtrujeme podľa typu
+        let filteredByType = allGroups.filter(group => group.type === selectedGroupType);
+        
+        // 🔥 AK MÁME ZADANÉ PÍSMENO, FILTRUJEME SKUPINY, KTORÉ SÚ ABECEDNE NESKOR
+        if (lastLetter && !teamToEdit) {
+          filteredByType = filteredByType.filter(group => {
+            const groupLetter = group.name.slice(-1).toUpperCase();
+            // Skupina musí byť abecedne neskôr alebo rovnaká
+            return groupLetter >= lastLetter;
+          });
+        }
+        
+        // Pridáme informáciu o zablokovaní kvôli zápasom
+        return filteredByType
           .map(group => ({
             ...group,
-            // Pridáme informáciu, či je skupina zablokovaná kvôli existujúcim zápasom
             isLocked: categoryName && hasMatchesInGroup(categoryName, group.name)
           }))
-          .sort((a, b) => {
-            // Zoradenie: najprv nezablokované, potom zablokované
-            if (a.isLocked && !b.isLocked) return 1;
-            if (!a.isLocked && b.isLocked) return -1;
-            return a.name.localeCompare(b.name);
-          });
+          .sort((a, b) => a.name.localeCompare(b.name));
       };
     
       const sortedCategoryEntries = Object.entries(categoryIdToNameMap)
@@ -2351,20 +2375,6 @@ const AddTeamsGroupApp = (props) => {
                 ' Tím s týmto názvom už existuje!'
               ) : null,
             
-              // Nezhoda koncovky skupiny - PRE OBA TYPY SKUPÍN, ALE S INOU SPRÁVOU
-//              groupEndingMismatch ? (
-//                selectedGroupType === 'základná skupina' ? React.createElement(
-//                  'p',
-//                  { className: 'text-sm text-red-600 font-medium' },
-//                  ` V tejto kategórii neexistuje žiadna základná skupina ${teamName.trim().slice(-1).toUpperCase()}`
-//                ) : selectedGroupType === 'nadstavbová skupina' ? React.createElement(
-//                  'p',
-//                  { className: 'text-sm text-yellow-700 bg-yellow-50 p-2 rounded-lg border border-yellow-300 font-medium' },
-//                  React.createElement('i', { className: 'fa-solid fa-circle-info mr-2' }),
-//                  ` V tejto kategórii neexistuje žiadna nadstavbová skupina ${teamName.trim().slice(-1).toUpperCase()}`
-//                ) : null
-//              ) : null,
-              
               // ŽLTÁ INFORMÁCIA PRE NADSTAVBOVÉ SKUPINY (ak je vybratá skupina)
               (selectedGroupType === 'nadstavbová skupina' && selectedGroup && teamName.trim().length > 0 && !groupEndingMismatch) ? React.createElement(
                 'p',
@@ -2471,10 +2481,16 @@ const AddTeamsGroupApp = (props) => {
                 React.createElement('option', { value: 'nadstavbová skupina' }, 'Nadstavbová skupina')
               ),
               !selectedCategory ? 
-                React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Najprv vyberte kategóriu') : null
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Najprv vyberte kategóriu') : null,
+              // 🔥 NOVÁ SPRÁVA - informácia o filtrovaní skupín podľa písmena
+              (selectedGroupType && lastLetter && !teamToEdit) ? React.createElement(
+                'p',
+                { className: 'text-xs text-blue-600 mt-1 italic' },
+                `Zobrazujú sa iba skupiny s písmenom ${lastLetter} alebo neskôr v abecede.`
+              ) : null
             ),
     
-            // PÔVODNÝ SELECTBOX: SKUPINA (TERAZ FILTROVANÁ PODĽA TYPU A S INFO O ZÁPASOCH)
+            // PÔVODNÝ SELECTBOX: SKUPINA (TERAZ FILTROVANÁ PODĽA TYPU A PÍSMENA)
             React.createElement(
               'div',
               { className: 'flex flex-col' },
@@ -2505,8 +2521,11 @@ const AddTeamsGroupApp = (props) => {
               ),
               !selectedGroupType && selectedCategory ?
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-1 italic' }, 'Vyberte typ skupiny') :
-              filteredGroups.length === 0 && selectedGroupType ?
-                React.createElement('p', { className: 'text-xs text-amber-600 mt-1 italic' }, `V tejto kategórii nie sú skupiny typu "${selectedGroupType}"`) : null,
+              filteredGroups.length === 0 && selectedGroupType && selectedCategory ?
+                React.createElement('p', { className: 'text-xs text-amber-600 mt-1 italic' }, 
+                  lastLetter ? `Žiadne skupiny s písmenom ${lastLetter} alebo neskôr v abecede.` :
+                  `V tejto kategórii nie sú skupiny typu "${selectedGroupType}"`
+                ) : null,
               isGroupFixed ? React.createElement('p', { className: 'text-xs text-indigo-600 mt-1' }, `Predvolená skupina: ${defaultGroupName}`) : null
             ),
     
