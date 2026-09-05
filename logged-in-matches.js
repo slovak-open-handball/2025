@@ -5631,9 +5631,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                     }
                     
                     const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                    const filteredMatches = hallMatchesForDay.filtered || [];
                     
                     if (isFilterActive) {
-                        if (hallMatchesForDay.length > 0) {
+                        if (filteredMatches.length > 0) {
                             visible = true;
                             break;
                         }
@@ -8664,6 +8665,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                
                                                // Získame zápasy pre túto halu a deň
                                                const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                               const filteredMatches = hallMatchesForDay.filtered || [];
                                                const matchesCount = hallMatchesForDay.length;
                                                
                                                // Ak je filter aktívny, hľadáme aspoň jeden zápas
@@ -8751,6 +8753,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                            
                                            if (matchesDayFilter) {
                                                const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                               const filteredMatches = hallMatchesForDay.filtered || [];
                                                const matchesCount = hallMatchesForDay.length;
                                                
                                                if (isFilterActiveLocal) {
@@ -8808,7 +8811,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                if (matchesDayFilter) {
                                                    // VŽDY PRIDÁME VŠETKY DNI do zoznamu dayCards
                                                    const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
-                                                   const matchesCount = hallMatchesForDay.length;
+                                                   const filteredMatches = hallMatchesForDay.filtered || [];
+                                                   const matchesCount = filteredMatches.length;
                                                    
                                                    // Vytvorenie matchesWithColors - nájdite túto časť v kóde (približne okolo riadku 4300-4400)
                                                    const matchesWithColors = hallMatchesForDay.map(match => {
