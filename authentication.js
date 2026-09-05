@@ -609,7 +609,7 @@ const handleAuthState = async () => {
                         window.unsubscribeUserDoc();
                     }
             
-                    window.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
+                    window.unsubscribeUserDoc = onSnapshot(userDocRef, async (snapshot) => {
                         if (snapshot.exists()) {
                             const userProfileData = { id: snapshot.id, ...snapshot.data() };
                             
@@ -620,7 +620,7 @@ const handleAuthState = async () => {
                                 checkRegistrationTimer(userProfileData);
                                 return;
                             }
-            
+                    
                             if (userProfileData.role === 'admin' && userProfileData.approved === false) {
                                 signOut(auth).then(() => {
                                     window.globalUserProfileData = null;
@@ -645,10 +645,7 @@ const handleAuthState = async () => {
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                                     return;
                                 }
-                                
-                                // ODSTRÁNTE Tieto špeciálne podmienky pre map, matches, teams-in-groups, tables
-                                // a nechajte to riešiť cez bežnú kontrolu prístupu
-                                
+            
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
                                     return;
@@ -659,25 +656,20 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
-                                // Kontrola prístupu - ak stránka nie je verejná a používateľ nemá prístup
                                 if (isHtmlPage() && !isCurrentPagePublic && !hasAccessToPage(userRole, currentPage)) {
                                     window.location.href = targetPathMyData;
                                     return;
                                 }
                                 
-                                // PRE VEREJNÉ STRÁNKY (map, matches, teams-in-groups, tables) 
-                                // spustíme kontrolu viditeľnosti
                                 if (isCurrentPagePublic && publicPages.includes(currentPage)) {
-                                    // Skontrolujeme viditeľnosť stránky
                                     const isVisible = await checkPageVisibilityForUser(currentPage, userProfileData);
                                     if (!isVisible) {
-                                        // Ak nie je viditeľná, presmerujeme na login.html
                                         window.location.href = `${appBasePath}/login.html`;
                                         return;
                                     }
                                 }
                             }
-            
+                    
                             window.globalUserProfileData = userProfileData;
                             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                         } else {
