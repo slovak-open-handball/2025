@@ -9151,7 +9151,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    style: { width: '100%' }
                                                                },
                                                                (function() {
-                                                                   const sortedMatches = allMatchesForDay.sort((a, b) => {
+                                                                   const sortedMatches = hallMatches.sort((a, b) => {
                                                                        if (!a.scheduledTime) return 1;
                                                                        if (!b.scheduledTime) return -1;
                                                                        try {
@@ -9162,6 +9162,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return 0;
                                                                        }
                                                                    });
+                                                                   
+                                                                   // 2. Pre medzeru PRED prvým zápasom - používame allMatchesForDay (VŠETKY)
+                                                                   // Zistíme prvý zápas zo všetkých (nie z filtrovaných)
+                                                                   const firstMatchAll = allMatchesForDay.length > 0 ? allMatchesForDay[0] : null;
                                                                    
                                                                    const allElements = [];
                                                                    
@@ -9261,8 +9265,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                                    
                                                                    // PRE MEDZERU PRED PRVÝM ZÁPASOM
-                                                                   if (sortedMatches.length > 0) {
-                                                                       const firstMatch = allMatchesForDay[0];
+                                                                   if (allSortedMatches.length > 0) {
+                                                                       const firstMatch = allSortedMatches[0];
                                                                        if (firstMatch.scheduledTime) {
                                                                            try {
                                                                                const firstMatchDate = firstMatch.scheduledTime.toDate();
@@ -9433,6 +9437,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    }
                                                                    
                                                                    // PRE ZÁPASY A MEDZERY MEDZI NIMI
+                                                                   // Používame sortedMatches (FILTROVANÉ zápasy) na zobrazenie
                                                                    sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                        let matchTime = '--:--';
                                                                        let endTime = '--:--';
@@ -9749,15 +9754,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            )
                                                                        );
                                                                        
-                                                                       // PRIDANIE MEDZERY MEDZI ZÁPASMI
-                                                                       const currentMatch = sortedArray[idx];
-                                                                       const nextMatch = sortedArray[idx + 1];
-    
-                                                                       if (nextMatch && currentMatch.scheduledTime && nextMatch.scheduledTime) {
+                                                                       // ============================================================
+                                                                       // PRIDANIE MEDZERY MEDZI ZÁPASMI - POUŽÍVAME allSortedMatches (VŠETKY zápasy)
+                                                                       // ============================================================
+                                                                       
+                                                                       // Nájdeme aktuálny zápas v allSortedMatches (VŠETKY zápasy)
+                                                                       const currentMatchAll = allSortedMatches.find(function(m) { return m.id === match.id; });
+                                                                       const currentIdxAll = allSortedMatches.indexOf(currentMatchAll);
+                                                                       
+                                                                       // Nájdeme nasledujúci zápas v allSortedMatches (VŠETKY zápasy)
+                                                                       const nextMatchAll = (currentIdxAll !== -1 && currentIdxAll < allSortedMatches.length - 1) 
+                                                                           ? allSortedMatches[currentIdxAll + 1] 
+                                                                           : null;
+                                                                       
+                                                                       // Ak existuje nasledujúci zápas vo VŠETKÝCH zápasoch, vypočítame medzeru
+                                                                       if (nextMatchAll && currentMatchAll.scheduledTime && nextMatchAll.scheduledTime) {
                                                                            try {
-                                                                               const currentMatchDate = currentMatch.scheduledTime.toDate();
-                                                                               const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
-            
+                                                                               const currentMatchDate = currentMatchAll.scheduledTime.toDate();
+                                                                               const currentMatchCategory = categories.find(function(c) { return c.name === currentMatchAll.categoryName; });
+                                                                               
                                                                                let currentMatchDuration = 0;
                                                                                let currentMatchBreak = 5;
                                                                                if (currentMatchCategory) {
@@ -9767,7 +9782,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    currentMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
                                                                                    currentMatchBreak = currentMatchCategory.matchBreak || 5;
                                                                                }
-            
+                                                                               
                                                                                // Koniec aktuálneho zápasu (čistý čas, bez prestávky)
                                                                                const currentMatchEndTime = new Date(currentMatchDate.getTime() + currentMatchDuration * 60000);
                                                                                const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
@@ -9776,12 +9791,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const freeTimeStartMinutes = currentEndMinutes + currentMatchBreak;
                                                                                
                                                                                // Začiatok nasledujúceho zápasu
-                                                                               const nextMatchDate = nextMatch.scheduledTime.toDate();
+                                                                               const nextMatchDate = nextMatchAll.scheduledTime.toDate();
                                                                                const nextStartMinutes = nextMatchDate.getHours() * 60 + nextMatchDate.getMinutes();
                                                                                
                                                                                // ZÍSKAME DĹŽKU PRESTÁVKY PRE NASLEDUJÚCI ZÁPAS
                                                                                let nextMatchBreak = 5;
-                                                                               const nextMatchCategory = categories.find(c => c.name === nextMatch.categoryName);
+                                                                               const nextMatchCategory = categories.find(function(c) { return c.name === nextMatchAll.categoryName; });
                                                                                if (nextMatchCategory) {
                                                                                    nextMatchBreak = nextMatchCategory.matchBreak || 5;
                                                                                }
@@ -9790,23 +9805,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const freeTimeEndMinutes = nextStartMinutes - nextMatchBreak;
                                                                                
                                                                                // DĹŽKA VOĽNÉHO ČASU (len priestor, kde môže byť zápas)
-                                                                               // Tu už NIE je potrebné odpočítavať prestávky - tie sú započítané v freeTimeStartMinutes a freeTimeEndMinutes
                                                                                let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                
                                                                                const dateStr = getLocalDateStr(currentMatchDate);
-                                                                               const hallId = currentMatch.hallId;
+                                                                               const hallId = currentMatchAll.hallId;
                                                                                
                                                                                // Začiatok zobrazovanej medzery = koniec zápasu + prestávka
                                                                                const gapStartTime = formatTimeFromMinutes(freeTimeStartMinutes);
                                                                                // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
                                                                                const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                
-                                                                               const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
-                                                                               
                                                                                // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0) {
-                                                                                   const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
-                                                                                   // Použijeme funkciu splitGapIntoBlocks - tá už NEODPOČÍTAVA prestávky, len ich používa na posun času medzi blokmi
+                                                                                   const maxBlockDuration = getMaxMatchDurationInDay(allSortedMatches);
                                                                                    const blocks = splitGapIntoBlocks(
                                                                                        displayGapMinutes, maxBlockDuration, hallId, dateStr, 
                                                                                        gapStartTime, gapEndTime, false,
@@ -9816,15 +9827,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        null, currentMatchBreak, blockedBreaks
                                                                                    );
                                                                                    
-                                                                                   blocks.forEach(block => {
+                                                                                   blocks.forEach(function(block) {
                                                                                        allElements.push(
                                                                                            React.createElement(
                                                                                                'div',
                                                                                                {
-                                                                                                   key: `gap-${currentMatch.id}-${nextMatch.id}-block-${block.id}`,
-                                                                                                   className: `p-0 rounded border border-dashed border-amber-400 ${
-                                                                                                       hasCompletedMatch ? '' : 'hover:border-amber-500'
-                                                                                                   } transition-all relative group/gap`,
+                                                                                                   key: 'gap-' + currentMatchAll.id + '-' + nextMatchAll.id + '-block-' + block.id,
+                                                                                                   className: 'p-0 rounded border border-dashed border-amber-400 ' + (hasCompletedMatch ? '' : 'hover:border-amber-500') + ' transition-all relative group/gap',
                                                                                                    style: { 
                                                                                                        width: '100%',
                                                                                                        backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
@@ -9848,9 +9857,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        React.createElement(
                                                                                                            'div', 
                                                                                                            { className: 'flex items-center justify-center gap-1 w-full' },
-                                                                                                           React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                           React.createElement('i', { className: 'fa-solid ' + (block.isBlocked ? 'fa-lock' : 'fa-hourglass-half') + ' text-amber-600 text-xs flex-shrink-0' }),
                                                                                                            React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
-                                                                                                               `${block.startTime} - ${block.endTime}`
+                                                                                                               block.startTime + ' - ' + block.endTime
                                                                                                            )
                                                                                                        )
                                                                                                    ),
@@ -9872,7 +9881,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        React.createElement(
                                                                                                            'div', 
                                                                                                            { className: 'text-[10px] text-amber-600 ml-1' },
-                                                                                                           `(${block.duration} min)`
+                                                                                                           '(' + block.duration + ' min)'
                                                                                                        )
                                                                                                    )
                                                                                                ),
@@ -9882,20 +9891,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    React.createElement(
                                                                                                        'button',
                                                                                                        {
-                                                                                                           className: `w-6 h-6 ${block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
-                                                                                                           onClick: (e) => {
+                                                                                                           className: 'w-6 h-6 ' + (block.isBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600') + ' text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                           onClick: function(e) {
                                                                                                                e.stopPropagation();
                                                                                                                toggleBlockBreak(hallId, dateStr, block.startTime, block.endTime, block.duration);
                                                                                                            },
                                                                                                            title: block.isBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
                                                                                                        },
-                                                                                                       React.createElement('i', { className: `fa-solid ${block.isBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                                       React.createElement('i', { className: 'fa-solid ' + (block.isBlocked ? 'fa-unlock' : 'fa-lock') + ' text-xs' })
                                                                                                    ),
                                                                                                    !block.isBlocked && React.createElement(
                                                                                                        'button',
                                                                                                        {
                                                                                                            className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                           onClick: (e) => {
+                                                                                                           onClick: function(e) {
                                                                                                                e.stopPropagation();
                                                                                                                setSelectedBreakForAssign({
                                                                                                                    hallId: hall.id,
@@ -9915,11 +9924,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        'button',
                                                                                                        {
                                                                                                            className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                                           onClick: (e) => {
+                                                                                                           onClick: function(e) {
                                                                                                                e.stopPropagation();
                                                                                                                handleDeleteBreak({
-                                                                                                                   matchId: currentMatch.id,
-                                                                                                                   nextMatchId: nextMatch.id,
+                                                                                                                   matchId: currentMatchAll.id,
+                                                                                                                   nextMatchId: nextMatchAll.id,
                                                                                                                    breakDuration: block.duration
                                                                                                                });
                                                                                                            },
