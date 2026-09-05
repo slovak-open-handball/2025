@@ -239,11 +239,13 @@ const MapApp = ({ userProfileData }) => {
     }, [activeFilter]);
     
     const setPlaceHash = (placeId) => {
-      if (placeId) {
-        window.history.replaceState(null, '', `#place-${placeId}`);
-      } else {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
+        if (placeId) {
+            window.history.replaceState(null, '', `#place-${placeId}`);
+        } else {
+            // Reset URL na aktuálnu cestu bez hashu
+            const currentPath = window.location.pathname + window.location.search;
+            window.history.replaceState(null, '', currentPath);
+        }
     };
     
     useEffect(() => {
@@ -315,10 +317,14 @@ const MapApp = ({ userProfileData }) => {
     
     // Pomocné funkcie
     const closeDetail = () => {
-        // 1. Najprv zresetujeme vybrané miesto
+        // 1. Najprv odstránime hash z URL (hneď na začiatku)
+        const currentPath = window.location.pathname + window.location.search;
+        window.history.replaceState(null, '', currentPath);
+    
+        // 2. Zresetujeme vybrané miesto
         setSelectedPlace(null);
     
-        // 2. Resetujeme všetky editačné stavy
+        // 3. Resetujeme všetky editačné stavy
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
@@ -328,7 +334,7 @@ const MapApp = ({ userProfileData }) => {
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
     
-        // 3. Odstránime edit marker
+        // 4. Odstránime edit marker
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current?.off('click', editMarkerRef.current._clickHandler);
@@ -336,8 +342,8 @@ const MapApp = ({ userProfileData }) => {
             editMarkerRef.current.remove();
             editMarkerRef.current = null;
         }
-
-        // 4. Reset markerov na normálnu ikonu - použijeme requestAnimationFrame pre istotu
+    
+        // 5. Reset markerov na normálnu ikonu
         requestAnimationFrame(() => {
             Object.keys(markersRef.current).forEach(placeId => {
                 const markerObj = markersRef.current[placeId];
@@ -348,15 +354,12 @@ const MapApp = ({ userProfileData }) => {
             });
         });
 
-        // 5. Reset mapy na pôvodné zobrazenie - s oneskorením aby sa stihli zresetovať markery
+        // 6. Reset mapy na pôvodné zobrazenie
         setTimeout(() => {
             if (leafletMap.current) {
                 leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
             }
         }, 50);
-    
-        // 6. Odstránime hash z URL
-        setPlaceHash(null);
 
         // 7. Scroll na začiatok zoznamu miest
         setTimeout(() => {
