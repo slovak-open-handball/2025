@@ -642,9 +642,6 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
-                                // ODSTRÁNTE Tieto špeciálne podmienky pre map, matches, teams-in-groups, tables
-                                // a nechajte to riešiť cez bežnú kontrolu prístupu
-                                
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
                                     return;
@@ -734,7 +731,6 @@ const handleAuthState = async () => {
             }
         });
     });
-
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
