@@ -1442,7 +1442,7 @@ const GroupTable = ({ table, filteredTables, groupMatches, transferredMatches, t
                         isAdvanced && carryOverEnabled && React.createElement(
                             'span',
                             { className: 'text-black-600 font-medium' },
-                            '• Vzájomné zápasy zo základných skupín sa započítavajú.'
+                            '• Vzájomné zápasy z iných skupín sa započítavajú.'
                         ),
                         React.createElement(
                             'span',
