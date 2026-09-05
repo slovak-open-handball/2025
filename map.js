@@ -324,7 +324,7 @@ const MapApp = ({ userProfileData }) => {
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
-        
+    
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current.off('click', editMarkerRef.current._clickHandler);
@@ -333,20 +333,22 @@ const MapApp = ({ userProfileData }) => {
             editMarkerRef.current = null;
         }
     
+        // Reset markerov na normálnu ikonu
+        Object.keys(markersRef.current).forEach(placeId => {
+            const markerObj = markersRef.current[placeId];
+            if (markerObj && markerObj.marker) {
+                markerObj.marker.setIcon(markerObj.normalIcon);
+                markerObj.marker.setZIndexOffset(0);
+            }
+        });
+    
+        // Reset mapy na pôvodné zobrazenie
         if (leafletMap.current) {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
         setPlaceHash(null);
-
-        Object.keys(markersRef.current).forEach(placeId => {
-            const markerObj = markersRef.current[placeId];
-            if (markerObj && markerObj.marker) {
-              markerObj.marker.setIcon(markerObj.normalIcon);
-              markerObj.marker.setZIndexOffset(0);
-            }
-        });
     
-        // NOVÉ: Scroll na začátek seznamu míst
+        // Scroll na začiatok zoznamu miest
         setTimeout(() => {
             if (placesListRef.current) {
                 placesListRef.current.scrollTo({
