@@ -4508,7 +4508,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [hasCompletedMatch, setHasCompletedMatch] = useState(false);
 
     // Tieto premenné definujeme AŽ za všetkými useState
-    const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
+    const isFilterActive = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
 
     // Pre hasVisibleHalls budeme potrebovať funkciu, ktorá to vypočíta
     const [hasVisibleHalls, setHasVisibleHalls] = useState(false);
@@ -5652,7 +5652,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
         
         checkVisibleHalls();
-    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, tournamentStartDate, tournamentEndDate, sportHalls, matches, loading]);
+    }, [selectedCategoriesFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, tournamentStartDate, tournamentEndDate, sportHalls, matches, loading]);
 
     useEffect(() => {
         const savedBlockedBreaks = localStorage.getItem('blockedBreaks');
@@ -5671,21 +5671,33 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Aktualizácia dostupných skupín pre filter pri zmene kategórie
     useEffect(() => {
-        if (selectedCategoryFilter && groupsByCategory[selectedCategoryFilter]) {
-            // Zoradenie skupín podľa abecedy
-            const sortedGroups = [...groupsByCategory[selectedCategoryFilter]].sort((a, b) => 
+        // Ak je vybraná práve jedna kategória, zobrazíme jej skupiny
+        if (selectedCategoriesFilter.length === 1 && groupsByCategory[selectedCategoriesFilter[0]]) {
+            const sortedGroups = [...groupsByCategory[selectedCategoriesFilter[0]]].sort((a, b) => 
                 a.name.localeCompare(b.name)
             );
+            setAvailableGroupsForFilter(sortedGroups);
+        } else if (selectedCategoriesFilter.length > 1) {
+            // Ak je vybraných viac kategórií, zobrazíme spoločné skupiny
+            const allGroups = new Set();
+            selectedCategoriesFilter.forEach(catId => {
+                if (groupsByCategory[catId]) {
+                    groupsByCategory[catId].forEach(group => allGroups.add(group.name));
+                }
+            });
+            const sortedGroups = Array.from(allGroups).sort((a, b) => a.localeCompare(b));
             setAvailableGroupsForFilter(sortedGroups);
         } else {
             setAvailableGroupsForFilter([]);
         }
-    }, [selectedCategoryFilter, groupsByCategory]);
+    }, [selectedCategoriesFilter, groupsByCategory]);
 
     useEffect(() => {
         if (categories.length > 0 && sportHalls.length > 0) {
             const filters = loadFiltersFromURL();
-            setSelectedCategoryFilter(filters.category);
+            if (filters.categories && filters.categories.length > 0) {
+                setSelectedCategoriesFilter(filters.categories);
+            }
             setSelectedGroupFilter(filters.group);
             setSelectedTeamIdFilter(filters.teamId);
             setSelectedHallFilter(filters.hall);
@@ -6285,7 +6297,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // Filtrovanie podľa aktívnych filtrov
         const filteredMatches = hallDayMatches.filter(match => {
-            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+            if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) {
                 return false;
             }
             if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
@@ -7797,7 +7809,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         e.target.blur(); // Odstránime focus po výbere
                                     },
                                     disabled: !selectedCategoryFilter,
-                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategoryFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
+                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategoriesFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky skupiny'),
                                 availableGroupsForFilter.map(group => 
@@ -8605,7 +8617,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                            { className: 'flex-1 flex flex-col' },
                            (() => {
                                // Zistíme, či je aktívny filter
-                               const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
+                               const isFilterActiveLocal = selectedCategoriesFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
                         
                                // Zistíme, či existujú nejaké haly na zobrazenie
                                const hasVisibleHalls = !loading && sportHalls.length > 0 &&
@@ -8704,7 +8716,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                for (const hall of sortedFilteredSportHalls) {
                                    const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                                    const hasAnyMatch = matches.some(match => match.hallId === hall.id);
-                                   const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                   const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
                                    
                                    // Generovanie zoznamu dní pre kontrolu, či sa hala zobrazí
                                    let hasVisibleDays = false;
@@ -8759,7 +8771,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                    sortedFilteredSportHalls.map((hall) => {
                                        const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                                        const hasAnyMatch = matches.some(match => match.hallId === hall.id);
-                                       const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                       const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
                                        
                                        // ZÍSKAME KOMPLETNÝ ZOZNAM DNÍ TURNAJA (nie len tie s matchmi)
                                        const tournamentDays = [];
@@ -8956,7 +8968,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
                                                    const showEmptyMessage = isEmpty && isFilterActiveLocal;
                                                    
-                                                   const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                   const isFilterActiveForDay = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                    
                                                    const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
                                                    const groupsCount = uniqueGroups.length;
@@ -9255,7 +9267,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    // DĹŽKA VOĽNÉHO ČASU
                                                                                    let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                    
-                                                                                   const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                                   const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                    
                                                                                    if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
                                                                                        const gapStartTime = hallStartTimeStr;
@@ -9764,7 +9776,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
                                                                                const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                
-                                                                               const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                                               const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
                                                                                // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
