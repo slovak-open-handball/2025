@@ -643,6 +643,13 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
+                                // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
+                                if (currentPage === 'tables.html') {
+                                    window.globalUserProfileData = userProfileData;
+                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
+                                    return;
+                                }
+                                
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
                                     return;
@@ -719,7 +726,6 @@ const handleAuthState = async () => {
             }
         });
     });
-
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
