@@ -342,6 +342,9 @@ const checkCurrentPageVisibility = async () => {
             }
             
             if (allowedForLoggedIn.includes(fileName)) {
+                // Ak je používateľ prihlásený a stránka nie je viditeľná, presmerujeme na login.html
+                const loginUrl = `${appBasePath}/login.html`;
+                window.location.href = loginUrl;
                 return;
             }
         }
