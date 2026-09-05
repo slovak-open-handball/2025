@@ -9329,7 +9329,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    'div',
                                                                                                    {
                                                                                                        key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
-                                                                                                       className: `p-0 rounded border border-dashed border-amber-400 ${
+                                                                                                       className: `p-1 rounded border border-dashed border-amber-400 ${
                                                                                                            hasCompletedMatch ? '' : 'hover:border-amber-500'
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
@@ -9843,7 +9843,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                'div',
                                                                                                {
                                                                                                    key: 'gap-' + currentMatchAll.id + '-' + nextMatchAll.id + '-block-' + block.id,
-                                                                                                   className: 'p-0 rounded border border-dashed border-amber-400 ' + (hasCompletedMatch ? '' : 'hover:border-amber-500') + ' transition-all relative group/gap',
+                                                                                                   className: 'p-1 rounded border border-dashed border-amber-400 ' + (hasCompletedMatch ? '' : 'hover:border-amber-500') + ' transition-all relative group/gap',
                                                                                                    style: { 
                                                                                                        width: '100%',
                                                                                                        backgroundColor: block.isBlocked ? '#fed7aa' : '#fffbeb'
@@ -10002,7 +10002,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            'div',
                                                                                            {
                                                                                                key: 'add-match-button',
-                                                                                               className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                                                               className: 'p-1 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
                                                                                                style: { 
                                                                                                    width: '100%',
                                                                                                    backgroundColor: '#f0fdf4'
@@ -10159,7 +10159,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    'div',
                                                                    {
                                                                        key: 'empty-day-add-button',
-                                                                       className: 'p-0 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
+                                                                       className: 'p-1 rounded border border-dashed border-green-400 hover:border-green-500 transition-all relative group/add cursor-pointer',
                                                                        style: { 
                                                                            width: '100%',
                                                                            backgroundColor: '#f0fdf4'
