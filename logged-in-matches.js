@@ -5743,7 +5743,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Upravený useEffect pre načítanie filtrov z URL
     useEffect(() => {
-        if (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && matches.length > 0 && !filtersInitialized) {        
+        if (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && matches.length > 0 && !filtersInitialized) {     
             console.log('Inicializujem filtre z URL...');
             const filters = loadFiltersFromURL();
             
