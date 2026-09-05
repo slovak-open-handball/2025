@@ -9556,7 +9556,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    style: { 
                                                                                        width: '100%',
                                                                                        backgroundColor: 'white',
-                                                                                       minHeight: '41 px'
+                                                                                       minHeight: '42px'
                                                                                    }
                                                                                },
                                                                                React.createElement(
