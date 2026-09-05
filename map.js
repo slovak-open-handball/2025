@@ -1,9 +1,7 @@
-// Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
-// Leaflet + Font Awesome
 const leafletCSS = document.createElement('link');
 leafletCSS.rel = 'stylesheet';
 leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -15,10 +13,8 @@ const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
 document.head.appendChild(faCSS);
-// Globálne predvolené hodnoty (fallback)
 const DEFAULT_CENTER = [49.195340, 18.786106];
 const DEFAULT_ZOOM = 13;
-// Typy a ikony značiek
 const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
     stravovanie: { icon: 'fa-utensils', color: '#16a34a' },
@@ -32,7 +28,6 @@ const typeLabels = {
     zastavka: "Zastávka",
 };
 
-// Global notification helper
 window.showGlobalNotification = (message, type = 'success') => {
     let el = document.getElementById('global-notification');
     if (!el) {
@@ -84,24 +79,19 @@ const MapApp = ({ userProfileData }) => {
     const [placeToDelete, setPlaceToDelete] = useState(null);
     const [newPlaceNote, setNewPlaceNote] = useState('');
     const [editNote, setEditNote] = useState('');
-    // Premenné pre cenu ubytovania
   
     const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
     
-    // Ref pre kontajner zoznamu miest
     const placesListRef = useRef(null);
     
-    // Ref pre rozbaľovacie menu
     const dropdownRef = useRef(null);
     
-    // Funkcia na scrollovanie k vybranému miestu v zozname
     const scrollToSelectedPlace = useCallback(() => {
         if (!selectedPlace || !placesListRef.current) return;
     
-        // Počkáme na renderovanie DOM
         setTimeout(() => {
             if (placesListRef.current) {
                 const selectedElement = placesListRef.current.querySelector(`[data-place-id="${selectedPlace.id}"]`);
@@ -158,7 +148,6 @@ const MapApp = ({ userProfileData }) => {
         
         fetchTournamentDates();
         
-        // Počúvanie na zmeny v settings/registration
         const unsubscribe = onSnapshot(doc(window.db, 'settings', 'registration'), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -192,7 +181,6 @@ const MapApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // NOVÉ: Effect pre zatváranie dropdownu pri kliknutí mimo
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -221,12 +209,10 @@ const MapApp = ({ userProfileData }) => {
         scrollToSelectedPlace();
     }, [selectedPlace, scrollToSelectedPlace]);
     
-    // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
     const handlePlaceClick = useCallback((place) => {
         setSelectedPlace(place);
         setPlaceHash(place.id);
     
-        // Reset filtrov, ak klikáme na miesto
         if (activeFilter !== place.type) {
             setActiveFilter(null);
             setSelectedAccommodationTypeFilter(null);
@@ -242,7 +228,6 @@ const MapApp = ({ userProfileData }) => {
         if (placeId) {
             window.history.replaceState(null, '', `#place-${placeId}`);
         } else {
-            // Reset URL na aktuálnu cestu bez hashu
             const currentPath = window.location.pathname + window.location.search;
             window.history.replaceState(null, '', currentPath);
         }
@@ -315,16 +300,12 @@ const MapApp = ({ userProfileData }) => {
       loadGlobalView();
     }, []);
     
-    // Pomocné funkcie
     const closeDetail = () => {      
-        // 1. Odstránime hash z URL
         const currentPath = window.location.pathname + window.location.search;
         window.history.replaceState(null, '', currentPath);
     
-        // 2. Zresetujeme vybrané miesto - NAJPRV toto
         setSelectedPlace(null);
     
-        // 3. Resetujeme všetky editačné stavy
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
@@ -334,7 +315,6 @@ const MapApp = ({ userProfileData }) => {
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
         
-        // 4. Odstránime edit marker
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current?.off('click', editMarkerRef.current._clickHandler);
@@ -343,7 +323,6 @@ const MapApp = ({ userProfileData }) => {
             editMarkerRef.current = null;
         }
 
-        // 5. Reset markerov na normálnu ikonu - OKAMŽITE
         Object.keys(markersRef.current).forEach(placeId => {
             const markerObj = markersRef.current[placeId];
             if (markerObj && markerObj.marker) {
@@ -352,12 +331,10 @@ const MapApp = ({ userProfileData }) => {
             }
         });
 
-        // 6. Reset mapy na pôvodné zobrazenie - OKAMŽITE
         if (leafletMap.current) {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
     
-        // 7. Scroll na začiatok zoznamu miest
         setTimeout(() => {
             if (placesListRef.current) {
                 placesListRef.current.scrollTo({
@@ -368,10 +345,8 @@ const MapApp = ({ userProfileData }) => {
         }, 100);
     };
     
-    // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
     const handleAccommodationButtonClick = () => {
         if (activeFilter === 'ubytovanie') {
-            // Ak už je filter aktívny, zruš ho (zobraz všetky miesta)
             setActiveFilter(null);
             setSelectedAccommodationTypeFilter(null);
             setShowAccommodationTypesDropdown(false);
@@ -379,7 +354,6 @@ const MapApp = ({ userProfileData }) => {
             setPlaceHash(null);
             window.goToDefaultView?.();
         } else {  
-            // Ak filter nie je aktívny, aktivuj filter ubytovanie (všetky typy)
             setActiveFilter('ubytovanie');
             setSelectedAccommodationTypeFilter(null);
             setShowAccommodationTypesDropdown(false);
@@ -389,11 +363,9 @@ const MapApp = ({ userProfileData }) => {
         }
     };
 
-    // NOVÉ: Funkcia pre kliknutie na šipku (len rozbalenie/zatvorenie dropdownu)
     const handleAccommodationArrowClick = (e) => {
-        e.stopPropagation(); // Zastaví event aby sa nespustil handleAccommodationButtonClick
+        e.stopPropagation(); 
         
-        // Ak filter ešte nie je aktivovaný, aktivuj ho
         if (activeFilter !== 'ubytovanie') {
             setActiveFilter('ubytovanie');
             setSelectedAccommodationTypeFilter(null);
@@ -402,11 +374,9 @@ const MapApp = ({ userProfileData }) => {
             window.goToDefaultView?.();
         }
         
-        // Toggle dropdown menu
         setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
     }; 
 
-    // NOVÉ: Funkcia pre výber všetkých ubytovní
     const handleSelectAllAccommodations = () => {
         setSelectedAccommodationTypeFilter(null);
         setActiveFilter('ubytovanie');
@@ -416,10 +386,8 @@ const MapApp = ({ userProfileData }) => {
         window.goToDefaultView?.();
     };
 
-    // NOVÉ: Upravená funkcia pre výber typu ubytovania
     const handleSelectAccommodationTypeFilter = (type) => {
         if (type === selectedAccommodationTypeFilter) {
-            // Ak klikneme na už vybraný typ, zrušíme filter typu, ale ponecháme filter ubytovanie
             setSelectedAccommodationTypeFilter(null);
         } else {
             setSelectedAccommodationTypeFilter(type);
@@ -429,12 +397,10 @@ const MapApp = ({ userProfileData }) => {
         window.goToDefaultView?.();
     };
     
-    // NOVÉ: Výpočet počtu ubytovní podľa typu
     const getAccommodationCountByType = (type) => {
         return allPlaces.filter(p => p.type === 'ubytovanie' && p.accommodationType === type).length;
     };
     
-    // Inicializácia mapy
     useEffect(() => {
         if (leafletMap.current) return;
         const initMap = () => {
@@ -448,44 +414,37 @@ const MapApp = ({ userProfileData }) => {
               })
               .setView(defaultCenter, defaultZoom);
     
-            // Hlavná vrstva
             const mainLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                detectRetina: false, // Zmena z true na false
-                crossOrigin: 'anonymous', // Upresnenie crossOrigin
-                noWrap: true, // Zabrániť opakovaniu dlaždíc
-                errorTileUrl: '', // Prázdna URL pre chybové dlaždice
-                updateWhenIdle: true, // Optimizácia aktualizácie
-                reuseTiles: false, // Zmena z true na false
-                updateWhenZooming: false // Zmena z true na false
+                detectRetina: false,
+                crossOrigin: 'anonymous',
+                noWrap: true,
+                errorTileUrl: '',
+                updateWhenIdle: true,
+                reuseTiles: false,
+                updateWhenZooming: false
             });
     
-            // Fallback vrstva (len pre prípad potreby)
             const fallbackLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap contributors',
-                subdomains: ['a', 'b', 'c'], // Pridané subdomény pre lepšiu dostupnosť
+                subdomains: ['a', 'b', 'c'], 
                 detectRetina: false
             });
     
-            // Skúste pridať hlavnú vrstvu
             mainLayer.addTo(leafletMap.current);
             
-            // Ak hlavná vrstva zlyhá, prepnite na fallback
             mainLayer.on('tileerror', function(e) {                
-                // Vytvor novú dlaždicu na chybovú
                 const errorImg = e.tile;
                 errorImg.onload = null;
                 errorImg.onerror = null;
                 
-                // Skús alternatívnu URL
                 const originalSrc = e.tile.src;
                 const altSrc = originalSrc.replace('tile.openstreetmap.org', '{s}.tile.openstreetmap.org');
                 e.tile.src = altSrc.replace('{s}', 'a');
             });  
             
-            // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
                 options: { position: 'topleft' },
                 onAdd: function (map) {
@@ -542,7 +501,6 @@ const MapApp = ({ userProfileData }) => {
         if (window.L) {
             initMap();
         } else {
-            // Pridajte listener pre načítanie scriptu
             leafletJS.onload = () => {
                 setTimeout(() => {
                     if (window.L) initMap();
@@ -585,7 +543,6 @@ const MapApp = ({ userProfileData }) => {
         return () => clearTimeout(timer);
     }, [selectedPlace, leafletMap.current]);
     
-    // Načítanie a filtrovanie miest
     useEffect(() => {
       let unsubscribePlaces = null;
       if (window.db) {
@@ -612,7 +569,6 @@ const MapApp = ({ userProfileData }) => {
           let filteredPlaces = loadedPlaces;
           if (activeFilter) {
             if (activeFilter === 'ubytovanie' && selectedAccommodationTypeFilter) {
-              // Filter podľa typu ubytovania
               filteredPlaces = loadedPlaces.filter(place => 
                 place.type === 'ubytovanie' && place.accommodationType === selectedAccommodationTypeFilter
               );
@@ -728,7 +684,6 @@ const MapApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
 
-        // Reset všetkých markerov na normálnu ikonu
         Object.keys(markersRef.current).forEach(placeId => {
             const markerObj = markersRef.current[placeId];
             if (markerObj && markerObj.marker) {
@@ -737,7 +692,6 @@ const MapApp = ({ userProfileData }) => {
             }
         });
     
-        // Nastav vybranému markeru selected ikonu
         if (selectedPlace && markersRef.current[selectedPlace.id]) {
             const selectedMarker = markersRef.current[selectedPlace.id];
             if (selectedMarker && selectedMarker.marker) {
@@ -747,24 +701,19 @@ const MapApp = ({ userProfileData }) => {
         }
     }, [selectedPlace]);
     
-    // NOVÉ: Získanie názvu vybraného typu ubytovania pre zobrazenie v tlačidle
     const getSelectedAccommodationTypeLabel = () => {
         if (!selectedAccommodationTypeFilter) return 'Všetky typy';
         const type = accommodationTypes.find(t => t.type === selectedAccommodationTypeFilter);
         return type ? type.type : selectedAccommodationTypeFilter;
     };
     
-    // RENDER
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-0 sm:p-2 relative' },
       React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-2 sm:p-4 lg:p-6' },
-        // NADPIS A ŠTATISTIKY PREHĽADU
         React.createElement('div', { className: 'flex flex-col items-center justify-center mb-1 md:mb-2 p-3 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 rounded-t-xl bg-white text-black' },
           React.createElement('h2', { className: 'text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-center mb-3' }, 'Mapa'),
           
-          // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
           React.createElement('div', { className: 'w-full mb-2' },
             React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
-              // Športové haly
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); 
@@ -796,7 +745,6 @@ const MapApp = ({ userProfileData }) => {
                 )
               ),
               
-              // Ubytovanie (s rozbaľovacím menu)
               React.createElement('div', { 
                   ref: dropdownRef,
                   className: 'relative'
@@ -842,11 +790,9 @@ const MapApp = ({ userProfileData }) => {
                       )
                   ),
                   
-                  // Rozbaľovacie menu typov ubytovania (zobrazené iba keď je filter aktívny)
                   showAccommodationTypesDropdown && React.createElement('div', {
                       className: 'absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'
                   },
-                      // Položka "Všetky typy"
                       React.createElement('button', {
                           onClick: () => {
                               handleSelectAllAccommodations();
@@ -864,10 +810,8 @@ const MapApp = ({ userProfileData }) => {
                           )
                       ),
                       
-                      // Oddeľovač
                       React.createElement('div', { className: 'border-t border-gray-200' }),
                       
-                      // Typy ubytovania
                       accommodationTypes.map((item, index) => {
                           const count = getAccommodationCountByType(item.type);
                           const isSelected = selectedAccommodationTypeFilter === item.type;
@@ -892,7 +836,6 @@ const MapApp = ({ userProfileData }) => {
                   )
               ),
               
-              // Stravovanie
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); 
@@ -923,7 +866,6 @@ const MapApp = ({ userProfileData }) => {
                 )
               ),
               
-              // Zastávky
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); 
@@ -957,19 +899,15 @@ const MapApp = ({ userProfileData }) => {
           )
         ),
 
-        // ZMENENÉ: Main content s flex layoutom
         React.createElement('div', { className: 'flex flex-col lg:flex-row gap-3 lg:gap-4' },
-          // Ľavá časť - Mapa a jej kontroly
           React.createElement('div', { className: 'lg:w-3/4 relative' },
             React.createElement('div', { className: 'relative' },
-              // Mapa
               React.createElement('div', {
                 id: 'map',
                 ref: mapRef,
                 className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px] z-0'
               }),
 
-              // Detail vybraného miesta (sidebar)
               selectedPlace && React.createElement(
                 'div',
                 {
@@ -1025,11 +963,9 @@ const MapApp = ({ userProfileData }) => {
             )
           ),
           
-          // Pravá časť - ZOZNAM MIEST (teraz už bez štatistík)
           React.createElement('div', { className: 'lg:w-1/4' },
             React.createElement('div', { className: 'bg-gray-50 rounded-xl p-6 shadow-inner h-full flex flex-col' },
               
-              // ZOZNAM MIEST
               React.createElement('div', { className: 'flex-1' },
                 React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-gray-800 border-b pb-3' }, 
                   React.createElement('i', { className: 'fa-solid fa-list mr-3' }),
@@ -1048,14 +984,12 @@ const MapApp = ({ userProfileData }) => {
                     ref: placesListRef,
                     className: 'overflow-y-auto h-[60vh] md:h-[60vh] min-h-[300px] pr-2'
                   },
-                    // Filtrovanie miest podľa aktívneho filtra a typu ubytovania
                     (() => {
                       let filtered = allPlaces;
                       
                       if (activeFilter) {
                         filtered = filtered.filter(p => p.type === activeFilter);
                         
-                        // Ak je aktívny filter ubytovanie a máme vybratý konkrétny typ
                         if (activeFilter === 'ubytovanie' && selectedAccommodationTypeFilter) {
                           filtered = filtered.filter(p => p.accommodationType === selectedAccommodationTypeFilter);
                         }
@@ -1075,7 +1009,6 @@ const MapApp = ({ userProfileData }) => {
                             }`,
                             onClick: () => handlePlaceClick(place)
                           },
-                            // JEDNOTNÁ HLAVIČKA PRE VŠETKY TYPY MIEST (vrátane ubytovania)
                             React.createElement('div', { className: 'p-4' },
                               React.createElement('div', { className: 'flex justify-between items-start' },
                                 React.createElement('div', null,
@@ -1109,7 +1042,6 @@ const MapApp = ({ userProfileData }) => {
                               )
                             ),
                             
-                            // Obsah karty (kapacity, ceny, atď.)
                             React.createElement('div', { className: 'px-4 pb-4' },
                               React.createElement('div', { className: "text-sm text-gray-600 space-y-1" },
                                 place.capacity && (place.type === 'ubytovanie' || place.type === 'stravovanie') &&
