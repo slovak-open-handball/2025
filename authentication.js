@@ -306,18 +306,18 @@ const checkCurrentPageVisibility = async () => {
         return;
     }
     
-    // Povolené stránky pre prihlásených používateľov
+    // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
     const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
-            // Pre prihlásených používateľov skontrolujeme viditeľnosť (vrátane admina)
+            // Skontrolujeme či je používateľ admin
             const userProfileData = window.globalUserProfileData;
-            const isVisible = await checkPageVisibilityForUser(fileName, userProfileData);
-            if (isVisible) {
-                return; // Ak je viditeľná, necháme ho na stránke
+            if (userProfileData && userProfileData.role === 'admin') {
+                // Admin má prístup vždy
+                return;
             }
-            // Ak nie je viditeľná, pokračujeme na presmerovanie
+            // Pre ostatných prihlásených používateľov necháme pokračovať na kontrolu viditeľnosti
         }
     }
     
@@ -340,7 +340,13 @@ const checkCurrentPageVisibility = async () => {
     }
     
     if (!isVisible) {
-        // Admin nemá výnimku - presmerujeme ho rovnako ako ostatných
+        // Skontrolujeme či je používateľ admin (ešte raz pre istotu)
+        const userProfileData = window.globalUserProfileData;
+        if (userProfileData && userProfileData.role === 'admin') {
+            // Admin má prístup aj keď stránka nie je viditeľná
+            return;
+        }
+        
         const loginUrl = `${appBasePath}/login.html`;
         window.location.href = loginUrl;
         return;
@@ -367,7 +373,11 @@ const isPageVisibleInSettings = async (pageId) => {
 };
 
 const checkPageVisibilityForUser = async (pageName, userProfileData) => {
-    // Admin NEMÁ výnimku - rešpektuje viditeľnosť v databáze
+    // Admin má vždy prístup
+    if (userProfileData && userProfileData.role === 'admin') {
+        return true;
+    }
+    
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return true;
@@ -642,6 +652,9 @@ const handleAuthState = async () => {
                                     return;
                                 }
                                 
+                                // ODSTRÁNTE Tieto špeciálne podmienky pre map, matches, teams-in-groups, tables
+                                // a nechajte to riešiť cez bežnú kontrolu prístupu
+                                
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
                                     return;
@@ -661,7 +674,7 @@ const handleAuthState = async () => {
                                 // PRE VEREJNÉ STRÁNKY (map, matches, teams-in-groups, tables) 
                                 // spustíme kontrolu viditeľnosti
                                 if (isCurrentPagePublic && publicPages.includes(currentPage)) {
-                                    // Skontrolujeme viditeľnosť stránky - admin nemá výnimku
+                                    // Skontrolujeme viditeľnosť stránky
                                     const isVisible = await checkPageVisibilityForUser(currentPage, userProfileData);
                                     if (!isVisible) {
                                         // Ak nie je viditeľná, presmerujeme na login.html
@@ -731,6 +744,7 @@ const handleAuthState = async () => {
             }
         });
     });
+
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
