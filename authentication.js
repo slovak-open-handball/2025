@@ -311,7 +311,13 @@ const checkCurrentPageVisibility = async () => {
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
-            return;
+            // Skontrolujeme či je používateľ admin
+            const userProfileData = window.globalUserProfileData;
+            if (userProfileData && userProfileData.role === 'admin') {
+                // Admin má prístup vždy
+                return;
+            }
+            // Pre ostatných prihlásených používateľov necháme pokračovať na kontrolu viditeľnosti
         }
     }
     
@@ -333,7 +339,14 @@ const checkCurrentPageVisibility = async () => {
         isVisible = settings[pageId];
     }
     
-    if (!isVisible) {        
+    if (!isVisible) {
+        // Skontrolujeme či je používateľ admin (ešte raz pre istotu)
+        const userProfileData = window.globalUserProfileData;
+        if (userProfileData && userProfileData.role === 'admin') {
+            // Admin má prístup aj keď stránka nie je viditeľná
+            return;
+        }
+        
         const loginUrl = `${appBasePath}/login.html`;
         window.location.href = loginUrl;
         return;
