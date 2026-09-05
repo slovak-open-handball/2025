@@ -348,11 +348,12 @@ const MapApp = ({ userProfileData }) => {
             const listElement = placesListRef.current;
             if (listElement) {
                 listElement.scrollTop = 0;
-                // Pre istotu aj smooth scroll
                 listElement.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }, 50);
     };
