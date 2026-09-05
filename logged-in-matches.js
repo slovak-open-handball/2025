@@ -9151,6 +9151,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    style: { width: '100%' }
                                                                },
                                                                (function() {
+                                                                   // 1. Zoraďte filtrované zápasy pre ZOBRAZENIE
                                                                    const sortedMatches = hallMatches.sort((a, b) => {
                                                                        if (!a.scheduledTime) return 1;
                                                                        if (!b.scheduledTime) return -1;
@@ -9163,9 +9164,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    });
                                                                    
-                                                                   // 2. Pre medzeru PRED prvým zápasom - používame allMatchesForDay (VŠETKY)
-                                                                   // Zistíme prvý zápas zo všetkých (nie z filtrovaných)
-                                                                   const firstMatchAll = allMatchesForDay.length > 0 ? allMatchesForDay[0] : null;
+                                                                   // 2. Zoraďte VŠETKY zápasy pre VÝPOČET VOĽNÉHO ČASU
+                                                                   const allSortedMatches = allMatchesForDay.sort((a, b) => {
+                                                                       if (!a.scheduledTime) return 1;
+                                                                       if (!b.scheduledTime) return -1;
+                                                                       try {
+                                                                           const timeA = a.scheduledTime.toDate().getTime();
+                                                                           const timeB = b.scheduledTime.toDate().getTime();
+                                                                           return timeA - timeB;
+                                                                       } catch (e) {
+                                                                           return 0;
+                                                                       }
+                                                                   });
                                                                    
                                                                    const allElements = [];
                                                                    
