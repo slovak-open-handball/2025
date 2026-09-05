@@ -425,12 +425,15 @@ const isPageAccessibleForGuest = async () => {
         }
     }
     
-    // PRIDAJTE TÚTO PODMIENKU PRE TABUĽKY
+    // Pre tables použijeme rovnakú logiku ako pre matches
     if (fileName === 'tables.html') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
         }
+        // Pre neprihlásených používateľov skontrolujeme viditeľnosť podľa matches
+        const isVisible = await isPageVisibleInSettings('tables');
+        return isVisible;
     }
     
     if (!publicPages.includes(fileName)) {
