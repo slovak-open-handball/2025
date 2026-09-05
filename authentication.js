@@ -263,25 +263,25 @@ const setupPageVisibilityListener = () => {
     pageVisibilityUnsubscribe = onSnapshot(pagesRef, (snapshot) => {
         
         const visibilitySettings = {};
-        let teamsInGroupsVisible = true;
+        let matchesVisible = true;
         
         snapshot.forEach(doc => {
             const data = doc.data();
             if (data.visible === false) {
                 visibilitySettings[doc.id] = false;
-                if (doc.id === 'teams-in-groups') {
-                    teamsInGroupsVisible = false;
+                if (doc.id === 'matches') {
+                    matchesVisible = false;
                 }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
-                if (doc.id === 'teams-in-groups') {
-                    teamsInGroupsVisible = true;
+                if (doc.id === 'matches') {
+                    matchesVisible = true;
                 }
             }
         });
         
-        // Nastavíme tables na rovnakú viditeľnosť ako teams-in-groups
-        visibilitySettings['tables'] = teamsInGroupsVisible;
+        // Nastavíme tables na rovnakú viditeľnosť ako matches
+        visibilitySettings['tables'] = matchesVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = Date.now();
@@ -322,10 +322,10 @@ const checkCurrentPageVisibility = async () => {
     
     const pageId = fileName.replace('.html', '');
     
-    // Pre tables použijeme viditeľnosť z teams-in-groups
+    // Pre tables použijeme viditeľnosť z matches
     let isVisible;
     if (pageId === 'tables') {
-        isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
     } else {
         if (settings[pageId] === undefined) {
             return;
@@ -357,9 +357,9 @@ const isPageVisibleInSettings = async (pageId) => {
         return true;
     }
     
-    // Ak sa pýtame na tables, vrátime hodnotu pre teams-in-groups
+    // Ak sa pýtame na tables, vrátime hodnotu pre matches
     if (pageId === 'tables') {
-        return settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+        return settings['matches'] !== undefined ? settings['matches'] : true;
     }
     
     if (settings[pageId] === undefined) {
