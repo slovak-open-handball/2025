@@ -9334,7 +9334,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    'div',
                                                                                                    {
                                                                                                        key: `gap-before-first-${firstMatch.id}-block-${block.id}`,
-                                                                                                       className: `p-1 rounded border border-dashed border-amber-400 ${
+                                                                                                       className: `p-0 rounded border border-dashed border-amber-400 ${
                                                                                                            hasCompletedMatch ? '' : 'hover:border-amber-500'
                                                                                                        } transition-all relative group/gap`,
                                                                                                        style: { 
