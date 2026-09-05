@@ -42,6 +42,36 @@ const removeSensitiveFieldsFromTeams = (teamsObj) => {
     return clean;
 };
 
+// ============================================================
+// FUNKCIA NA KONTROLU DUPLICITNÝCH NÁZVOV TÍMOV V KATEGÓRII
+// ============================================================
+const getDuplicateTeamNamesInCategory = (allTeamsData) => {
+    const categoryTeamNames = new Map();
+    
+    allTeamsData.forEach(team => {
+        const category = team._category || 'Bez kategórie';
+        const teamName = team.teamName || '';
+        if (!teamName) return;
+        
+        const key = `${category}|${teamName}`;
+        if (!categoryTeamNames.has(key)) {
+            categoryTeamNames.set(key, []);
+        }
+        categoryTeamNames.get(key).push(team);
+    });
+    
+    const duplicateNames = new Set();
+    categoryTeamNames.forEach((teams, key) => {
+        if (teams.length > 1) {
+            teams.forEach(team => {
+                duplicateNames.add(`${team._userId}-${team._category}-${team._teamIndex}`);
+            });
+        }
+    });
+    
+    return duplicateNames;
+};
+
 function getSmartCursorPosition(oldDisplay, newDisplay, oldPos) {
     if (oldPos === 3 && newDisplay.length === 4 && newDisplay[3] === ' ') {
         return 4;
@@ -517,7 +547,7 @@ const formatArrivalTime = (type, time) => {
     return '-';
 };
 
-const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false) => {
+const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSection = false, showUsersChecked = false, showTeamsChecked = false, isDuplicate = false) => {
     const menTeamMembersCount = team._menTeamMembersCount !== undefined ? team._menTeamMembersCount : 0;
     const womenTeamMembersCount = team._womenTeamMembersCount !== undefined ? team._womenTeamMembersCount : 0;
     const menDriversCount = team._menDriversCount !== undefined ? team._menDriversCount : 0; 
@@ -528,7 +558,9 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
     if (forCollapsibleSection || (showUsersChecked && showTeamsChecked)) {
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
-        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, `Názov tímu: ${team.teamName || `Tím`}`));
+        titleParts.push(React.createElement('span', { 
+            className: `text-gray-700 mr-4 whitespace-nowrap ${isDuplicate ? 'text-red-600 font-bold' : ''}`
+        }, `Názov tímu: ${team.teamName || `Tím`}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
@@ -553,7 +585,9 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
     } else {
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
-        titleParts.push(React.createElement('span', { className: 'text-gray-700 mr-4 whitespace-nowrap' }, team.teamName || `Tím`));
+        titleParts.push(React.createElement('span', { 
+            className: `text-gray-700 mr-4 whitespace-nowrap ${isDuplicate ? 'text-red-600 font-bold' : ''}`
+        }, team.teamName || `Tím`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount));
@@ -594,7 +628,7 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember, allTeamsData }) {
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember, allTeamsData, duplicateTeamIds }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
@@ -1158,7 +1192,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         )
     );
 
-    const collapsibleSectionTitle = generateTeamHeaderTitle(team, tshirtSizeOrder, true, showUsersChecked, showTeamsChecked);
+    const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
+    const isDuplicate = duplicateTeamIds ? duplicateTeamIds.has(teamUniqueId) : false;
+    const teamNameDisplay = team.teamName || `Tím`;
+    const collapsibleSectionTitle = generateTeamHeaderTitle(team, tshirtSizeOrder, true, showUsersChecked, showTeamsChecked, isDuplicate);
 
     const teamEditButtonElement = React.createElement('button', {
         onClick: (e) => {
@@ -3470,6 +3507,10 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       }
       return [];
     }, [filteredUsers, showUsers, showTeams]);
+
+    const duplicateTeamIds = React.useMemo(() => {
+        return getDuplicateTeamNamesInCategory(allTeamsFlattened);
+    }, [allTeamsFlattened]);
 
     const calculateVolunteerTshirtSummary = () => {
         const tshirtSizeCounts = new Map();
@@ -5938,7 +5979,17 @@ const clearFilter = (column) => {
                                                         }, '✏️')
                                                     ),
                                                     React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'),
-                                                    React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Tím`),
+                                                    (() => {
+                                                        const teamUniqueId = `${team._userId}-${team._category}-${team._teamIndex}`;
+                                                        const isDuplicate = duplicateTeamIds.has(teamUniqueId);
+                                                        return React.createElement(
+                                                            'td',
+                                                            {
+                                                                className: `py-3 px-2 text-left whitespace-nowrap min-w-max ${isDuplicate ? 'text-red-600 font-bold' : ''}`
+                                                            },
+                                                            team.teamName || `Tím`
+                                                        );
+                                                    })(),
                                                     React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._players),
                                                     React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._womenTeamMembersCount),
                                                     React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._menTeamMembersCount),
@@ -5969,7 +6020,8 @@ const clearFilter = (column) => {
                                                             db: db,
                                                             setUserNotificationMessage: setUserNotificationMessage,
                                                             onAddMember: handleOpenAddMemberTypeModal,
-                                                            allTeamsData: allTeamsFlattened
+                                                            allTeamsData: allTeamsFlattened,
+                                                            duplicateTeamIds: duplicateTeamIds
                                                         })
                                                     )
                                                 )
@@ -6121,7 +6173,8 @@ const clearFilter = (column) => {
                                                                 db: db,
                                                                 setUserNotificationMessage: setUserNotificationMessage,
                                                                 onAddMember: handleOpenAddMemberTypeModal,
-                                                                allTeamsData: allTeamsFlattened
+                                                                allTeamsData: allTeamsFlattened,
+                                                                duplicateTeamIds: duplicateTeamIds
                                                             })
                                                         })
                                                     )
