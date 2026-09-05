@@ -303,9 +303,9 @@ const MapApp = ({ userProfileData }) => {
     const closeDetail = () => {      
         const currentPath = window.location.pathname + window.location.search;
         window.history.replaceState(null, '', currentPath);
-    
+
         setSelectedPlace(null);
-    
+
         setIsEditingLocation(false);
         setTempLocation(null);
         setIsEditingNameAndType(false);
@@ -314,7 +314,7 @@ const MapApp = ({ userProfileData }) => {
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
-        
+    
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current?.off('click', editMarkerRef.current._clickHandler);
@@ -334,15 +334,15 @@ const MapApp = ({ userProfileData }) => {
         if (leafletMap.current) {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
-    
-        setTimeout(() => {
+
+        requestAnimationFrame(() => {
             if (placesListRef.current) {
                 placesListRef.current.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
             }
-        }, 100);
+        });
     };
     
     const handleAccommodationButtonClick = () => {
