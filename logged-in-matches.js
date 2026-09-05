@@ -5743,14 +5743,12 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Upravený useEffect pre načítanie filtrov z URL
     useEffect(() => {
-        if (categories.length > 0 && 
-            sportHalls.length > 0 && 
-            Object.keys(groupsByCategory).length > 0 && 
-            matches.length > 0 && 
-            !filtersInitialized) {
-            
+        if (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && if (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && matches.length > 0 && !filtersInitialized) {        
             console.log('Inicializujem filtre z URL...');
             const filters = loadFiltersFromURL();
+            
+            console.log('Načítané filtre z URL:', filters);
+            console.log('Dostupné kategórie:', categories.map(c => ({ id: c.id, name: c.name })));
             
             let shouldSetFilters = false;
             
@@ -8690,12 +8688,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                            
                                // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
                                if (isFilterActiveLocal && !hasVisibleHalls) {
-                                   return React.createElement(
-                                       'div',
-                                       { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
-                                       React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-4xl mb-3 opacity-30' }),
-                                       React.createElement('p', { className: 'text-lg' }, 'Pre zvolené filtre neexistujú žiadne zápasy.')
-                                   );
+                                   // Skontrolujeme, či naozaj neexistujú žiadne zápasy pre tieto filtre
+                                   const hasAnyMatch = filteredAllMatches.length > 0;
+                                   if (!hasAnyMatch) {
+                                       return React.createElement(
+                                           'div',
+                                           { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
+                                           React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-4xl mb-3 opacity-30' }),
+                                           React.createElement('p', { className: 'text-lg' }, 'Pre zvolené filtre neexistujú žiadne zápasy.')
+                                       );
+                                   }
                                }
                                
                                // Inak zobrazíme štandardný nadpis
