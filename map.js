@@ -1722,20 +1722,6 @@ const MapApp = ({ userProfileData }) => {
                       ),
                       selectedPlace.capacity
                     ),
-
-                    // Farby pre ubytovanie
-                    selectedPlace.type === 'ubytovanie' && (
-                      React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
-                        React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
-                        React.createElement('div', { 
-                          className: 'px-4 py-2 rounded-lg text-sm font-medium shadow-sm',
-                          style: { 
-                            backgroundColor: selectedPlace.headerColor || '#1e40af',
-                            color: selectedPlace.headerTextColor || '#000000'
-                          }
-                        }, '')
-                      )
-                    ),
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
