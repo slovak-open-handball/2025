@@ -9294,7 +9294,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    
                                                                                    const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                    
-                                                                                   if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
+                                                                                   if (displayGapMinutes > 0) {
                                                                                        const gapStartTime = hallStartTimeStr;
                                                                                        const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                        
@@ -9804,7 +9804,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
                                                                                // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
-                                                                               if (displayGapMinutes > 0 && !isFilterActiveForGaps) {
+                                                                               if (displayGapMinutes > 0) {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(sortedMatches);
                                                                                    // Použijeme funkciu splitGapIntoBlocks - tá už NEODPOČÍTAVA prestávky, len ich používa na posun času medzi blokmi
                                                                                    const blocks = splitGapIntoBlocks(
