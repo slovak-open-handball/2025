@@ -1747,7 +1747,7 @@ export function CategorySettings({
                                                             : 'text-gray-700 cursor-pointer'
                                                         }`
                                                 },
-                                                'Zápas zo základnej skupiny sa započítava v nadstavbovej skupine'
+                                                'Vzájomné zápasy sa započítavajú'
                                             )
                                         ),
                                         hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
