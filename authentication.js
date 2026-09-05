@@ -218,25 +218,25 @@ const loadPageVisibilitySettings = async () => {
         const pagesSnapshot = await getDocs(pagesRef);
         
         const visibilitySettings = {};
-        let teamsInGroupsVisible = true; // predvolene viditeľné
+        let matchesVisible = true; // predvolene viditeľné
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
             if (data.visible === false) {
                 visibilitySettings[doc.id] = false;
-                if (doc.id === 'teams-in-groups') {
-                    teamsInGroupsVisible = false;
+                if (doc.id === 'matches') {
+                    matchesVisible = false;
                 }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
-                if (doc.id === 'teams-in-groups') {
-                    teamsInGroupsVisible = true;
+                if (doc.id === 'matches') {
+                    matchesVisible = true;
                 }
             }
         });
         
-        // Nastavíme tables na rovnakú viditeľnosť ako teams-in-groups
-        visibilitySettings['tables'] = teamsInGroupsVisible;
+        // Nastavíme tables na rovnakú viditeľnosť ako matches
+        visibilitySettings['tables'] = matchesVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = now;
