@@ -6276,13 +6276,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         return false;
     };
     
-    // UPRAVENÁ FUNKCIA getMatchesForHallAndDay - PRIDANÉ NOVÉ POLE pre zobrazenie súčtu počtov
+    // ============================================================
+    // UPRAVENÁ ČASŤ: Výpočet voľného času medzi zápasmi
+    // ============================================================
+    
+    // Náhrada za existujúcu funkciu getMatchesForHallAndDay - PRIDANÉ NOVÉ POLE pre zobrazenie súčtu počtov
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
     
         const dateStr = getLocalDateStr(date);
     
-        const hallDayMatches = matches.filter(match => {
+        // VŠETKY zápasy pre túto halu a deň (BEZ FILTRA) - použijeme na výpočet voľného času
+        const allHallDayMatches = matches.filter(match => {
             if (!match.hallId || !match.scheduledTime) return false;
             if (match.hallId !== hallId) return false;
     
@@ -6293,10 +6298,18 @@ const AddMatchesApp = ({ userProfileData }) => {
             } catch (e) {
                 return false;
             }
+        }).sort((a, b) => {
+            try {
+                const timeA = a.scheduledTime.toDate().getTime();
+                const timeB = b.scheduledTime.toDate().getTime();
+                return timeA - timeB;
+            } catch (e) {
+                return 0;
+            }
         });
     
-        // Filtrovanie podľa aktívnych filtrov
-        const filteredMatches = hallDayMatches.filter(match => {
+        // Filtrovanie zápasov podľa aktívnych filtrov (PRE ZOBRAZENIE)
+        const filteredMatches = allHallDayMatches.filter(match => {
             if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) {
                 return false;
             }
@@ -6313,7 +6326,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte, farby ubytovní A NOVÉ POLE totalMembersCount
-        return filteredMatches.map(match => {
+        const filteredWithColors = filteredMatches.map(match => {
             const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
             const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
     
@@ -6329,7 +6342,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
             const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
     
-            // Ak názov tímu obsahuje názov kategórie, farba ostáva biela (pôvodná #f3f4f6)
             if (homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
                 const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                 if (accommodation) {
@@ -6348,11 +6360,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // Funkcia na získanie celkového počtu členov tímu - OPRAVENÁ VERZIA (používa priamy prístup k users kolekcii)
+            // Funkcia na získanie celkového počtu členov tímu
             const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
                 if (!teamIdentifier) return 0;
-            
-                // KROK 1: Získame názov tímu
+    
                 let teamDisplayName = null;
                 if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                     try {
@@ -6361,15 +6372,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                         console.error(`getTotalMembersCountSync: Chyba pre "${teamIdentifier}":`, e);
                     }
                 }
-            
+    
                 const actualTeamName = teamDisplayName || teamIdentifier;
-            
-                // KROK 2: Vyhľadáme v cache
+    
                 if (!window.__allUsersCache) {
-                    console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
                     return 0;
                 }
-            
+    
                 for (const user of window.__allUsersCache) {
                     if (!user.teams) continue;
                     
@@ -6380,7 +6389,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             t.teamName === actualTeamName && 
                             (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
                         );
-                        
+    
                         if (team) {
                             const playersCount = team.playerDetails?.length || 0;
                             const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
@@ -6392,10 +6401,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                         }
                     }
                 }
-                
+    
                 return 0;
             };
-                    
+    
             return {
                 ...match,
                 homeTeamInConflict: homeInConflict,
@@ -6408,6 +6417,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTotalMembersCount: getTotalMembersCount(match.awayTeamIdentifier, match.categoryName)
             };
         });
+    
+        // Vrátime OBJEKT s dvoma poliami:
+        // - filtered: zobrazené zápasy (podľa filtra)
+        // - allMatches: všetky zápasy v dni (pre výpočet voľného času)
+        return {
+            filtered: filteredWithColors,
+            allMatches: allHallDayMatches
+        };
     };
     
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
@@ -8958,9 +8975,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                dayCards.map((dayCard, index) => {
                                                    const date = dayCard.date;
                                                    const dateStr = dayCard.dateStr;
-                                                   const hallMatches = dayCard.matches;
-                                                   const matchesCount = dayCard.matchesCount;
-                                                   const isEmpty = dayCard.isEmpty;
+
+                                                   const hallDayData = getMatchesForHallAndDay(hall.id, date);
+                                                   const hallMatches = hallDayData.filtered; 
+                                                   const allMatchesForDay = hallDayData.allMatches; 
+                                                       
+                                                   const matchesCount = hallMatches.length;
+                                                   const isEmpty = matchesCount === 0;                                                   
                                                    
                                                    // ** NOVÉ: Zistíme, či existujú nepriradené zápasy **
                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
@@ -9237,7 +9258,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    
                                                                    // PRE MEDZERU PRED PRVÝM ZÁPASOM
                                                                    if (sortedMatches.length > 0) {
-                                                                       const firstMatch = sortedMatches[0];
+                                                                       const firstMatch = allMatchesForDay[0];
                                                                        if (firstMatch.scheduledTime) {
                                                                            try {
                                                                                const firstMatchDate = firstMatch.scheduledTime.toDate();
