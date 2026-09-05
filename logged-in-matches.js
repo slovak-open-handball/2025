@@ -7809,7 +7809,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         e.target.blur(); // Odstránime focus po výbere
                                     },
                                     disabled: selectedCategoriesFilter.length === 0,
-                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategoriesFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
+                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${selectedCategoriesFilter.length === 0 ? 'bg-gray-100 cursor-not-allowed' : ''}`
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky skupiny'),
                                 availableGroupsForFilter.map(group => 
