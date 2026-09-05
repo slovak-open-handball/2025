@@ -357,7 +357,7 @@ const setupPagesVisibilityListener = () => {
 };
 
 // Aktualizácia navigačných odkazov podľa viditeľnosti stránok
-const updateNavigationLinks = () => {    
+const updateNavigationLinks = () => {
     if (Object.keys(pagesVisibility).length === 0) {
         return;
     }
@@ -370,10 +370,10 @@ const updateNavigationLinks = () => {
         
         let isVisible = pageConfig && pageConfig.visible === true;
         
-        // ŠPECIÁLNE PRAVIDLO: Tabuľky majú rovnakú viditeľnosť ako Skupiny
+        // ŠPECIÁLNE PRAVIDLO: Tabuľky majú rovnakú viditeľnosť ako Zápasy
         if (pageId === 'tables') {
-            const groupsConfig = pagesVisibility['teams-in-groups'];
-            isVisible = groupsConfig && groupsConfig.visible === true;
+            const matchesConfig = pagesVisibility['matches'];
+            isVisible = matchesConfig && matchesConfig.visible === true;
         }
         
         if (isVisible) {
