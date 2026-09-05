@@ -317,13 +317,11 @@ const MapApp = ({ userProfileData }) => {
     
     // Pomocné funkcie
     const closeDetail = () => {      
-        // 1. Odstránime hash z URL (najprv priamo)
-        window.location.hash = '';
-        // Alebo pomocou history API
+        // 1. Odstránime hash z URL
         const currentPath = window.location.pathname + window.location.search;
         window.history.replaceState(null, '', currentPath);
     
-        // 2. Zresetujeme vybrané miesto
+        // 2. Zresetujeme vybrané miesto - NAJPRV toto
         setSelectedPlace(null);
     
         // 3. Resetujeme všetky editačné stavy
@@ -335,7 +333,7 @@ const MapApp = ({ userProfileData }) => {
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
-    
+        
         // 4. Odstránime edit marker
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
@@ -344,25 +342,21 @@ const MapApp = ({ userProfileData }) => {
             editMarkerRef.current.remove();
             editMarkerRef.current = null;
         }
-    
-        // 5. Reset markerov na normálnu ikonu
-        requestAnimationFrame(() => {
-            Object.keys(markersRef.current).forEach(placeId => {
-                const markerObj = markersRef.current[placeId];
-                if (markerObj && markerObj.marker) {
-                    markerObj.marker.setIcon(markerObj.normalIcon);
-                    markerObj.marker.setZIndexOffset(0);
-                }
-            });
+
+        // 5. Reset markerov na normálnu ikonu - OKAMŽITE
+        Object.keys(markersRef.current).forEach(placeId => {
+            const markerObj = markersRef.current[placeId];
+            if (markerObj && markerObj.marker) {
+                markerObj.marker.setIcon(markerObj.normalIcon);
+                markerObj.marker.setZIndexOffset(0);
+            }
         });
 
-        // 6. Reset mapy na pôvodné zobrazenie
-        setTimeout(() => {
-            if (leafletMap.current) {
-                leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-            }
-        }, 50);
-
+        // 6. Reset mapy na pôvodné zobrazenie - OKAMŽITE
+        if (leafletMap.current) {
+            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+        }
+    
         // 7. Scroll na začiatok zoznamu miest
         setTimeout(() => {
             if (placesListRef.current) {
@@ -371,7 +365,7 @@ const MapApp = ({ userProfileData }) => {
                     behavior: 'smooth'
                 });
             }
-        }, 150);
+        }, 100);
     };
     
     // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
@@ -628,8 +622,7 @@ const MapApp = ({ userProfileData }) => {
           }
           setPlaces(filteredPlaces);
           
-          // Přidejte podmínku - nerefreshujte markery pokud máme otevřený detail
-          if (!leafletMap.current || selectedPlace) return;
+          if (!leafletMap.current) return;
           
           if (placesLayerRef.current) {
             placesLayerRef.current.clearLayers();
@@ -715,7 +708,6 @@ const MapApp = ({ userProfileData }) => {
             };
           });
           
-          // Po pridaní všetkých markerov, nastav vybraný marker (ak existuje)
           if (selectedPlace && markersRef.current[selectedPlace.id]) {
             const selectedMarker = markersRef.current[selectedPlace.id];
             if (selectedMarker && selectedMarker.marker) {
@@ -727,14 +719,12 @@ const MapApp = ({ userProfileData }) => {
       }
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
-        // Nemažeme vrstvu pokud máme otevřený detail
         if (placesLayerRef.current && !selectedPlace) {
           placesLayerRef.current.clearLayers();
         }
       };
-    }, [activeFilter, selectedAccommodationTypeFilter]); // Odstraňte handlePlaceClick z dependency array
+    }, [activeFilter, selectedAccommodationTypeFilter, selectedPlace]);
     
-    // Potom přidejte samostatný efekt pro aktualizaci ikon při změně selectedPlace:
     useEffect(() => {
         if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
 
