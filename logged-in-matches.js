@@ -9151,7 +9151,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    style: { width: '100%' }
                                                                },
                                                                (function() {
-                                                                   const sortedMatches = hallMatches.sort((a, b) => {
+                                                                   const sortedMatches = allMatchesForDay.sort((a, b) => {
                                                                        if (!a.scheduledTime) return 1;
                                                                        if (!b.scheduledTime) return -1;
                                                                        try {
