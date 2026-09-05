@@ -9563,7 +9563,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                React.createElement(
                                                                                    'div', 
                                                                                    { 
-                                                                                       className: 'grid items-center text-xs',
+                                                                                       className: 'grid items-center justify-items-center text-xs',
                                                                                        style: { 
                                                                                            gridTemplateColumns: '130px 200px 10px 200px 10px 50px 30px',
                                                                                            width: '100%'
