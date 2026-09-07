@@ -1875,37 +1875,21 @@ const handleDataUpdateAndRender = (event) => {
         );
     }
 };
-// Nahraďte poslednú časť súboru (od window.addEventListener) týmto:
 
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-const renderMap = (userProfileData = null) => {
+window.addEventListener('globalDataUpdated', (event) => {
     const root = document.getElementById('root');
     if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
     
-    ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData }));
-};
+    ReactDOM.createRoot(root).render(
+        React.createElement(MapApp, { userProfileData: event.detail || null })
+    );
+});
 
-if (window.globalUserProfileData) {
-    renderMap(window.globalUserProfileData);
-} else {
-    renderMap(null);
-    
-    if (window.auth) {
-        onAuthStateChanged(window.auth, (user) => {
-            if (user) {
-                // Používateľ sa prihlásil, načítame jeho dáta
-                const userRef = doc(window.db, 'users', user.uid);
-                getDoc(userRef).then((snap) => {
-                    if (snap.exists()) {
-                        const userData = snap.data();
-                        renderMap(userData);
-                    }
-                }).catch(err => {
-                    console.error("Chyba pri načítaní používateľa:", err);
-                    renderMap(null);
-                });
-            }
-        });
-    }
+const root = document.getElementById('root');
+if (root && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    ReactDOM.createRoot(root).render(
+        React.createElement(MapApp, { 
+            userProfileData: window.globalUserProfileData || null 
+        })
+    );
 }
