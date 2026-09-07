@@ -100,6 +100,20 @@ const TeamsOverviewApp = (props) => {
 
     const tableContainerRef = useRef(null);
 
+    useEffect(() => {
+        const updateHeight = () => {
+            if (tableContainerRef.current) {
+                const rect = tableContainerRef.current.getBoundingClientRect();
+                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
+                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
+            }
+        };
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, [allTeams, selectedCategoryId, selectedTeamNameFilter]);  
+
     // Konštanty pre šírky stĺpcov
     const COLUMN_WIDTHS = {
         teamName: { minWidth: '180px', maxWidth: '250px', width: '180px' },
@@ -271,8 +285,9 @@ const TeamsOverviewApp = (props) => {
         return React.createElement(
             'div',
             { 
-                className: 'w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] relative shadow-lg rounded-lg',
-                ref: tableContainerRef
+                className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
+                ref: tableContainerRef,
+                style: { maxHeight: maxTableHeight }
             },
             React.createElement(
                 'table',
