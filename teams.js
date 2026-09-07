@@ -270,8 +270,27 @@ const TeamsOverviewApp = (props) => {
             return total;
         };
 
+        // Filtrovanie tímov - ak je vybraná kategória, zobrazíme len tímy, ktoré majú v tejto kategórii hodnotu > 0
+        let filteredTeamNames = teamNames;
+        if (selectedCategoryId) {
+            const selectedCategoryName = categoryIdToNameMap[selectedCategoryId];
+            filteredTeamNames = teamNames.filter(teamName => {
+                const count = matrix[teamName]?.[selectedCategoryName] || 0;
+                return count > 0;
+            });
+        }
+
         // Tímy sú už zoradené abecedne, zachováme toto poradie
-        const sortedTeamNames = teamNames;
+        const sortedTeamNames = filteredTeamNames;
+
+        // Ak po filtri nezostali žiadne tímy, zobrazíme správu
+        if (sortedTeamNames.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-center py-16 text-gray-500' },
+                'Žiadne tímy v tejto kategórii.'
+            );
+        }
 
         return React.createElement(
             'div',
@@ -395,7 +414,7 @@ const TeamsOverviewApp = (props) => {
                         ),
                         filteredCategoryNames.map(catName => {
                             let totalInCategory = 0;
-                            teamNames.forEach(teamName => {
+                            sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
                             });
                             return React.createElement(
@@ -412,7 +431,7 @@ const TeamsOverviewApp = (props) => {
                             { 
                                 className: 'px-4 py-3 text-center text-gray-700 bg-gray-300'
                             },
-                            teamNames.reduce((sum, name) => sum + getTotalForTeam(name), 0)
+                            sortedTeamNames.reduce((sum, name) => sum + getTotalForTeam(name), 0)
                         )
                     )
                 )
