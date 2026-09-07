@@ -315,7 +315,7 @@ const TeamsOverviewApp = (props) => {
                             'Názov tímu'
                         ),
                         filteredCategoryNames.map((catName, index) => {
-                            // Zistíme, či je táto kategória vybraná
+                            // Zistíme, či je táto kategória vybraná - LEN AK selectedCategoryId NIE JE PRÁZDNE
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
                             // Pridáme border na pravú stranu pre všetky okrem posledného
                             const borderClass = 'border-r border-gray-600';
