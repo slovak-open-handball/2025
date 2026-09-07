@@ -318,8 +318,6 @@ const TeamsOverviewApp = (props) => {
     // Počúvanie na zmeny v URL hash (pre prípad, že používateľ klikne na späť/ďalej)
     useEffect(() => {
         const handleHashChange = () => {
-            // Ak už máme zobrazený detail tímu a hash sa zmenil kvôli kliknutiu na tlačidlo,
-            // nechceme prepínať späť na tabuľku
             if (!isInitialLoad) {
                 const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
                 
@@ -363,13 +361,9 @@ const TeamsOverviewApp = (props) => {
                             setSelectedTeamDetails(null);
                         }
                     }
-                    // Ak je rovnaký tím, nič nerobíme (zostávame v detaile)
                 } else {
-                    // Ak v URL nie je tím, ale máme zobrazený detail, necháme ho zobrazený
-                    // (to je prípad, keď sme klikli na tlačidlo a zmenila sa len kategória)
-                    if (!selectedTeamDetails) {
-                        setSelectedTeamDetails(null);
-                    }
+                    // Ak v URL nie je tím, zobrazíme tabuľku s filtrom kategórie
+                    setSelectedTeamDetails(null);
                 }
             }
         };
@@ -498,10 +492,25 @@ const TeamsOverviewApp = (props) => {
     };
 
     const closeTeamDetails = () => {
+        // Získame aktuálnu kategóriu z URL
+        const { categoryName: categoryNameFromUrl } = parseUrlHash();
+        
+        // Nastavíme detail na null
         setSelectedTeamDetails(null);
-        // Zachováme kategóriu ak je nastavená
-        const categoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
-        updateUrlHash(null, categoryName);
+        
+        // Ak je v URL kategória, nastavíme filter
+        if (categoryNameFromUrl) {
+            const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
+            if (categoryId) {
+                setSelectedCategoryId(categoryId);
+            }
+        } else {
+            // Ak nie je kategória v URL, zachováme aktuálnu alebo ju vymažeme
+            setSelectedCategoryId('');
+        }
+        
+        // Aktualizujeme URL - zachováme kategóriu ak je v URL
+        updateUrlHash(null, categoryNameFromUrl || null);
     };
 
     const handleTeamOccurrenceClick = (occ) => {
@@ -818,7 +827,13 @@ const TeamsOverviewApp = (props) => {
                     onClick: () => {
                         setSelectedCategoryId('');
                         setSelectedTeamNameFilter('');
-                        updateUrlHash(null);
+                        // Ak je zobrazený detail, zachováme tím, inak vymažeme všetko
+                        if (selectedTeamDetails) {
+                            const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
+                            updateUrlHash(normalizedTeam, null);
+                        } else {
+                            updateUrlHash(null);
+                        }
                     },
                     className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
                 },
