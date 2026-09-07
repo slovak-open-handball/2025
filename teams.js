@@ -318,7 +318,7 @@ const TeamsOverviewApp = (props) => {
                             // Zistíme, či je táto kategória vybraná
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
                             // Pridáme border na pravú stranu pre všetky okrem posledného
-                            const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-600' : '';
+                            const borderClass = 'border-r border-gray-600' : '';
                             
                             return React.createElement(
                                 'th',
@@ -375,10 +375,8 @@ const TeamsOverviewApp = (props) => {
                             // Hodnoty pre každú kategóriu - BEZ PODFARBOVANIA
                             filteredCategoryNames.map((catName, index) => {
                                 const count = matrix[teamName]?.[catName] || 0;
-                                // Ak je count 0, zobrazíme prázdny reťazec, inak zobrazíme číslo
                                 const displayValue = count > 0 ? count : '';
-                                // Pridáme border na pravú stranu pre všetky okrem posledného
-                                const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-200' : '';
+                                const borderClass = 'border-r border-gray-200' : '';
                                 
                                 return React.createElement(
                                     'td',
@@ -419,7 +417,7 @@ const TeamsOverviewApp = (props) => {
                             sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
                             });
-                            const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-300' : '';
+                            const borderClass = 'border-r border-gray-300' : '';
                             
                             return React.createElement(
                                 'td',
