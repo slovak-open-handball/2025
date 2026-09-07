@@ -305,22 +305,17 @@ const TeamsOverviewApp = (props) => {
         if (teamNames.length === 0 || filteredCategoryNames.length === 0) {
             return null;
         }
-
+    
         return React.createElement(
             'div',
             { 
                 ref: fixedHeaderRef,
-                className: `fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-gray-800 text-white shadow-lg ${
+                className: `fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
                 style: { 
                     width: '90%',
                     maxWidth: '1200px'
-                }
-                    showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
-                }`,
-                style: { 
-                    transition: 'transform 0.3s ease, opacity 0.3s ease',
                 }
             },
             React.createElement(
