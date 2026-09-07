@@ -140,7 +140,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                                 userId: userId,
                                 originalIndex: idx,
                                 dbArrayName: 'playerDetails',
-                                // Uložíme aj referenciu na tím pre neskoršie načítanie štatistík
                                 teamName: actualTeamName,
                                 categoryName: categoryName
                             });
@@ -262,7 +261,7 @@ const TeamsOverviewApp = (props) => {
             document.body.style.overflow = '';
             document.documentElement.style.overflow = '';
         } else {
-            document.body.style.overflow = 'hiddem';
+            document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
         }
     
@@ -441,10 +440,13 @@ const TeamsOverviewApp = (props) => {
 
     // Načítanie súpisky pri zmene vybraného výskytu
     useEffect(() => {
-        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0) {
+        // Zistíme, či je v URL kategória
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+        
+        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0 && hasCategoryInUrl) {
             // Nájdeme aktuálne vybraný výskyt (ten s kategóriou z URL alebo prvý)
             let selectedOcc = null;
-            const categoryFromUrl = getCategoryFromUrl();
             
             if (categoryFromUrl) {
                 selectedOcc = selectedTeamDetails.occurrences.find(
@@ -466,7 +468,7 @@ const TeamsOverviewApp = (props) => {
                 loadTeamRoster(selectedOcc.teamName, categoryName);
             }
         } else {
-            // Zrušíme listener a vyčistíme
+            // Zrušíme listener a vyčistíme - nezobrazujeme súpisku
             if (rosterUnsubscribe) {
                 try {
                     rosterUnsubscribe();
@@ -990,6 +992,15 @@ const TeamsOverviewApp = (props) => {
 
     // Render súpisky tímu so štatistikami
     const renderTeamRoster = () => {
+        // Zistíme, či je v URL kategória
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+        
+        // Ak nie je v URL kategória, nezobrazujeme súpisku
+        if (!hasCategoryInUrl) {
+            return null;
+        }
+        
         if (!selectedTeamDetails) return null;
         
         if (isLoadingRoster) {
@@ -1263,7 +1274,7 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // Box so súpiskou tímu so štatistikami
+            // Box so súpiskou tímu so štatistikami - zobrazí sa LEN ak je v URL kategória
             renderTeamRoster()
         );
     };
