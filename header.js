@@ -150,19 +150,6 @@ const createZoomOverlay = () => {
                 <br>
                 <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
             </p>
-            <button id="zoom-dismiss" style="
-                margin-top: 30px;
-                padding: 12px 40px;
-                font-size: 16px;
-                background-color: #2ecc71;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: background-color 0.3s;
-            " onmouseover="this.style.backgroundColor='#27ae60'" onmouseout="this.style.backgroundColor='#2ecc71'">
-                ✅ Pokračovať na stránku
-            </button>
         </div>
     `;
 
