@@ -63,6 +63,181 @@ const getCurrentZoomLevel = () => {
     return 100;
 };
 
+// Vytvorenie overlay pre informáciu o zoome
+const createZoomOverlay = () => {
+    // Odstránime existujúci overlay ak existuje
+    const existingOverlay = document.getElementById('zoom-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'zoom-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: white;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        box-sizing: border-box;
+    `;
+
+    overlay.innerHTML = `
+        <div style="text-align: center; max-width: 600px;">
+            <h1 style="font-size: 28px; color: #1a1a1a; margin-bottom: 20px;">
+                🔍 Nastavenie priblíženia
+            </h1>
+            <p style="font-size: 18px; color: #333; margin-bottom: 10px;">
+                Pre správne zobrazenie stránky nastavte priblíženie na <strong>80%</strong> alebo menej.
+            </p>
+            <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                Aktuálne priblíženie: <span id="zoom-display" style="font-weight: bold; color: #e74c3c;">100%</span>
+            </p>
+            <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px;">
+                <button id="zoom-minus" style="
+                    width: 60px;
+                    height: 60px;
+                    font-size: 32px;
+                    background-color: #3498db;
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: background-color 0.3s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                " onmouseover="this.style.backgroundColor='#2980b9'" onmouseout="this.style.backgroundColor='#3498db'">
+                    −
+                </button>
+                <button id="zoom-plus" style="
+                    width: 60px;
+                    height: 60px;
+                    font-size: 32px;
+                    background-color: #3498db;
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: background-color 0.3s;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                " onmouseover="this.style.backgroundColor='#2980b9'" onmouseout="this.style.backgroundColor='#3498db'">
+                    +
+                </button>
+            </div>
+            <p style="font-size: 14px; color: #888; margin-top: 10px;">
+                <span style="display: inline-block; margin: 0 10px;">🖥️ Windows/Linux: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + koliesko</span>
+                <br>
+                <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
+            </p>
+            <button id="zoom-dismiss" style="
+                margin-top: 30px;
+                padding: 12px 40px;
+                font-size: 16px;
+                background-color: #2ecc71;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#27ae60'" onmouseout="this.style.backgroundColor='#2ecc71'">
+                ✅ Pokračovať na stránku
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Aktualizácia zobrazenia zoomu
+    const updateZoomDisplay = () => {
+        const zoom = getCurrentZoomLevel();
+        const display = document.getElementById('zoom-display');
+        if (display) {
+            display.textContent = zoom + '%';
+            if (zoom <= 80) {
+                display.style.color = '#2ecc71';
+            } else {
+                display.style.color = '#e74c3c';
+            }
+        }
+        return zoom;
+    };
+
+    // Funkcia na skrytie overlay
+    const dismissOverlay = () => {
+        const zoom = getCurrentZoomLevel();
+        if (zoom <= 80) {
+            const overlay = document.getElementById('zoom-overlay');
+            if (overlay) {
+                overlay.style.transition = 'opacity 0.5s';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                }, 500);
+            }
+        } else {
+            // Ak zoom stále nie je správny, zobrazíme upozornenie
+            alert('Priblíženie musí byť nastavené na 80% alebo menej. Prosím, znížte priblíženie pomocou tlačidiel +/- alebo klávesových skratiek.');
+            updateZoomDisplay();
+        }
+    };
+
+    // Event listenery pre tlačidlá
+    document.getElementById('zoom-minus')?.addEventListener('click', () => {
+        const zoom = getCurrentZoomLevel();
+        if (zoom > 50) {
+            // Simulácia zmenšenia - použijeme CSS zoom
+            document.body.style.zoom = (zoom - 5) + '%';
+            setTimeout(updateZoomDisplay, 100);
+        }
+    });
+
+    document.getElementById('zoom-plus')?.addEventListener('click', () => {
+        const zoom = getCurrentZoomLevel();
+        if (zoom < 200) {
+            // Simulácia zväčšenia - použijeme CSS zoom
+            document.body.style.zoom = (zoom + 5) + '%';
+            setTimeout(updateZoomDisplay, 100);
+        }
+    });
+
+    // Tlačidlo pokračovať
+    document.getElementById('zoom-dismiss')?.addEventListener('click', dismissOverlay);
+
+    // Klávesové skratky
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === '-' || e.key === 'Minus') {
+                e.preventDefault();
+                document.getElementById('zoom-minus')?.click();
+            } else if (e.key === '+' || e.key === 'Equal') {
+                e.preventDefault();
+                document.getElementById('zoom-plus')?.click();
+            }
+        }
+    });
+
+    // Aktualizácia pri zmene okna
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            updateZoomDisplay();
+        }, 300);
+    });
+
+    // Počiatočná aktualizácia
+    setTimeout(updateZoomDisplay, 100);
+
+    return overlay;
+};
+
 // Funkcia na výpis priblíženia do konzoly
 const logCurrentZoom = () => {
     const zoom = getCurrentZoomLevel();
@@ -70,39 +245,57 @@ const logCurrentZoom = () => {
     return zoom;
 };
 
-// Automatické zistenie a výpis priblíženia pri načítaní stránky
-// a pri zmene veľkosti okna (pre prípad, že používateľ zmení zoom)
-const setupZoomMonitoring = () => {
-    // Zistíme a vypíšeme aktuálne priblíženie
-    logCurrentZoom();
+// Funkcia na kontrolu a zobrazenie overlay
+const checkAndShowZoomOverlay = () => {
+    const zoom = getCurrentZoomLevel();
+    console.log(`📐 Aktuálne priblíženie stránky: ${zoom}%`);
+    
+    if (zoom > 80) {
+        console.log('⚠️ Priblíženie je nad 80%. Zobrazujem overlay.');
+        createZoomOverlay();
+    } else {
+        console.log('✅ Priblíženie je 80% alebo menej.');
+        // Odstránime overlay ak existuje
+        const existingOverlay = document.getElementById('zoom-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+    }
+};
 
-    // Sledujeme zmenu veľkosti okna (často indikuje zmenu zoomu)
+// Automatické zistenie a výpis priblíženia pri načítaní stránky
+const setupZoomMonitoring = () => {
+    // Skontrolujeme zoom a zobrazíme overlay ak treba
+    setTimeout(checkAndShowZoomOverlay, 500);
+
+    // Sledujeme zmenu veľkosti okna
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             logCurrentZoom();
+            // Skontrolujeme či už overlay existuje
+            const overlay = document.getElementById('zoom-overlay');
+            const zoom = getCurrentZoomLevel();
+            
+            if (zoom > 80 && !overlay) {
+                createZoomOverlay();
+            } else if (zoom <= 80 && overlay) {
+                overlay.style.transition = 'opacity 0.5s';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                }, 500);
+            }
         }, 300);
     });
 
-    // Sledujeme zmenu orientácie obrazovky (pre mobilné zariadenia)
+    // Sledujeme zmenu orientácie obrazovky
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
-            logCurrentZoom();
+            checkAndShowZoomOverlay();
         }, 500);
     });
-
-    // Sledujeme zmenu priblíženia pomocou Media Query (pre niektoré prehliadače)
-    try {
-        const mediaQuery = window.matchMedia('(resolution: 1dppx)');
-        mediaQuery.addEventListener('change', () => {
-            setTimeout(() => {
-                logCurrentZoom();
-            }, 100);
-        });
-    } catch (e) {
-        // Event listener pre media query nie je podporovaný
-    }
 };
 
 // Spustíme sledovanie priblíženia po načítaní DOM
@@ -112,9 +305,11 @@ if (document.readyState === 'loading') {
     setupZoomMonitoring();
 }
 
-// Exportujeme funkcie pre prípadné manuálne použitie z konzoly
+// Exportujeme funkcie pre prípadné manuálne použitie
 window.getCurrentZoomLevel = getCurrentZoomLevel;
 window.logCurrentZoom = logCurrentZoom;
+window.checkAndShowZoomOverlay = checkAndShowZoomOverlay;
+window.createZoomOverlay = createZoomOverlay;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
 
