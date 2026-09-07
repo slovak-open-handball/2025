@@ -309,21 +309,23 @@ const TeamsOverviewApp = (props) => {
                         React.createElement(
                             'th',
                             { 
-                                className: 'px-4 py-3 text-left font-semibold sticky left-0 bg-gray-800 z-10',
+                                className: 'px-4 py-3 text-left font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600',
                                 style: { minWidth: '180px', maxWidth: '250px' }
                             },
                             'Názov tímu'
                         ),
-                        filteredCategoryNames.map(catName => {
+                        filteredCategoryNames.map((catName, index) => {
                             // Zistíme, či je táto kategória vybraná
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                            // Pridáme border na pravú stranu pre všetky okrem posledného
+                            const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-600' : '';
                             
                             return React.createElement(
                                 'th',
                                 { 
                                     key: catName,
                                     onClick: () => handleCategoryHeaderClick(catName),
-                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 ${isSelected ? 'bg-blue-600' : ''}`,
+                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 ${isSelected ? 'bg-blue-600' : ''} ${borderClass}`,
                                     title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                                 },
                                 React.createElement(
@@ -371,16 +373,18 @@ const TeamsOverviewApp = (props) => {
                                 teamName
                             ),
                             // Hodnoty pre každú kategóriu - BEZ PODFARBOVANIA
-                            filteredCategoryNames.map(catName => {
+                            filteredCategoryNames.map((catName, index) => {
                                 const count = matrix[teamName]?.[catName] || 0;
                                 // Ak je count 0, zobrazíme prázdny reťazec, inak zobrazíme číslo
                                 const displayValue = count > 0 ? count : '';
+                                // Pridáme border na pravú stranu pre všetky okrem posledného
+                                const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-200' : '';
                                 
                                 return React.createElement(
                                     'td',
                                     { 
                                         key: catName,
-                                        className: 'px-4 py-3 text-center font-semibold'
+                                        className: `px-4 py-3 text-center font-semibold ${borderClass}`
                                     },
                                     displayValue
                                 );
@@ -410,16 +414,18 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Celkom tímov'
                         ),
-                        filteredCategoryNames.map(catName => {
+                        filteredCategoryNames.map((catName, index) => {
                             let totalInCategory = 0;
                             sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
                             });
+                            const borderClass = index < filteredCategoryNames.length - 1 ? 'border-r border-gray-300' : '';
+                            
                             return React.createElement(
                                 'td',
                                 { 
                                     key: catName,
-                                    className: 'px-4 py-3 text-center text-gray-700'
+                                    className: `px-4 py-3 text-center text-gray-700 ${borderClass}`
                                 },
                                 totalInCategory
                             );
