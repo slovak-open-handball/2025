@@ -2838,7 +2838,7 @@ const AddTeamsGroupApp = (props) => {
     };
     const getGroupColorClass = (type) => {
         switch (type) {
-            case 'základná skupina': return 'bg-gray-100';
+            case 'základná skupina': return 'bg-green-100';
             case 'nadstavbová skupina': return 'bg-blue-100';
             default: return 'bg-white';
         }
@@ -3481,7 +3481,7 @@ const renderGroupedCategories = () => {
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100'
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-green-100'
                                     },
                                     React.createElement('h4', { 
                                         className: 'text-xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
@@ -3737,7 +3737,7 @@ const renderSingleCategoryView = () => {
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-gray-100'
+                                        className: 'flex flex-col rounded-xl shadow-xl p-6 h-full bg-green-100'
                                     },
                                     React.createElement('h3', { 
                                         className: 'text-2xl font-semibold mb-2 text-center whitespace-nowrap truncate flex-shrink-0' 
