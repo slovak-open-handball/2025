@@ -9,7 +9,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 
 // true = zapnutá kontrola, overlay sa zobrazuje, vyžaduje sa zmenšenie priblíženia na 80% alebo menej
 // false = vypnutá kontrola, overlay sa nezobrazuje
-const ZOOM_CONTROL_ENABLED = false; 
+const ZOOM_CONTROL_ENABLED = true; 
 
 const getCurrentZoomLevel = () => {
     // Metóda 1: Použitie window.devicePixelRatio pre mobilné zariadenia
