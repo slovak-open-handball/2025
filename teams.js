@@ -61,6 +61,31 @@ const slovakCollator = new Intl.Collator('sk', {
 });
 
 // ===================================================================
+// POMOCNÁ FUNKCIA PRE ODSTRÁNENIE SUFIXU (A, B, C, ...)
+// ===================================================================
+const removeSuffix = (teamName) => {
+    // Zoznam písmen slovenskej abecedy (veľké aj malé)
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
+    const lettersLower = letters.toLowerCase();
+    const allLetters = letters + lettersLower;
+    
+    // Skontrolujeme, či názov končí na medzeru a písmeno (A, B, C, ...)
+    // a to písmeno je posledným znakom
+    if (teamName.length >= 2) {
+        const lastChar = teamName[teamName.length - 1];
+        const secondLastChar = teamName[teamName.length - 2];
+        
+        // Ak je predposledný znak medzera a posledný je písmeno
+        if (secondLastChar === ' ' && allLetters.includes(lastChar)) {
+            // Odstránime medzeru a písmeno
+            return teamName.slice(0, -2).trim();
+        }
+    }
+    
+    return teamName;
+};
+
+// ===================================================================
 // HLAVNÝ KOMPONENT - ZOBRAZUJE PREHĽADOVÚ TABUĽKU LEN Z POUŽÍVATEĽSKÝCH TÍMOV
 // ===================================================================
 const TeamsOverviewApp = (props) => {
@@ -138,10 +163,16 @@ const TeamsOverviewApp = (props) => {
         // Získame všetky kategórie (zoradené podľa slovenskej abecedy)
         const categoryNames = Object.values(categoryIdToNameMap).sort((a, b) => slovakCollator.compare(a, b));
         
-        // Získame všetky unikátne názvy tímov (bez kategórie)
+        // Najprv si pripravíme zoznam tímov s očistenými názvami (bez suffixov)
+        const cleanedTeams = allTeams.map(team => ({
+            ...team,
+            cleanName: removeSuffix(team.teamName)
+        }));
+        
+        // Získame všetky unikátne názvy tímov (bez kategórie) - použijeme očistené názvy
         const teamNamesSet = new Set();
-        allTeams.forEach(team => {
-            let cleanName = team.teamName;
+        cleanedTeams.forEach(team => {
+            let cleanName = team.cleanName;
             // Odstránime prefix kategórie
             if (team.category && cleanName.startsWith(team.category + ' ')) {
                 cleanName = cleanName.substring(team.category.length + 1).trim();
@@ -156,14 +187,14 @@ const TeamsOverviewApp = (props) => {
         // Zoradenie názvov tímov podľa slovenskej abecedy
         const teamNames = Array.from(teamNamesSet).sort((a, b) => slovakCollator.compare(a, b));
         
-        // Vytvoríme maticu počtov
+        // Vytvoríme maticu počtov - použijeme očistené názvy pre porovnávanie
         const matrix = {};
         teamNames.forEach(name => {
             matrix[name] = {};
             categoryNames.forEach(cat => {
-                // Spočítame tímy v tejto kategórii s týmto názvom
-                const count = allTeams.filter(team => {
-                    let cleanName = team.teamName;
+                // Spočítame tímy v tejto kategórii s týmto názvom (použijeme očistené názvy)
+                const count = cleanedTeams.filter(team => {
+                    let cleanName = team.cleanName;
                     if (team.category && cleanName.startsWith(team.category + ' ')) {
                         cleanName = cleanName.substring(team.category.length + 1).trim();
                     }
