@@ -1875,13 +1875,37 @@ const handleDataUpdateAndRender = (event) => {
         );
     }
 };
+// Nahraďte poslednú časť súboru (od window.addEventListener) týmto:
+
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+const renderMap = (userProfileData = null) => {
+    const root = document.getElementById('root');
+    if (!root || typeof ReactDOM === 'undefined' || typeof React === 'undefined') return;
+    
+    ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData }));
+};
+
 if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-} else if (document.getElementById('root')) {
-    ReactDOM.createRoot(document.getElementById('root')).render(
-        React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-        )
-    );
+    renderMap(window.globalUserProfileData);
+} else {
+    renderMap(null);
+    
+    if (window.auth) {
+        onAuthStateChanged(window.auth, (user) => {
+            if (user) {
+                // Používateľ sa prihlásil, načítame jeho dáta
+                const userRef = doc(window.db, 'users', user.uid);
+                getDoc(userRef).then((snap) => {
+                    if (snap.exists()) {
+                        const userData = snap.data();
+                        renderMap(userData);
+                    }
+                }).catch(err => {
+                    console.error("Chyba pri načítaní používateľa:", err);
+                    renderMap(null);
+                });
+            }
+        });
+    }
 }
