@@ -248,77 +248,6 @@ const TeamsOverviewApp = (props) => {
     };
 
     // ===================================================================
-    // RENDER HLAVIČKY PRE FIXNÉ ZOBRAZENIE
-    // ===================================================================
-    const renderFixedHeader = () => {
-        if (teamNames.length === 0 || filteredCategoryNames.length === 0) {
-            return null;
-        }
-
-        return React.createElement(
-            'div',
-            { 
-                className: 'sticky top-0 z-20 bg-gray-800 text-white rounded-t-lg overflow-hidden shadow-lg',
-                style: { 
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 20
-                }
-            },
-            React.createElement(
-                'div',
-                { 
-                    className: 'flex items-center',
-                    style: { minWidth: '600px' }
-                },
-                // Prvý stĺpec - Názov tímu
-                React.createElement(
-                    'div',
-                    { 
-                        className: 'px-4 py-3 font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600 flex-shrink-0',
-                        style: { minWidth: '180px', maxWidth: '250px', width: '180px' }
-                    },
-                    'Názov tímu'
-                ),
-                // Stĺpce kategórií
-                filteredCategoryNames.map((catName) => {
-                    const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
-                    
-                    return React.createElement(
-                        'div',
-                        { 
-                            key: catName,
-                            onClick: () => handleCategoryHeaderClick(catName),
-                            className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 border-r border-gray-600 flex-shrink-0 ${isSelected ? 'bg-blue-600' : ''}`,
-                            style: { minWidth: '80px', width: '80px' },
-                            title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
-                        },
-                        React.createElement(
-                            'span',
-                            { className: 'flex items-center justify-center gap-1' },
-                            catName,
-                            isSelected && React.createElement(
-                                'span',
-                                { className: 'text-xs ml-1' },
-                                '✕'
-                            )
-                        )
-                    );
-                }),
-                // Stĺpec Celkom
-                React.createElement(
-                    'div',
-                    { 
-                        className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap flex-shrink-0',
-                        style: { minWidth: '80px', width: '80px' }
-                    },
-                    'Celkom'
-                )
-            )
-        );
-    };
-
-    // ===================================================================
     // RENDER - PREHĽADOVÁ TABUĽKA
     // ===================================================================
     const renderOverviewTable = () => {
@@ -363,23 +292,17 @@ const TeamsOverviewApp = (props) => {
 
         return React.createElement(
             'div',
-            { 
-                className: 'w-full overflow-x-auto relative',
-                style: { maxHeight: '600px', overflowY: 'auto' }
-            },
-            // Fixná hlavička
-            renderFixedHeader(),
-            // Telo tabuľky
+            { className: 'w-full overflow-x-auto' },
             React.createElement(
                 'table',
                 { 
-                    className: 'w-full border-collapse bg-white shadow-lg rounded-b-lg overflow-hidden',
+                    className: 'w-full border-collapse bg-white shadow-lg rounded-lg overflow-hidden',
                     style: { minWidth: '600px' }
                 },
-                // HLAVIČKA TABUĽKY (skrytá, ale zachovaná pre štruktúru)
+                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
-                    { className: 'sr-only' },
+                    { className: 'bg-gray-800 text-white' },
                     React.createElement(
                         'tr',
                         null,
@@ -391,16 +314,30 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Názov tímu'
                         ),
-                        filteredCategoryNames.map((catName) => {
+                        filteredCategoryNames.map((catName, index) => {
+                            // Zistíme, či je táto kategória vybraná - LEN AK selectedCategoryId NIE JE PRÁZDNE
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                            // Pridáme border na pravú stranu pre všetky okrem posledného
+                            const borderClass = 'border-r border-gray-600';
                             
                             return React.createElement(
                                 'th',
                                 { 
                                     key: catName,
-                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap border-r border-gray-600 ${isSelected ? 'bg-blue-600' : ''}`,
+                                    onClick: () => handleCategoryHeaderClick(catName),
+                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 ${isSelected ? 'bg-blue-600' : ''} ${borderClass}`,
+                                    title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                                 },
-                                catName
+                                React.createElement(
+                                    'span',
+                                    { className: 'flex items-center justify-center gap-1' },
+                                    catName,
+                                    isSelected && React.createElement(
+                                        'span',
+                                        { className: 'text-xs ml-1' },
+                                        '✕'
+                                    )
+                                )
                             );
                         }),
                         React.createElement(
@@ -436,15 +373,16 @@ const TeamsOverviewApp = (props) => {
                                 teamName
                             ),
                             // Hodnoty pre každú kategóriu - BEZ PODFARBOVANIA
-                            filteredCategoryNames.map((catName) => {
+                            filteredCategoryNames.map((catName, index) => {
                                 const count = matrix[teamName]?.[catName] || 0;
                                 const displayValue = count > 0 ? count : '';
+                                const borderClass = 'border-r border-gray-200';
                                 
                                 return React.createElement(
                                     'td',
                                     { 
                                         key: catName,
-                                        className: 'px-4 py-3 text-center font-semibold border-r border-gray-200'
+                                        className: `px-4 py-3 text-center font-semibold ${borderClass}`
                                     },
                                     displayValue
                                 );
@@ -463,7 +401,7 @@ const TeamsOverviewApp = (props) => {
                 // PATIČKA TABUĽKY - SÚČTY PRE KATEGÓRIE
                 React.createElement(
                     'tfoot',
-                    { className: 'bg-gray-200 font-semibold sticky bottom-0' },
+                    { className: 'bg-gray-200 font-semibold' },
                     React.createElement(
                         'tr',
                         null,
@@ -474,17 +412,18 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Celkom tímov'
                         ),
-                        filteredCategoryNames.map((catName) => {
+                        filteredCategoryNames.map((catName, index) => {
                             let totalInCategory = 0;
                             sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
                             });
+                            const borderClass = 'border-r border-gray-300';
                             
                             return React.createElement(
                                 'td',
                                 { 
                                     key: catName,
-                                    className: 'px-4 py-3 text-center text-gray-700 border-r border-gray-300'
+                                    className: `px-4 py-3 text-center text-gray-700 ${borderClass}`
                                 },
                                 totalInCategory
                             );
