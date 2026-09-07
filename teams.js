@@ -124,11 +124,12 @@ const TeamsOverviewApp = (props) => {
     // Funkcia na aktualizáciu URL hashu
     const updateUrlHash = (teamName, categoryName = null) => {
         let hashParts = [];
-        if (teamName) {
-            hashParts.push(`team=${encodeURIComponent(teamName)}`);
-        }
+        // Najprv kategória, potom tím
         if (categoryName) {
             hashParts.push(`category=${encodeURIComponent(categoryName)}`);
+        }
+        if (teamName) {
+            hashParts.push(`team=${encodeURIComponent(teamName)}`);
         }
         
         if (hashParts.length > 0) {
