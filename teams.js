@@ -1078,7 +1078,7 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'span',
                     { className: 'text-sm text-gray-500' },
-                    `Počet členov: ${teamRoster.length}`
+                    `Kategória: ${displayCategoryName}`
                 )
             ),
             React.createElement(
@@ -1176,7 +1176,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { className: 'mt-4 pt-3 border-t border-gray-200 text-xs text-gray-400' },
-                `Kategória: ${displayCategoryName}`
+                `Počet členov: ${teamRoster.length}`
             )
         );
     };
