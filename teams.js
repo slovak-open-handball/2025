@@ -102,6 +102,7 @@ const TeamsOverviewApp = (props) => {
     // Referencie pre IntersectionObserver
     const tableContainerRef = useRef(null);
     const headerSentinelRef = useRef(null);
+    const observerRef = useRef(null);
 
     // ===================================================================
     // LISTENERY PRE DÁTA - LEN POUŽÍVATEĽSKÉ TÍMY (BEZ SUPERSTRUCTURE)
@@ -221,28 +222,45 @@ const TeamsOverviewApp = (props) => {
     // INTERSECTION OBSERVER PRE FIXNÚ HLAVIČKU
     // ===================================================================
     useEffect(() => {
-        const sentinel = headerSentinelRef.current;
-        if (!sentinel) return;
+        // Počkáme na vykreslenie sentinel elementu
+        const timeoutId = setTimeout(() => {
+            const sentinel = headerSentinelRef.current;
+            if (!sentinel) return;
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach(entry => {
-                    // Ak sentinel nie je viditeľný, zobrazíme fixnú hlavičku
-                    setShowFixedHeader(!entry.isIntersecting);
-                });
-            },
-            {
-                threshold: 0,
-                rootMargin: '0px 0px 0px 0px'
+            // Zrušíme starý observer
+            if (observerRef.current) {
+                observerRef.current.disconnect();
             }
-        );
 
-        observer.observe(sentinel);
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        setShowFixedHeader(!entry.isIntersecting);
+                    });
+                },
+                {
+                    threshold: 0,
+                    rootMargin: '0px 0px 0px 0px'
+                }
+            );
+
+            observer.observe(sentinel);
+            observerRef.current = observer;
+
+            return () => {
+                observer.disconnect();
+                observerRef.current = null;
+            };
+        }, 100);
 
         return () => {
-            observer.disconnect();
+            clearTimeout(timeoutId);
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+                observerRef.current = null;
+            }
         };
-    }, []); // Prázdne pole závislostí - observer sa nastaví len raz
+    }, [teamNames, filteredCategoryNames, selectedCategoryId, selectedTeamNameFilter]);
 
     // ===================================================================
     // NOTIFIKÁCIE
