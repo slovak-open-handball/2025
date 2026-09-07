@@ -3,7 +3,6 @@ import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
-const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -52,26 +51,24 @@ export const subscribe = (cb) => {
   return () => listeners.delete(cb);
 };
 
-// HLAVNÝ KOMPONENT - ZOBRAZUJE PREHĽADOVÚ TABUĽKU
+// HLAVNÝ KOMPONENT - ZOBRAZUJE PREHĽADOVÚ TABUĽKU LEN Z POUŽÍVATEĽSKÝCH TÍMOV
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
-    const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
     const [uiNotification, setUiNotification] = useState(null);
     const currentUserEmail = window.globalUserProfileData?.email || null;
     
     // Stav pre filtrovanie
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
-    const [teamNameOptions, setTeamNameOptions] = useState([]);
 
     // ===================================================================
-    // LISTENERY PRE DÁTA
+    // LISTENERY PRE DÁTA - LEN POUŽÍVATEĽSKÉ TÍMY (BEZ SUPERSTRUCTURE)
     // ===================================================================
     useEffect(() => {
         if (!window.db) return;
 
-        // Načítanie používateľských tímov
+        // Načítanie používateľských tímov - IBA TOTO, BEZ SUPERSTRUCTURE
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
             let userTeamsList = [];
             querySnapshot.forEach((doc) => {
@@ -96,34 +93,7 @@ const TeamsOverviewApp = (props) => {
                     });
                 }
             });
-            // Uložíme do state
-            setAllTeams(prev => {
-                // Odstránime staré používateľské tímy a pridáme nové
-                const superstructureTeams = prev.filter(t => t.isSuperstructureTeam);
-                return [...superstructureTeams, ...userTeamsList];
-            });
-        });
-
-        // Načítanie superstructure tímov
-        const unsubscribeSuperstructure = onSnapshot(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')), (docSnap) => {
-            const data = docSnap.exists() ? docSnap.data() : {};
-            const globalTeamsList = Object.entries(data).flatMap(([categoryName, teamArray]) =>
-                (teamArray || []).map(team => ({
-                    uid: 'global',
-                    category: categoryName,
-                    id: team.id || crypto.randomUUID(),
-                    teamName: team.teamName,
-                    groupName: team.groupName || null,
-                    order: team.order ?? null,
-                    isSuperstructureTeam: true
-                }))
-            );
-            
-            setAllTeams(prev => {
-                // Odstránime staré superstructure tímy a pridáme nové
-                const userTeams = prev.filter(t => !t.isSuperstructureTeam);
-                return [...userTeams, ...globalTeamsList];
-            });
+            setAllTeams(userTeamsList); // IBA používateľské tímy
         });
 
         // Načítanie kategórií
@@ -140,50 +110,11 @@ const TeamsOverviewApp = (props) => {
             setCategoryIdToNameMap(categoryIdToName);
         });
 
-        // Načítanie skupín (pre typy skupín)
-        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
-            const groupsByCategoryId = {};
-            if (docSnap.exists()) {
-                const groupData = docSnap.data();
-                Object.entries(groupData).forEach(([categoryId, groupArray]) => {
-                    if (Array.isArray(groupArray)) {
-                        groupsByCategoryId[categoryId] = groupArray.map(group => ({
-                            name: group.name,
-                            type: group.type
-                        }));
-                    }
-                });
-            }
-            setAllGroupsByCategoryId(groupsByCategoryId);
-        });
-
         return () => {
             unsubscribeUsers();
-            unsubscribeSuperstructure();
             unsubscribeCategories();
-            unsubscribeGroups();
         };
     }, []);
-
-    // ===================================================================
-    // EFEKT PRE FILTROVANIE NÁZVOV TÍMOV
-    // ===================================================================
-    useEffect(() => {
-        if (allTeams.length === 0) return;
-        
-        // Získame unikátne názvy tímov (bez kategórie)
-        const uniqueTeamNames = new Set();
-        allTeams.forEach(team => {
-            let cleanName = team.teamName;
-            // Odstránime prefix kategórie
-            if (team.category && cleanName.startsWith(team.category + ' ')) {
-                cleanName = cleanName.substring(team.category.length + 1).trim();
-            }
-            uniqueTeamNames.add(cleanName);
-        });
-        
-        setTeamNameOptions(Array.from(uniqueTeamNames).sort());
-    }, [allTeams]);
 
     // ===================================================================
     // VÝPOČET DÁT PRE TABUĽKU
@@ -200,6 +131,7 @@ const TeamsOverviewApp = (props) => {
         const teamNamesSet = new Set();
         allTeams.forEach(team => {
             let cleanName = team.teamName;
+            // Odstránime prefix kategórie
             if (team.category && cleanName.startsWith(team.category + ' ')) {
                 cleanName = cleanName.substring(team.category.length + 1).trim();
             }
