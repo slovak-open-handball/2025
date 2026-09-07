@@ -1,3 +1,4 @@
+// logged-in-left-menu.js
 import { getFirestore, doc, updateDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const loadLeftMenu = async (userProfileData) => {
@@ -17,6 +18,7 @@ const loadLeftMenu = async (userProfileData) => {
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
+            console.error('Chyba pri načítaní menu:', error);
         }
     } else {
         const leftMenuElement = document.getElementById('left-menu');
@@ -52,16 +54,30 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
 
-    // Pridajte túto funkciu do setupMenuListeners
+    // OPRAVENÁ funkcia na načítanie neprečítaných notifikácií
     const loadUnreadNotificationsCount = async () => {
         if (!userId) return;
         
         try {
-            const db = getFirestore();
-            const notificationsRef = collection(db, 'users', userId, 'notifications');
-            const q = query(notificationsRef, where('read', '==', false));
+            // Používame rovnakú štruktúru ako v NotificationsApp - koreňová kolekcia 'notifications'
+            const notificationsRef = collection(db, 'notifications');
+            const q = query(
+                notificationsRef, 
+                where('read', '==', false),
+                where('deletedBy', 'array-not-contains', userId) // Ignorujeme notifikácie, ktoré používateľ vymazal
+            );
             const querySnapshot = await getDocs(q);
-            const unreadCount = querySnapshot.size;
+            
+            // Filtrujeme notifikácie, ktoré používateľ ešte nevidel
+            let unreadCount = 0;
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                // Kontrola, či používateľ už videl túto notifikáciu
+                const seenBy = data.seenBy || [];
+                if (!seenBy.includes(userId)) {
+                    unreadCount++;
+                }
+            });
         
             const badge = document.getElementById('notification-badge-count');
             const textWithCount = document.getElementById('notifications-text-with-count');
@@ -80,12 +96,38 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             }
         } catch (error) {
             console.error('Chyba pri načítaní notifikácií:', error);
+            // V prípade chyby skúsime alternatívny prístup - načítať notifikácie priamo z podkolekcie používateľa
+            try {
+                const userNotificationsRef = collection(db, 'users', userId, 'notifications');
+                const q = query(userNotificationsRef, where('read', '==', false));
+                const querySnapshot = await getDocs(q);
+                const unreadCount = querySnapshot.size;
+                
+                const badge = document.getElementById('notification-badge-count');
+                const textWithCount = document.getElementById('notifications-text-with-count');
+                
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+                
+                if (textWithCount) {
+                    textWithCount.textContent = unreadCount > 0 ? `Upozornenia (${unreadCount})` : 'Upozornenia';
+                }
+            } catch (fallbackError) {
+                console.error('Chyba pri fallback načítaní notifikácií:', fallbackError);
+            }
         }
     };
     
     // Zavolajte funkciu po načítaní menu
     await loadUnreadNotificationsCount();
 
+    // ... zvyšok kódu zostáva rovnaký ...
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
