@@ -160,30 +160,17 @@ const TeamsOverviewApp = (props) => {
             params.forEach(param => {
                 const [key, value] = param.split('=');
                 if (key === 'team') {
-                    // Dekódujeme
                     let decoded = decodeURIComponent(value);
-                    // Najprv nahradíme "---" za špeciálny placeholder (napr. "___TRIPLE_DASH___")
-                    // aby sme ich ochránili pred ďalším nahrádzaním
                     decoded = decoded.replace(/---/g, '___TRIPLE_DASH___');
-                    // Potom nahradíme zostávajúce "-" za " "
                     decoded = decoded.replace(/-/g, ' ');
-                    // Nakoniec nahradíme placeholder za " - "
                     decoded = decoded.replace(/___TRIPLE_DASH___/g, ' - ');
-                    // Normalizujeme viacnásobné medzery na jednu
                     result.teamName = decoded.replace(/\s+/g, ' ').trim();
-                    console.log('Parsovaný teamName:', result.teamName);
                 } else if (key === 'category') {
-                    // Dekódujeme
                     let decoded = decodeURIComponent(value);
-                    // Najprv nahradíme "---" za špeciálny placeholder
                     decoded = decoded.replace(/---/g, '___TRIPLE_DASH___');
-                    // Potom nahradíme zostávajúce "-" za " "
                     decoded = decoded.replace(/-/g, ' ');
-                    // Nakoniec nahradíme placeholder za " - "
                     decoded = decoded.replace(/___TRIPLE_DASH___/g, ' - ');
-                    // Normalizujeme viacnásobné medzery na jednu
                     result.categoryName = decoded.replace(/\s+/g, ' ').trim();
-                    console.log('Parsovaný categoryName:', result.categoryName);
                 }
             });
             
@@ -214,10 +201,7 @@ const TeamsOverviewApp = (props) => {
                 setSelectedCategoryId(categoryIdFromUrl);
             }
             
-            if (teamNameFromUrl) {
-                console.log('Načítavam tím z URL:', teamNameFromUrl);
-                
-                // Odstránime sufix z názvu z URL pre vyhľadávanie
+            if (teamNameFromUrl) {                
                 const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
                 
                 // Nájdi tím podľa názvu - použijeme porovnanie bez sufixu
@@ -241,8 +225,6 @@ const TeamsOverviewApp = (props) => {
                         groupName: team.groupName,
                         order: team.order
                     }));
-
-                console.log('Nájdené výskyty:', teamOccurrences.length);
 
                 if (teamOccurrences.length > 0) {
                     setSelectedTeamDetails({
@@ -558,18 +540,8 @@ const TeamsOverviewApp = (props) => {
     };
 
     const handleTeamOccurrenceClick = (occ) => {
-        // Normalizujeme názvy - odstránime viacnásobné medzery
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();
-        
-        console.log('Kliknuté na tlačidlo:', {
-            category: normalizedCategory,
-            teamName: normalizedTeamName,
-            uid: occ.uid,
-            id: occ.id,
-            groupName: occ.groupName,
-            order: occ.order
-        });
         
         // Aktualizujeme URL s kategóriou aj tímom
         const hashParts = [];
