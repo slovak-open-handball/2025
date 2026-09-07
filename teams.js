@@ -258,14 +258,19 @@ const TeamsOverviewApp = (props) => {
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
     useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        document.documentElement.style.overflow = 'hidden';
+        if (selectedTeamDetails) {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        } else {
+            document.body.style.overflow = 'hiddem';
+            document.documentElement.style.overflow = 'hidden';
+        }
     
         return () => {
             document.body.style.overflow = '';
             document.documentElement.style.overflow = '';
         };
-    }, []);
+    }, [selectedTeamDetails]);
 
     useEffect(() => {
         const updateHeight = () => {
