@@ -208,7 +208,10 @@ const TeamsOverviewApp = (props) => {
             if (teamNameFromUrl) {
                 console.log('Načítavam tím z URL:', teamNameFromUrl);
                 
-                // Nájdi tím podľa názvu - použijeme presné porovnanie
+                // Odstránime sufix z názvu z URL pre vyhľadávanie
+                const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+                
+                // Nájdi tím podľa názvu - použijeme porovnanie bez sufixu
                 const teamOccurrences = allTeams
                     .filter(team => {
                         // Získame čistý názov tímu
@@ -216,8 +219,10 @@ const TeamsOverviewApp = (props) => {
                         if (team.category && cleanName.startsWith(team.category + ' ')) {
                             cleanName = cleanName.substring(team.category.length + 1).trim();
                         }
-                        // Porovnáme s názvom z URL (už je bez medzier nahradených za "-")
-                        return cleanName === teamNameFromUrl;
+                        // Odstránime sufix pre porovnanie
+                        cleanName = removeSuffix(cleanName);
+                        // Porovnáme s názvom z URL (bez sufixu)
+                        return cleanName === baseTeamNameFromUrl;
                     })
                     .map(team => ({
                         category: team.category,
@@ -236,13 +241,14 @@ const TeamsOverviewApp = (props) => {
                         occurrences: teamOccurrences
                     });
                 } else {
-                    // Skúsime alternatívne vyhľadávanie - bez odstránenia sufixu
+                    // Skúsime alternatívne vyhľadávanie - bez odstránenia sufixu z názvu z URL
                     const teamOccurrencesAlt = allTeams
                         .filter(team => {
-                            let cleanName = team.teamName;
+                            let cleanName = removeSuffix(team.teamName);
                             if (team.category && cleanName.startsWith(team.category + ' ')) {
                                 cleanName = cleanName.substring(team.category.length + 1).trim();
                             }
+                            cleanName = removeSuffix(cleanName);
                             return cleanName === teamNameFromUrl;
                         })
                         .map(team => ({
@@ -333,15 +339,21 @@ const TeamsOverviewApp = (props) => {
                 
                 // Aktualizácia detailu tímu - IBA ak sa zmenil tím v URL
                 if (teamNameFromUrl) {
-                    // Skontrolujeme, či už nemáme rovnaký tím zobrazený
-                    if (!selectedTeamDetails || selectedTeamDetails.teamName !== teamNameFromUrl) {
+                    // Odstránime sufix z názvu z URL pre vyhľadávanie
+                    const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+                    
+                    // Skontrolujeme, či už nemáme rovnaký tím zobrazený (porovnanie bez sufixu)
+                    const currentBaseName = selectedTeamDetails ? removeSuffix(selectedTeamDetails.teamName) : null;
+                    
+                    if (!selectedTeamDetails || currentBaseName !== baseTeamNameFromUrl) {
                         const teamOccurrences = allTeams
                             .filter(team => {
                                 let cleanName = removeSuffix(team.teamName);
                                 if (team.category && cleanName.startsWith(team.category + ' ')) {
                                     cleanName = cleanName.substring(team.category.length + 1).trim();
                                 }
-                                return cleanName === teamNameFromUrl;
+                                cleanName = removeSuffix(cleanName);
+                                return cleanName === baseTeamNameFromUrl;
                             })
                             .map(team => ({
                                 category: team.category,
