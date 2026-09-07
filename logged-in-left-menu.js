@@ -12,7 +12,8 @@ const loadLeftMenu = async (userProfileData) => {
             menuPlaceholder.innerHTML = menuHtml;
             const db = window.db;
             const userId = userProfileData.id;
-            setupMenuListeners(userProfileData, db, userId);
+            await setupMenuListeners(userProfileData, db, userId);
+            
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) leftMenuElement.classList.remove('hidden');
         } catch (error) {
