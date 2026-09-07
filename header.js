@@ -11,7 +11,35 @@ import { countryDialCodes } from "./countryDialCodes.js";
 // false = vypnutá kontrola, overlay sa nezobrazuje
 const ZOOM_CONTROL_ENABLED = true; 
 
+// Zistenie či ide o mobilné zariadenie
+const isMobileDevice = () => {
+    return /Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent) || 
+           (window.innerWidth <= 768 && window.innerHeight <= 1024);
+};
+
 const getCurrentZoomLevel = () => {
+    // Pre mobilné zariadenia - používame inú metódu
+    if (isMobileDevice()) {
+        try {
+            // Metóda pre mobily: porovnanie vizuálneho viewportu s layout viewportom
+            const visualViewport = window.visualViewport;
+            if (visualViewport) {
+                // Na mobile sa zoom prejavuje ako zmena pomeru visualViewport.width / layout viewport
+                const zoom = (visualViewport.width / window.innerWidth) * 100;
+                return Math.round(zoom);
+            }
+            
+            // Alternatívna metóda pre mobily: porovnanie screen.width s innerWidth
+            if (window.screen && window.screen.width) {
+                const zoom = (window.screen.width / window.innerWidth) * 100;
+                return Math.round(zoom);
+            }
+        } catch (e) {}
+        
+        // Pre mobilné zariadenia vždy vrátime 100%, pretože pinch-to-zoom je dočasný
+        return 100;
+    }
+
     // Metóda 1: Použitie window.devicePixelRatio pre mobilné zariadenia
     if (window.devicePixelRatio) {
         if (window.innerWidth !== window.screen.width) {
@@ -75,6 +103,12 @@ const createZoomOverlay = () => {
         return null;
     }
 
+    // Pre mobilné zariadenia overlay nezobrazujeme (pinch-to-zoom je dočasný)
+    if (isMobileDevice()) {
+        console.log('📱 Mobilné zariadenie - overlay sa nezobrazuje (pinch-to-zoom je dočasný)');
+        return null;
+    }
+
     // Odstránime existujúci overlay ak existuje
     const existingOverlay = document.getElementById('zoom-overlay');
     if (existingOverlay) {
@@ -116,6 +150,19 @@ const createZoomOverlay = () => {
                 <br>
                 <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
             </p>
+            <button id="zoom-dismiss" style="
+                margin-top: 30px;
+                padding: 12px 40px;
+                font-size: 16px;
+                background-color: #2ecc71;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#27ae60'" onmouseout="this.style.backgroundColor='#2ecc71'">
+                ✅ Pokračovať na stránku
+            </button>
         </div>
     `;
 
@@ -149,7 +196,6 @@ const createZoomOverlay = () => {
                 }, 500);
             }
         } else {
-            // Ak zoom stále nie je správny, zobrazíme upozornenie
             alert('Priblíženie musí byť nastavené na 80% alebo menej. Prosím, znížte priblíženie pomocou klávesových skratiek.');
             updateZoomDisplay();
         }
@@ -160,10 +206,8 @@ const createZoomOverlay = () => {
 
     // Klávesové skratky pre zmenu zoomu
     document.addEventListener('keydown', (e) => {
-        // Ctrl+0 pre reset na 100%
         if ((e.ctrlKey || e.metaKey) && e.key === '0') {
             e.preventDefault();
-            // Reset CSS zoom
             document.body.style.zoom = '100%';
             setTimeout(updateZoomDisplay, 100);
         }
@@ -187,7 +231,8 @@ const createZoomOverlay = () => {
 // Funkcia na výpis priblíženia do konzoly
 const logCurrentZoom = () => {
     const zoom = getCurrentZoomLevel();
-    console.log(`📐 Aktuálne priblíženie stránky: ${zoom}%`);
+    const device = isMobileDevice() ? '📱 Mobil' : '🖥️ Desktop';
+    console.log(`${device} - Aktuálne priblíženie stránky: ${zoom}%`);
     return zoom;
 };
 
@@ -196,7 +241,16 @@ const checkAndShowZoomOverlay = () => {
     // Ak je kontrola vypnutá, nič nerobíme
     if (!ZOOM_CONTROL_ENABLED) {
         console.log('ℹ️ Kontrola priblíženia je vypnutá (ZOOM_CONTROL_ENABLED = false)');
-        // Odstránime overlay ak existuje
+        const existingOverlay = document.getElementById('zoom-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        return;
+    }
+
+    // Pre mobilné zariadenia overlay nezobrazujeme
+    if (isMobileDevice()) {
+        console.log('📱 Mobilné zariadenie - kontrola priblíženia je preskočená');
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
             existingOverlay.remove();
@@ -212,7 +266,6 @@ const checkAndShowZoomOverlay = () => {
         createZoomOverlay();
     } else {
         console.log('✅ Priblíženie je 80% alebo menej.');
-        // Odstránime overlay ak existuje
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
             existingOverlay.style.transition = 'opacity 0.5s';
@@ -226,22 +279,18 @@ const checkAndShowZoomOverlay = () => {
 
 // Automatické zistenie a výpis priblíženia pri načítaní stránky
 const setupZoomMonitoring = () => {
-    // Skontrolujeme zoom a zobrazíme overlay ak treba
     setTimeout(checkAndShowZoomOverlay, 500);
 
-    // Sledujeme zmenu veľkosti okna
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             logCurrentZoom();
             
-            // Ak je kontrola vypnutá, nič nerobíme
-            if (!ZOOM_CONTROL_ENABLED) {
+            if (!ZOOM_CONTROL_ENABLED || isMobileDevice()) {
                 return;
             }
             
-            // Skontrolujeme či už overlay existuje
             const overlay = document.getElementById('zoom-overlay');
             const zoom = getCurrentZoomLevel();
             
@@ -257,7 +306,6 @@ const setupZoomMonitoring = () => {
         }, 300);
     });
 
-    // Sledujeme zmenu orientácie obrazovky
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
             checkAndShowZoomOverlay();
@@ -278,6 +326,7 @@ window.logCurrentZoom = logCurrentZoom;
 window.checkAndShowZoomOverlay = checkAndShowZoomOverlay;
 window.createZoomOverlay = createZoomOverlay;
 window.ZOOM_CONTROL_ENABLED = ZOOM_CONTROL_ENABLED;
+window.isMobileDevice = isMobileDevice;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
 
