@@ -3171,8 +3171,7 @@ const AddTeamsGroupApp = (props) => {
                     const categoryName = categoryIdToNameMap[targetCategoryId];
                     const isCategoryBlocked = categoryName && categoryMatchStatus[categoryName] === true;
                     const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
-
-                    const isInSuperstructureGroup = team.groupName && 
+                    const isInSuperstructureGroupForSwap = team.groupName && 
                         allGroupsByCategoryId[targetCategoryId]?.some(g => 
                             g.name === team.groupName && g.type === 'nadstavbová skupina'
                         );
@@ -3217,7 +3216,7 @@ const AddTeamsGroupApp = (props) => {
                                     })()
                                 }),
                                 
-                                groupHasMatches && !isInSuperstructureGroup && React.createElement(
+                                groupHasMatches && !isInSuperstructureGroupForSwap && React.createElement(
                                     'button',
                                     {
                                         onClick: isCategoryBlocked ? undefined : () => {
