@@ -41,11 +41,6 @@ const NotificationPortal = () => {
   );
 };
 
-export const notify = (message, type = 'info') => {
-  const id = Date.now() + Math.random();
-  listeners.forEach(cb => cb({ id, message, type }));
-};
-
 export const subscribe = (cb) => {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -444,10 +439,7 @@ const TeamsOverviewApp = (props) => {
         });
         
         // Aktualizujeme URL s kategóriou aj tímom
-        updateUrlHash(occ.teamName, occ.category);
-        
-        // Zostaneme v detaile tímu - iba aktualizujeme URL, nezobrazujeme tabuľku
-        notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
+        updateUrlHash(occ.teamName, occ.category);        
     };
 
     const renderTeamDetails = () => {
