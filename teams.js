@@ -69,6 +69,154 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
+// Funkcia na načítanie členov tímu s reálnym sledovaním (rovnaká ako v matches.js)
+const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
+    if (!window.db || !teamName || !categoryName) {
+        if (onUpdate) onUpdate([]);
+        if (onMappedName) onMappedName(teamName);
+        return () => {};
+    }
+    
+    let actualTeamName = teamName;
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        window.matchTracker.getTeamNameByDisplayId(teamName)
+            .then(convertedName => {
+                if (convertedName && convertedName !== teamName) {
+                    actualTeamName = convertedName;
+                    if (onMappedName) {
+                        onMappedName(actualTeamName);
+                    }
+                } else {
+                    if (onMappedName) {
+                        onMappedName(teamName);
+                    }
+                }
+            })
+            .catch(() => {
+                if (onMappedName) {
+                    onMappedName(teamName);
+                }
+            });
+    } else {
+        if (onMappedName) {
+            onMappedName(teamName);
+        }
+    }
+    
+    const usersRef = collection(window.db, 'users');
+    
+    const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
+        const members = [];
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                if (categoryKey !== categoryName) continue;
+                
+                const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName || t.teamName === teamName);
+                
+                if (foundTeam) {
+                    // Hráči
+                    if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
+                        foundTeam.playerDetails.forEach((player, idx) => {
+                            members.push({
+                                type: 'Hráč',
+                                firstName: player.firstName || '',
+                                lastName: player.lastName || '',
+                                jerseyNumber: player.jerseyNumber || '',
+                                registrationNumber: player.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'playerDetails'
+                            });
+                        });
+                    }
+                    
+                    // Členovia RT (muži)
+                    if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
+                        foundTeam.menTeamMemberDetails.forEach((member, idx) => {
+                            members.push({
+                                type: 'Člen RT (muž)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'menTeamMemberDetails'
+                            });
+                        });
+                    }
+                    
+                    // Členovia RT (ženy)
+                    if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
+                        foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
+                            members.push({
+                                type: 'Člen RT (žena)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'womenTeamMemberDetails'
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (muži)
+                    if (foundTeam.driverDetailsMale && Array.isArray(foundTeam.driverDetailsMale)) {
+                        foundTeam.driverDetailsMale.forEach((driver, idx) => {
+                            members.push({
+                                type: 'Šofér (muž)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'driverDetailsMale'
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (ženy)
+                    if (foundTeam.driverDetailsFemale && Array.isArray(foundTeam.driverDetailsFemale)) {
+                        foundTeam.driverDetailsFemale.forEach((driver, idx) => {
+                            members.push({
+                                type: 'Šofér (žena)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'driverDetailsFemale'
+                            });
+                        });
+                    }
+                    
+                    break;
+                }
+            }
+        }
+        
+        // Zoradenie: najprv RT členovia, potom hráči
+        const rtMembers = members.filter(m => m.type !== 'Hráč');
+        const players = members.filter(m => m.type === 'Hráč');
+        const sortedMembers = [...rtMembers, ...players];
+        
+        if (onUpdate) onUpdate(sortedMembers);
+    }, (error) => {
+        if (onUpdate) onUpdate([]);
+    });
+    
+    return unsubscribe;
+};
+
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
@@ -78,8 +226,11 @@ const TeamsOverviewApp = (props) => {
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [teamRoster, setTeamRoster] = useState(null);
+    const [teamRoster, setTeamRoster] = useState([]);
     const [isLoadingRoster, setIsLoadingRoster] = useState(false);
+    const [rosterTeamName, setRosterTeamName] = useState('');
+    const [rosterCategoryName, setRosterCategoryName] = useState('');
+    const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
 
     const tableContainerRef = useRef(null);
 
@@ -117,53 +268,61 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // Funkcia na načítanie súpisky tímu
-    const loadTeamRoster = async (uid, teamId) => {
-        if (!uid || !teamId) return;
+    // Funkcia na načítanie súpisky tímu pomocou loadTeamMembers
+    const loadTeamRoster = (teamName, categoryName) => {
+        // Zrušíme predchádzajúci listener
+        if (rosterUnsubscribe) {
+            rosterUnsubscribe();
+            setRosterUnsubscribe(null);
+        }
+        
+        if (!teamName || !categoryName) {
+            setTeamRoster([]);
+            setIsLoadingRoster(false);
+            setRosterTeamName('');
+            setRosterCategoryName('');
+            return;
+        }
         
         setIsLoadingRoster(true);
-        setTeamRoster(null);
+        setTeamRoster([]);
+        setRosterTeamName(teamName);
+        setRosterCategoryName(categoryName);
         
-        try {
-            const userDocRef = doc(window.db, 'users', uid);
-            const docSnap = await getDoc(userDocRef);
-            
-            if (docSnap.exists()) {
-                const userData = docSnap.data();
-                // Hľadáme tím v rôznych kategóriách
-                if (userData.teams) {
-                    for (const [categoryName, teamsArray] of Object.entries(userData.teams)) {
-                        if (Array.isArray(teamsArray)) {
-                            const foundTeam = teamsArray.find(t => t.id === teamId);
-                            if (foundTeam) {
-                                // Ak má tím súpisku, načítame ju
-                                if (foundTeam.roster && Array.isArray(foundTeam.roster)) {
-                                    setTeamRoster({
-                                        category: categoryName,
-                                        teamName: foundTeam.teamName,
-                                        roster: foundTeam.roster,
-                                        groupName: foundTeam.groupName || null
-                                    });
-                                } else {
-                                    setTeamRoster({
-                                        category: categoryName,
-                                        teamName: foundTeam.teamName,
-                                        roster: [],
-                                        groupName: foundTeam.groupName || null
-                                    });
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Chyba pri načítaní súpisky tímu:', error);
-        } finally {
+        const handleMembersUpdate = (members) => {
+            setTeamRoster(members);
             setIsLoadingRoster(false);
-        }
+        };
+        
+        const handleMappedName = (mappedName) => {
+            // Môžeme použiť na aktualizáciu zobrazeného názvu
+        };
+        
+        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
+        setRosterUnsubscribe(() => unsubscribe);
+        
+        // Timeout pre prípad, že sa načítanie zasekne
+        const timeoutId = setTimeout(() => {
+            setIsLoadingRoster(false);
+        }, 10000);
+        
+        // Uložíme timeout pre cleanup
+        window.__rosterTimeoutId = timeoutId;
     };
+
+    // Čistenie listenera pri zmene výberu
+    useEffect(() => {
+        return () => {
+            if (rosterUnsubscribe) {
+                rosterUnsubscribe();
+                setRosterUnsubscribe(null);
+            }
+            if (window.__rosterTimeoutId) {
+                clearTimeout(window.__rosterTimeoutId);
+                window.__rosterTimeoutId = null;
+            }
+        };
+    }, []);
 
     // Načítanie súpisky pri zmene vybraného výskytu
     useEffect(() => {
@@ -183,10 +342,24 @@ const TeamsOverviewApp = (props) => {
             }
             
             if (selectedOcc) {
-                loadTeamRoster(selectedOcc.uid, selectedOcc.id);
+                // Získame čistý názov kategórie
+                let categoryName = selectedOcc.category;
+                // Ak je kategória ID, prevedieme na názov
+                if (categoryIdToNameMap[categoryName]) {
+                    categoryName = categoryIdToNameMap[categoryName];
+                }
+                loadTeamRoster(selectedOcc.teamName, categoryName);
             }
         } else {
-            setTeamRoster(null);
+            // Zrušíme listener a vyčistíme
+            if (rosterUnsubscribe) {
+                rosterUnsubscribe();
+                setRosterUnsubscribe(null);
+            }
+            setTeamRoster([]);
+            setIsLoadingRoster(false);
+            setRosterTeamName('');
+            setRosterCategoryName('');
         }
     }, [selectedTeamDetails]);
 
@@ -309,7 +482,7 @@ const TeamsOverviewApp = (props) => {
                 if (teamOccurrences.length > 0) {
                     setSelectedTeamDetails({
                         teamName: teamNameFromUrl,
-                        category: categoryNameToStore, // Použijeme priamo z URL
+                        category: categoryNameToStore,
                         occurrences: teamOccurrences
                     });
                 } else {
@@ -335,7 +508,7 @@ const TeamsOverviewApp = (props) => {
                     if (teamOccurrencesAlt.length > 0) {
                         setSelectedTeamDetails({
                             teamName: teamNameFromUrl,
-                            category: categoryNameToStore, // Použijeme priamo z URL
+                            category: categoryNameToStore,
                             occurrences: teamOccurrencesAlt
                         });
                     }
@@ -601,9 +774,17 @@ const TeamsOverviewApp = (props) => {
         // Získame aktuálnu kategóriu z URL
         const { categoryName: categoryNameFromUrl } = parseUrlHash();
         
+        // Zrušíme listener na súpisku
+        if (rosterUnsubscribe) {
+            rosterUnsubscribe();
+            setRosterUnsubscribe(null);
+        }
+        
         // Nastavíme detail na null
         setSelectedTeamDetails(null);
-        setTeamRoster(null);
+        setTeamRoster([]);
+        setRosterTeamName('');
+        setRosterCategoryName('');
         
         // Ak je v URL kategória, nastavíme filter
         if (categoryNameFromUrl) {
@@ -675,12 +856,16 @@ const TeamsOverviewApp = (props) => {
         });
         
         // Načítame súpisku pre vybraný výskyt
-        loadTeamRoster(occ.uid, occ.id);
+        let categoryName = occ.category;
+        if (categoryIdToNameMap[categoryName]) {
+            categoryName = categoryIdToNameMap[categoryName];
+        }
+        loadTeamRoster(occ.teamName, categoryName);
     };
 
-    // Render súpisky tímu
+    // Render súpisky tímu (podobný ako v matches.js)
     const renderTeamRoster = () => {
-        if (!teamRoster) return null;
+        if (!selectedTeamDetails) return null;
         
         if (isLoadingRoster) {
             return React.createElement(
@@ -689,21 +874,23 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'div',
                     { className: 'text-center text-gray-500 py-4' },
-                    'Načítavam súpisku tímu...'
+                    React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
+                    React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam súpisku tímu...')
                 )
             );
         }
         
-        const { roster, teamName, category, groupName } = teamRoster;
+        const displayTeamName = rosterTeamName || selectedTeamDetails?.teamName || '';
+        const displayCategoryName = rosterCategoryName || selectedTeamDetails?.category || '';
         
-        if (!roster || roster.length === 0) {
+        if (!teamRoster || teamRoster.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
                 React.createElement(
                     'h3',
                     { className: 'text-lg font-semibold text-gray-700 mb-2' },
-                    `Súpiska tímu: ${teamName}`
+                    `Súpiska tímu: ${displayTeamName}`
                 ),
                 React.createElement(
                     'p',
@@ -712,6 +899,15 @@ const TeamsOverviewApp = (props) => {
                 )
             );
         }
+        
+        // Zoradenie: najprv hráči podľa čísla, potom RT členovia
+        const players = teamRoster.filter(m => m.type === 'Hráč').sort((a, b) => {
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+        const rtMembers = teamRoster.filter(m => m.type !== 'Hráč');
+        const sortedRoster = [...players, ...rtMembers];
         
         return React.createElement(
             'div',
@@ -722,12 +918,12 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'h3',
                     { className: 'text-lg font-semibold text-gray-700' },
-                    `Súpiska tímu: ${teamName}`
+                    `Súpiska tímu: ${displayTeamName}`
                 ),
                 React.createElement(
                     'span',
                     { className: 'text-sm text-gray-500' },
-                    `Počet hráčov: ${roster.length}`
+                    `Počet členov: ${teamRoster.length}`
                 )
             ),
             React.createElement(
@@ -745,6 +941,11 @@ const TeamsOverviewApp = (props) => {
                             React.createElement(
                                 'th',
                                 { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
+                                'Typ'
+                            ),
+                            React.createElement(
+                                'th',
+                                { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
                                 'Číslo'
                             ),
                             React.createElement(
@@ -755,43 +956,58 @@ const TeamsOverviewApp = (props) => {
                             React.createElement(
                                 'th',
                                 { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
-                                'Pozícia'
+                                'Reg. číslo'
                             )
                         )
                     ),
                     React.createElement(
                         'tbody',
                         null,
-                        roster.map((player, index) => {
-                            const playerNumber = player.number || player.cislo || '';
-                            const playerName = player.name || player.meno || player.fullName || '';
-                            const playerPosition = player.position || player.pozicia || '';
+                        sortedRoster.map((member, index) => {
+                            const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
+                            const typeIcon = member.type === 'Hráč' 
+                                ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500' })
+                                : (member.type === 'Člen RT (muž)' 
+                                    ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500' })
+                                    : (member.type === 'Člen RT (žena)'
+                                        ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500' })
+                                        : React.createElement('i', { className: 'fa-solid fa-user text-gray-400' })));
                             
                             return React.createElement(
                                 'tr',
                                 { 
-                                    key: index,
+                                    key: `${member.type}_${member.originalIndex || index}`,
                                     className: index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                                 },
                                 React.createElement(
                                     'td',
-                                    { className: 'px-4 py-2 text-sm border-b border-gray-100' },
-                                    playerNumber
+                                    { className: 'px-4 py-2 text-sm border-b border-gray-100 text-center' },
+                                    typeIcon
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-2 text-sm font-mono border-b border-gray-100 text-center' },
+                                    member.jerseyNumber || '-'
                                 ),
                                 React.createElement(
                                     'td',
                                     { className: 'px-4 py-2 text-sm font-medium border-b border-gray-100' },
-                                    playerName
+                                    fullName
                                 ),
                                 React.createElement(
                                     'td',
                                     { className: 'px-4 py-2 text-sm border-b border-gray-100' },
-                                    playerPosition || '-'
+                                    member.registrationNumber || '-'
                                 )
                             );
                         })
                     )
                 )
+            ),
+            React.createElement(
+                'div',
+                { className: 'mt-4 pt-3 border-t border-gray-200 text-xs text-gray-400' },
+                `Kategória: ${displayCategoryName}`
             )
         );
     };
@@ -1159,6 +1375,59 @@ const TeamsOverviewApp = (props) => {
         renderMainContent()
     );
 };
+
+// Definícia funkcie handleDataUpdateAndRender
+let isEmailSyncListenerSetup = false;
+
+const handleDataUpdateAndRender = (event) => {
+    const userProfileData = event?.detail || null;
+    const rootElement = document.getElementById('root');
+    
+    if (!rootElement || typeof ReactDOM === 'undefined' || typeof React === 'undefined') {
+        return;
+    }
+
+    try {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(TeamsOverviewApp, { 
+            userProfileData: userProfileData || null 
+        }));
+        
+        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(window.db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                await updateDoc(userProfileRef, { email: user.email });
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email,
+                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(),
+                                });
+                            }
+                        }
+                    } catch (error) {
+                    }
+                }
+            });
+            isEmailSyncListenerSetup = true;
+        }
+    } catch (error) {
+        rootElement.innerHTML = `
+            <div class="text-center py-16">
+                <p class="text-red-600 text-lg">Chyba pri načítaní aplikácie</p>
+                <p class="text-gray-500 text-sm">${error.message}</p>
+            </div>
+        `;
+    }
+};
+
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 const rootElement = document.getElementById('root');
 if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
