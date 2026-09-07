@@ -271,7 +271,7 @@ const TeamsOverviewApp = (props) => {
         return React.createElement(
             'div',
             { 
-                className: 'w-full overflow-x-auto overflow-y-auto max-h-[80vh] relative shadow-lg rounded-lg',
+                className: 'w-full overflow-x-auto overflow-y-auto max-h-[60vh] relative shadow-lg rounded-lg',
                 ref: tableContainerRef
             },
             React.createElement(
