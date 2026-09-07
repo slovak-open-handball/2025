@@ -103,6 +103,7 @@ const TeamsOverviewApp = (props) => {
     const tableContainerRef = useRef(null);
     const headerSentinelRef = useRef(null);
     const observerRef = useRef(null);
+    const fixedHeaderRef = useRef(null);
 
     // ===================================================================
     // LISTENERY PRE DÁTA - LEN POUŽÍVATEĽSKÉ TÍMY (BEZ SUPERSTRUCTURE)
@@ -240,7 +241,7 @@ const TeamsOverviewApp = (props) => {
                 },
                 {
                     threshold: 0,
-                    rootMargin: '64px 0px 0px 0px'
+                    rootMargin: '-70px 0px 0px 0px'
                 }
             );
 
@@ -308,6 +309,7 @@ const TeamsOverviewApp = (props) => {
         return React.createElement(
             'div',
             { 
+                ref: fixedHeaderRef,
                 className: `fixed top-0 left-0 right-0 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
@@ -318,13 +320,13 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'container mx-auto px-4 sm:px-6 lg:px-8',
-                    style: { minWidth: '600px' }
+                    className: 'container mx-auto px-4 sm:px-6 lg:px-8'
                 },
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex items-center'
+                        className: 'flex items-center',
+                        style: { minWidth: '600px' }
                     },
                     // Prvý stĺpec - Názov tímu
                     React.createElement(
