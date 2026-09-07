@@ -390,6 +390,9 @@ const TeamsOverviewApp = (props) => {
             if (team.category && cleanName.startsWith(team.category + ' ')) {
                 cleanName = cleanName.substring(team.category.length + 1).trim();
             }
+            // Odstráň sufix pre zobrazenie v tabuľke
+            cleanName = removeSuffix(cleanName);
+            
             if (selectedTeamNameFilter && !cleanName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())) {
                 return;
             }
@@ -407,6 +410,8 @@ const TeamsOverviewApp = (props) => {
                     if (team.category && cleanName.startsWith(team.category + ' ')) {
                         cleanName = cleanName.substring(team.category.length + 1).trim();
                     }
+                    // Odstráň sufix pre porovnanie
+                    cleanName = removeSuffix(cleanName);
                     return team.category === cat && cleanName === name;
                 }).length;
                 matrix[name][cat] = count;
@@ -463,13 +468,17 @@ const TeamsOverviewApp = (props) => {
         // Normalizujeme názov - odstránime viacnásobné medzery
         const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
         
+        // Získame názov bez sufixu pre vyhľadávanie
+        const baseTeamName = removeSuffix(normalizedTeamName);
+        
         const teamOccurrences = allTeams
             .filter(team => {
                 let cleanName = removeSuffix(team.teamName);
                 if (team.category && cleanName.startsWith(team.category + ' ')) {
                     cleanName = cleanName.substring(team.category.length + 1).trim();
                 }
-                return cleanName === normalizedTeamName;
+                // Porovnávame bez sufixu
+                return cleanName === baseTeamName;
             })
             .map(team => ({
                 category: team.category,
@@ -719,6 +728,9 @@ const TeamsOverviewApp = (props) => {
                     sortedTeamNames.map((teamName, rowIndex) => {
                         const total = getTotalForTeam(teamName);
                         const isEvenRow = rowIndex % 2 === 0;
+                        
+                        // Získame base názov bez sufixu pre kliknutie
+                        const baseTeamName = removeSuffix(teamName);
                         
                         return React.createElement(
                             'tr',
