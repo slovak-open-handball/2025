@@ -313,6 +313,9 @@ const TeamsOverviewApp = (props) => {
             return null;
         }
     
+        // Vypočítame celkový počet stĺpcov
+        const totalColumns = 1 + filteredCategoryNames.length + 1; // názov + kategórie + celkom
+    
         return React.createElement(
             'div',
             { 
@@ -331,51 +334,89 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'flex items-center',
-                    style: { minWidth: '600px' }
+                    style: { 
+                        display: 'table',
+                        width: '100%',
+                        tableLayout: 'fixed',
+                        minWidth: '600px'
+                    }
                 },
-                // Prvý stĺpec - Názov tímu
+                // Riadok ako tabuľkový riadok
                 React.createElement(
                     'div',
-                    { 
-                        className: 'px-4 py-3 font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600 flex-shrink-0',
-                        style: COLUMN_WIDTHS.teamName
-                    },
-                    'Názov tímu'
-                ),
-                // Stĺpce kategórií
-                filteredCategoryNames.map((catName) => {
-                    const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
-                    
-                    return React.createElement(
+                    { style: { display: 'table-row' } },
+                    // Prvý stĺpec - Názov tímu
+                    React.createElement(
                         'div',
                         { 
-                            key: catName,
-                            onClick: () => handleCategoryHeaderClick(catName),
-                            className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 border-r border-gray-600 flex-shrink-0 ${isSelected ? 'bg-blue-600' : ''}`,
-                            style: COLUMN_WIDTHS.category,
-                            title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
+                            style: { 
+                                display: 'table-cell',
+                                padding: '12px 16px',
+                                fontWeight: '600',
+                                position: 'sticky',
+                                left: 0,
+                                backgroundColor: '#1f2937',
+                                zIndex: 10,
+                                borderRight: '1px solid #4b5563',
+                                width: '180px',
+                                minWidth: '180px',
+                                maxWidth: '250px'
+                            }
                         },
-                        React.createElement(
-                            'span',
-                            { className: 'flex items-center justify-center gap-1' },
-                            catName,
-                            isSelected && React.createElement(
+                        'Názov tímu'
+                    ),
+                    // Stĺpce kategórií
+                    filteredCategoryNames.map((catName) => {
+                        const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                        
+                        return React.createElement(
+                            'div',
+                            { 
+                                key: catName,
+                                onClick: () => handleCategoryHeaderClick(catName),
+                                style: { 
+                                    display: 'table-cell',
+                                    padding: '12px 16px',
+                                    textAlign: 'center',
+                                    fontWeight: '600',
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    backgroundColor: isSelected ? '#2563eb' : '#1f2937',
+                                    borderRight: '1px solid #4b5563',
+                                    width: '80px',
+                                    minWidth: '80px'
+                                },
+                                title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
+                            },
+                            React.createElement(
                                 'span',
-                                { className: 'text-xs ml-1' },
-                                '✕'
+                                { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' } },
+                                catName,
+                                isSelected && React.createElement(
+                                    'span',
+                                    { style: { fontSize: '0.75rem', marginLeft: '4px' } },
+                                    '✕'
+                                )
                             )
-                        )
-                    );
-                }),
-                // Stĺpec Celkom
-                React.createElement(
-                    'div',
-                    { 
-                        className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap flex-shrink-0',
-                        style: COLUMN_WIDTHS.total
-                    },
-                    'Celkom'
+                        );
+                    }),
+                    // Stĺpec Celkom
+                    React.createElement(
+                        'div',
+                        { 
+                            style: { 
+                                display: 'table-cell',
+                                padding: '12px 16px',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                backgroundColor: '#374151',
+                                whiteSpace: 'nowrap',
+                                width: '80px',
+                                minWidth: '80px'
+                            }
+                        },
+                        'Celkom'
+                    )
                 )
             )
         );
