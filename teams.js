@@ -255,7 +255,7 @@ const TeamsOverviewApp = (props) => {
             return React.createElement(
                 'div',
                 { className: 'text-center py-16 text-gray-500' },
-                'Žiadne dáta pre zobrazenie. Najprv vytvorte kategórie a tímy.'
+                'Žiadne údaje.'
             );
         }
 
