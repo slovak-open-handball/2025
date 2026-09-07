@@ -325,7 +325,7 @@ const TeamsOverviewApp = (props) => {
                 }`,
                 style: { 
                     width: '90%',
-                    maxWidth: '1080px',
+                    maxWidth: '1060px',
                     transition: 'transform 0.3s ease, opacity 0.3s ease',
                     borderRadius: '8px',
                     overflow: 'hidden'
