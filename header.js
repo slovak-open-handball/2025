@@ -3,7 +3,7 @@ import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion
 import { countryDialCodes } from "./countryDialCodes.js";
 
 
-
+/*
 
 // ---------------------------------------------------------------------------------------------------------------- ZAČIATOK približenie stranky
 
@@ -426,6 +426,8 @@ window.ZOOM_CONTROL_ENABLED = ZOOM_CONTROL_ENABLED;
 window.isMobileDevice = isMobileDevice;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
+
+*/
 
 
 
