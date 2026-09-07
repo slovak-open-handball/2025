@@ -93,7 +93,7 @@ const TeamsOverviewApp = (props) => {
                     });
                 }
             });
-            setAllTeams(userTeamsList); // IBA používateľské tímy
+            setAllTeams(userTeamsList);
         });
 
         // Načítanie kategórií
@@ -190,6 +190,23 @@ const TeamsOverviewApp = (props) => {
     }, []);
 
     // ===================================================================
+    // FUNKCIA PRE KLIKNUTIE NA HLAVIČKU KATEGÓRIE
+    // ===================================================================
+    const handleCategoryHeaderClick = (categoryName) => {
+        // Nájdeme ID kategórie podľa názvu
+        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
+        
+        if (categoryId) {
+            // Ak je už vybraná tá istá kategória, zrušíme filter (zobrazíme všetky)
+            if (selectedCategoryId === categoryId) {
+                setSelectedCategoryId('');
+            } else {
+                setSelectedCategoryId(categoryId);
+            }
+        }
+    };
+
+    // ===================================================================
     // RENDER - PREHĽADOVÁ TABUĽKA
     // ===================================================================
     const renderOverviewTable = () => {
@@ -241,16 +258,30 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Názov tímu'
                         ),
-                        filteredCategoryNames.map(catName => 
-                            React.createElement(
+                        filteredCategoryNames.map(catName => {
+                            // Zistíme, či je táto kategória vybraná
+                            const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                            
+                            return React.createElement(
                                 'th',
                                 { 
                                     key: catName,
-                                    className: 'px-4 py-3 text-center font-semibold whitespace-nowrap'
+                                    onClick: () => handleCategoryHeaderClick(catName),
+                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 ${isSelected ? 'bg-blue-600' : ''}`,
+                                    title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                                 },
-                                catName
-                            )
-                        ),
+                                React.createElement(
+                                    'span',
+                                    { className: 'flex items-center justify-center gap-1' },
+                                    catName,
+                                    isSelected && React.createElement(
+                                        'span',
+                                        { className: 'text-xs ml-1' },
+                                        '✕'
+                                    )
+                                )
+                            );
+                        }),
                         React.createElement(
                             'th',
                             { 
@@ -354,34 +385,12 @@ const TeamsOverviewApp = (props) => {
     };
 
     // ===================================================================
-    // FILTRE A OVLÁDANIE
+    // FILTRE - IBA VYHĽADÁVANIE (BEZ SELECTBOXU)
     // ===================================================================
     const renderFilters = () => {
-        const categoryOptions = Object.entries(categoryIdToNameMap)
-            .sort(([, a], [, b]) => a.localeCompare(b))
-            .map(([id, name]) => 
-                React.createElement('option', { key: id, value: id }, name)
-            );
-
         return React.createElement(
             'div',
             { className: 'flex flex-wrap gap-4 mb-6 items-end' },
-            // Filter podľa kategórie
-            React.createElement(
-                'div',
-                { className: 'flex flex-col' },
-                React.createElement('label', { className: 'text-sm font-medium text-gray-600 mb-1' }, 'Kategória'),
-                React.createElement(
-                    'select',
-                    {
-                        value: selectedCategoryId,
-                        onChange: (e) => setSelectedCategoryId(e.target.value),
-                        className: 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
-                    },
-                    React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                    ...categoryOptions
-                )
-            ),
             // Filter podľa názvu tímu
             React.createElement(
                 'div',
@@ -439,7 +448,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'p',
                 { className: 'text-center text-gray-500 mt-1' },
-                'Zobrazenie počtu výskytov každého tímu v jednotlivých kategóriách'
+                'Kliknite na názov kategórie v hlavičke pre filtrovanie'
             )
         ),
         
