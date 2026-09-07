@@ -63,73 +63,6 @@ const getCurrentZoomLevel = () => {
     return 100;
 };
 
-// Funkcia na nastavenie priblíženia na 80%
-const setZoomTo80Percent = () => {
-    try {
-        // Metóda 1: Použitie CSS zoom (funguje vo väčšine prehliadačov)
-        document.body.style.zoom = '80%';
-        
-        // Metóda 2: Pre Firefox a staršie prehliadače - transform scale
-        // document.body.style.transform = 'scale(0.8)';
-        // document.body.style.transformOrigin = 'top left';
-        // document.body.style.width = '125%'; // Kompenzácia pre scale
-        
-        // Metóda 3: Pre mobilné prehliadače - viewport meta tag
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-            // Pridáme alebo upravíme initial-scale
-            let content = viewport.getAttribute('content') || '';
-            if (content.includes('initial-scale')) {
-                content = content.replace(/initial-scale=[0-9.]+/, 'initial-scale=0.8');
-            } else {
-                content += ', initial-scale=0.8';
-            }
-            viewport.setAttribute('content', content);
-        }
-        
-        console.log('🔍 Priblíženie bolo nastavené na 80%');
-        return true;
-    } catch (e) {
-        console.warn('❌ Nepodarilo sa nastaviť priblíženie na 80%', e);
-        return false;
-    }
-};
-
-// Funkcia na kontrolu a nastavenie priblíženia
-const checkAndSetZoom = () => {
-    const currentZoom = getCurrentZoomLevel();
-    console.log(`📐 Aktuálne priblíženie stránky: ${currentZoom}%`);
-    
-    // Ak priblíženie nie je 80%, nastavíme ho na 80%
-    if (currentZoom !== 80) {
-        console.log(`🔄 Nastavujem priblíženie z ${currentZoom}% na 80%`);
-        setZoomTo80Percent();
-        
-        // Overíme, či sa priblíženie zmenilo
-        setTimeout(() => {
-            const newZoom = getCurrentZoomLevel();
-            if (newZoom !== 80) {
-                console.log(`⚠️ Priblíženie zostalo na ${newZoom}%. Skúšam alternatívnu metódu...`);
-                // Alternatívna metóda - použitie CSS transform
-                try {
-                    document.body.style.transform = 'scale(0.8)';
-                    document.body.style.transformOrigin = 'top left';
-                    document.body.style.width = '125%';
-                    console.log('🔍 Použitá alternatívna metóda (transform: scale)');
-                } catch (e) {
-                    console.warn('❌ Alternatívna metóda zlyhala');
-                }
-            } else {
-                console.log('✅ Priblíženie úspešne nastavené na 80%');
-            }
-        }, 500);
-    } else {
-        console.log('✅ Priblíženie je už na 80%');
-    }
-    
-    return currentZoom;
-};
-
 // Funkcia na výpis priblíženia do konzoly
 const logCurrentZoom = () => {
     const zoom = getCurrentZoomLevel();
@@ -137,31 +70,25 @@ const logCurrentZoom = () => {
     return zoom;
 };
 
-// Automatické zistenie a nastavenie priblíženia na 80%
+// Automatické zistenie a výpis priblíženia pri načítaní stránky
+// a pri zmene veľkosti okna (pre prípad, že používateľ zmení zoom)
 const setupZoomMonitoring = () => {
-    // Skontrolujeme a nastavíme priblíženie na 80%
-    checkAndSetZoom();
+    // Zistíme a vypíšeme aktuálne priblíženie
+    logCurrentZoom();
 
     // Sledujeme zmenu veľkosti okna (často indikuje zmenu zoomu)
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            const currentZoom = getCurrentZoomLevel();
-            console.log(`📐 Aktuálne priblíženie stránky: ${currentZoom}%`);
-            
-            // Ak sa priblíženie zmenilo, opäť ho nastavíme na 80%
-            if (currentZoom !== 80) {
-                console.log(`🔄 Používateľ zmenil priblíženie na ${currentZoom}%. Vraciam na 80%`);
-                setZoomTo80Percent();
-            }
+            logCurrentZoom();
         }, 300);
     });
 
     // Sledujeme zmenu orientácie obrazovky (pre mobilné zariadenia)
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
-            checkAndSetZoom();
+            logCurrentZoom();
         }, 500);
     });
 
@@ -170,10 +97,12 @@ const setupZoomMonitoring = () => {
         const mediaQuery = window.matchMedia('(resolution: 1dppx)');
         mediaQuery.addEventListener('change', () => {
             setTimeout(() => {
-                checkAndSetZoom();
+                logCurrentZoom();
             }, 100);
         });
-    } catch (e) {}
+    } catch (e) {
+        // Event listener pre media query nie je podporovaný
+    }
 };
 
 // Spustíme sledovanie priblíženia po načítaní DOM
@@ -183,10 +112,9 @@ if (document.readyState === 'loading') {
     setupZoomMonitoring();
 }
 
-// Exportujeme funkcie pre prípadné manuálne použitie
+// Exportujeme funkcie pre prípadné manuálne použitie z konzoly
 window.getCurrentZoomLevel = getCurrentZoomLevel;
-window.setZoomTo80Percent = setZoomTo80Percent;
-window.checkAndSetZoom = checkAndSetZoom;
+window.logCurrentZoom = logCurrentZoom;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
 
