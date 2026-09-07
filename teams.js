@@ -1160,8 +1160,6 @@ const TeamsOverviewApp = (props) => {
     );
 };
 
-window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
 const rootElement = document.getElementById('root');
 if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
     const root = ReactDOM.createRoot(rootElement);
