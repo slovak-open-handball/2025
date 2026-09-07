@@ -855,7 +855,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 return React.createElement('li', {
                                     key: groupIndex,
                                     className: `
-                                        ${group.type === 'nadstavbová skupina' ? 'bg-blue-100' : 'bg-gray-100'}
+                                        ${group.type === 'nadstavbová skupina' ? 'bg-blue-100' : 'bg-green-100'}
                                         rounded-md p-2 my-1 text-sm flex justify-between items-center
                                     `.trim()
                                 }, 
