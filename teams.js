@@ -256,6 +256,8 @@ const TeamsOverviewApp = (props) => {
     // Počúvanie na zmeny v URL hash (pre prípad, že používateľ klikne na späť/ďalej)
     useEffect(() => {
         const handleHashChange = () => {
+            // Ak už máme zobrazený detail tímu a hash sa zmenil kvôli kliknutiu na tlačidlo,
+            // nechceme prepínať späť na tabuľku
             if (!isInitialLoad) {
                 const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
                 
@@ -269,42 +271,50 @@ const TeamsOverviewApp = (props) => {
                     setSelectedCategoryId('');
                 }
                 
-                // Aktualizácia detailu tímu
+                // Aktualizácia detailu tímu - IBA ak sa zmenil tím v URL
                 if (teamNameFromUrl) {
-                    const teamOccurrences = allTeams
-                        .filter(team => {
-                            let cleanName = removeSuffix(team.teamName);
-                            if (team.category && cleanName.startsWith(team.category + ' ')) {
-                                cleanName = cleanName.substring(team.category.length + 1).trim();
-                            }
-                            return cleanName === teamNameFromUrl;
-                        })
-                        .map(team => ({
-                            category: team.category,
-                            teamName: team.teamName,
-                            uid: team.uid,
-                            id: team.id,
-                            groupName: team.groupName,
-                            order: team.order
-                        }));
+                    // Skontrolujeme, či už nemáme rovnaký tím zobrazený
+                    if (!selectedTeamDetails || selectedTeamDetails.teamName !== teamNameFromUrl) {
+                        const teamOccurrences = allTeams
+                            .filter(team => {
+                                let cleanName = removeSuffix(team.teamName);
+                                if (team.category && cleanName.startsWith(team.category + ' ')) {
+                                    cleanName = cleanName.substring(team.category.length + 1).trim();
+                                }
+                                return cleanName === teamNameFromUrl;
+                            })
+                            .map(team => ({
+                                category: team.category,
+                                teamName: team.teamName,
+                                uid: team.uid,
+                                id: team.id,
+                                groupName: team.groupName,
+                                order: team.order
+                            }));
 
-                    if (teamOccurrences.length > 0) {
-                        setSelectedTeamDetails({
-                            teamName: teamNameFromUrl,
-                            occurrences: teamOccurrences
-                        });
-                    } else {
+                        if (teamOccurrences.length > 0) {
+                            setSelectedTeamDetails({
+                                teamName: teamNameFromUrl,
+                                occurrences: teamOccurrences
+                            });
+                        } else {
+                            setSelectedTeamDetails(null);
+                        }
+                    }
+                    // Ak je rovnaký tím, nič nerobíme (zostávame v detaile)
+                } else {
+                    // Ak v URL nie je tím, ale máme zobrazený detail, necháme ho zobrazený
+                    // (to je prípad, keď sme klikli na tlačidlo a zmenila sa len kategória)
+                    if (!selectedTeamDetails) {
                         setSelectedTeamDetails(null);
                     }
-                } else {
-                    setSelectedTeamDetails(null);
                 }
             }
         };
 
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [allTeams, categoryIdToNameMap, isInitialLoad]);
+    }, [allTeams, categoryIdToNameMap, isInitialLoad, selectedTeamDetails]);
 
     const getTableData = () => {
         if (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0) {
@@ -438,8 +448,25 @@ const TeamsOverviewApp = (props) => {
             order: occ.order
         });
         
-        // Aktualizujeme URL s kategóriou aj tímom
-        updateUrlHash(occ.teamName, occ.category);        
+        // Aktualizujeme URL s kategóriou aj tímom - použijeme history.replaceState aby sme nespustili hashchange
+        const hashParts = [];
+        if (occ.category) {
+            const encodedCategory = encodeURIComponent(occ.category.replace(/ /g, '-'));
+            hashParts.push(`category=${encodedCategory}`);
+        }
+        if (occ.teamName) {
+            const encodedTeam = encodeURIComponent(occ.teamName.replace(/ /g, '-'));
+            hashParts.push(`team=${encodedTeam}`);
+        }
+        
+        const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
+        if (window.location.hash !== newHash) {
+            // Použijeme replaceState aby sme nespustili hashchange event
+            window.history.replaceState(null, '', newHash);
+        }
+        
+        // Zostaneme v detaile tímu - nič nemeníme na selectedTeamDetails
+        // notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
     };
 
     const renderTeamDetails = () => {
