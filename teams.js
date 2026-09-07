@@ -105,6 +105,13 @@ const TeamsOverviewApp = (props) => {
     const observerRef = useRef(null);
     const fixedHeaderRef = useRef(null);
 
+    // Konštanty pre šírky stĺpcov
+    const COLUMN_WIDTHS = {
+        teamName: { minWidth: '180px', maxWidth: '250px', width: '180px' },
+        category: { minWidth: '80px', width: '80px' },
+        total: { minWidth: '80px', width: '80px' }
+    };
+
     // ===================================================================
     // LISTENERY PRE DÁTA - LEN POUŽÍVATEĽSKÉ TÍMY (BEZ SUPERSTRUCTURE)
     // ===================================================================
@@ -310,68 +317,65 @@ const TeamsOverviewApp = (props) => {
             'div',
             { 
                 ref: fixedHeaderRef,
-                className: `fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
+                className: `fixed top-14 left-1/2 transform -translate-x-1/2 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
                 style: { 
                     width: '90%',
-                    maxWidth: '1200px'
+                    maxWidth: '1200px',
+                    transition: 'transform 0.3s ease, opacity 0.3s ease',
+                    borderRadius: '8px',
+                    overflow: 'hidden'
                 }
             },
             React.createElement(
                 'div',
                 { 
-                    className: 'container mx-auto px-4 sm:px-6 lg:px-8'
+                    className: 'flex items-center',
+                    style: { minWidth: '600px' }
                 },
+                // Prvý stĺpec - Názov tímu
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex items-center',
-                        style: { minWidth: '600px' }
+                        className: 'px-4 py-3 font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600 flex-shrink-0',
+                        style: COLUMN_WIDTHS.teamName
                     },
-                    // Prvý stĺpec - Názov tímu
-                    React.createElement(
+                    'Názov tímu'
+                ),
+                // Stĺpce kategórií
+                filteredCategoryNames.map((catName) => {
+                    const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                    
+                    return React.createElement(
                         'div',
                         { 
-                            className: 'px-4 py-3 font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600 flex-shrink-0',
-                            style: { minWidth: '180px', maxWidth: '250px', width: '180px' }
+                            key: catName,
+                            onClick: () => handleCategoryHeaderClick(catName),
+                            className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 border-r border-gray-600 flex-shrink-0 ${isSelected ? 'bg-blue-600' : ''}`,
+                            style: COLUMN_WIDTHS.category,
+                            title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                         },
-                        'Názov tímu'
-                    ),
-                    // Stĺpce kategórií
-                    filteredCategoryNames.map((catName) => {
-                        const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
-                        
-                        return React.createElement(
-                            'div',
-                            { 
-                                key: catName,
-                                onClick: () => handleCategoryHeaderClick(catName),
-                                className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 border-r border-gray-600 flex-shrink-0 ${isSelected ? 'bg-blue-600' : ''}`,
-                                style: { minWidth: '80px', width: '80px' },
-                                title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
-                            },
-                            React.createElement(
+                        React.createElement(
+                            'span',
+                            { className: 'flex items-center justify-center gap-1' },
+                            catName,
+                            isSelected && React.createElement(
                                 'span',
-                                { className: 'flex items-center justify-center gap-1' },
-                                catName,
-                                isSelected && React.createElement(
-                                    'span',
-                                    { className: 'text-xs ml-1' },
-                                    '✕'
-                                )
+                                { className: 'text-xs ml-1' },
+                                '✕'
                             )
-                        );
-                    }),
-                    // Stĺpec Celkom
-                    React.createElement(
-                        'div',
-                        { 
-                            className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap flex-shrink-0',
-                            style: { minWidth: '80px', width: '80px' }
-                        },
-                        'Celkom'
-                    )
+                        )
+                    );
+                }),
+                // Stĺpec Celkom
+                React.createElement(
+                    'div',
+                    { 
+                        className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap flex-shrink-0',
+                        style: COLUMN_WIDTHS.total
+                    },
+                    'Celkom'
                 )
             )
         );
@@ -452,7 +456,7 @@ const TeamsOverviewApp = (props) => {
                             'th',
                             { 
                                 className: 'px-4 py-3 text-left font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600',
-                                style: { minWidth: '180px', maxWidth: '250px' }
+                                style: COLUMN_WIDTHS.teamName
                             },
                             'Názov tímu'
                         ),
@@ -468,6 +472,7 @@ const TeamsOverviewApp = (props) => {
                                     key: catName,
                                     onClick: () => handleCategoryHeaderClick(catName),
                                     className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 ${isSelected ? 'bg-blue-600' : ''} ${borderClass}`,
+                                    style: COLUMN_WIDTHS.category,
                                     title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                                 },
                                 React.createElement(
@@ -485,7 +490,8 @@ const TeamsOverviewApp = (props) => {
                         React.createElement(
                             'th',
                             { 
-                                className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap'
+                                className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap',
+                                style: COLUMN_WIDTHS.total
                             },
                             'Celkom'
                         )
@@ -510,7 +516,7 @@ const TeamsOverviewApp = (props) => {
                                 'td',
                                 { 
                                     className: 'px-4 py-3 font-medium text-gray-800 sticky left-0 bg-inherit z-10 border-r border-gray-200',
-                                    style: { minWidth: '180px', maxWidth: '250px' }
+                                    style: COLUMN_WIDTHS.teamName
                                 },
                                 teamName
                             ),
@@ -524,7 +530,8 @@ const TeamsOverviewApp = (props) => {
                                     'td',
                                     { 
                                         key: catName,
-                                        className: `px-4 py-3 text-center font-semibold ${borderClass}`
+                                        className: `px-4 py-3 text-center font-semibold ${borderClass}`,
+                                        style: COLUMN_WIDTHS.category
                                     },
                                     displayValue
                                 );
@@ -533,7 +540,8 @@ const TeamsOverviewApp = (props) => {
                             React.createElement(
                                 'td',
                                 { 
-                                    className: `px-4 py-3 text-center font-bold ${total > 0 ? 'text-gray-800' : 'text-gray-400'}`
+                                    className: `px-4 py-3 text-center font-bold ${total > 0 ? 'text-gray-800' : 'text-gray-400'}`,
+                                    style: COLUMN_WIDTHS.total
                                 },
                                 total > 0 ? total : ''
                             )
@@ -550,7 +558,8 @@ const TeamsOverviewApp = (props) => {
                         React.createElement(
                             'td',
                             { 
-                                className: 'px-4 py-3 text-left text-gray-700 sticky left-0 bg-gray-200 z-10 border-r border-gray-300'
+                                className: 'px-4 py-3 text-left text-gray-700 sticky left-0 bg-gray-200 z-10 border-r border-gray-300',
+                                style: COLUMN_WIDTHS.teamName
                             },
                             'Celkom tímov'
                         ),
@@ -565,7 +574,8 @@ const TeamsOverviewApp = (props) => {
                                 'td',
                                 { 
                                     key: catName,
-                                    className: `px-4 py-3 text-center text-gray-700 ${borderClass}`
+                                    className: `px-4 py-3 text-center text-gray-700 ${borderClass}`,
+                                    style: COLUMN_WIDTHS.category
                                 },
                                 totalInCategory
                             );
@@ -573,7 +583,8 @@ const TeamsOverviewApp = (props) => {
                         React.createElement(
                             'td',
                             { 
-                                className: 'px-4 py-3 text-center text-gray-700 bg-gray-300'
+                                className: 'px-4 py-3 text-center text-gray-700 bg-gray-300',
+                                style: COLUMN_WIDTHS.total
                             },
                             sortedTeamNames.reduce((sum, name) => sum + getTotalForTeam(name), 0)
                         )
