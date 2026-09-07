@@ -2,6 +2,140 @@ import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/fire
 import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from "./countryDialCodes.js";
 
+
+
+
+// ---------------------------------------------------------------------------------------------------------------- ZAČIATOK približenie stranky
+
+const getCurrentZoomLevel = () => {
+    // Metóda 1: Použitie window.devicePixelRatio pre mobilné zariadenia
+    if (window.devicePixelRatio) {
+        // Pre mobilné zariadenia vrátime hodnotu devicePixelRatio * 100
+        // ale berieme do úvahy, že na desktopoch to môže byť 1
+        if (window.innerWidth !== window.screen.width) {
+            return Math.round(window.devicePixelRatio * 100);
+        }
+    }
+
+    // Metóda 2: Výpočet pomocou vizuálneho viewportu
+    // Pre desktopové prehliadače
+    try {
+        // Vytvoríme testovací element
+        const testElement = document.createElement('div');
+        testElement.style.width = '100px';
+        testElement.style.height = '100px';
+        testElement.style.position = 'absolute';
+        testElement.style.visibility = 'hidden';
+        testElement.style.top = '-1000px';
+        document.body.appendChild(testElement);
+
+        // Získame šírku v CSS pixeloch a v screen pixeloch
+        const cssWidth = testElement.offsetWidth;
+        const screenWidth = testElement.getBoundingClientRect().width;
+        
+        // Odstránime testovací element
+        document.body.removeChild(testElement);
+
+        // Vypočítame zoom
+        if (cssWidth > 0 && screenWidth > 0) {
+            const zoom = (screenWidth / cssWidth) * 100;
+            return Math.round(zoom);
+        }
+    } catch (e) {
+        // Ak metóda zlyhá, použijeme alternatívnu metódu
+    }
+
+    // Metóda 3: Alternatívny výpočet pomocou window.outerWidth a window.innerWidth
+    try {
+        if (window.outerWidth && window.innerWidth) {
+            // Odhad zoomu pre desktopové prehliadače
+            const zoom = (window.innerWidth / window.outerWidth) * 100;
+            // Zaokrúhlime na najbližšie celé číslo
+            return Math.round(zoom);
+        }
+    } catch (e) {
+        // Ak metóda zlyhá, vrátime predvolenú hodnotu
+    }
+
+    // Metóda 4: Pre moderné prehliadače - Media Queries
+    try {
+        // Skúsime zistiť zoom pomocou media query match
+        const mediaQuery = window.matchMedia('(resolution: 1dppx)');
+        if (mediaQuery.matches) {
+            return 100;
+        }
+        
+        // Overíme rôzne hodnoty
+        const resolutions = [0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 2];
+        for (const res of resolutions) {
+            const mq = window.matchMedia(`(resolution: ${res}dppx)`);
+            if (mq.matches) {
+                return Math.round(res * 100);
+            }
+        }
+    } catch (e) {
+        // Media queries nie sú podporované
+    }
+
+    // Predvolená hodnota - 100%
+    return 100;
+};
+
+// Funkcia na výpis priblíženia do konzoly
+const logCurrentZoom = () => {
+    const zoom = getCurrentZoomLevel();
+    console.log(`📐 Aktuálne priblíženie stránky: ${zoom}%`);
+    return zoom;
+};
+
+// Automatické zistenie a výpis priblíženia pri načítaní stránky
+// a pri zmene veľkosti okna (pre prípad, že používateľ zmení zoom)
+const setupZoomMonitoring = () => {
+    // Zistíme a vypíšeme aktuálne priblíženie
+    logCurrentZoom();
+
+    // Sledujeme zmenu veľkosti okna (často indikuje zmenu zoomu)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            logCurrentZoom();
+        }, 300);
+    });
+
+    // Sledujeme zmenu orientácie obrazovky (pre mobilné zariadenia)
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            logCurrentZoom();
+        }, 500);
+    });
+
+    // Sledujeme zmenu priblíženia pomocou Media Query (pre niektoré prehliadače)
+    try {
+        const mediaQuery = window.matchMedia('(resolution: 1dppx)');
+        mediaQuery.addEventListener('change', () => {
+            setTimeout(() => {
+                logCurrentZoom();
+            }, 100);
+        });
+    } catch (e) {
+        // Event listener pre media query nie je podporovaný
+    }
+};
+
+// Spustíme sledovanie priblíženia po načítaní DOM
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', setupZoomMonitoring);
+} else {
+    setupZoomMonitoring();
+}
+
+// ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
+
+
+
+
+
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null;
 let unsubscribeFromUserSettings = null;
