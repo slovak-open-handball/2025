@@ -391,6 +391,8 @@ const TeamsOverviewApp = (props) => {
             return;
         }
         
+        console.log(`[loadTeamRoster] Načítavam súpisku pre: "${teamName}" v kategórii "${categoryName}"`);
+        
         setIsLoadingRoster(true);
         setTeamRoster([]);
         setRosterTeamName(teamName);
@@ -410,6 +412,7 @@ const TeamsOverviewApp = (props) => {
             const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
             setRosterUnsubscribe(() => unsubscribe);
         } catch (error) {
+            console.error(`[loadTeamRoster] Chyba pri načítavaní:`, error);
             setIsLoadingRoster(false);
         }
         
@@ -456,6 +459,17 @@ const TeamsOverviewApp = (props) => {
                     occ => occ.category === selectedTeamDetails.category && 
                            occ.teamName === selectedTeamDetails.teamName
                 );
+            }
+            
+            // Ak sme nenašli, skúsime podľa kategórie z URL a názvu z URL
+            if (!selectedOcc) {
+                const { teamName: teamNameFromUrl } = parseUrlHash();
+                if (categoryFromUrl && teamNameFromUrl) {
+                    selectedOcc = selectedTeamDetails.occurrences.find(
+                        occ => occ.category === categoryFromUrl && 
+                               occ.teamName === teamNameFromUrl
+                    );
+                }
             }
             
             // Ak sme nenašli, skúsime podľa kategórie z URL
@@ -725,14 +739,22 @@ const TeamsOverviewApp = (props) => {
                 
                 // Aktualizácia detailu tímu - IBA ak sa zmenil tím v URL
                 if (teamNameFromUrl) {
-                    // Odstránime sufix z názvu z URL pre vyhľadávanie
-                    const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+                    // Skúsime nájsť presnú zhodu podľa celého názvu (vrátane sufixu)
+                    let teamOccurrences = allTeams
+                        .filter(team => team.teamName === teamNameFromUrl)
+                        .map(team => ({
+                            category: team.category,
+                            teamName: team.teamName,
+                            uid: team.uid,
+                            id: team.id,
+                            groupName: team.groupName,
+                            order: team.order
+                        }));
                     
-                    // Skontrolujeme, či už nemáme rovnaký tím zobrazený (porovnanie bez sufixu)
-                    const currentBaseName = selectedTeamDetails ? removeSuffix(selectedTeamDetails.teamName) : null;
-                    
-                    if (!selectedTeamDetails || currentBaseName !== baseTeamNameFromUrl) {
-                        const teamOccurrences = allTeams
+                    // Ak sme nenašli presnú zhodu, skúsime bez sufixu (len pre prípad, že URL neobsahuje sufix)
+                    if (teamOccurrences.length === 0) {
+                        const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+                        teamOccurrences = allTeams
                             .filter(team => {
                                 let cleanName = removeSuffix(team.teamName);
                                 if (team.category && cleanName.startsWith(team.category + ' ')) {
@@ -749,22 +771,35 @@ const TeamsOverviewApp = (props) => {
                                 groupName: team.groupName,
                                 order: team.order
                             }));
-
-                        if (teamOccurrences.length > 0) {
-                            setSelectedTeamDetails({
-                                teamName: teamNameFromUrl,
-                                category: categoryNameFromUrl || null,
-                                occurrences: teamOccurrences
-                            });
-                        } else {
-                            setSelectedTeamDetails(null);
+                    }
+                    
+                    // Ak máme kategóriu, vyberieme len výskyty v tejto kategórii
+                    let selectedOccurrences = teamOccurrences;
+                    let selectedTeamName = teamNameFromUrl;
+                    
+                    if (categoryNameFromUrl && teamOccurrences.length > 0) {
+                        const filteredOccurrences = teamOccurrences.filter(occ => occ.category === categoryNameFromUrl);
+                        if (filteredOccurrences.length > 0) {
+                            selectedOccurrences = filteredOccurrences;
+                            // Ak máme presný názov, použijeme ho
+                            const exactMatch = filteredOccurrences.find(occ => occ.teamName === teamNameFromUrl);
+                            if (exactMatch) {
+                                selectedTeamName = exactMatch.teamName;
+                            } else if (filteredOccurrences.length > 0) {
+                                // Ak nemáme presnú zhodu, použijeme prvý výskyt v kategórii
+                                selectedTeamName = filteredOccurrences[0].teamName;
+                            }
                         }
+                    }
+                    
+                    if (selectedOccurrences.length > 0) {
+                        setSelectedTeamDetails({
+                            teamName: selectedTeamName,
+                            category: categoryNameFromUrl || null,
+                            occurrences: selectedOccurrences
+                        });
                     } else {
-                        // Ak je rovnaký tím, aktualizujeme len kategóriu v detaile
-                        setSelectedTeamDetails(prev => ({
-                            ...prev,
-                            category: categoryNameFromUrl || null
-                        }));
+                        setSelectedTeamDetails(null);
                     }
                 } else {
                     // Ak v URL nie je tím, zobrazíme tabuľku s filtrom kategórie
@@ -772,7 +807,7 @@ const TeamsOverviewApp = (props) => {
                 }
             }
         };
-
+    
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [allTeams, categoryIdToNameMap, isInitialLoad, selectedTeamDetails]);
