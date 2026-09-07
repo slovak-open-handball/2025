@@ -418,12 +418,6 @@ const TeamsOverviewApp = (props) => {
                     className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
                 },
                 'Vymazať filtre ✕'
-            ),
-            // Informácia o počte tímov
-            React.createElement(
-                'div',
-                { className: 'ml-auto text-sm text-gray-500' },
-                `Počet tímov: ${teamNames.length}`
             )
         );
     };
