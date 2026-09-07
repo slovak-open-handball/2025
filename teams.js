@@ -329,15 +329,17 @@ const TeamsOverviewApp = (props) => {
             if (!isInitialLoad) {
                 const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
                 
-                // Aktualizácia filtra kategórie
+                // Najprv zistíme ID kategórie z URL
+                let newCategoryId = '';
                 if (categoryNameFromUrl) {
                     const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
                     if (categoryId) {
-                        setSelectedCategoryId(categoryId);
+                        newCategoryId = categoryId;
                     }
-                } else {
-                    setSelectedCategoryId('');
                 }
+                
+                // Aktualizácia filtra kategórie
+                setSelectedCategoryId(newCategoryId);
                 
                 // Aktualizácia detailu tímu - IBA ak sa zmenil tím v URL
                 if (teamNameFromUrl) {
@@ -375,6 +377,12 @@ const TeamsOverviewApp = (props) => {
                         } else {
                             setSelectedTeamDetails(null);
                         }
+                    } else {
+                        // Ak je rovnaký tím, aktualizujeme len kategóriu v detaile
+                        setSelectedTeamDetails(prev => ({
+                            ...prev,
+                            category: categoryNameFromUrl || null
+                        }));
                     }
                 } else {
                     // Ak v URL nie je tím, zobrazíme tabuľku s filtrom kategórie
@@ -486,6 +494,9 @@ const TeamsOverviewApp = (props) => {
         // Získame názov bez sufixu pre vyhľadávanie
         const baseTeamName = removeSuffix(normalizedTeamName);
         
+        // Získame aktuálnu kategóriu
+        const currentCategoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
+        
         const teamOccurrences = allTeams
             .filter(team => {
                 let cleanName = removeSuffix(team.teamName);
@@ -507,12 +518,11 @@ const TeamsOverviewApp = (props) => {
         if (teamOccurrences.length > 0) {
             setSelectedTeamDetails({
                 teamName: normalizedTeamName,
-                category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
+                category: currentCategoryName,
                 occurrences: teamOccurrences
             });
             // Zachováme aktuálnu kategóriu ak je nastavená
-            const categoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
-            updateUrlHash(normalizedTeamName, categoryName);
+            updateUrlHash(normalizedTeamName, currentCategoryName);
         }
     };
 
