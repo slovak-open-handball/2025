@@ -89,6 +89,18 @@ const TeamsOverviewApp = (props) => {
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
     useEffect(() => {
+        // Zakáže skrolovanie hlavnej stránky
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+    
+        // Pri odpojení komponentu vráti pôvodné správanie (cleanup)
+        return () => {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, []);
+
+    useEffect(() => {
         const updateHeight = () => {
             if (tableContainerRef.current) {
                 const rect = tableContainerRef.current.getBoundingClientRect();
