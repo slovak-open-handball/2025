@@ -59,22 +59,22 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         if (!userId) return;
         
         try {
-            // Používame rovnakú štruktúru ako v NotificationsApp - koreňová kolekcia 'notifications'
+            // Najprv skúsime načítať z koreňovej kolekcie 'notifications'
+            // (bez filtrovania, ktoré spôsobujú problémy)
             const notificationsRef = collection(db, 'notifications');
-            const q = query(
-                notificationsRef, 
-                where('read', '==', false),
-                where('deletedBy', 'array-not-contains', userId) // Ignorujeme notifikácie, ktoré používateľ vymazal
-            );
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(notificationsRef);
             
-            // Filtrujeme notifikácie, ktoré používateľ ešte nevidel
             let unreadCount = 0;
             querySnapshot.forEach(doc => {
                 const data = doc.data();
                 // Kontrola, či používateľ už videl túto notifikáciu
                 const seenBy = data.seenBy || [];
-                if (!seenBy.includes(userId)) {
+                const deletedBy = data.deletedBy || [];
+                
+                // Notifikácia je neprečítaná, ak:
+                // 1. Používateľ ju ešte nevidel (nie je v seenBy)
+                // 2. Používateľ ju nevymazal (nie je v deletedBy)
+                if (!seenBy.includes(userId) && !deletedBy.includes(userId)) {
                     unreadCount++;
                 }
             });
@@ -95,8 +95,8 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
                 textWithCount.textContent = unreadCount > 0 ? `Upozornenia (${unreadCount})` : 'Upozornenia';
             }
         } catch (error) {
-            console.error('Chyba pri načítaní notifikácií:', error);
-            // V prípade chyby skúsime alternatívny prístup - načítať notifikácie priamo z podkolekcie používateľa
+            console.error('Chyba pri načítaní notifikácií z hlavnej kolekcie:', error);
+            // Ak hlavný dotaz zlyhá, skúsime načítať z podkolekcie používateľa
             try {
                 const userNotificationsRef = collection(db, 'users', userId, 'notifications');
                 const q = query(userNotificationsRef, where('read', '==', false));
@@ -120,6 +120,30 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
                 }
             } catch (fallbackError) {
                 console.error('Chyba pri fallback načítaní notifikácií:', fallbackError);
+                // Ak všetko zlyhá, aspoň skúsime zobraziť notifikácie z globálneho stavu
+                try {
+                    // Skúsime použiť dáta z NotificationsApp ak sú dostupné
+                    if (window.notificationsData) {
+                        const unreadCount = window.notificationsData.filter(n => !n.read && !n.deletedByMe).length;
+                        const badge = document.getElementById('notification-badge-count');
+                        const textWithCount = document.getElementById('notifications-text-with-count');
+                        
+                        if (badge) {
+                            if (unreadCount > 0) {
+                                badge.textContent = unreadCount;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                        
+                        if (textWithCount) {
+                            textWithCount.textContent = unreadCount > 0 ? `Upozornenia (${unreadCount})` : 'Upozornenia';
+                        }
+                    }
+                } catch (globalError) {
+                    console.error('Chyba pri načítaní z globálnych dát:', globalError);
+                }
             }
         }
     };
