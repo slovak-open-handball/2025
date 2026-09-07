@@ -73,12 +73,13 @@ const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [uiNotification, setUiNotification] = useState(null);
-    const currentUserEmail = window.globalUserProfileData?.email || null;
     
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [teamRoster, setTeamRoster] = useState(null);
+    const [isLoadingRoster, setIsLoadingRoster] = useState(false);
 
     const tableContainerRef = useRef(null);
 
@@ -115,6 +116,79 @@ const TeamsOverviewApp = (props) => {
     };
 
     const TOP_OFFSET = '0px'; 
+
+    // Funkcia na načítanie súpisky tímu
+    const loadTeamRoster = async (uid, teamId) => {
+        if (!uid || !teamId) return;
+        
+        setIsLoadingRoster(true);
+        setTeamRoster(null);
+        
+        try {
+            const userDocRef = doc(window.db, 'users', uid);
+            const docSnap = await getDoc(userDocRef);
+            
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                // Hľadáme tím v rôznych kategóriách
+                if (userData.teams) {
+                    for (const [categoryName, teamsArray] of Object.entries(userData.teams)) {
+                        if (Array.isArray(teamsArray)) {
+                            const foundTeam = teamsArray.find(t => t.id === teamId);
+                            if (foundTeam) {
+                                // Ak má tím súpisku, načítame ju
+                                if (foundTeam.roster && Array.isArray(foundTeam.roster)) {
+                                    setTeamRoster({
+                                        category: categoryName,
+                                        teamName: foundTeam.teamName,
+                                        roster: foundTeam.roster,
+                                        groupName: foundTeam.groupName || null
+                                    });
+                                } else {
+                                    setTeamRoster({
+                                        category: categoryName,
+                                        teamName: foundTeam.teamName,
+                                        roster: [],
+                                        groupName: foundTeam.groupName || null
+                                    });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Chyba pri načítaní súpisky tímu:', error);
+        } finally {
+            setIsLoadingRoster(false);
+        }
+    };
+
+    // Načítanie súpisky pri zmene vybraného výskytu
+    useEffect(() => {
+        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0) {
+            // Nájdeme aktuálne vybraný výskyt (ten s kategóriou z URL alebo prvý)
+            let selectedOcc = null;
+            const categoryFromUrl = getCategoryFromUrl();
+            
+            if (categoryFromUrl) {
+                selectedOcc = selectedTeamDetails.occurrences.find(
+                    occ => occ.category === categoryFromUrl
+                );
+            }
+            
+            if (!selectedOcc) {
+                selectedOcc = selectedTeamDetails.occurrences[0];
+            }
+            
+            if (selectedOcc) {
+                loadTeamRoster(selectedOcc.uid, selectedOcc.id);
+            }
+        } else {
+            setTeamRoster(null);
+        }
+    }, [selectedTeamDetails]);
 
     // Funkcia na aktualizáciu URL hashu
     const updateUrlHash = (teamName, categoryName = null) => {
@@ -529,6 +603,7 @@ const TeamsOverviewApp = (props) => {
         
         // Nastavíme detail na null
         setSelectedTeamDetails(null);
+        setTeamRoster(null);
         
         // Ak je v URL kategória, nastavíme filter
         if (categoryNameFromUrl) {
@@ -598,6 +673,127 @@ const TeamsOverviewApp = (props) => {
                 occurrences: allOccurrences
             };
         });
+        
+        // Načítame súpisku pre vybraný výskyt
+        loadTeamRoster(occ.uid, occ.id);
+    };
+
+    // Render súpisky tímu
+    const renderTeamRoster = () => {
+        if (!teamRoster) return null;
+        
+        if (isLoadingRoster) {
+            return React.createElement(
+                'div',
+                { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+                React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-500 py-4' },
+                    'Načítavam súpisku tímu...'
+                )
+            );
+        }
+        
+        const { roster, teamName, category, groupName } = teamRoster;
+        
+        if (!roster || roster.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-semibold text-gray-700 mb-2' },
+                    `Súpiska tímu: ${teamName}`
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-500' },
+                    'Tento tím momentálne nemá žiadnych hráčov v súpiske.'
+                )
+            );
+        }
+        
+        return React.createElement(
+            'div',
+            { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-semibold text-gray-700' },
+                    `Súpiska tímu: ${teamName}`
+                ),
+                React.createElement(
+                    'span',
+                    { className: 'text-sm text-gray-500' },
+                    `Počet hráčov: ${roster.length}`
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' },
+                React.createElement(
+                    'table',
+                    { className: 'w-full border-collapse' },
+                    React.createElement(
+                        'thead',
+                        { className: 'bg-gray-100' },
+                        React.createElement(
+                            'tr',
+                            null,
+                            React.createElement(
+                                'th',
+                                { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
+                                'Číslo'
+                            ),
+                            React.createElement(
+                                'th',
+                                { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
+                                'Meno a priezvisko'
+                            ),
+                            React.createElement(
+                                'th',
+                                { className: 'px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b' },
+                                'Pozícia'
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        null,
+                        roster.map((player, index) => {
+                            const playerNumber = player.number || player.cislo || '';
+                            const playerName = player.name || player.meno || player.fullName || '';
+                            const playerPosition = player.position || player.pozicia || '';
+                            
+                            return React.createElement(
+                                'tr',
+                                { 
+                                    key: index,
+                                    className: index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                },
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-2 text-sm border-b border-gray-100' },
+                                    playerNumber
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-2 text-sm font-medium border-b border-gray-100' },
+                                    playerName
+                                ),
+                                React.createElement(
+                                    'td',
+                                    { className: 'px-4 py-2 text-sm border-b border-gray-100' },
+                                    playerPosition || '-'
+                                )
+                            );
+                        })
+                    )
+                )
+            )
+        );
     };
 
     const renderTeamDetails = () => {
@@ -693,7 +889,9 @@ const TeamsOverviewApp = (props) => {
                     { className: 'mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500' },
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
-            )
+            ),
+            // Box so súpiskou tímu - pridaný pod tlačidlami
+            renderTeamRoster()
         );
     };
 
@@ -960,56 +1158,6 @@ const TeamsOverviewApp = (props) => {
         ),
         renderMainContent()
     );
-};
-
-let isEmailSyncListenerSetup = false;
-
-const handleDataUpdateAndRender = (event) => {
-    const userProfileData = event?.detail || null;
-    const rootElement = document.getElementById('root');
-    
-    if (!rootElement || typeof ReactDOM === 'undefined' || typeof React === 'undefined') {
-        return;
-    }
-
-    try {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(TeamsOverviewApp, { 
-            userProfileData: userProfileData || null 
-        }));
-        
-        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                await updateDoc(userProfileRef, { email: user.email });
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });
-                            }
-                        }
-                    } catch (error) {
-                    }
-                }
-            });
-            isEmailSyncListenerSetup = true;
-        }
-    } catch (error) {
-        rootElement.innerHTML = `
-            <div class="text-center py-16">
-                <p class="text-red-600 text-lg">Chyba pri načítaní aplikácie</p>
-                <p class="text-gray-500 text-sm">${error.message}</p>
-            </div>
-        `;
-    }
 };
 
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
