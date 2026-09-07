@@ -580,9 +580,6 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
-        // Získame base názov tímu (bez sufixu) pre porovnanie
-        const baseTeamName = removeSuffix(selectedTeamDetails.teamName);
-
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -623,22 +620,8 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     selectedTeamDetails.occurrences.map((occ, index) => {
-                        // Získame čistý názov tímu pre porovnanie
-                        let cleanOccName = removeSuffix(occ.teamName);
-                        if (occ.category && cleanOccName.startsWith(occ.category + ' ')) {
-                            cleanOccName = cleanOccName.substring(occ.category.length + 1).trim();
-                        }
-                        cleanOccName = removeSuffix(cleanOccName);
-                        
-                        // Získame čistý názov z detailu pre porovnanie
-                        let cleanDetailName = removeSuffix(selectedTeamDetails.teamName);
-                        if (occ.category && cleanDetailName.startsWith(occ.category + ' ')) {
-                            cleanDetailName = cleanDetailName.substring(occ.category.length + 1).trim();
-                        }
-                        cleanDetailName = removeSuffix(cleanDetailName);
-                        
-                        // Zistíme, či ide o aktuálne zobrazený tím
-                        const isSelected = cleanOccName === cleanDetailName;
+                        // Porovnávame celý názov tímu vrátane sufixu
+                        const isSelected = occ.teamName === selectedTeamDetails.teamName;
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
