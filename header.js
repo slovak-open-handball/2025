@@ -99,13 +99,11 @@ const getCurrentZoomLevel = () => {
 const createZoomOverlay = () => {
     // Ak je kontrola vypnutá, nič nerobíme
     if (!ZOOM_CONTROL_ENABLED) {
-        console.log('ℹ️ Kontrola priblíženia je vypnutá (ZOOM_CONTROL_ENABLED = false)');
         return null;
     }
 
     // Pre mobilné zariadenia overlay nezobrazujeme (pinch-to-zoom je dočasný)
     if (isMobileDevice()) {
-        console.log('📱 Mobilné zariadenie - overlay sa nezobrazuje (pinch-to-zoom je dočasný)');
         return null;
     }
 
@@ -216,7 +214,6 @@ const createZoomOverlay = () => {
 const logCurrentZoom = () => {
     const zoom = getCurrentZoomLevel();
     const device = isMobileDevice() ? '📱 Mobil' : '🖥️ Desktop';
-    console.log(`${device} - Aktuálne priblíženie stránky: ${zoom}%`);
     return zoom;
 };
 
@@ -224,7 +221,6 @@ const logCurrentZoom = () => {
 const checkAndShowZoomOverlay = () => {
     // Ak je kontrola vypnutá, nič nerobíme
     if (!ZOOM_CONTROL_ENABLED) {
-        console.log('ℹ️ Kontrola priblíženia je vypnutá (ZOOM_CONTROL_ENABLED = false)');
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
             existingOverlay.remove();
@@ -234,7 +230,6 @@ const checkAndShowZoomOverlay = () => {
 
     // Pre mobilné zariadenia overlay nezobrazujeme
     if (isMobileDevice()) {
-        console.log('📱 Mobilné zariadenie - kontrola priblíženia je preskočená');
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
             existingOverlay.remove();
@@ -243,13 +238,10 @@ const checkAndShowZoomOverlay = () => {
     }
 
     const zoom = getCurrentZoomLevel();
-    console.log(`📐 Aktuálne priblíženie stránky: ${zoom}%`);
     
     if (zoom > 80) {
-        console.log('⚠️ Priblíženie je nad 80%. Zobrazujem overlay.');
         createZoomOverlay();
     } else {
-        console.log('✅ Priblíženie je 80% alebo menej.');
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
             existingOverlay.style.transition = 'opacity 0.5s';
