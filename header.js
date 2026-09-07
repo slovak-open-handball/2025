@@ -8,7 +8,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 // ---------------------------------------------------------------------------------------------------------------- ZAČIATOK približenie stranky
 
 // true = zapnutá kontrola, overlay sa zobrazuje, vyžaduje sa zmenšenie priblíženia na 80% alebo menej
-// false = vypnutá kontrola, overlay sa nezobrazuje
+// false = vypnutá kontrola, overlay sa zobrazí ako informácia s možnosťou zavrieť
 const ZOOM_CONTROL_ENABLED = false; 
 
 // Zistenie či ide o mobilné zariadenie
@@ -97,11 +97,6 @@ const getCurrentZoomLevel = () => {
 
 // Vytvorenie overlay pre informáciu o zoome
 const createZoomOverlay = () => {
-    // Ak je kontrola vypnutá, nič nerobíme
-    if (!ZOOM_CONTROL_ENABLED) {
-        return null;
-    }
-
     // Pre mobilné zariadenia overlay nezobrazujeme (pinch-to-zoom je dočasný)
     if (isMobileDevice()) {
         return null;
@@ -121,7 +116,7 @@ const createZoomOverlay = () => {
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-color: white;
+        background-color: rgba(0, 0, 0, 0.5);
         z-index: 999999;
         display: flex;
         flex-direction: column;
@@ -130,28 +125,106 @@ const createZoomOverlay = () => {
         font-family: Arial, sans-serif;
         padding: 20px;
         box-sizing: border-box;
+        backdrop-filter: blur(4px);
     `;
 
-    overlay.innerHTML = `
-        <div style="text-align: center; max-width: 600px;">
-            <h1 style="font-size: 28px; color: #1a1a1a; margin-bottom: 20px;">
-                🔍 Nastavenie priblíženia
-            </h1>
-            <p style="font-size: 18px; color: #333; margin-bottom: 10px;">
-                Pre správne zobrazenie stránky nastavte priblíženie na <strong>80%</strong> alebo menej.
-            </p>
-            <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                Aktuálne priblíženie: <span id="zoom-display" style="font-weight: bold; color: #e74c3c;">100%</span>
-            </p>
-            <p style="font-size: 14px; color: #888; margin-top: 10px;">
-                <span style="display: inline-block; margin: 0 10px;">🖥️ Windows/Linux: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + koliesko</span>
-                <br>
-                <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
-            </p>
-        </div>
-    `;
+    // Ak je ZOOM_CONTROL_ENABLED false, zobrazíme informačný overlay s tlačidlom na zavretie
+    if (!ZOOM_CONTROL_ENABLED) {
+        overlay.innerHTML = `
+            <div style="text-align: center; max-width: 600px; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;">
+                <button id="zoom-overlay-close" style="
+                    position: absolute;
+                    top: 12px;
+                    right: 16px;
+                    background: none;
+                    border: none;
+                    font-size: 28px;
+                    cursor: pointer;
+                    color: #999;
+                    padding: 4px 10px;
+                    border-radius: 50%;
+                    transition: background 0.2s;
+                    line-height: 1;
+                " onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">✕</button>
+                <div style="font-size: 48px; margin-bottom: 16px;">💡</div>
+                <h1 style="font-size: 28px; color: #1a1a1a; margin-bottom: 12px;">
+                    Optimalizované priblíženie
+                </h1>
+                <p style="font-size: 18px; color: #333; margin-bottom: 10px;">
+                    Táto aplikácia je optimalizovaná na priblíženie <strong>80%</strong>.
+                </p>
+                <p style="font-size: 16px; color: #666; margin-bottom: 8px;">
+                    Aktuálne priblíženie: <span id="zoom-display" style="font-weight: bold; color: #f39c12;">${getCurrentZoomLevel()}%</span>
+                </p>
+                <p style="font-size: 14px; color: #888; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee;">
+                    <span style="display: inline-block; margin: 0 10px;">🖥️ Windows/Linux: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + koliesko</span>
+                    <br>
+                    <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
+                </p>
+                <button id="zoom-overlay-dismiss" style="
+                    margin-top: 20px;
+                    padding: 12px 40px;
+                    background: #3498db;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: background 0.2s;
+                " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">
+                    Rozumiem, zavrieť
+                </button>
+            </div>
+        `;
+    } else {
+        // Pôvodný overlay pre kontrolu zoomu (ZOOM_CONTROL_ENABLED = true)
+        overlay.innerHTML = `
+            <div style="text-align: center; max-width: 600px; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <h1 style="font-size: 28px; color: #1a1a1a; margin-bottom: 20px;">
+                    🔍 Nastavenie priblíženia
+                </h1>
+                <p style="font-size: 18px; color: #333; margin-bottom: 10px;">
+                    Pre správne zobrazenie stránky nastavte priblíženie na <strong>80%</strong> alebo menej.
+                </p>
+                <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                    Aktuálne priblíženie: <span id="zoom-display" style="font-weight: bold; color: #e74c3c;">100%</span>
+                </p>
+                <p style="font-size: 14px; color: #888; margin-top: 10px;">
+                    <span style="display: inline-block; margin: 0 10px;">🖥️ Windows/Linux: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Ctrl</kbd> + koliesko</span>
+                    <br>
+                    <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
+                </p>
+            </div>
+        `;
+    }
 
     document.body.appendChild(overlay);
+
+    // Funkcia na zatvorenie overlay (pre informačný režim)
+    const dismissOverlay = () => {
+        const overlay = document.getElementById('zoom-overlay');
+        if (overlay) {
+            overlay.style.transition = 'opacity 0.4s';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+            }, 400);
+        }
+    };
+
+    // Pridanie event listenerov pre tlačidlá zavretia
+    setTimeout(() => {
+        const closeBtn = document.getElementById('zoom-overlay-close');
+        const dismissBtn = document.getElementById('zoom-overlay-dismiss');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', dismissOverlay);
+        }
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', dismissOverlay);
+        }
+    }, 50);
 
     // Aktualizácia zobrazenia zoomu
     const updateZoomDisplay = () => {
@@ -159,31 +232,31 @@ const createZoomOverlay = () => {
         const display = document.getElementById('zoom-display');
         if (display) {
             display.textContent = zoom + '%';
-            if (zoom <= 80) {
-                display.style.color = '#2ecc71';
+            
+            if (ZOOM_CONTROL_ENABLED) {
+                // Režim kontroly - farba podľa hodnoty
+                if (zoom <= 80) {
+                    display.style.color = '#2ecc71';
+                    // Automaticky zavrieme overlay ak je zoom správny
+                    setTimeout(() => {
+                        const overlay = document.getElementById('zoom-overlay');
+                        if (overlay) {
+                            overlay.style.transition = 'opacity 0.5s';
+                            overlay.style.opacity = '0';
+                            setTimeout(() => {
+                                overlay.remove();
+                            }, 500);
+                        }
+                    }, 300);
+                } else {
+                    display.style.color = '#e74c3c';
+                }
             } else {
-                display.style.color = '#e74c3c';
+                // Informačný režim - vždy oranžová
+                display.style.color = '#f39c12';
             }
         }
         return zoom;
-    };
-
-    // Funkcia na skrytie overlay
-    const dismissOverlay = () => {
-        const zoom = getCurrentZoomLevel();
-        if (zoom <= 80) {
-            const overlay = document.getElementById('zoom-overlay');
-            if (overlay) {
-                overlay.style.transition = 'opacity 0.5s';
-                overlay.style.opacity = '0';
-                setTimeout(() => {
-                    overlay.remove();
-                }, 500);
-            }
-        } else {
-            alert('Priblíženie musí byť nastavené na 80% alebo menej. Prosím, znížte priblíženie pomocou klávesových skratiek.');
-            updateZoomDisplay();
-        }
     };
 
     // Klávesové skratky pre zmenu zoomu
@@ -219,15 +292,6 @@ const logCurrentZoom = () => {
 
 // Funkcia na kontrolu a zobrazenie overlay
 const checkAndShowZoomOverlay = () => {
-    // Ak je kontrola vypnutá, nič nerobíme
-    if (!ZOOM_CONTROL_ENABLED) {
-        const existingOverlay = document.getElementById('zoom-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        return;
-    }
-
     // Pre mobilné zariadenia overlay nezobrazujeme
     if (isMobileDevice()) {
         const existingOverlay = document.getElementById('zoom-overlay');
@@ -237,6 +301,20 @@ const checkAndShowZoomOverlay = () => {
         return;
     }
 
+    // Ak je ZOOM_CONTROL_ENABLED false, zobrazíme informačný overlay (ak ešte nebol zavretý)
+    if (!ZOOM_CONTROL_ENABLED) {
+        // Skontrolujeme či už bol overlay zavretý (pomocou sessionStorage)
+        const wasDismissed = sessionStorage.getItem('zoomOverlayDismissed');
+        if (!wasDismissed) {
+            const existingOverlay = document.getElementById('zoom-overlay');
+            if (!existingOverlay) {
+                createZoomOverlay();
+            }
+        }
+        return;
+    }
+
+    // Režim s kontrolou (ZOOM_CONTROL_ENABLED = true)
     const zoom = getCurrentZoomLevel();
     
     if (zoom > 80) {
@@ -263,6 +341,7 @@ const setupZoomMonitoring = () => {
         resizeTimeout = setTimeout(() => {
             logCurrentZoom();
             
+            // Ak je ZOOM_CONTROL_ENABLED false, neriešime automatické skrývanie
             if (!ZOOM_CONTROL_ENABLED || isMobileDevice()) {
                 return;
             }
