@@ -51,7 +51,18 @@ export const subscribe = (cb) => {
   return () => listeners.delete(cb);
 };
 
+// ===================================================================
+// POMOCNÁ FUNKCIA PRE SLOVENSKÉ ABECEDNÉ RADENIE
+// ===================================================================
+const slovakCollator = new Intl.Collator('sk', { 
+    sensitivity: 'base',
+    ignorePunctuation: true,
+    numeric: false
+});
+
+// ===================================================================
 // HLAVNÝ KOMPONENT - ZOBRAZUJE PREHĽADOVÚ TABUĽKU LEN Z POUŽÍVATEĽSKÝCH TÍMOV
+// ===================================================================
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
@@ -124,8 +135,8 @@ const TeamsOverviewApp = (props) => {
             return { teamNames: [], categoryNames: [], matrix: {} };
         }
 
-        // Získame všetky kategórie (zoradené)
-        const categoryNames = Object.values(categoryIdToNameMap).sort();
+        // Získame všetky kategórie (zoradené podľa slovenskej abecedy)
+        const categoryNames = Object.values(categoryIdToNameMap).sort((a, b) => slovakCollator.compare(a, b));
         
         // Získame všetky unikátne názvy tímov (bez kategórie)
         const teamNamesSet = new Set();
@@ -142,7 +153,8 @@ const TeamsOverviewApp = (props) => {
             teamNamesSet.add(cleanName);
         });
         
-        const teamNames = Array.from(teamNamesSet).sort();
+        // Zoradenie názvov tímov podľa slovenskej abecedy
+        const teamNames = Array.from(teamNamesSet).sort((a, b) => slovakCollator.compare(a, b));
         
         // Vytvoríme maticu počtov
         const matrix = {};
@@ -227,12 +239,8 @@ const TeamsOverviewApp = (props) => {
             return total;
         };
 
-        // Zoradenie tímov podľa celkového počtu (zostupne)
-        const sortedTeamNames = [...teamNames].sort((a, b) => {
-            const totalA = getTotalForTeam(a);
-            const totalB = getTotalForTeam(b);
-            return totalB - totalA;
-        });
+        // Tímy sú už zoradené abecedne, zachováme toto poradie
+        const sortedTeamNames = teamNames;
 
         return React.createElement(
             'div',
@@ -453,7 +461,7 @@ const TeamsOverviewApp = (props) => {
             renderOverviewTable()
         ),
         
-        // Legenda - odstránená, pretože už nemáme podfarbovanie
+        // Legenda
         React.createElement(
             'div',
             { className: 'mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-500' },
