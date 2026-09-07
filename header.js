@@ -7,6 +7,10 @@ import { countryDialCodes } from "./countryDialCodes.js";
 
 // ---------------------------------------------------------------------------------------------------------------- ZAČIATOK približenie stranky
 
+// true = zapnutá kontrola, overlay sa zobrazuje, vyžaduje sa zmenšenie priblíženia na 80% alebo menej
+// false = vypnutá kontrola, overlay sa nezobrazuje
+const ZOOM_CONTROL_ENABLED = false; 
+
 const getCurrentZoomLevel = () => {
     // Metóda 1: Použitie window.devicePixelRatio pre mobilné zariadenia
     if (window.devicePixelRatio) {
@@ -65,6 +69,12 @@ const getCurrentZoomLevel = () => {
 
 // Vytvorenie overlay pre informáciu o zoome
 const createZoomOverlay = () => {
+    // Ak je kontrola vypnutá, nič nerobíme
+    if (!ZOOM_CONTROL_ENABLED) {
+        console.log('ℹ️ Kontrola priblíženia je vypnutá (ZOOM_CONTROL_ENABLED = false)');
+        return null;
+    }
+
     // Odstránime existujúci overlay ak existuje
     const existingOverlay = document.getElementById('zoom-overlay');
     if (existingOverlay) {
@@ -140,43 +150,22 @@ const createZoomOverlay = () => {
             }
         } else {
             // Ak zoom stále nie je správny, zobrazíme upozornenie
-            alert('Priblíženie musí byť nastavené na 80% alebo menej. Prosím, znížte priblíženie pomocou tlačidiel +/- alebo klávesových skratiek.');
+            alert('Priblíženie musí byť nastavené na 80% alebo menej. Prosím, znížte priblíženie pomocou klávesových skratiek.');
             updateZoomDisplay();
         }
     };
 
-    // Event listenery pre tlačidlá
-    document.getElementById('zoom-minus')?.addEventListener('click', () => {
-        const zoom = getCurrentZoomLevel();
-        if (zoom > 50) {
-            // Simulácia zmenšenia - použijeme CSS zoom
-            document.body.style.zoom = (zoom - 5) + '%';
-            setTimeout(updateZoomDisplay, 100);
-        }
-    });
-
-    document.getElementById('zoom-plus')?.addEventListener('click', () => {
-        const zoom = getCurrentZoomLevel();
-        if (zoom < 200) {
-            // Simulácia zväčšenia - použijeme CSS zoom
-            document.body.style.zoom = (zoom + 5) + '%';
-            setTimeout(updateZoomDisplay, 100);
-        }
-    });
-
     // Tlačidlo pokračovať
     document.getElementById('zoom-dismiss')?.addEventListener('click', dismissOverlay);
 
-    // Klávesové skratky
+    // Klávesové skratky pre zmenu zoomu
     document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            if (e.key === '-' || e.key === 'Minus') {
-                e.preventDefault();
-                document.getElementById('zoom-minus')?.click();
-            } else if (e.key === '+' || e.key === 'Equal') {
-                e.preventDefault();
-                document.getElementById('zoom-plus')?.click();
-            }
+        // Ctrl+0 pre reset na 100%
+        if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+            e.preventDefault();
+            // Reset CSS zoom
+            document.body.style.zoom = '100%';
+            setTimeout(updateZoomDisplay, 100);
         }
     });
 
@@ -204,6 +193,17 @@ const logCurrentZoom = () => {
 
 // Funkcia na kontrolu a zobrazenie overlay
 const checkAndShowZoomOverlay = () => {
+    // Ak je kontrola vypnutá, nič nerobíme
+    if (!ZOOM_CONTROL_ENABLED) {
+        console.log('ℹ️ Kontrola priblíženia je vypnutá (ZOOM_CONTROL_ENABLED = false)');
+        // Odstránime overlay ak existuje
+        const existingOverlay = document.getElementById('zoom-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        return;
+    }
+
     const zoom = getCurrentZoomLevel();
     console.log(`📐 Aktuálne priblíženie stránky: ${zoom}%`);
     
@@ -215,7 +215,11 @@ const checkAndShowZoomOverlay = () => {
         // Odstránime overlay ak existuje
         const existingOverlay = document.getElementById('zoom-overlay');
         if (existingOverlay) {
-            existingOverlay.remove();
+            existingOverlay.style.transition = 'opacity 0.5s';
+            existingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                existingOverlay.remove();
+            }, 500);
         }
     }
 };
@@ -231,6 +235,12 @@ const setupZoomMonitoring = () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             logCurrentZoom();
+            
+            // Ak je kontrola vypnutá, nič nerobíme
+            if (!ZOOM_CONTROL_ENABLED) {
+                return;
+            }
+            
             // Skontrolujeme či už overlay existuje
             const overlay = document.getElementById('zoom-overlay');
             const zoom = getCurrentZoomLevel();
@@ -267,6 +277,7 @@ window.getCurrentZoomLevel = getCurrentZoomLevel;
 window.logCurrentZoom = logCurrentZoom;
 window.checkAndShowZoomOverlay = checkAndShowZoomOverlay;
 window.createZoomOverlay = createZoomOverlay;
+window.ZOOM_CONTROL_ENABLED = ZOOM_CONTROL_ENABLED;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
 
