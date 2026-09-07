@@ -433,40 +433,20 @@ const TeamsOverviewApp = (props) => {
     };
 
     const handleTeamOccurrenceClick = (occ) => {
+        // Iba vypíšeme do konzoly, na ktoré tlačidlo sa kliklo
+        console.log('Kliknuté na tlačidlo:', {
+            category: occ.category,
+            teamName: occ.teamName,
+            uid: occ.uid,
+            id: occ.id,
+            groupName: occ.groupName,
+            order: occ.order
+        });
+        
         // Aktualizujeme URL s kategóriou aj tímom
         updateUrlHash(occ.teamName, occ.category);
         
-        // Zostaneme v detaile tímu - aktualizujeme len zobrazené výskyty
-        // Nájdi všetky výskyty tohto tímu (rovnaký tím, ale v inej kategórii)
-        const teamOccurrences = allTeams
-            .filter(team => {
-                let cleanName = removeSuffix(team.teamName);
-                if (team.category && cleanName.startsWith(team.category + ' ')) {
-                    cleanName = cleanName.substring(team.category.length + 1).trim();
-                }
-                return cleanName === occ.teamName;
-            })
-            .map(team => ({
-                category: team.category,
-                teamName: team.teamName,
-                uid: team.uid,
-                id: team.id,
-                groupName: team.groupName,
-                order: team.order
-            }));
-
-        // Aktualizujeme detail tímu s novými výskytmi (zachováme rovnaký tím)
-        setSelectedTeamDetails({
-            teamName: occ.teamName,
-            occurrences: teamOccurrences
-        });
-        
-        // Nastavíme filter na vybranú kategóriu - ale len vizuálne, nezobrazíme tabuľku
-        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === occ.category);
-        if (categoryId) {
-            setSelectedCategoryId(categoryId);
-        }
-        
+        // Zostaneme v detaile tímu - iba aktualizujeme URL, nezobrazujeme tabuľku
         notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
     };
 
