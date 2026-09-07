@@ -636,9 +636,6 @@ const TeamsOverviewApp = (props) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
 
-        // Získame base názov (bez sufixu) pre aktuálne zobrazený detail
-        const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
-
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -679,18 +676,15 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     sortedOccurrences.map((occ, index) => {
-                        // Získame base názov (bez sufixu) pre tento výskyt
-                        const baseOccName = removeSuffix(occ.teamName);
-                        
-                        // Porovnávame kategóriu a base názov (bez sufixu)
+                        // Porovnávame celý názov tímu (vrátane sufixu) a kategóriu
                         let isSelected = false;
                         if (selectedTeamDetails.category === null) {
-                            // Ak nie je kategória nastavená, porovnávame len base názov
-                            isSelected = baseOccName === baseDetailName;
+                            // Ak nie je kategória nastavená, porovnávame len celý názov
+                            isSelected = occ.teamName === selectedTeamDetails.teamName;
                         } else {
-                            // Inak porovnávame aj kategóriu a base názov
+                            // Inak porovnávame aj kategóriu a celý názov
                             isSelected = occ.category === selectedTeamDetails.category && 
-                                       baseOccName === baseDetailName;
+                                       occ.teamName === selectedTeamDetails.teamName;
                         }
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
