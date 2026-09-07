@@ -256,9 +256,7 @@ const MapApp = ({ userProfileData }) => {
                         setTournamentDates({ start: null, end: null, days: [] });
                     }
                 }
-            } catch (err) {
-                console.error("Chyba pri načítaní dátumov turnaja:", err);
-            }
+            } catch (err) {}
         };
         
         fetchTournamentDates();
@@ -319,12 +317,7 @@ const MapApp = ({ userProfileData }) => {
                 });
                 
                 setIsSportHallAssigned(hasMatches);
-                
-                if (hasMatches) {
-                    console.log(`Športová hala ${selectedPlace.name} má priradené zápasy - tlačidlo na odstránenie bude zablokované`);
-                }
             } catch (err) {
-                console.error("Chyba pri kontrole priradenia zápasov pre športovú halu:", err);
                 setIsSportHallAssigned(false);
             }
         };
@@ -362,7 +355,6 @@ const MapApp = ({ userProfileData }) => {
           
           setIsPlaceAssigned(assigned);
         } catch (err) {
-          console.error("Chyba pri kontrole priradenia miesta:", err);
           setIsPlaceAssigned(false);
         }
       };
@@ -387,7 +379,6 @@ const MapApp = ({ userProfileData }) => {
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
-                console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
                 leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
             }
         };
@@ -419,7 +410,6 @@ const MapApp = ({ userProfileData }) => {
     
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
-      console.log("CLICK NA MAPE zachytený!", e.latlng);
       const pos = { lat: e.latlng.lat, lng: e.latlng.lng };
     
       setSelectedAddPosition(pos);
@@ -547,7 +537,6 @@ const MapApp = ({ userProfileData }) => {
     
     const startAddingPlace = () => {
         if (isAddingPlace) return;
-        console.log("Spúšťam režim pridávania");
         setIsAddingPlace(true);
         setTempAddPosition(null);
         setShowModal(false);
@@ -568,11 +557,9 @@ const MapApp = ({ userProfileData }) => {
         }
         addClickHandlerRef.current = handleAddClick;
         leafletMap.current.on('click', handleAddClick);
-        console.log("→ pridávací click handler (handleAddClick) pridaný");
     };
     
     const cancelAddingPlace = () => {
-        console.log("Ruším režim pridávania");
         setIsAddingPlace(false);
         setTempAddPosition(null);
         setShowModal(false);
@@ -587,7 +574,6 @@ const MapApp = ({ userProfileData }) => {
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
-            console.log("→ pridávací click handler odstránený");
         }
         
         if (tempMarkerRef.current) {
@@ -604,17 +590,12 @@ const MapApp = ({ userProfileData }) => {
       }
     };
     
-    const handleAddPlace = async () => {
-        console.log("handleAddPlace volané");
-        console.log("selectedAddPosition:", selectedAddPosition);
-        console.log("window.lastAddedPosition:", window.lastAddedPosition);
-        
+    const handleAddPlace = async () => {        
         if (!newPlaceName.trim() || !newPlaceType) return;
         
         let position = selectedAddPosition;
         if (!position && window.lastAddedPosition) {
             position = window.lastAddedPosition;
-            console.log("Používam fallback window.lastAddedPosition:", position);
         }
         
         if (!position) {
@@ -824,7 +805,6 @@ const MapApp = ({ userProfileData }) => {
                 tempMarkerRef.current = null;
             }
         } catch (err) {
-            console.error("Chyba pri pridávaní:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
@@ -996,16 +976,12 @@ const MapApp = ({ userProfileData }) => {
                 capacity: Number(item.capacity) || 0
               }));
 
-            setAccommodationTypes(validTypes);
-         
-          console.log("Načítané typy ubytovania:", validTypes);
+            setAccommodationTypes(validTypes);         
           } else {
-            console.warn("Dokument settings/accommodation neexistuje");
             setAccommodationTypes([]);
           }
           },
         (error) => {
-          console.error("Chyba pri načítaní accommodation types:", error);
           setAccommodationTypes([]);
         }
       );
@@ -1093,16 +1069,12 @@ const MapApp = ({ userProfileData }) => {
               const newCenter = [data.center.lat, data.center.lng];
               setDefaultCenter(newCenter);
               setDefaultZoom(data.zoom);
-              console.log("Načítané default view z DB:", newCenter, data.zoom);
               if (leafletMap.current) {
                 leafletMap.current.setView(newCenter, data.zoom, { animate: true });
-                console.log("Mapa presunutá hneď po načítaní z DB");
               }
             }
           }
-        } catch (err) {
-          console.error("CHYBA pri čítaní default view:", err);
-        }
+        } catch (err) {}
       };
       loadGlobalView();
     }, []);
@@ -1292,9 +1264,8 @@ const MapApp = ({ userProfileData }) => {
                 
                 for (const update of userUpdates) {
                     await updateDoc(doc(window.db, 'users', update.userId), {
-                        teams: update.teams  // Opravené: používame update.teams namiesto updatedTeams
+                        teams: update.teams
                     });
-                    console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z '${oldName}' na '${newName}'`);
                 }
             }
     
@@ -1594,7 +1565,6 @@ const MapApp = ({ userProfileData }) => {
             setMealPriceError(null);
     
         } catch (err) {
-            console.error("Chyba pri ukladaní:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť zmeny', 'error');
         }
     };
@@ -1654,7 +1624,6 @@ const MapApp = ({ userProfileData }) => {
                 editMarkerRef.current = null;
             }
         } catch (err) {
-            console.error("Chyba pri ukladaní novej polohy:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť novú polohu', 'error');
         }
     };
@@ -1717,7 +1686,6 @@ const MapApp = ({ userProfileData }) => {
             window.showGlobalNotification('Miesto bolo odstránené', 'success');
             closeDetail();
         } catch (err) {
-            console.error("Chyba pri odstraňovaní:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť miesto', 'error');
         }
         // Zatvoríme modálne okno
@@ -1837,9 +1805,7 @@ const MapApp = ({ userProfileData }) => {
             mainLayer.addTo(leafletMap.current);
             
             // Ak hlavná vrstva zlyhá, prepnite na fallback
-            mainLayer.on('tileerror', function(e) {
-                console.warn('Tile error on main layer, tile:', e.tile.src);
-                
+            mainLayer.on('tileerror', function(e) {                
                 // Vytvor novú dlaždicu na chybovú
                 const errorImg = e.tile;
                 errorImg.onload = null;
@@ -1873,7 +1839,6 @@ const MapApp = ({ userProfileData }) => {
                     this._home.title = 'Pôvodné zobrazenie (z databázy)';
                     L.DomEvent.on(this._home, 'click', L.DomEvent.stopPropagation);
                     L.DomEvent.on(this._home, 'click', () => {
-                        console.log("DOMČEK – aktuálne default hodnoty:", defaultCenter, defaultZoom);
                         window.goToDefaultView?.();
                     });
                     
@@ -1916,7 +1881,6 @@ const MapApp = ({ userProfileData }) => {
                         map.setView([center.lat, center.lng], zoom, { animate: true });
                         window.showGlobalNotification('Globálne východzie uložené a nastavené!', 'success');
                     } catch (err) {
-                        console.error('Chyba pri ukladaní:', err);
                         window.showGlobalNotification('Nepodarilo sa uložiť', 'error');
                     }
                 };
@@ -1926,13 +1890,10 @@ const MapApp = ({ userProfileData }) => {
             
             leafletMap.current.on('moveend zoomend resize', () => {
                 const c = leafletMap.current.getCenter();
-                console.log(`[MAP] ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)} | zoom ${leafletMap.current.getZoom()}`);
             });
             
             setTimeout(() => leafletMap.current?.invalidateSize(), 400);
-            console.log("Mapa inicializovaná na fallback súradniciach");
             leafletMap.current.on('click', (e) => {
-                console.log("RAW MAP CLICK EVENT FIRED", e.latlng);
             });
         };
         
@@ -1945,7 +1906,6 @@ const MapApp = ({ userProfileData }) => {
         } else {
             // Pridajte listener pre načítanie scriptu
             leafletJS.onload = () => {
-                console.log("Leaflet script načítaný");
                 setTimeout(() => {
                     if (window.L) initMap();
                 }, 100);
@@ -1981,7 +1941,6 @@ const MapApp = ({ userProfileData }) => {
                     duration: 1.0,
                     easeLinearity: 0.25
                 });
-                console.log(`Zoom na miesto ${selectedPlace.name} → [${lat.toFixed(6)}, ${lng.toFixed(6)}] zoom 18`);
             }
         }, 300);
         
@@ -3450,10 +3409,7 @@ const createPlaceChangeNotification = async (actionType, changesArray, placeData
             relatedPlaceName: placeData.name || null,
             relatedPlaceType: placeData.type || null,
         });
-        console.log("[NOTIFIKÁCIA – viaceré zmeny]", changesArray);
-    } catch (err) {
-        console.error("[CHYBA pri ukladaní notifikácie]", err);
-    }
+    } catch (err) {}
 };
 
 let isEmailSyncListenerSetup = false;
@@ -3481,7 +3437,6 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (err) {
-                        console.error("Chyba synchronizácie emailu:", err);
                         window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
                     }
                 }
