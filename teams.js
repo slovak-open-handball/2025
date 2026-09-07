@@ -150,9 +150,11 @@ const TeamsOverviewApp = (props) => {
                 if (key === 'team') {
                     // Dekódujeme a nahradíme "-" späť na medzery
                     result.teamName = decodeURIComponent(value).replace(/-/g, ' ');
+                    console.log('Parsovaný teamName:', result.teamName);
                 } else if (key === 'category') {
                     // Dekódujeme a nahradíme "-" späť na medzery
                     result.categoryName = decodeURIComponent(value).replace(/-/g, ' ');
+                    console.log('Parsovaný categoryName:', result.categoryName);
                 }
             });
             
@@ -175,13 +177,17 @@ const TeamsOverviewApp = (props) => {
             }
             
             if (teamNameFromUrl) {
-                // Nájdi tím podľa názvu
+                console.log('Načítavam tím z URL:', teamNameFromUrl);
+                
+                // Nájdi tím podľa názvu - použijeme presné porovnanie
                 const teamOccurrences = allTeams
                     .filter(team => {
+                        // Získame čistý názov tímu
                         let cleanName = removeSuffix(team.teamName);
                         if (team.category && cleanName.startsWith(team.category + ' ')) {
                             cleanName = cleanName.substring(team.category.length + 1).trim();
                         }
+                        // Porovnáme s názvom z URL (už je bez medzier nahradených za "-")
                         return cleanName === teamNameFromUrl;
                     })
                     .map(team => ({
@@ -193,11 +199,38 @@ const TeamsOverviewApp = (props) => {
                         order: team.order
                     }));
 
+                console.log('Nájdené výskyty:', teamOccurrences.length);
+
                 if (teamOccurrences.length > 0) {
                     setSelectedTeamDetails({
                         teamName: teamNameFromUrl,
                         occurrences: teamOccurrences
                     });
+                } else {
+                    // Skúsime alternatívne vyhľadávanie - bez odstránenia sufixu
+                    const teamOccurrencesAlt = allTeams
+                        .filter(team => {
+                            let cleanName = team.teamName;
+                            if (team.category && cleanName.startsWith(team.category + ' ')) {
+                                cleanName = cleanName.substring(team.category.length + 1).trim();
+                            }
+                            return cleanName === teamNameFromUrl;
+                        })
+                        .map(team => ({
+                            category: team.category,
+                            teamName: team.teamName,
+                            uid: team.uid,
+                            id: team.id,
+                            groupName: team.groupName,
+                            order: team.order
+                        }));
+                    
+                    if (teamOccurrencesAlt.length > 0) {
+                        setSelectedTeamDetails({
+                            teamName: teamNameFromUrl,
+                            occurrences: teamOccurrencesAlt
+                        });
+                    }
                 }
             }
             setIsInitialLoad(false);
