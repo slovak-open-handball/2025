@@ -23,7 +23,7 @@ const loadLeftMenu = async (userProfileData) => {
     }
 };
 
-const setupMenuListeners = (userProfileData, db, userId) => {
+const setupMenuListeners = async (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
