@@ -369,7 +369,7 @@ const TeamsOverviewApp = (props) => {
                         if (teamOccurrences.length > 0) {
                             setSelectedTeamDetails({
                                 teamName: teamNameFromUrl,
-                                category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
+                                category: categoryNameFromUrl || null,
                                 occurrences: teamOccurrences
                             });
                         } else {
