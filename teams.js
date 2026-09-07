@@ -562,7 +562,6 @@ const TeamsOverviewApp = (props) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();
         
-        // Iba vypíšeme do konzoly, na ktoré tlačidlo sa kliklo
         console.log('Kliknuté na tlačidlo:', {
             category: normalizedCategory,
             teamName: normalizedTeamName,
@@ -572,40 +571,53 @@ const TeamsOverviewApp = (props) => {
             order: occ.order
         });
         
-        // Aktualizujeme URL s kategóriou aj tímom - použijeme history.replaceState aby sme nespustili hashchange
+        // Aktualizujeme URL s kategóriou aj tímom
         const hashParts = [];
         if (normalizedCategory) {
-            // Najprv nahradíme " - " za placeholder
             let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
-            // Potom nahradíme medzery za "-"
             encodedCategory = encodedCategory.replace(/ /g, '-');
-            // Nakoniec nahradíme placeholder za "---"
             encodedCategory = encodedCategory.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`category=${encodeURIComponent(encodedCategory)}`);
         }
         if (normalizedTeamName) {
-            // Najprv nahradíme " - " za placeholder
             let encodedTeam = normalizedTeamName.replace(/ - /g, '___TRIPLE_DASH___');
-            // Potom nahradíme medzery za "-"
             encodedTeam = encodedTeam.replace(/ /g, '-');
-            // Nakoniec nahradíme placeholder za "---"
             encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
         
         const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
         if (window.location.hash !== newHash) {
-            // Použijeme replaceState aby sme nespustili hashchange event
             window.history.replaceState(null, '', newHash);
         }
         
-        // AKTUALIZUJEME selectedTeamDetails - zmeníme kategóriu na tú z tlačidla
-        // a zachováme rovnaký názov tímu
+        // AKTUALIZUJEME selectedTeamDetails - zmeníme názov aj kategóriu
         setSelectedTeamDetails(prev => {
             if (!prev) return prev;
+            // Nájdeme všetky výskyty pre tento tím (rovnaký base názov)
+            const baseTeamName = removeSuffix(normalizedTeamName);
+            const allOccurrences = allTeams
+                .filter(team => {
+                    let cleanName = removeSuffix(team.teamName);
+                    if (team.category && cleanName.startsWith(team.category + ' ')) {
+                        cleanName = cleanName.substring(team.category.length + 1).trim();
+                    }
+                    cleanName = removeSuffix(cleanName);
+                    return cleanName === baseTeamName;
+                })
+                .map(team => ({
+                    category: team.category,
+                    teamName: team.teamName,
+                    uid: team.uid,
+                    id: team.id,
+                    groupName: team.groupName,
+                    order: team.order
+                }));
+            
             return {
-                ...prev,
-                category: normalizedCategory
+                teamName: normalizedTeamName,
+                category: normalizedCategory,
+                occurrences: allOccurrences
             };
         });
     };
@@ -623,6 +635,9 @@ const TeamsOverviewApp = (props) => {
             // Ak sú kategórie rovnaké, porovnáme názvy tímov
             return slovakCollator.compare(a.teamName, b.teamName);
         });
+
+        // Získame base názov (bez sufixu) pre aktuálne zobrazený detail
+        const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
 
         return React.createElement(
             'div',
@@ -664,12 +679,18 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     sortedOccurrences.map((occ, index) => {
+                        // Získame base názov (bez sufixu) pre tento výskyt
+                        const baseOccName = removeSuffix(occ.teamName);
+                        
+                        // Porovnávame kategóriu a base názov (bez sufixu)
                         let isSelected = false;
                         if (selectedTeamDetails.category === null) {
-                            isSelected = occ.teamName === selectedTeamDetails.teamName;
+                            // Ak nie je kategória nastavená, porovnávame len base názov
+                            isSelected = baseOccName === baseDetailName;
                         } else {
+                            // Inak porovnávame aj kategóriu a base názov
                             isSelected = occ.category === selectedTeamDetails.category && 
-                                       occ.teamName === selectedTeamDetails.teamName;
+                                       baseOccName === baseDetailName;
                         }
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
