@@ -318,7 +318,7 @@ const TeamsOverviewApp = (props) => {
                             // Zistíme, či je táto kategória vybraná
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
                             // Pridáme border na pravú stranu pre všetky okrem posledného
-                            const borderClass = 'border-r border-gray-600' : '';
+                            const borderClass = 'border-r border-gray-600';
                             
                             return React.createElement(
                                 'th',
@@ -376,7 +376,7 @@ const TeamsOverviewApp = (props) => {
                             filteredCategoryNames.map((catName, index) => {
                                 const count = matrix[teamName]?.[catName] || 0;
                                 const displayValue = count > 0 ? count : '';
-                                const borderClass = 'border-r border-gray-200' : '';
+                                const borderClass = 'border-r border-gray-200';
                                 
                                 return React.createElement(
                                     'td',
@@ -417,7 +417,7 @@ const TeamsOverviewApp = (props) => {
                             sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
                             });
-                            const borderClass = 'border-r border-gray-300' : '';
+                            const borderClass = 'border-r border-gray-300';
                             
                             return React.createElement(
                                 'td',
