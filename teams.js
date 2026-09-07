@@ -313,9 +313,6 @@ const TeamsOverviewApp = (props) => {
             return null;
         }
     
-        // Vypočítame celkový počet stĺpcov
-        const totalColumns = 1 + filteredCategoryNames.length + 1; // názov + kategórie + celkom
-    
         return React.createElement(
             'div',
             { 
@@ -324,8 +321,8 @@ const TeamsOverviewApp = (props) => {
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
                 style: { 
-                    width: '90%',
-                    maxWidth: '1200px',
+                    width: '100%',
+                    maxWidth: '1280px',
                     transition: 'transform 0.3s ease, opacity 0.3s ease',
                     borderRadius: '8px',
                     overflow: 'hidden'
