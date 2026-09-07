@@ -594,6 +594,9 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
+        console.log('selectedTeamDetails.category:', selectedTeamDetails.category);
+        console.log('selectedTeamDetails.teamName:', selectedTeamDetails.teamName);
+
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -638,6 +641,15 @@ const TeamsOverviewApp = (props) => {
                         const baseOccName = removeSuffix(occ.teamName);
                         const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
                         
+                        console.log('Porovnanie:', {
+                            occCategory: occ.category,
+                            detailCategory: selectedTeamDetails.category,
+                            baseOccName,
+                            baseDetailName,
+                            categoryMatch: occ.category === selectedTeamDetails.category,
+                            nameMatch: baseOccName === baseDetailName
+                        });
+                        
                         // Porovnávame kategóriu aj názov tímu (bez sufixu)
                         // Ak je selectedTeamDetails.category null, porovnávame len názov
                         let isSelected = false;
@@ -649,6 +661,8 @@ const TeamsOverviewApp = (props) => {
                             isSelected = occ.category === selectedTeamDetails.category && 
                                        baseOccName === baseDetailName;
                         }
+                        
+                        console.log('isSelected:', isSelected);
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
