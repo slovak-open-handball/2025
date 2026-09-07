@@ -179,6 +179,12 @@ const TeamsOverviewApp = (props) => {
         return { teamName: null, categoryName: null };
     };
 
+    // Pomocná funkcia na získanie kategórie z URL
+    const getCategoryFromUrl = () => {
+        const { categoryName } = parseUrlHash();
+        return categoryName;
+    };
+
     // Načítanie tímu z URL pri prvom načítaní
     useEffect(() => {
         if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
@@ -597,6 +603,10 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
+        // Zistíme, či je v URL kategória
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+
         // Zoradíme výskyty podľa kategórie a potom podľa názvu tímu
         const sortedOccurrences = [...selectedTeamDetails.occurrences].sort((a, b) => {
             // Najprv porovnáme kategórie
@@ -648,15 +658,18 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     sortedOccurrences.map((occ, index) => {
-                        // Porovnávame celý názov tímu (vrátane sufixu) a kategóriu
+                        // Ak nie je v URL kategória, všetky tlačidlá sú sivé
                         let isSelected = false;
-                        if (selectedTeamDetails.category === null) {
-                            // Ak nie je kategória nastavená, porovnávame len celý názov
-                            isSelected = occ.teamName === selectedTeamDetails.teamName;
-                        } else {
-                            // Inak porovnávame aj kategóriu a celý názov
-                            isSelected = occ.category === selectedTeamDetails.category && 
-                                       occ.teamName === selectedTeamDetails.teamName;
+                        if (hasCategoryInUrl) {
+                            // Porovnávame celý názov tímu (vrátane sufixu) a kategóriu
+                            if (selectedTeamDetails.category === null) {
+                                // Ak nie je kategória nastavená, porovnávame len celý názov
+                                isSelected = occ.teamName === selectedTeamDetails.teamName;
+                            } else {
+                                // Inak porovnávame aj kategóriu a celý názov
+                                isSelected = occ.category === selectedTeamDetails.category && 
+                                           occ.teamName === selectedTeamDetails.teamName;
+                            }
                         }
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
@@ -665,7 +678,7 @@ const TeamsOverviewApp = (props) => {
                             {
                                 key: index,
                                 className: `px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                                    isSelected 
+                                    hasCategoryInUrl && isSelected 
                                         ? 'bg-blue-500 text-white hover:bg-blue-600' 
                                         : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
                                 }`,
