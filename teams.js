@@ -209,10 +209,8 @@ const TeamsOverviewApp = (props) => {
 
     const { teamNames, categoryNames, matrix } = getTableData();
 
-    // Filtrovanie podľa kategórie - ak je vybraná kategória, zobrazíme len tú
-    const filteredCategoryNames = selectedCategoryId 
-        ? [categoryIdToNameMap[selectedCategoryId]].filter(Boolean)
-        : categoryNames;
+    // Všetky kategórie zostávajú viditeľné - NEFILTRUJEME STĹPCE
+    const filteredCategoryNames = categoryNames;
 
     // ===================================================================
     // NOTIFIKÁCIE
@@ -240,7 +238,7 @@ const TeamsOverviewApp = (props) => {
         const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
         
         if (categoryId) {
-            // Ak je už vybraná tá istá kategória, zrušíme filter (zobrazíme všetky)
+            // Ak je už vybraná tá istá kategória, zrušíme filter (zobrazíme všetky tímy)
             if (selectedCategoryId === categoryId) {
                 setSelectedCategoryId('');
             } else {
