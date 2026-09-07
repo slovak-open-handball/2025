@@ -125,6 +125,7 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                 if (categoryKey !== categoryName) continue;
                 
+                // Vyhľadávame presne podľa celého názvu tímu vrátane sufixu
                 const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName || t.teamName === teamName);
                 
                 if (foundTeam) {
