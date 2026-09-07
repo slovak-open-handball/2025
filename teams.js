@@ -618,7 +618,7 @@ const TeamsOverviewApp = (props) => {
                         groupName: team.groupName,
                         order: team.order
                     }));
-    
+        
                 // Ak sme nenašli presnú zhodu, skúsime bez sufixu
                 if (teamOccurrences.length === 0) {
                     const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
@@ -640,29 +640,42 @@ const TeamsOverviewApp = (props) => {
                             order: team.order
                         }));
                 }
-    
+        
                 if (teamOccurrences.length > 0) {
-                    // Ak máme kategóriu, vyberieme konkrétny výskyt
-                    let selectedOccurrences = teamOccurrences;
-                    let selectedTeamName = teamNameFromUrl;
-                    
-                    // Ak je v URL kategória, vyberieme len výskyty v tejto kategórii
-                    if (categoryNameFromUrl) {
-                        const filteredOccurrences = teamOccurrences.filter(occ => occ.category === categoryNameFromUrl);
-                        if (filteredOccurrences.length > 0) {
-                            selectedOccurrences = filteredOccurrences;
-                            // Ak máme presný názov, použijeme ho
-                            const exactMatch = filteredOccurrences.find(occ => occ.teamName === teamNameFromUrl);
-                            if (exactMatch) {
-                                selectedTeamName = exactMatch.teamName;
+                    // Nájdeme všetky výskyty tímu (vo všetkých kategóriách)
+                    // Použijeme base názov bez sufixu pre vyhľadanie všetkých výskytov
+                    const baseTeamName = removeSuffix(teamNameFromUrl);
+                    const allOccurrences = allTeams
+                        .filter(team => {
+                            let cleanName = removeSuffix(team.teamName);
+                            if (team.category && cleanName.startsWith(team.category + ' ')) {
+                                cleanName = cleanName.substring(team.category.length + 1).trim();
                             }
+                            cleanName = removeSuffix(cleanName);
+                            return cleanName === baseTeamName;
+                        })
+                        .map(team => ({
+                            category: team.category,
+                            teamName: team.teamName,
+                            uid: team.uid,
+                            id: team.id,
+                            groupName: team.groupName,
+                            order: team.order
+                        }));
+                    
+                    // Vyberieme názov tímu podľa kategórie z URL
+                    let selectedTeamName = teamNameFromUrl;
+                    if (categoryNameFromUrl) {
+                        const exactMatch = teamOccurrences.find(occ => occ.category === categoryNameFromUrl);
+                        if (exactMatch) {
+                            selectedTeamName = exactMatch.teamName;
                         }
                     }
                     
                     setSelectedTeamDetails({
                         teamName: selectedTeamName, // Uložíme celý názov vrátane sufixu
                         category: categoryNameToStore,
-                        occurrences: selectedOccurrences
+                        occurrences: allOccurrences // Uložíme VŠETKY výskyty vo všetkých kategóriách
                     });
                 }
             }
@@ -751,7 +764,7 @@ const TeamsOverviewApp = (props) => {
                             order: team.order
                         }));
                     
-                    // Ak sme nenašli presnú zhodu, skúsime bez sufixu (len pre prípad, že URL neobsahuje sufix)
+                    // Ak sme nenašli presnú zhodu, skúsime bez sufixu
                     if (teamOccurrences.length === 0) {
                         const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
                         teamOccurrences = allTeams
@@ -773,30 +786,40 @@ const TeamsOverviewApp = (props) => {
                             }));
                     }
                     
-                    // Ak máme kategóriu, vyberieme len výskyty v tejto kategórii
-                    let selectedOccurrences = teamOccurrences;
-                    let selectedTeamName = teamNameFromUrl;
-                    
-                    if (categoryNameFromUrl && teamOccurrences.length > 0) {
-                        const filteredOccurrences = teamOccurrences.filter(occ => occ.category === categoryNameFromUrl);
-                        if (filteredOccurrences.length > 0) {
-                            selectedOccurrences = filteredOccurrences;
-                            // Ak máme presný názov, použijeme ho
-                            const exactMatch = filteredOccurrences.find(occ => occ.teamName === teamNameFromUrl);
+                    if (teamOccurrences.length > 0) {
+                        // Nájdeme všetky výskyty tímu (vo všetkých kategóriách)
+                        const baseTeamName = removeSuffix(teamNameFromUrl);
+                        const allOccurrences = allTeams
+                            .filter(team => {
+                                let cleanName = removeSuffix(team.teamName);
+                                if (team.category && cleanName.startsWith(team.category + ' ')) {
+                                    cleanName = cleanName.substring(team.category.length + 1).trim();
+                                }
+                                cleanName = removeSuffix(cleanName);
+                                return cleanName === baseTeamName;
+                            })
+                            .map(team => ({
+                                category: team.category,
+                                teamName: team.teamName,
+                                uid: team.uid,
+                                id: team.id,
+                                groupName: team.groupName,
+                                order: team.order
+                            }));
+                        
+                        // Vyberieme názov tímu podľa kategórie z URL
+                        let selectedTeamName = teamNameFromUrl;
+                        if (categoryNameFromUrl) {
+                            const exactMatch = teamOccurrences.find(occ => occ.category === categoryNameFromUrl);
                             if (exactMatch) {
                                 selectedTeamName = exactMatch.teamName;
-                            } else if (filteredOccurrences.length > 0) {
-                                // Ak nemáme presnú zhodu, použijeme prvý výskyt v kategórii
-                                selectedTeamName = filteredOccurrences[0].teamName;
                             }
                         }
-                    }
-                    
-                    if (selectedOccurrences.length > 0) {
+                        
                         setSelectedTeamDetails({
                             teamName: selectedTeamName,
                             category: categoryNameFromUrl || null,
-                            occurrences: selectedOccurrences
+                            occurrences: allOccurrences // Uložíme VŠETKY výskyty
                         });
                     } else {
                         setSelectedTeamDetails(null);
@@ -982,7 +1005,7 @@ const TeamsOverviewApp = (props) => {
         
         console.log(`[handleTeamOccurrenceClick] Klik na tím: "${normalizedTeamName}", kategória: "${normalizedCategory}"`);
         
-        // Aktualizujeme URL s kategóriou aj tímom - používame CELÝ NÁZOV VRÁTANE SUFIXU
+        // Aktualizujeme URL s kategóriou aj tímom
         const hashParts = [];
         if (normalizedCategory) {
             let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
@@ -1002,8 +1025,7 @@ const TeamsOverviewApp = (props) => {
             window.history.replaceState(null, '', newHash);
         }
         
-        // AKTUALIZUJEME selectedTeamDetails - zmeníme názov aj kategóriu
-        // Nájdeme všetky výskyty pre tento tím (rovnaký base názov)
+        // Nájdeme všetky výskyty pre tento tím (vo všetkých kategóriách)
         const baseTeamName = removeSuffix(normalizedTeamName);
         const allOccurrences = allTeams
             .filter(team => {
@@ -1019,14 +1041,14 @@ const TeamsOverviewApp = (props) => {
                 order: team.order
             }));
         
-        // Uložíme celý názov vrátane sufixu
+        // Uložíme celý názov vrátane sufixu a VŠETKY výskyty
         setSelectedTeamDetails({
-            teamName: normalizedTeamName, // Uložíme celý názov vrátane sufixu
-            category: normalizedCategory, // Uložíme vybranú kategóriu
-            occurrences: allOccurrences
+            teamName: normalizedTeamName,
+            category: normalizedCategory,
+            occurrences: allOccurrences // Uložíme VŠETKY výskyty
         });
         
-        // Načítame súpisku pre vybraný výskyt - používame CELÝ NÁZOV VRÁTANE SUFIXU
+        // Načítame súpisku pre vybraný výskyt
         let categoryName = occ.category;
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
