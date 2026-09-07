@@ -310,7 +310,7 @@ const TeamsOverviewApp = (props) => {
             'div',
             { 
                 ref: fixedHeaderRef,
-                className: `fixed top-0 left-0 right-0 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
+                className: `fixed top-16 left-0 right-0 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
                 style: { 
