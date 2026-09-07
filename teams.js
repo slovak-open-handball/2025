@@ -121,14 +121,20 @@ const TeamsOverviewApp = (props) => {
         let hashParts = [];
         // Najprv kategória, potom tím
         if (categoryName) {
-            // Nahradíme medzery za "-" a zakódujeme
-            const encodedCategory = encodeURIComponent(categoryName.replace(/ /g, '-'));
-            hashParts.push(`category=${encodedCategory}`);
+            // Normalizujeme viacnásobné medzery na jednu
+            const normalizedCategory = categoryName.replace(/\s+/g, ' ').trim();
+            // Nahradíme " - " za "---" (tri pomlčky) a potom jednotlivé medzery za "-"
+            let encodedCategory = normalizedCategory.replace(/ - /g, '---');
+            encodedCategory = encodedCategory.replace(/ /g, '-');
+            hashParts.push(`category=${encodeURIComponent(encodedCategory)}`);
         }
         if (teamName) {
-            // Nahradíme medzery za "-" a zakódujeme
-            const encodedTeam = encodeURIComponent(teamName.replace(/ /g, '-'));
-            hashParts.push(`team=${encodedTeam}`);
+            // Normalizujeme viacnásobné medzery na jednu
+            const normalizedTeam = teamName.replace(/\s+/g, ' ').trim();
+            // Nahradíme " - " za "---" (tri pomlčky) a potom jednotlivé medzery za "-"
+            let encodedTeam = normalizedTeam.replace(/ - /g, '---');
+            encodedTeam = encodedTeam.replace(/ /g, '-');
+            hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
         
         if (hashParts.length > 0) {
@@ -148,12 +154,24 @@ const TeamsOverviewApp = (props) => {
             params.forEach(param => {
                 const [key, value] = param.split('=');
                 if (key === 'team') {
-                    // Dekódujeme a nahradíme "-" späť na medzery
-                    result.teamName = decodeURIComponent(value).replace(/-/g, ' ');
+                    // Dekódujeme
+                    let decoded = decodeURIComponent(value);
+                    // Najprv nahradíme "---" za " - " (tri pomlčky za medzera-pomlčka-medzera)
+                    decoded = decoded.replace(/---/g, ' - ');
+                    // Potom nahradíme zostávajúce "-" za " "
+                    decoded = decoded.replace(/-/g, ' ');
+                    // Normalizujeme viacnásobné medzery na jednu
+                    result.teamName = decoded.replace(/\s+/g, ' ').trim();
                     console.log('Parsovaný teamName:', result.teamName);
                 } else if (key === 'category') {
-                    // Dekódujeme a nahradíme "-" späť na medzery
-                    result.categoryName = decodeURIComponent(value).replace(/-/g, ' ');
+                    // Dekódujeme
+                    let decoded = decodeURIComponent(value);
+                    // Najprv nahradíme "---" za " - " (tri pomlčky za medzera-pomlčka-medzera)
+                    decoded = decoded.replace(/---/g, ' - ');
+                    // Potom nahradíme zostávajúce "-" za " "
+                    decoded = decoded.replace(/-/g, ' ');
+                    // Normalizujeme viacnásobné medzery na jednu
+                    result.categoryName = decoded.replace(/\s+/g, ' ').trim();
                     console.log('Parsovaný categoryName:', result.categoryName);
                 }
             });
@@ -418,7 +436,8 @@ const TeamsOverviewApp = (props) => {
                 setSelectedCategoryId('');
                 // Aktualizujeme URL - odstránime kategóriu
                 if (selectedTeamDetails) {
-                    updateUrlHash(selectedTeamDetails.teamName, null);
+                    const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
+                    updateUrlHash(normalizedTeam, null);
                 } else {
                     updateUrlHash(null);
                 }
@@ -426,7 +445,8 @@ const TeamsOverviewApp = (props) => {
                 setSelectedCategoryId(categoryId);
                 // Aktualizujeme URL - pridáme kategóriu
                 if (selectedTeamDetails) {
-                    updateUrlHash(selectedTeamDetails.teamName, categoryName);
+                    const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
+                    updateUrlHash(normalizedTeam, categoryName);
                 } else {
                     updateUrlHash(null, categoryName);
                 }
@@ -435,13 +455,16 @@ const TeamsOverviewApp = (props) => {
     };
 
     const handleTeamNameClick = (teamName) => {
+        // Normalizujeme názov - odstránime viacnásobné medzery
+        const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
+        
         const teamOccurrences = allTeams
             .filter(team => {
                 let cleanName = removeSuffix(team.teamName);
                 if (team.category && cleanName.startsWith(team.category + ' ')) {
                     cleanName = cleanName.substring(team.category.length + 1).trim();
                 }
-                return cleanName === teamName;
+                return cleanName === normalizedTeamName;
             })
             .map(team => ({
                 category: team.category,
@@ -454,12 +477,12 @@ const TeamsOverviewApp = (props) => {
 
         if (teamOccurrences.length > 0) {
             setSelectedTeamDetails({
-                teamName: teamName,
+                teamName: normalizedTeamName,
                 occurrences: teamOccurrences
             });
             // Zachováme aktuálnu kategóriu ak je nastavená
             const categoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
-            updateUrlHash(teamName, categoryName);
+            updateUrlHash(normalizedTeamName, categoryName);
         }
     };
 
@@ -471,10 +494,14 @@ const TeamsOverviewApp = (props) => {
     };
 
     const handleTeamOccurrenceClick = (occ) => {
+        // Normalizujeme názvy - odstránime viacnásobné medzery
+        const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
+        const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();
+        
         // Iba vypíšeme do konzoly, na ktoré tlačidlo sa kliklo
         console.log('Kliknuté na tlačidlo:', {
-            category: occ.category,
-            teamName: occ.teamName,
+            category: normalizedCategory,
+            teamName: normalizedTeamName,
             uid: occ.uid,
             id: occ.id,
             groupName: occ.groupName,
@@ -483,13 +510,17 @@ const TeamsOverviewApp = (props) => {
         
         // Aktualizujeme URL s kategóriou aj tímom - použijeme history.replaceState aby sme nespustili hashchange
         const hashParts = [];
-        if (occ.category) {
-            const encodedCategory = encodeURIComponent(occ.category.replace(/ /g, '-'));
-            hashParts.push(`category=${encodedCategory}`);
+        if (normalizedCategory) {
+            // Nahradíme " - " za "---" a potom medzery za "-"
+            let encodedCategory = normalizedCategory.replace(/ - /g, '---');
+            encodedCategory = encodedCategory.replace(/ /g, '-');
+            hashParts.push(`category=${encodeURIComponent(encodedCategory)}`);
         }
-        if (occ.teamName) {
-            const encodedTeam = encodeURIComponent(occ.teamName.replace(/ /g, '-'));
-            hashParts.push(`team=${encodedTeam}`);
+        if (normalizedTeamName) {
+            // Nahradíme " - " za "---" a potom medzery za "-"
+            let encodedTeam = normalizedTeamName.replace(/ - /g, '---');
+            encodedTeam = encodedTeam.replace(/ /g, '-');
+            hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
         
         const newHash = hashParts.length > 0 ? `#${hashParts.join('&')}` : '';
@@ -497,9 +528,6 @@ const TeamsOverviewApp = (props) => {
             // Použijeme replaceState aby sme nespustili hashchange event
             window.history.replaceState(null, '', newHash);
         }
-        
-        // Zostaneme v detaile tímu - nič nemeníme na selectedTeamDetails
-        // notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
     };
 
     const renderTeamDetails = () => {
