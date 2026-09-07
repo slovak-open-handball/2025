@@ -197,12 +197,21 @@ const TeamsOverviewApp = (props) => {
         if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
             const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
             
-            // Ak je v URL kategória, nastavíme filter
+            // Získame ID kategórie z URL priamo
+            let categoryIdFromUrl = '';
+            let categoryNameToStore = null;
+            
             if (categoryNameFromUrl) {
                 const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
                 if (categoryId) {
-                    setSelectedCategoryId(categoryId);
+                    categoryIdFromUrl = categoryId;
+                    categoryNameToStore = categoryNameFromUrl;
                 }
+            }
+            
+            // Nastavíme filter kategórie
+            if (categoryIdFromUrl) {
+                setSelectedCategoryId(categoryIdFromUrl);
             }
             
             if (teamNameFromUrl) {
@@ -238,7 +247,7 @@ const TeamsOverviewApp = (props) => {
                 if (teamOccurrences.length > 0) {
                     setSelectedTeamDetails({
                         teamName: teamNameFromUrl,
-                        category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
+                        category: categoryNameToStore, // Použijeme priamo z URL
                         occurrences: teamOccurrences
                     });
                 } else {
@@ -264,7 +273,7 @@ const TeamsOverviewApp = (props) => {
                     if (teamOccurrencesAlt.length > 0) {
                         setSelectedTeamDetails({
                             teamName: teamNameFromUrl,
-                            category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
+                            category: categoryNameToStore, // Použijeme priamo z URL
                             occurrences: teamOccurrencesAlt
                         });
                     }
