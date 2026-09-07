@@ -1,4 +1,4 @@
-import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, updateDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const loadLeftMenu = async (userProfileData) => {
     if (userProfileData && userProfileData.id) {
@@ -50,6 +50,40 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) return;
 
     let isMenuToggled = userProfileData?.isMenuToggled || false;
+
+    // Pridajte túto funkciu do setupMenuListeners
+    const loadUnreadNotificationsCount = async () => {
+        if (!userId) return;
+        
+        try {
+            const db = getFirestore();
+            const notificationsRef = collection(db, 'users', userId, 'notifications');
+            const q = query(notificationsRef, where('read', '==', false));
+            const querySnapshot = await getDocs(q);
+            const unreadCount = querySnapshot.size;
+        
+            const badge = document.getElementById('notification-badge-count');
+            const textWithCount = document.getElementById('notifications-text-with-count');
+        
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        
+            if (textWithCount) {
+                textWithCount.textContent = unreadCount > 0 ? `Upozornenia (${unreadCount})` : 'Upozornenia';
+            }
+        } catch (error) {
+            console.error('Chyba pri načítaní notifikácií:', error);
+        }
+    };
+    
+    // Zavolajte funkciu po načítaní menu
+    await loadUnreadNotificationsCount();
 
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
