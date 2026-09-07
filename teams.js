@@ -691,7 +691,7 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'div',
                     { className: 'mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500' },
-                    `Celkový počet výskytov: ${selectedTeamDetails.occurrences.length}`
+                    `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             )
         );
