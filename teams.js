@@ -51,33 +51,22 @@ export const subscribe = (cb) => {
   return () => listeners.delete(cb);
 };
 
-// ===================================================================
-// POMOCNÁ FUNKCIA PRE SLOVENSKÉ ABECEDNÉ RADENIE
-// ===================================================================
 const slovakCollator = new Intl.Collator('sk', { 
     sensitivity: 'base',
     ignorePunctuation: true,
     numeric: false
 });
 
-// ===================================================================
-// POMOCNÁ FUNKCIA PRE ODSTRÁNENIE SUFIXU (A, B, C, ...)
-// ===================================================================
 const removeSuffix = (teamName) => {
-    // Zoznam písmen slovenskej abecedy (veľké aj malé)
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
     const lettersLower = letters.toLowerCase();
     const allLetters = letters + lettersLower;
     
-    // Skontrolujeme, či názov končí na medzeru a písmeno (A, B, C, ...)
-    // a to písmeno je posledným znakom
     if (teamName.length >= 2) {
         const lastChar = teamName[teamName.length - 1];
         const secondLastChar = teamName[teamName.length - 2];
         
-        // Ak je predposledný znak medzera a posledný je písmeno
         if (secondLastChar === ' ' && allLetters.includes(lastChar)) {
-            // Odstránime medzeru a písmeno
             return teamName.slice(0, -2).trim();
         }
     }
@@ -85,20 +74,19 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
-// ===================================================================
-// HLAVNÝ KOMPONENT - ZOBRAZUJE PREHĽADOVÚ TABUĽKU LEN Z POUŽÍVATEĽSKÝCH TÍMOV
-// ===================================================================
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [uiNotification, setUiNotification] = useState(null);
     const currentUserEmail = window.globalUserProfileData?.email || null;
     
-    // Stav pre filtrovanie
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
 
     const tableContainerRef = useRef(null);
+
+    // DYNAMICKÝ VÝPOČET VÝŠKY TABUĽKY (50px MEDZERA OD SPODKU OKNA)
+    const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
     useEffect(() => {
         const updateHeight = () => {
@@ -112,16 +100,14 @@ const TeamsOverviewApp = (props) => {
         updateHeight();
         window.addEventListener('resize', updateHeight);
         return () => window.removeEventListener('resize', updateHeight);
-    }, [allTeams, selectedCategoryId, selectedTeamNameFilter]);  
+    }, [allTeams, selectedCategoryId, selectedTeamNameFilter]);
 
-    // Konštanty pre šírky stĺpcov
     const COLUMN_WIDTHS = {
         teamName: { minWidth: '180px', maxWidth: '250px', width: '180px' },
         category: { minWidth: '80px', width: '80px' },
         total: { minWidth: '80px', width: '80px' }
     };
 
-    // Ak máš na stránke fixné horné menu (napr. 56px / 3.5rem), zmeň TOP_OFFSET na '56px'
     const TOP_OFFSET = '0px'; 
 
     useEffect(() => {
@@ -295,14 +281,12 @@ const TeamsOverviewApp = (props) => {
                     className: 'w-full border-collapse bg-white',
                     style: { minWidth: '600px' }
                 },
-                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-800 text-white' },
                     React.createElement(
                         'tr',
                         null,
-                        // Prvý stĺpec (Názov tímu) - ukotvený zhora aj zľava
                         React.createElement(
                             'th',
                             { 
@@ -311,7 +295,6 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Názov tímu'
                         ),
-                        // Stĺpce kategórií - ukotvené zhora
                         filteredCategoryNames.map((catName) => {
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
                             
@@ -332,7 +315,6 @@ const TeamsOverviewApp = (props) => {
                                 )
                             );
                         }),
-                        // Stĺpec Celkom - ukotvený zhora
                         React.createElement(
                             'th',
                             { 
@@ -343,7 +325,6 @@ const TeamsOverviewApp = (props) => {
                         )
                     )
                 ),
-                // TELO TABUĽKY
                 React.createElement(
                     'tbody',
                     null,
@@ -388,14 +369,12 @@ const TeamsOverviewApp = (props) => {
                         );
                     })
                 ),
-                // PATIČKA TABUĽKY - PRISPÔSOBENÁ ROVNAKO AKO HLAVIČKA
                 React.createElement(
                     'tfoot',
                     { className: 'bg-gray-200 font-semibold' },
                     React.createElement(
                         'tr',
                         null,
-                        // Prvý stĺpec patičky - ukotvený zdola aj zľava (z-20)
                         React.createElement(
                             'td',
                             { 
@@ -404,7 +383,6 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Celkom tímov'
                         ),
-                        // Stĺpce kategórií - ukotvené zdola (z-10)
                         filteredCategoryNames.map((catName) => {
                             let totalInCategory = 0;
                             sortedTeamNames.forEach(teamName => {
@@ -421,7 +399,6 @@ const TeamsOverviewApp = (props) => {
                                 totalInCategory
                             );
                         }),
-                        // Stĺpec Celkom zdola (z-10)
                         React.createElement(
                             'td',
                             { 
@@ -496,9 +473,6 @@ const TeamsOverviewApp = (props) => {
     );
 };
 
-// ============================================================
-// INICIALIZÁCIA APLIKÁCIE
-// ============================================================
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
@@ -551,7 +525,6 @@ const handleDataUpdateAndRender = (event) => {
 
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Okamžité vykreslenie
 const rootElement = document.getElementById('root');
 if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
     const root = ReactDOM.createRoot(rootElement);
