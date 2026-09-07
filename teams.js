@@ -447,16 +447,29 @@ const TeamsOverviewApp = (props) => {
         const hasCategoryInUrl = !!categoryFromUrl;
         
         if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0 && hasCategoryInUrl) {
-            // Nájdeme aktuálne vybraný výskyt (ten s kategóriou z URL alebo prvý)
+            // Nájdeme aktuálne vybraný výskyt - ten, ktorý zodpovedá kategórii z URL
             let selectedOcc = null;
             
             if (categoryFromUrl) {
+                // Hľadáme výskyt s kategóriou z URL
                 selectedOcc = selectedTeamDetails.occurrences.find(
                     occ => occ.category === categoryFromUrl
                 );
             }
             
+            // Ak sme nenašli podľa kategórie, skúsime nájsť podľa názvu tímu z URL
             if (!selectedOcc) {
+                const { teamName: teamNameFromUrl } = parseUrlHash();
+                if (teamNameFromUrl) {
+                    // Hľadáme presnú zhodu s názvom z URL (vrátane sufixu)
+                    selectedOcc = selectedTeamDetails.occurrences.find(
+                        occ => occ.teamName === teamNameFromUrl
+                    );
+                }
+            }
+            
+            // Ak stále nemáme vybraný výskyt, použijeme prvý
+            if (!selectedOcc && selectedTeamDetails.occurrences.length > 0) {
                 selectedOcc = selectedTeamDetails.occurrences[0];
             }
             
@@ -467,8 +480,11 @@ const TeamsOverviewApp = (props) => {
                 if (categoryIdToNameMap[categoryName]) {
                     categoryName = categoryIdToNameMap[categoryName];
                 }
+                console.log(`[useEffect] Načítavam súpisku pre tím: "${selectedOcc.teamName}", kategória: "${categoryName}"`);
                 // Načítame súpisku s celým názvom tímu vrátane sufixu
                 loadTeamRoster(selectedOcc.teamName, categoryName);
+            } else {
+                console.log(`[useEffect] Žiadny vhodný výskyt pre načítanie súpisky`);
             }
         } else {
             // Zrušíme listener a vyčistíme - nezobrazujeme súpisku
@@ -906,6 +922,8 @@ const TeamsOverviewApp = (props) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();
         
+        console.log(`[handleTeamOccurrenceClick] Klik na tím: "${normalizedTeamName}", kategória: "${normalizedCategory}"`);
+        
         // Aktualizujeme URL s kategóriou aj tímom - používame CELÝ NÁZOV VRÁTANE SUFIXU
         const hashParts = [];
         if (normalizedCategory) {
@@ -946,8 +964,8 @@ const TeamsOverviewApp = (props) => {
                 }));
             
             return {
-                teamName: normalizedTeamName,
-                category: normalizedCategory,
+                teamName: normalizedTeamName, // Uložíme celý názov vrátane sufixu
+                category: normalizedCategory, // Uložíme vybranú kategóriu
                 occurrences: allOccurrences
             };
         });
@@ -957,6 +975,7 @@ const TeamsOverviewApp = (props) => {
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
         }
+        console.log(`[handleTeamOccurrenceClick] Načítavam súpisku pre: "${occ.teamName}" v kategórii "${categoryName}"`);
         loadTeamRoster(occ.teamName, categoryName);
     };
 
