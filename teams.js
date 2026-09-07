@@ -280,7 +280,7 @@ const TeamsOverviewApp = (props) => {
                     className: 'w-full border-collapse bg-white',
                     style: { minWidth: '600px' }
                 },
-                // HLAVIČKA TABUĽKY ZOSTÁVA PERFEKTNE PRICHYTENÁ
+                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-800 text-white' },
@@ -373,21 +373,23 @@ const TeamsOverviewApp = (props) => {
                         );
                     })
                 ),
-                // PATIČKA TABUĽKY
+                // PATIČKA TABUĽKY - PRISPÔSOBENÁ ROVNAKO AKO HLAVIČKA
                 React.createElement(
                     'tfoot',
                     { className: 'bg-gray-200 font-semibold' },
                     React.createElement(
                         'tr',
                         null,
+                        // Prvý stĺpec patičky - ukotvený zdola aj zľava (z-20)
                         React.createElement(
                             'td',
                             { 
-                                className: 'px-4 py-3 text-left text-gray-700 sticky left-0 bg-gray-200 z-10 border-r border-gray-300',
-                                style: COLUMN_WIDTHS.teamName
+                                className: 'px-4 py-3 text-left text-gray-700 sticky left-0 bottom-0 bg-gray-200 z-20 border-r border-gray-300 border-t border-gray-400',
+                                style: { ...COLUMN_WIDTHS.teamName, bottom: 0 }
                             },
                             'Celkom tímov'
                         ),
+                        // Stĺpce kategórií - ukotvené zdola (z-10)
                         filteredCategoryNames.map((catName) => {
                             let totalInCategory = 0;
                             sortedTeamNames.forEach(teamName => {
@@ -398,17 +400,18 @@ const TeamsOverviewApp = (props) => {
                                 'td',
                                 { 
                                     key: catName,
-                                    className: 'px-4 py-3 text-center text-gray-700 border-r border-gray-300',
-                                    style: COLUMN_WIDTHS.category
+                                    className: 'px-4 py-3 text-center text-gray-700 sticky bottom-0 bg-gray-200 z-10 border-r border-gray-300 border-t border-gray-400',
+                                    style: { ...COLUMN_WIDTHS.category, bottom: 0 }
                                 },
                                 totalInCategory
                             );
                         }),
+                        // Stĺpec Celkom zdola (z-10)
                         React.createElement(
                             'td',
                             { 
-                                className: 'px-4 py-3 text-center text-gray-700 bg-gray-300',
-                                style: COLUMN_WIDTHS.total
+                                className: 'px-4 py-3 text-center text-gray-700 bg-gray-300 sticky bottom-0 z-10 border-t border-gray-400',
+                                style: { ...COLUMN_WIDTHS.total, bottom: 0 }
                             },
                             sortedTeamNames.reduce((sum, name) => sum + getTotalForTeam(name), 0)
                         )
