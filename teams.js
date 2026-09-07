@@ -314,31 +314,28 @@ const TeamsOverviewApp = (props) => {
                                 },
                                 teamName
                             ),
-                            // Hodnoty pre každú kategóriu
+                            // Hodnoty pre každú kategóriu - BEZ PODFARBOVANIA
                             filteredCategoryNames.map(catName => {
                                 const count = matrix[teamName]?.[catName] || 0;
-                                // Farba podľa počtu
-                                let bgColor = 'bg-gray-100';
-                                if (count > 0 && count <= 2) bgColor = 'bg-green-100';
-                                else if (count >= 3 && count <= 5) bgColor = 'bg-yellow-100';
-                                else if (count >= 6) bgColor = 'bg-red-100';
+                                // Ak je count 0, zobrazíme prázdny reťazec, inak zobrazíme číslo
+                                const displayValue = count > 0 ? count : '';
                                 
                                 return React.createElement(
                                     'td',
                                     { 
                                         key: catName,
-                                        className: `px-4 py-3 text-center font-semibold ${bgColor}`
+                                        className: 'px-4 py-3 text-center font-semibold'
                                     },
-                                    count > 0 ? count : '—'
+                                    displayValue
                                 );
                             }),
-                            // Celkový súčet
+                            // Celkový súčet - BEZ PODFARBOVANIA
                             React.createElement(
                                 'td',
                                 { 
-                                    className: `px-4 py-3 text-center font-bold ${total > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-400'}`
+                                    className: `px-4 py-3 text-center font-bold ${total > 0 ? 'text-gray-800' : 'text-gray-400'}`
                                 },
-                                total
+                                total > 0 ? total : ''
                             )
                         );
                     })
@@ -456,34 +453,11 @@ const TeamsOverviewApp = (props) => {
             renderOverviewTable()
         ),
         
-        // Legenda
+        // Legenda - odstránená, pretože už nemáme podfarbovanie
         React.createElement(
             'div',
-            { className: 'mt-4 flex flex-wrap gap-4 justify-center text-sm' },
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2' },
-                React.createElement('div', { className: 'w-4 h-4 bg-green-100 rounded border border-green-300' }),
-                '1-2 tímy'
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2' },
-                React.createElement('div', { className: 'w-4 h-4 bg-yellow-100 rounded border border-yellow-300' }),
-                '3-5 tímov'
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2' },
-                React.createElement('div', { className: 'w-4 h-4 bg-red-100 rounded border border-red-300' }),
-                '6+ tímov'
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-2' },
-                React.createElement('div', { className: 'w-4 h-4 bg-gray-100 rounded border border-gray-300' }),
-                'Žiadny tím'
-            )
+            { className: 'mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-500' },
+            'Prázdne bunky znamenajú, že tím nie je v danej kategórii'
         )
     );
 };
