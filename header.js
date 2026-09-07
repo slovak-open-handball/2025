@@ -161,20 +161,33 @@ const createZoomOverlay = () => {
                     <br>
                     <span style="display: inline-block; margin: 5px 10px;">🍎 Mac: <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">−</kbd> alebo <kbd style="background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">Cmd</kbd> + koliesko</span>
                 </p>
-                <button id="zoom-overlay-dismiss" style="
-                    margin-top: 20px;
-                    padding: 12px 40px;
-                    background: #3498db;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    cursor: pointer;
-                    font-weight: bold;
-                    transition: background 0.2s;
-                " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">
-                    Rozumiem, zavrieť
-                </button>
+                <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+                    <button id="zoom-overlay-dismiss" style="
+                        padding: 12px 40px;
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        font-weight: bold;
+                        transition: background 0.2s;
+                    " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">
+                        Rozumiem, zavrieť
+                    </button>
+                    <button id="zoom-overlay-never-show" style="
+                        padding: 12px 30px;
+                        background: transparent;
+                        color: #666;
+                        border: 2px solid #ddd;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.borderColor='#999'; this.style.color='#333'" onmouseout="this.style.borderColor='#ddd'; this.style.color='#666'">
+                        ⛔ Viac nezobrazovať
+                    </button>
+                </div>
             </div>
         `;
     } else {
@@ -213,16 +226,30 @@ const createZoomOverlay = () => {
         }
     };
 
-    // Pridanie event listenerov pre tlačidlá zavretia
+    // Funkcia na trvalé skrytie (uloží do localStorage)
+    const neverShowAgain = () => {
+        try {
+            localStorage.setItem('zoomOverlayNeverShow', 'true');
+        } catch (e) {
+            // localStorage nie je dostupný
+        }
+        dismissOverlay();
+    };
+
+    // Pridanie event listenerov pre tlačidlá
     setTimeout(() => {
         const closeBtn = document.getElementById('zoom-overlay-close');
         const dismissBtn = document.getElementById('zoom-overlay-dismiss');
+        const neverShowBtn = document.getElementById('zoom-overlay-never-show');
         
         if (closeBtn) {
             closeBtn.addEventListener('click', dismissOverlay);
         }
         if (dismissBtn) {
             dismissBtn.addEventListener('click', dismissOverlay);
+        }
+        if (neverShowBtn) {
+            neverShowBtn.addEventListener('click', neverShowAgain);
         }
     }, 50);
 
@@ -303,7 +330,22 @@ const checkAndShowZoomOverlay = () => {
 
     // Ak je ZOOM_CONTROL_ENABLED false, zobrazíme informačný overlay (ak ešte nebol zavretý)
     if (!ZOOM_CONTROL_ENABLED) {
-        // Skontrolujeme či už bol overlay zavretý (pomocou sessionStorage)
+        // Skontrolujeme či používateľ nechcel overlay trvale skryť
+        try {
+            const neverShow = localStorage.getItem('zoomOverlayNeverShow');
+            if (neverShow === 'true') {
+                // Overlay sa nebude zobrazovať vôbec
+                const existingOverlay = document.getElementById('zoom-overlay');
+                if (existingOverlay) {
+                    existingOverlay.remove();
+                }
+                return;
+            }
+        } catch (e) {
+            // localStorage nie je dostupný
+        }
+
+        // Skontrolujeme či už bol overlay zavretý (pomocou sessionStorage - dočasné)
         const wasDismissed = sessionStorage.getItem('zoomOverlayDismissed');
         if (!wasDismissed) {
             const existingOverlay = document.getElementById('zoom-overlay');
