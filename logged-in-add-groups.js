@@ -844,7 +844,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                     const categoryGroups = groups[category.id] || [];
                     const zakladneSkupiny = categoryGroups.filter(g => g.type === 'základná skupina').sort((a, b) => a.name.localeCompare(b.name));
                     const nadstavboveSkupiny = categoryGroups.filter(g => g.type === 'nadstavbová skupina').sort((a, b) => a.name.localeCompare(b.name));
-                    const sortedGroups = [...zakladneSkupiny, ...nadstavboveSkupiny];                    
+                    const sortedGroups = [...zakladneSkupiny, ...nadstavboveSkupiny];
+
+                    // Farbenie podľa typu skupiny - ZÁKLADNÁ = ZELENÁ, NADSTAVBOVÁ = MODRÁ
+                    const getGroupColors = (type) => {
+                        if (type === 'nadstavbová skupina') {
+                            return { bg: 'bg-blue-100', hoverBg: 'hover:bg-blue-200' };
+                        }
+                        return { bg: 'bg-green-100', hoverBg: 'hover:bg-green-200' };
+                    };
+                    
                     return React.createElement(
                         'div',
                         { key: category.id, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
