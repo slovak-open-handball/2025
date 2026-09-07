@@ -314,6 +314,12 @@ const TeamsOverviewApp = (props) => {
                     showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
                 }`,
                 style: { 
+                    width: '90%',
+                    maxWidth: '1200px'
+                }
+                    showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+                }`,
+                style: { 
                     transition: 'transform 0.3s ease, opacity 0.3s ease',
                 }
             },
