@@ -507,13 +507,6 @@ const TeamsOverviewApp = (props) => {
             'div',
             { className: 'bg-white rounded-xl shadow-xl p-4' },
             renderOverviewTable()
-        ),
-        
-        // Legenda
-        React.createElement(
-            'div',
-            { className: 'mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-500' },
-            'Prázdne bunky znamenajú, že tím nie je v danej kategórii'
         )
     );
 };
