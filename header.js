@@ -10,17 +10,13 @@ import { countryDialCodes } from "./countryDialCodes.js";
 const getCurrentZoomLevel = () => {
     // Metóda 1: Použitie window.devicePixelRatio pre mobilné zariadenia
     if (window.devicePixelRatio) {
-        // Pre mobilné zariadenia vrátime hodnotu devicePixelRatio * 100
-        // ale berieme do úvahy, že na desktopoch to môže byť 1
         if (window.innerWidth !== window.screen.width) {
             return Math.round(window.devicePixelRatio * 100);
         }
     }
 
     // Metóda 2: Výpočet pomocou vizuálneho viewportu
-    // Pre desktopové prehliadače
     try {
-        // Vytvoríme testovací element
         const testElement = document.createElement('div');
         testElement.style.width = '100px';
         testElement.style.height = '100px';
@@ -29,43 +25,32 @@ const getCurrentZoomLevel = () => {
         testElement.style.top = '-1000px';
         document.body.appendChild(testElement);
 
-        // Získame šírku v CSS pixeloch a v screen pixeloch
         const cssWidth = testElement.offsetWidth;
         const screenWidth = testElement.getBoundingClientRect().width;
         
-        // Odstránime testovací element
         document.body.removeChild(testElement);
 
-        // Vypočítame zoom
         if (cssWidth > 0 && screenWidth > 0) {
             const zoom = (screenWidth / cssWidth) * 100;
             return Math.round(zoom);
         }
-    } catch (e) {
-        // Ak metóda zlyhá, použijeme alternatívnu metódu
-    }
+    } catch (e) {}
 
     // Metóda 3: Alternatívny výpočet pomocou window.outerWidth a window.innerWidth
     try {
         if (window.outerWidth && window.innerWidth) {
-            // Odhad zoomu pre desktopové prehliadače
             const zoom = (window.innerWidth / window.outerWidth) * 100;
-            // Zaokrúhlime na najbližšie celé číslo
             return Math.round(zoom);
         }
-    } catch (e) {
-        // Ak metóda zlyhá, vrátime predvolenú hodnotu
-    }
+    } catch (e) {}
 
     // Metóda 4: Pre moderné prehliadače - Media Queries
     try {
-        // Skúsime zistiť zoom pomocou media query match
         const mediaQuery = window.matchMedia('(resolution: 1dppx)');
         if (mediaQuery.matches) {
             return 100;
         }
         
-        // Overíme rôzne hodnoty
         const resolutions = [0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 2];
         for (const res of resolutions) {
             const mq = window.matchMedia(`(resolution: ${res}dppx)`);
@@ -73,12 +58,76 @@ const getCurrentZoomLevel = () => {
                 return Math.round(res * 100);
             }
         }
-    } catch (e) {
-        // Media queries nie sú podporované
-    }
+    } catch (e) {}
 
-    // Predvolená hodnota - 100%
     return 100;
+};
+
+// Funkcia na nastavenie priblíženia na 80%
+const setZoomTo80Percent = () => {
+    try {
+        // Metóda 1: Použitie CSS zoom (funguje vo väčšine prehliadačov)
+        document.body.style.zoom = '80%';
+        
+        // Metóda 2: Pre Firefox a staršie prehliadače - transform scale
+        // document.body.style.transform = 'scale(0.8)';
+        // document.body.style.transformOrigin = 'top left';
+        // document.body.style.width = '125%'; // Kompenzácia pre scale
+        
+        // Metóda 3: Pre mobilné prehliadače - viewport meta tag
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            // Pridáme alebo upravíme initial-scale
+            let content = viewport.getAttribute('content') || '';
+            if (content.includes('initial-scale')) {
+                content = content.replace(/initial-scale=[0-9.]+/, 'initial-scale=0.8');
+            } else {
+                content += ', initial-scale=0.8';
+            }
+            viewport.setAttribute('content', content);
+        }
+        
+        console.log('🔍 Priblíženie bolo nastavené na 80%');
+        return true;
+    } catch (e) {
+        console.warn('❌ Nepodarilo sa nastaviť priblíženie na 80%', e);
+        return false;
+    }
+};
+
+// Funkcia na kontrolu a nastavenie priblíženia
+const checkAndSetZoom = () => {
+    const currentZoom = getCurrentZoomLevel();
+    console.log(`📐 Aktuálne priblíženie stránky: ${currentZoom}%`);
+    
+    // Ak priblíženie nie je 80%, nastavíme ho na 80%
+    if (currentZoom !== 80) {
+        console.log(`🔄 Nastavujem priblíženie z ${currentZoom}% na 80%`);
+        setZoomTo80Percent();
+        
+        // Overíme, či sa priblíženie zmenilo
+        setTimeout(() => {
+            const newZoom = getCurrentZoomLevel();
+            if (newZoom !== 80) {
+                console.log(`⚠️ Priblíženie zostalo na ${newZoom}%. Skúšam alternatívnu metódu...`);
+                // Alternatívna metóda - použitie CSS transform
+                try {
+                    document.body.style.transform = 'scale(0.8)';
+                    document.body.style.transformOrigin = 'top left';
+                    document.body.style.width = '125%';
+                    console.log('🔍 Použitá alternatívna metóda (transform: scale)');
+                } catch (e) {
+                    console.warn('❌ Alternatívna metóda zlyhala');
+                }
+            } else {
+                console.log('✅ Priblíženie úspešne nastavené na 80%');
+            }
+        }, 500);
+    } else {
+        console.log('✅ Priblíženie je už na 80%');
+    }
+    
+    return currentZoom;
 };
 
 // Funkcia na výpis priblíženia do konzoly
@@ -88,25 +137,31 @@ const logCurrentZoom = () => {
     return zoom;
 };
 
-// Automatické zistenie a výpis priblíženia pri načítaní stránky
-// a pri zmene veľkosti okna (pre prípad, že používateľ zmení zoom)
+// Automatické zistenie a nastavenie priblíženia na 80%
 const setupZoomMonitoring = () => {
-    // Zistíme a vypíšeme aktuálne priblíženie
-    logCurrentZoom();
+    // Skontrolujeme a nastavíme priblíženie na 80%
+    checkAndSetZoom();
 
     // Sledujeme zmenu veľkosti okna (často indikuje zmenu zoomu)
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            logCurrentZoom();
+            const currentZoom = getCurrentZoomLevel();
+            console.log(`📐 Aktuálne priblíženie stránky: ${currentZoom}%`);
+            
+            // Ak sa priblíženie zmenilo, opäť ho nastavíme na 80%
+            if (currentZoom !== 80) {
+                console.log(`🔄 Používateľ zmenil priblíženie na ${currentZoom}%. Vraciam na 80%`);
+                setZoomTo80Percent();
+            }
         }, 300);
     });
 
     // Sledujeme zmenu orientácie obrazovky (pre mobilné zariadenia)
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
-            logCurrentZoom();
+            checkAndSetZoom();
         }, 500);
     });
 
@@ -115,12 +170,10 @@ const setupZoomMonitoring = () => {
         const mediaQuery = window.matchMedia('(resolution: 1dppx)');
         mediaQuery.addEventListener('change', () => {
             setTimeout(() => {
-                logCurrentZoom();
+                checkAndSetZoom();
             }, 100);
         });
-    } catch (e) {
-        // Event listener pre media query nie je podporovaný
-    }
+    } catch (e) {}
 };
 
 // Spustíme sledovanie priblíženia po načítaní DOM
@@ -129,6 +182,11 @@ if (document.readyState === 'loading') {
 } else {
     setupZoomMonitoring();
 }
+
+// Exportujeme funkcie pre prípadné manuálne použitie
+window.getCurrentZoomLevel = getCurrentZoomLevel;
+window.setZoomTo80Percent = setZoomTo80Percent;
+window.checkAndSetZoom = checkAndSetZoom;
 
 // ---------------------------------------------------------------------------------------------------------------- KONIEC približenie stranky
 
