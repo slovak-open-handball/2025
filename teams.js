@@ -83,6 +83,7 @@ const TeamsOverviewApp = (props) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const tableContainerRef = useRef(null);
 
@@ -119,6 +120,60 @@ const TeamsOverviewApp = (props) => {
     };
 
     const TOP_OFFSET = '0px'; 
+
+    // Funkcia na aktualizáciu URL hashu
+    const updateUrlHash = (teamName) => {
+        if (teamName) {
+            const encodedTeamName = encodeURIComponent(teamName);
+            window.location.hash = `team=${encodedTeamName}`;
+        } else {
+            window.location.hash = '';
+        }
+    };
+
+    // Funkcia na parsovanie URL hashu
+    const parseUrlHash = () => {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#team=')) {
+            const teamName = decodeURIComponent(hash.substring(6));
+            return teamName;
+        }
+        return null;
+    };
+
+    // Načítanie tímu z URL pri prvom načítaní
+    useEffect(() => {
+        if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
+            const teamNameFromUrl = parseUrlHash();
+            if (teamNameFromUrl) {
+                // Nájdi tím podľa názvu
+                const teamOccurrences = allTeams
+                    .filter(team => {
+                        let cleanName = removeSuffix(team.teamName);
+                        if (team.category && cleanName.startsWith(team.category + ' ')) {
+                            cleanName = cleanName.substring(team.category.length + 1).trim();
+                        }
+                        return cleanName === teamNameFromUrl;
+                    })
+                    .map(team => ({
+                        category: team.category,
+                        teamName: team.teamName,
+                        uid: team.uid,
+                        id: team.id,
+                        groupName: team.groupName,
+                        order: team.order
+                    }));
+
+                if (teamOccurrences.length > 0) {
+                    setSelectedTeamDetails({
+                        teamName: teamNameFromUrl,
+                        occurrences: teamOccurrences
+                    });
+                }
+            }
+            setIsInitialLoad(false);
+        }
+    }, [allTeams, categoryIdToNameMap, isInitialLoad]);
 
     useEffect(() => {
         if (!window.db) return;
@@ -168,6 +223,47 @@ const TeamsOverviewApp = (props) => {
             unsubscribeCategories();
         };
     }, []);
+
+    // Počúvanie na zmeny v URL hash (pre prípad, že používateľ klikne na späť/ďalej)
+    useEffect(() => {
+        const handleHashChange = () => {
+            if (!isInitialLoad) {
+                const teamNameFromUrl = parseUrlHash();
+                if (teamNameFromUrl) {
+                    const teamOccurrences = allTeams
+                        .filter(team => {
+                            let cleanName = removeSuffix(team.teamName);
+                            if (team.category && cleanName.startsWith(team.category + ' ')) {
+                                cleanName = cleanName.substring(team.category.length + 1).trim();
+                            }
+                            return cleanName === teamNameFromUrl;
+                        })
+                        .map(team => ({
+                            category: team.category,
+                            teamName: team.teamName,
+                            uid: team.uid,
+                            id: team.id,
+                            groupName: team.groupName,
+                            order: team.order
+                        }));
+
+                    if (teamOccurrences.length > 0) {
+                        setSelectedTeamDetails({
+                            teamName: teamNameFromUrl,
+                            occurrences: teamOccurrences
+                        });
+                    } else {
+                        setSelectedTeamDetails(null);
+                    }
+                } else {
+                    setSelectedTeamDetails(null);
+                }
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [allTeams, isInitialLoad]);
 
     const getTableData = () => {
         if (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0) {
@@ -265,11 +361,13 @@ const TeamsOverviewApp = (props) => {
                 teamName: teamName,
                 occurrences: teamOccurrences
             });
+            updateUrlHash(teamName);
         }
     };
 
     const closeTeamDetails = () => {
         setSelectedTeamDetails(null);
+        updateUrlHash(null);
     };
 
     const renderTeamDetails = () => {
