@@ -69,7 +69,7 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
-// Funkcia na načítanie členov tímu s reálnym sledovaním (rovnaká ako v matches.js)
+// Funkcia na načítanie členov tímu s reálnym sledovaním
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         if (onUpdate) onUpdate([]);
@@ -78,25 +78,35 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     }
     
     let actualTeamName = teamName;
-    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        window.matchTracker.getTeamNameByDisplayId(teamName)
-            .then(convertedName => {
-                if (convertedName && convertedName !== teamName) {
-                    actualTeamName = convertedName;
-                    if (onMappedName) {
-                        onMappedName(actualTeamName);
+    
+    // Bezpečná kontrola existencie window.matchTracker
+    const matchTracker = window.matchTracker;
+    if (matchTracker && typeof matchTracker.getTeamNameByDisplayId === 'function') {
+        try {
+            // Použijeme Promise s bezpečným volaním
+            Promise.resolve(matchTracker.getTeamNameByDisplayId(teamName))
+                .then(convertedName => {
+                    if (convertedName && convertedName !== teamName) {
+                        actualTeamName = convertedName;
+                        if (onMappedName) {
+                            onMappedName(actualTeamName);
+                        }
+                    } else {
+                        if (onMappedName) {
+                            onMappedName(teamName);
+                        }
                     }
-                } else {
+                })
+                .catch(() => {
                     if (onMappedName) {
                         onMappedName(teamName);
                     }
-                }
-            })
-            .catch(() => {
-                if (onMappedName) {
-                    onMappedName(teamName);
-                }
-            });
+                });
+        } catch (err) {
+            if (onMappedName) {
+                onMappedName(teamName);
+            }
+        }
     } else {
         if (onMappedName) {
             onMappedName(teamName);
@@ -272,7 +282,11 @@ const TeamsOverviewApp = (props) => {
     const loadTeamRoster = (teamName, categoryName) => {
         // Zrušíme predchádzajúci listener
         if (rosterUnsubscribe) {
-            rosterUnsubscribe();
+            try {
+                rosterUnsubscribe();
+            } catch (e) {
+                // Ignorujeme chyby pri odhlasovaní
+            }
             setRosterUnsubscribe(null);
         }
         
@@ -298,8 +312,12 @@ const TeamsOverviewApp = (props) => {
             // Môžeme použiť na aktualizáciu zobrazeného názvu
         };
         
-        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
-        setRosterUnsubscribe(() => unsubscribe);
+        try {
+            const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
+            setRosterUnsubscribe(() => unsubscribe);
+        } catch (error) {
+            setIsLoadingRoster(false);
+        }
         
         // Timeout pre prípad, že sa načítanie zasekne
         const timeoutId = setTimeout(() => {
@@ -314,7 +332,11 @@ const TeamsOverviewApp = (props) => {
     useEffect(() => {
         return () => {
             if (rosterUnsubscribe) {
-                rosterUnsubscribe();
+                try {
+                    rosterUnsubscribe();
+                } catch (e) {
+                    // Ignorujeme chyby pri odhlasovaní
+                }
                 setRosterUnsubscribe(null);
             }
             if (window.__rosterTimeoutId) {
@@ -353,7 +375,11 @@ const TeamsOverviewApp = (props) => {
         } else {
             // Zrušíme listener a vyčistíme
             if (rosterUnsubscribe) {
-                rosterUnsubscribe();
+                try {
+                    rosterUnsubscribe();
+                } catch (e) {
+                    // Ignorujeme chyby pri odhlasovaní
+                }
                 setRosterUnsubscribe(null);
             }
             setTeamRoster([]);
@@ -776,7 +802,11 @@ const TeamsOverviewApp = (props) => {
         
         // Zrušíme listener na súpisku
         if (rosterUnsubscribe) {
-            rosterUnsubscribe();
+            try {
+                rosterUnsubscribe();
+            } catch (e) {
+                // Ignorujeme chyby pri odhlasovaní
+            }
             setRosterUnsubscribe(null);
         }
         
@@ -863,7 +893,7 @@ const TeamsOverviewApp = (props) => {
         loadTeamRoster(occ.teamName, categoryName);
     };
 
-    // Render súpisky tímu (podobný ako v matches.js)
+    // Render súpisky tímu
     const renderTeamRoster = () => {
         if (!selectedTeamDetails) return null;
         
