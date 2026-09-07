@@ -92,11 +92,16 @@ const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [uiNotification, setUiNotification] = useState(null);
+    const [showFixedHeader, setShowFixedHeader] = useState(false);
     const currentUserEmail = window.globalUserProfileData?.email || null;
     
     // Stav pre filtrovanie
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
+
+    // Referencie pre IntersectionObserver
+    const tableContainerRef = useRef(null);
+    const headerSentinelRef = useRef(null);
 
     // ===================================================================
     // LISTENERY PRE DÁTA - LEN POUŽÍVATEĽSKÉ TÍMY (BEZ SUPERSTRUCTURE)
@@ -213,6 +218,33 @@ const TeamsOverviewApp = (props) => {
     const filteredCategoryNames = categoryNames;
 
     // ===================================================================
+    // INTERSECTION OBSERVER PRE FIXNÚ HLAVIČKU
+    // ===================================================================
+    useEffect(() => {
+        const sentinel = headerSentinelRef.current;
+        if (!sentinel) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    // Ak sentinel nie je viditeľný, zobrazíme fixnú hlavičku
+                    setShowFixedHeader(!entry.isIntersecting);
+                });
+            },
+            {
+                threshold: 0,
+                rootMargin: '0px 0px 0px 0px'
+            }
+        );
+
+        observer.observe(sentinel);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []); // Prázdne pole závislostí - observer sa nastaví len raz
+
+    // ===================================================================
     // NOTIFIKÁCIE
     // ===================================================================
     useEffect(() => {
@@ -245,6 +277,83 @@ const TeamsOverviewApp = (props) => {
                 setSelectedCategoryId(categoryId);
             }
         }
+    };
+
+    // ===================================================================
+    // RENDER FIXNEJ HLAVIČKY (zobrazí sa len pri skrolovaní)
+    // ===================================================================
+    const renderFixedHeader = () => {
+        if (teamNames.length === 0 || filteredCategoryNames.length === 0) {
+            return null;
+        }
+
+        return React.createElement(
+            'div',
+            { 
+                className: `fixed top-0 left-0 right-0 z-50 bg-gray-800 text-white shadow-lg transition-all duration-300 ${
+                    showFixedHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'
+                }`,
+                style: { 
+                    transition: 'transform 0.3s ease, opacity 0.3s ease',
+                }
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'container mx-auto px-4 sm:px-6 lg:px-8',
+                    style: { minWidth: '600px' }
+                },
+                React.createElement(
+                    'div',
+                    { 
+                        className: 'flex items-center'
+                    },
+                    // Prvý stĺpec - Názov tímu
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'px-4 py-3 font-semibold sticky left-0 bg-gray-800 z-10 border-r border-gray-600 flex-shrink-0',
+                            style: { minWidth: '180px', maxWidth: '250px', width: '180px' }
+                        },
+                        'Názov tímu'
+                    ),
+                    // Stĺpce kategórií
+                    filteredCategoryNames.map((catName) => {
+                        const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
+                        
+                        return React.createElement(
+                            'div',
+                            { 
+                                key: catName,
+                                onClick: () => handleCategoryHeaderClick(catName),
+                                className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 border-r border-gray-600 flex-shrink-0 ${isSelected ? 'bg-blue-600' : ''}`,
+                                style: { minWidth: '80px', width: '80px' },
+                                title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
+                            },
+                            React.createElement(
+                                'span',
+                                { className: 'flex items-center justify-center gap-1' },
+                                catName,
+                                isSelected && React.createElement(
+                                    'span',
+                                    { className: 'text-xs ml-1' },
+                                    '✕'
+                                )
+                            )
+                        );
+                    }),
+                    // Stĺpec Celkom
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap flex-shrink-0',
+                            style: { minWidth: '80px', width: '80px' }
+                        },
+                        'Celkom'
+                    )
+                )
+            )
+        );
     };
 
     // ===================================================================
@@ -292,7 +401,19 @@ const TeamsOverviewApp = (props) => {
 
         return React.createElement(
             'div',
-            { className: 'w-full overflow-x-auto' },
+            { 
+                className: 'w-full overflow-x-auto relative',
+                ref: tableContainerRef
+            },
+            // Sentinel element - sledujeme, či je viditeľný
+            React.createElement(
+                'div',
+                {
+                    ref: headerSentinelRef,
+                    className: 'h-0 w-full',
+                    style: { position: 'absolute', top: '0', left: '0', pointerEvents: 'none' }
+                }
+            ),
             React.createElement(
                 'table',
                 { 
@@ -314,7 +435,7 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Názov tímu'
                         ),
-                        filteredCategoryNames.map((catName, index) => {
+                        filteredCategoryNames.map((catName) => {
                             // Zistíme, či je táto kategória vybraná - LEN AK selectedCategoryId NIE JE PRÁZDNE
                             const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
                             // Pridáme border na pravú stranu pre všetky okrem posledného
@@ -373,7 +494,7 @@ const TeamsOverviewApp = (props) => {
                                 teamName
                             ),
                             // Hodnoty pre každú kategóriu - BEZ PODFARBOVANIA
-                            filteredCategoryNames.map((catName, index) => {
+                            filteredCategoryNames.map((catName) => {
                                 const count = matrix[teamName]?.[catName] || 0;
                                 const displayValue = count > 0 ? count : '';
                                 const borderClass = 'border-r border-gray-200';
@@ -412,7 +533,7 @@ const TeamsOverviewApp = (props) => {
                             },
                             'Celkom tímov'
                         ),
-                        filteredCategoryNames.map((catName, index) => {
+                        filteredCategoryNames.map((catName) => {
                             let totalInCategory = 0;
                             sortedTeamNames.forEach(teamName => {
                                 totalInCategory += (matrix[teamName]?.[catName] || 0);
@@ -486,6 +607,9 @@ const TeamsOverviewApp = (props) => {
         'div',
         { className: 'flex flex-col w-full p-4 relative text-[87.5%]' },
         React.createElement(NotificationPortal, null),
+        
+        // Fixná hlavička (zobrazí sa pri skrolovaní)
+        renderFixedHeader(),
         
         // Hlavička
         React.createElement(
