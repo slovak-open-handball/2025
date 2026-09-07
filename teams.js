@@ -414,7 +414,7 @@ const TeamsOverviewApp = (props) => {
                                 { 
                                     key: catName,
                                     onClick: () => handleCategoryHeaderClick(catName),
-                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 sticky z-10 border-r border-gray-600 ${isSelected ? 'bg-blue-600' : 'bg-gray-800'}`,
+                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 sticky z-10 border-r border-gray-600 ${isSelected ? 'bg-[#1d4ed8]' : 'bg-gray-800'}`,
                                     style: { ...COLUMN_WIDTHS.category, top: TOP_OFFSET },
                                     title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
                                 },
