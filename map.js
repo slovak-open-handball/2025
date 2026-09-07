@@ -257,7 +257,6 @@ const MapApp = ({ userProfileData }) => {
                     }
                 }
             } catch (err) {
-                console.error("Chyba pri načítaní dátumov turnaja:", err);
             }
         };
         
@@ -321,7 +320,6 @@ const MapApp = ({ userProfileData }) => {
                 setIsSportHallAssigned(hasMatches);
                 
             } catch (err) {
-                console.error("Chyba pri kontrole priradenia zápasov pre športovú halu:", err);
                 setIsSportHallAssigned(false);
             }
         };
@@ -359,7 +357,6 @@ const MapApp = ({ userProfileData }) => {
           
           setIsPlaceAssigned(assigned);
         } catch (err) {
-          console.error("Chyba pri kontrole priradenia miesta:", err);
           setIsPlaceAssigned(false);
         }
       };
@@ -481,7 +478,6 @@ const MapApp = ({ userProfileData }) => {
         if (leafletMap.current && addClickHandlerRef.current) {
             leafletMap.current.off('click', addClickHandlerRef.current);
             addClickHandlerRef.current = null;
-            console.log("→ pridávací click handler odstránený");
         }
         
         if (tempMarkerRef.current) {
@@ -498,17 +494,12 @@ const MapApp = ({ userProfileData }) => {
       }
     };
     
-    const handleAddPlace = async () => {
-        console.log("handleAddPlace volané");
-        console.log("selectedAddPosition:", selectedAddPosition);
-        console.log("window.lastAddedPosition:", window.lastAddedPosition);
-        
+    const handleAddPlace = async () => {        
         if (!newPlaceName.trim() || !newPlaceType) return;
         
         let position = selectedAddPosition;
         if (!position && window.lastAddedPosition) {
             position = window.lastAddedPosition;
-            console.log("Používam fallback window.lastAddedPosition:", position);
         }
         
         if (!position) {
@@ -689,7 +680,6 @@ const MapApp = ({ userProfileData }) => {
                 tempMarkerRef.current = null;
             }
         } catch (err) {
-            console.error("Chyba pri pridávaní:", err);
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
@@ -863,14 +853,11 @@ const MapApp = ({ userProfileData }) => {
 
             setAccommodationTypes(validTypes);
          
-          console.log("Načítané typy ubytovania:", validTypes);
           } else {
-            console.warn("Dokument settings/accommodation neexistuje");
             setAccommodationTypes([]);
           }
           },
         (error) => {
-          console.error("Chyba pri načítaní accommodation types:", error);
           setAccommodationTypes([]);
         }
       );
@@ -963,9 +950,7 @@ const MapApp = ({ userProfileData }) => {
               }
             }
           }
-        } catch (err) {
-          console.error("CHYBA pri čítaní default view:", err);
-        }
+        } catch (err) {}
       };
       loadGlobalView();
     }, []);
@@ -1128,7 +1113,6 @@ const MapApp = ({ userProfileData }) => {
             
             // Ak hlavná vrstva zlyhá, prepnite na fallback
             mainLayer.on('tileerror', function(e) {
-                console.warn('Tile error on main layer, tile:', e.tile.src);
                 
                 // Vytvor novú dlaždicu na chybovú
                 const errorImg = e.tile;
@@ -1859,7 +1843,6 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (err) {
-                        console.error("Chyba synchronizácie emailu:", err);
                         window.showGlobalNotification('Chyba pri aktualizácii e-mailu', 'error');
                     }
                 }
