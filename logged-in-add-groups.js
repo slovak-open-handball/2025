@@ -860,7 +860,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
                             sortedGroups.map((group, groupIndex) => {
-                                const isUsed = isGroupUsed(category.id, group.name);                                
+                                const isUsed = isGroupUsed(category.id, group.name); 
+                                const colors = getGroupColors(group.type);
                                 return React.createElement('li', {
                                     key: groupIndex,
                                     className: `
