@@ -652,7 +652,7 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'h3',
                     { className: 'text-lg font-semibold text-gray-700 mb-4' },
-                    'Výskyty tímu v kategóriách:'
+                    'Tím v kategóriách:'
                 ),
                 React.createElement(
                     'div',
@@ -955,7 +955,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'p',
                 { className: 'text-center text-gray-500 mt-1' },
-                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny výskyt tímu' : 'Kliknite na názov tímu pre zobrazenie detailov'
+                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny tím' : 'Kliknite na názov tímu pre zobrazenie detailov'
             )
         ),
         renderMainContent()
