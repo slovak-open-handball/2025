@@ -238,6 +238,7 @@ const TeamsOverviewApp = (props) => {
                 if (teamOccurrences.length > 0) {
                     setSelectedTeamDetails({
                         teamName: teamNameFromUrl,
+                        category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
                         occurrences: teamOccurrences
                     });
                 } else {
@@ -263,6 +264,7 @@ const TeamsOverviewApp = (props) => {
                     if (teamOccurrencesAlt.length > 0) {
                         setSelectedTeamDetails({
                             teamName: teamNameFromUrl,
+                            category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
                             occurrences: teamOccurrencesAlt
                         });
                     }
@@ -367,6 +369,7 @@ const TeamsOverviewApp = (props) => {
                         if (teamOccurrences.length > 0) {
                             setSelectedTeamDetails({
                                 teamName: teamNameFromUrl,
+                                category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
                                 occurrences: teamOccurrences
                             });
                         } else {
@@ -504,6 +507,7 @@ const TeamsOverviewApp = (props) => {
         if (teamOccurrences.length > 0) {
             setSelectedTeamDetails({
                 teamName: normalizedTeamName,
+                category: selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null,
                 occurrences: teamOccurrences
             });
             // Zachováme aktuálnu kategóriu ak je nastavená
@@ -620,8 +624,13 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     selectedTeamDetails.occurrences.map((occ, index) => {
-                        // Porovnávame celý názov tímu vrátane sufixu
-                        const isSelected = occ.teamName === selectedTeamDetails.teamName;
+                        // Získame základný názov tímu bez sufixu pre porovnanie
+                        const baseOccName = removeSuffix(occ.teamName);
+                        const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
+                        
+                        // Porovnávame kategóriu aj názov tímu (bez sufixu)
+                        const isSelected = occ.category === selectedTeamDetails.category && 
+                                           baseOccName === baseDetailName;
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
