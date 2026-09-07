@@ -603,6 +603,17 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
+        // Zoradíme výskyty podľa kategórie a potom podľa názvu tímu
+        const sortedOccurrences = [...selectedTeamDetails.occurrences].sort((a, b) => {
+            // Najprv porovnáme kategórie
+            const categoryCompare = slovakCollator.compare(a.category, b.category);
+            if (categoryCompare !== 0) {
+                return categoryCompare;
+            }
+            // Ak sú kategórie rovnaké, porovnáme názvy tímov
+            return slovakCollator.compare(a.teamName, b.teamName);
+        });
+
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -642,7 +653,7 @@ const TeamsOverviewApp = (props) => {
                 React.createElement(
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
-                    selectedTeamDetails.occurrences.map((occ, index) => {
+                    sortedOccurrences.map((occ, index) => {
                         let isSelected = false;
                         if (selectedTeamDetails.category === null) {
                             isSelected = occ.teamName === selectedTeamDetails.teamName;
