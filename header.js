@@ -805,6 +805,18 @@ const updateNavigationLinks = () => {
             isVisible = matchesConfig && matchesConfig.visible === true;
         }
         
+        // ŠPECIÁLNE PRAVIDLO: Tímy majú rovnakú viditeľnosť ako Skupiny (teams-in-groups)
+        if (pageId === 'teams') {
+            const teamsInGroupsConfig = pagesVisibility['teams-in-groups'];
+            isVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
+        }
+        
+        // ŠPECIÁLNE PRAVIDLO: Štatistiky majú rovnakú viditeľnosť ako Zápasy
+        if (pageId === 'statistics') {
+            const matchesConfig = pagesVisibility['matches'];
+            isVisible = matchesConfig && matchesConfig.visible === true;
+        }
+        
         if (isVisible) {
             link.classList.remove('hidden');
             link.style.display = '';
