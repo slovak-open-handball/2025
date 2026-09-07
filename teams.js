@@ -598,6 +598,16 @@ const TeamsOverviewApp = (props) => {
             // Použijeme replaceState aby sme nespustili hashchange event
             window.history.replaceState(null, '', newHash);
         }
+        
+        // AKTUALIZUJEME selectedTeamDetails - zmeníme kategóriu na tú z tlačidla
+        // a zachováme rovnaký názov tímu
+        setSelectedTeamDetails(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                category: normalizedCategory
+            };
+        });
     };
 
     const renderTeamDetails = () => {
