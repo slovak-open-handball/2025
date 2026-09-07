@@ -603,9 +603,6 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
-        console.log('selectedTeamDetails.category:', selectedTeamDetails.category);
-        console.log('selectedTeamDetails.teamName:', selectedTeamDetails.teamName);
-
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -646,32 +643,13 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     selectedTeamDetails.occurrences.map((occ, index) => {
-                        // Získame základný názov tímu bez sufixu pre porovnanie
-                        const baseOccName = removeSuffix(occ.teamName);
-                        const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
-                        
-                        console.log('Porovnanie:', {
-                            occCategory: occ.category,
-                            detailCategory: selectedTeamDetails.category,
-                            baseOccName,
-                            baseDetailName,
-                            categoryMatch: occ.category === selectedTeamDetails.category,
-                            nameMatch: baseOccName === baseDetailName
-                        });
-                        
-                        // Porovnávame kategóriu aj názov tímu (bez sufixu)
-                        // Ak je selectedTeamDetails.category null, porovnávame len názov
                         let isSelected = false;
                         if (selectedTeamDetails.category === null) {
-                            // Ak nie je kategória nastavená, porovnávame len názov
-                            isSelected = baseOccName === baseDetailName;
+                            isSelected = occ.teamName === selectedTeamDetails.teamName;
                         } else {
-                            // Inak porovnávame aj kategóriu
                             isSelected = occ.category === selectedTeamDetails.category && 
-                                       baseOccName === baseDetailName;
+                                       occ.teamName === selectedTeamDetails.teamName;
                         }
-                        
-                        console.log('isSelected:', isSelected);
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
