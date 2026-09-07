@@ -188,9 +188,6 @@ const createZoomOverlay = () => {
         }
     };
 
-    // Tlačidlo pokračovať
-    document.getElementById('zoom-dismiss')?.addEventListener('click', dismissOverlay);
-
     // Klávesové skratky pre zmenu zoomu
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === '0') {
