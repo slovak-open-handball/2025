@@ -126,10 +126,14 @@ const TeamsOverviewApp = (props) => {
         let hashParts = [];
         // Najprv kategória, potom tím
         if (categoryName) {
-            hashParts.push(`category=${encodeURIComponent(categoryName)}`);
+            // Nahradíme medzery za "-" a zakódujeme
+            const encodedCategory = encodeURIComponent(categoryName.replace(/ /g, '-'));
+            hashParts.push(`category=${encodedCategory}`);
         }
         if (teamName) {
-            hashParts.push(`team=${encodeURIComponent(teamName)}`);
+            // Nahradíme medzery za "-" a zakódujeme
+            const encodedTeam = encodeURIComponent(teamName.replace(/ /g, '-'));
+            hashParts.push(`team=${encodedTeam}`);
         }
         
         if (hashParts.length > 0) {
@@ -149,9 +153,11 @@ const TeamsOverviewApp = (props) => {
             params.forEach(param => {
                 const [key, value] = param.split('=');
                 if (key === 'team') {
-                    result.teamName = decodeURIComponent(value);
+                    // Dekódujeme a nahradíme "-" späť na medzery
+                    result.teamName = decodeURIComponent(value).replace(/-/g, ' ');
                 } else if (key === 'category') {
-                    result.categoryName = decodeURIComponent(value);
+                    // Dekódujeme a nahradíme "-" späť na medzery
+                    result.categoryName = decodeURIComponent(value).replace(/-/g, ' ');
                 }
             });
             
