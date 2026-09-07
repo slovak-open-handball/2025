@@ -123,17 +123,23 @@ const TeamsOverviewApp = (props) => {
         if (categoryName) {
             // Normalizujeme viacnásobné medzery na jednu
             const normalizedCategory = categoryName.replace(/\s+/g, ' ').trim();
-            // Nahradíme " - " za "---" (tri pomlčky) a potom jednotlivé medzery za "-"
-            let encodedCategory = normalizedCategory.replace(/ - /g, '---');
+            // Najprv nahradíme " - " za špeciálny placeholder
+            let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
+            // Potom nahradíme medzery za "-"
             encodedCategory = encodedCategory.replace(/ /g, '-');
+            // Nakoniec nahradíme placeholder za "---"
+            encodedCategory = encodedCategory.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`category=${encodeURIComponent(encodedCategory)}`);
         }
         if (teamName) {
             // Normalizujeme viacnásobné medzery na jednu
             const normalizedTeam = teamName.replace(/\s+/g, ' ').trim();
-            // Nahradíme " - " za "---" (tri pomlčky) a potom jednotlivé medzery za "-"
-            let encodedTeam = normalizedTeam.replace(/ - /g, '---');
+            // Najprv nahradíme " - " za špeciálny placeholder
+            let encodedTeam = normalizedTeam.replace(/ - /g, '___TRIPLE_DASH___');
+            // Potom nahradíme medzery za "-"
             encodedTeam = encodedTeam.replace(/ /g, '-');
+            // Nakoniec nahradíme placeholder za "---"
+            encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
         
@@ -156,20 +162,25 @@ const TeamsOverviewApp = (props) => {
                 if (key === 'team') {
                     // Dekódujeme
                     let decoded = decodeURIComponent(value);
-                    // Najprv nahradíme "---" za " - " (tri pomlčky za medzera-pomlčka-medzera)
-                    decoded = decoded.replace(/---/g, ' - ');
+                    // Najprv nahradíme "---" za špeciálny placeholder (napr. "___TRIPLE_DASH___")
+                    // aby sme ich ochránili pred ďalším nahrádzaním
+                    decoded = decoded.replace(/---/g, '___TRIPLE_DASH___');
                     // Potom nahradíme zostávajúce "-" za " "
                     decoded = decoded.replace(/-/g, ' ');
+                    // Nakoniec nahradíme placeholder za " - "
+                    decoded = decoded.replace(/___TRIPLE_DASH___/g, ' - ');
                     // Normalizujeme viacnásobné medzery na jednu
                     result.teamName = decoded.replace(/\s+/g, ' ').trim();
                     console.log('Parsovaný teamName:', result.teamName);
                 } else if (key === 'category') {
                     // Dekódujeme
                     let decoded = decodeURIComponent(value);
-                    // Najprv nahradíme "---" za " - " (tri pomlčky za medzera-pomlčka-medzera)
-                    decoded = decoded.replace(/---/g, ' - ');
+                    // Najprv nahradíme "---" za špeciálny placeholder
+                    decoded = decoded.replace(/---/g, '___TRIPLE_DASH___');
                     // Potom nahradíme zostávajúce "-" za " "
                     decoded = decoded.replace(/-/g, ' ');
+                    // Nakoniec nahradíme placeholder za " - "
+                    decoded = decoded.replace(/___TRIPLE_DASH___/g, ' - ');
                     // Normalizujeme viacnásobné medzery na jednu
                     result.categoryName = decoded.replace(/\s+/g, ' ').trim();
                     console.log('Parsovaný categoryName:', result.categoryName);
@@ -511,15 +522,21 @@ const TeamsOverviewApp = (props) => {
         // Aktualizujeme URL s kategóriou aj tímom - použijeme history.replaceState aby sme nespustili hashchange
         const hashParts = [];
         if (normalizedCategory) {
-            // Nahradíme " - " za "---" a potom medzery za "-"
-            let encodedCategory = normalizedCategory.replace(/ - /g, '---');
+            // Najprv nahradíme " - " za placeholder
+            let encodedCategory = normalizedCategory.replace(/ - /g, '___TRIPLE_DASH___');
+            // Potom nahradíme medzery za "-"
             encodedCategory = encodedCategory.replace(/ /g, '-');
+            // Nakoniec nahradíme placeholder za "---"
+            encodedCategory = encodedCategory.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`category=${encodeURIComponent(encodedCategory)}`);
         }
         if (normalizedTeamName) {
-            // Nahradíme " - " za "---" a potom medzery za "-"
-            let encodedTeam = normalizedTeamName.replace(/ - /g, '---');
+            // Najprv nahradíme " - " za placeholder
+            let encodedTeam = normalizedTeamName.replace(/ - /g, '___TRIPLE_DASH___');
+            // Potom nahradíme medzery za "-"
             encodedTeam = encodedTeam.replace(/ /g, '-');
+            // Nakoniec nahradíme placeholder za "---"
+            encodedTeam = encodedTeam.replace(/___TRIPLE_DASH___/g, '---');
             hashParts.push(`team=${encodeURIComponent(encodedTeam)}`);
         }
         
