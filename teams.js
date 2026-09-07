@@ -639,8 +639,16 @@ const TeamsOverviewApp = (props) => {
                         const baseDetailName = removeSuffix(selectedTeamDetails.teamName);
                         
                         // Porovnávame kategóriu aj názov tímu (bez sufixu)
-                        const isSelected = occ.category === selectedTeamDetails.category && 
-                                           baseOccName === baseDetailName;
+                        // Ak je selectedTeamDetails.category null, porovnávame len názov
+                        let isSelected = false;
+                        if (selectedTeamDetails.category === null) {
+                            // Ak nie je kategória nastavená, porovnávame len názov
+                            isSelected = baseOccName === baseDetailName;
+                        } else {
+                            // Inak porovnávame aj kategóriu
+                            isSelected = occ.category === selectedTeamDetails.category && 
+                                       baseOccName === baseDetailName;
+                        }
                         
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
