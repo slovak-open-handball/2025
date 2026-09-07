@@ -122,10 +122,17 @@ const TeamsOverviewApp = (props) => {
     const TOP_OFFSET = '0px'; 
 
     // Funkcia na aktualizáciu URL hashu
-    const updateUrlHash = (teamName) => {
+    const updateUrlHash = (teamName, categoryName = null) => {
+        let hashParts = [];
         if (teamName) {
-            const encodedTeamName = encodeURIComponent(teamName);
-            window.location.hash = `team=${encodedTeamName}`;
+            hashParts.push(`team=${encodeURIComponent(teamName)}`);
+        }
+        if (categoryName) {
+            hashParts.push(`category=${encodeURIComponent(categoryName)}`);
+        }
+        
+        if (hashParts.length > 0) {
+            window.location.hash = hashParts.join('&');
         } else {
             window.location.hash = '';
         }
@@ -134,17 +141,37 @@ const TeamsOverviewApp = (props) => {
     // Funkcia na parsovanie URL hashu
     const parseUrlHash = () => {
         const hash = window.location.hash;
-        if (hash && hash.startsWith('#team=')) {
-            const teamName = decodeURIComponent(hash.substring(6));
-            return teamName;
+        if (hash && hash.startsWith('#')) {
+            const params = hash.substring(1).split('&');
+            const result = { teamName: null, categoryName: null };
+            
+            params.forEach(param => {
+                const [key, value] = param.split('=');
+                if (key === 'team') {
+                    result.teamName = decodeURIComponent(value);
+                } else if (key === 'category') {
+                    result.categoryName = decodeURIComponent(value);
+                }
+            });
+            
+            return result;
         }
-        return null;
+        return { teamName: null, categoryName: null };
     };
 
     // Načítanie tímu z URL pri prvom načítaní
     useEffect(() => {
         if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
-            const teamNameFromUrl = parseUrlHash();
+            const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
+            
+            // Ak je v URL kategória, nastavíme filter
+            if (categoryNameFromUrl) {
+                const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
+                if (categoryId) {
+                    setSelectedCategoryId(categoryId);
+                }
+            }
+            
             if (teamNameFromUrl) {
                 // Nájdi tím podľa názvu
                 const teamOccurrences = allTeams
@@ -228,7 +255,19 @@ const TeamsOverviewApp = (props) => {
     useEffect(() => {
         const handleHashChange = () => {
             if (!isInitialLoad) {
-                const teamNameFromUrl = parseUrlHash();
+                const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
+                
+                // Aktualizácia filtra kategórie
+                if (categoryNameFromUrl) {
+                    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
+                    if (categoryId) {
+                        setSelectedCategoryId(categoryId);
+                    }
+                } else {
+                    setSelectedCategoryId('');
+                }
+                
+                // Aktualizácia detailu tímu
                 if (teamNameFromUrl) {
                     const teamOccurrences = allTeams
                         .filter(team => {
@@ -263,7 +302,7 @@ const TeamsOverviewApp = (props) => {
 
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [allTeams, isInitialLoad]);
+    }, [allTeams, categoryIdToNameMap, isInitialLoad]);
 
     const getTableData = () => {
         if (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0) {
@@ -332,8 +371,20 @@ const TeamsOverviewApp = (props) => {
         if (categoryId) {
             if (selectedCategoryId === categoryId) {
                 setSelectedCategoryId('');
+                // Aktualizujeme URL - odstránime kategóriu
+                if (selectedTeamDetails) {
+                    updateUrlHash(selectedTeamDetails.teamName, null);
+                } else {
+                    updateUrlHash(null);
+                }
             } else {
                 setSelectedCategoryId(categoryId);
+                // Aktualizujeme URL - pridáme kategóriu
+                if (selectedTeamDetails) {
+                    updateUrlHash(selectedTeamDetails.teamName, categoryName);
+                } else {
+                    updateUrlHash(null, categoryName);
+                }
             }
         }
     };
@@ -361,13 +412,33 @@ const TeamsOverviewApp = (props) => {
                 teamName: teamName,
                 occurrences: teamOccurrences
             });
-            updateUrlHash(teamName);
+            // Zachováme aktuálnu kategóriu ak je nastavená
+            const categoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
+            updateUrlHash(teamName, categoryName);
         }
     };
 
     const closeTeamDetails = () => {
         setSelectedTeamDetails(null);
-        updateUrlHash(null);
+        // Zachováme kategóriu ak je nastavená
+        const categoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
+        updateUrlHash(null, categoryName);
+    };
+
+    const handleTeamOccurrenceClick = (occ) => {
+        // Nastavíme filter na kategóriu
+        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === occ.category);
+        if (categoryId) {
+            setSelectedCategoryId(categoryId);
+        }
+        
+        // Zavrieme detail tímu
+        setSelectedTeamDetails(null);
+        
+        // Aktualizujeme URL s kategóriou aj tímom
+        updateUrlHash(occ.teamName, occ.category);
+        
+        notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
     };
 
     const renderTeamDetails = () => {
@@ -419,10 +490,7 @@ const TeamsOverviewApp = (props) => {
                             {
                                 key: index,
                                 className: 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium',
-                                onClick: () => {
-                                    console.log('Kliknuté na:', occ);
-                                    notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
-                                }
+                                onClick: () => handleTeamOccurrenceClick(occ)
                             },
                             buttonLabel
                         );
@@ -644,6 +712,7 @@ const TeamsOverviewApp = (props) => {
                     onClick: () => {
                         setSelectedCategoryId('');
                         setSelectedTeamNameFilter('');
+                        updateUrlHash(null);
                     },
                     className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
                 },
