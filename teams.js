@@ -82,6 +82,7 @@ const TeamsOverviewApp = (props) => {
     
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
+    const [selectedTeamDetails, setSelectedTeamDetails] = useState(null); // Nový stav pre vybraný tím
 
     const tableContainerRef = useRef(null);
 
@@ -244,6 +245,104 @@ const TeamsOverviewApp = (props) => {
         }
     };
 
+    // Nová funkcia pre kliknutie na názov tímu
+    const handleTeamNameClick = (teamName) => {
+        // Nájdi všetky výskyty tímu v rôznych kategóriách
+        const teamOccurrences = allTeams
+            .filter(team => {
+                let cleanName = removeSuffix(team.teamName);
+                if (team.category && cleanName.startsWith(team.category + ' ')) {
+                    cleanName = cleanName.substring(team.category.length + 1).trim();
+                }
+                return cleanName === teamName;
+            })
+            .map(team => ({
+                category: team.category,
+                teamName: team.teamName,
+                uid: team.uid,
+                id: team.id,
+                groupName: team.groupName,
+                order: team.order
+            }));
+
+        if (teamOccurrences.length > 0) {
+            setSelectedTeamDetails({
+                teamName: teamName,
+                occurrences: teamOccurrences
+            });
+        }
+    };
+
+    // Funkcia pre zatvorenie detailu tímu
+    const closeTeamDetails = () => {
+        setSelectedTeamDetails(null);
+    };
+
+    const renderTeamDetails = () => {
+        if (!selectedTeamDetails) return null;
+
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-20',
+                onClick: (e) => {
+                    if (e.target === e.currentTarget) {
+                        closeTeamDetails();
+                    }
+                }
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between items-center mb-4' },
+                    React.createElement(
+                        'h2',
+                        { className: 'text-xl font-bold text-gray-800' },
+                        `Tím: ${selectedTeamDetails.teamName}`
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: closeTeamDetails,
+                            className: 'text-gray-500 hover:text-gray-700 text-2xl font-bold'
+                        },
+                        '✕'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap gap-2 mt-4' },
+                    selectedTeamDetails.occurrences.map((occ, index) => {
+                        const buttonLabel = `${occ.category} | ${occ.teamName}`;
+                        return React.createElement(
+                            'button',
+                            {
+                                key: index,
+                                className: 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium',
+                                onClick: () => {
+                                    // Tu môžeš pridať akciu pre kliknutie na tlačidlo
+                                    console.log('Kliknuté na:', occ);
+                                    notify(`Vybratý: ${occ.teamName} (${occ.category})`, 'info');
+                                }
+                            },
+                            buttonLabel
+                        );
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mt-6 text-sm text-gray-500' },
+                    `Celkový počet výskytov: ${selectedTeamDetails.occurrences.length}`
+                )
+            )
+        );
+    };
+
     const renderOverviewTable = () => {
         if (teamNames.length === 0 || filteredCategoryNames.length === 0) {
             return React.createElement(
@@ -353,8 +452,9 @@ const TeamsOverviewApp = (props) => {
                             React.createElement(
                                 'td',
                                 { 
-                                    className: 'px-4 py-3 font-medium text-gray-800 sticky left-0 bg-inherit z-10 border-r border-gray-200',
-                                    style: COLUMN_WIDTHS.teamName
+                                    className: 'px-4 py-3 font-medium text-gray-800 sticky left-0 bg-inherit z-10 border-r border-gray-200 cursor-pointer hover:text-blue-600 hover:underline',
+                                    style: COLUMN_WIDTHS.teamName,
+                                    onClick: () => handleTeamNameClick(teamName)
                                 },
                                 teamName
                             ),
@@ -473,7 +573,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'p',
                 { className: 'text-center text-gray-500 mt-1' },
-                'Kliknite na názov kategórie v hlavičke pre filtrovanie'
+                'Kliknite na názov tímu pre zobrazenie detailov'
             )
         ),
         renderFilters(),
@@ -481,7 +581,8 @@ const TeamsOverviewApp = (props) => {
             'div',
             { className: 'bg-white rounded-xl shadow-xl p-4' },
             renderOverviewTable()
-        )
+        ),
+        renderTeamDetails() // Renderovanie detailu tímu
     );
 };
 
