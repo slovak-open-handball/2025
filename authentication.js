@@ -98,7 +98,9 @@ const publicPages = [
     'teams-in-groups.html',
     'matches.html', 
     'map.html', 
-    'tables.html'
+    'tables.html',
+    'teams.html',
+    'statistics.html'
 ];
 
 const guestOnlyPages = [
