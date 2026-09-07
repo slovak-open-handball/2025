@@ -580,6 +580,9 @@ const TeamsOverviewApp = (props) => {
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
 
+        // Získame base názov tímu (bez sufixu) pre porovnanie
+        const baseTeamName = removeSuffix(selectedTeamDetails.teamName);
+
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -620,12 +623,33 @@ const TeamsOverviewApp = (props) => {
                     'div',
                     { className: 'flex flex-wrap gap-3 mt-2' },
                     selectedTeamDetails.occurrences.map((occ, index) => {
+                        // Získame čistý názov tímu pre porovnanie
+                        let cleanOccName = removeSuffix(occ.teamName);
+                        if (occ.category && cleanOccName.startsWith(occ.category + ' ')) {
+                            cleanOccName = cleanOccName.substring(occ.category.length + 1).trim();
+                        }
+                        cleanOccName = removeSuffix(cleanOccName);
+                        
+                        // Získame čistý názov z detailu pre porovnanie
+                        let cleanDetailName = removeSuffix(selectedTeamDetails.teamName);
+                        if (occ.category && cleanDetailName.startsWith(occ.category + ' ')) {
+                            cleanDetailName = cleanDetailName.substring(occ.category.length + 1).trim();
+                        }
+                        cleanDetailName = removeSuffix(cleanDetailName);
+                        
+                        // Zistíme, či ide o aktuálne zobrazený tím
+                        const isSelected = cleanOccName === cleanDetailName;
+                        
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
                             'button',
                             {
                                 key: index,
-                                className: 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium',
+                                className: `px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                                    isSelected 
+                                        ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                        : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                                }`,
                                 onClick: () => handleTeamOccurrenceClick(occ)
                             },
                             buttonLabel
