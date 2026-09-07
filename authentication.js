@@ -219,6 +219,7 @@ const loadPageVisibilitySettings = async () => {
         
         const visibilitySettings = {};
         let matchesVisible = true; // predvolene viditeľné
+        let teamsInGroupsVisible = true; // predvolene viditeľné
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
@@ -227,16 +228,28 @@ const loadPageVisibilitySettings = async () => {
                 if (doc.id === 'matches') {
                     matchesVisible = false;
                 }
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
                     matchesVisible = true;
+                }
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = true;
                 }
             }
         });
         
         // Nastavíme tables na rovnakú viditeľnosť ako matches
         visibilitySettings['tables'] = matchesVisible;
+        
+        // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
+        visibilitySettings['teams'] = teamsInGroupsVisible;
+        
+        // Nastavíme statistics na rovnakú viditeľnosť ako matches
+        visibilitySettings['statistics'] = matchesVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = now;
@@ -264,6 +277,7 @@ const setupPageVisibilityListener = () => {
         
         const visibilitySettings = {};
         let matchesVisible = true;
+        let teamsInGroupsVisible = true;
         
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -272,16 +286,28 @@ const setupPageVisibilityListener = () => {
                 if (doc.id === 'matches') {
                     matchesVisible = false;
                 }
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
                     matchesVisible = true;
+                }
+                if (doc.id === 'teams-in-groups') {
+                    teamsInGroupsVisible = true;
                 }
             }
         });
         
         // Nastavíme tables na rovnakú viditeľnosť ako matches
         visibilitySettings['tables'] = matchesVisible;
+        
+        // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
+        visibilitySettings['teams'] = teamsInGroupsVisible;
+        
+        // Nastavíme statistics na rovnakú viditeľnosť ako matches
+        visibilitySettings['statistics'] = matchesVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = Date.now();
@@ -307,7 +333,7 @@ const checkCurrentPageVisibility = async () => {
     }
     
     // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
-    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html'];
+    const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html', 'teams.html', 'statistics.html'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
@@ -316,9 +342,7 @@ const checkCurrentPageVisibility = async () => {
             if (userProfileData && userProfileData.role === 'admin') {
                 // Admin má prístup vždy - ale rešpektujeme nastavenia viditeľnosti
                 // Pokračujeme na kontrolu viditeľnosti
-                // return; // ODSTRÁNENÉ - admin bude tiež kontrolovať viditeľnosť
             }
-            // Pre ostatných prihlásených používateľov necháme pokračovať na kontrolu viditeľnosti
         }
     }
     
@@ -333,7 +357,16 @@ const checkCurrentPageVisibility = async () => {
     let isVisible;
     if (pageId === 'tables') {
         isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
-    } else {
+    } 
+    // Pre teams použijeme viditeľnosť z teams-in-groups
+    else if (pageId === 'teams') {
+        isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+    }
+    // Pre statistics použijeme viditeľnosť z matches
+    else if (pageId === 'statistics') {
+        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
+    }
+    else {
         if (settings[pageId] === undefined) {
             return;
         }
@@ -355,6 +388,16 @@ const isPageVisibleInSettings = async (pageId) => {
     
     // Ak sa pýtame na tables, vrátime hodnotu pre matches
     if (pageId === 'tables') {
+        return settings['matches'] !== undefined ? settings['matches'] : true;
+    }
+    
+    // Ak sa pýtame na teams, vrátime hodnotu pre teams-in-groups
+    if (pageId === 'teams') {
+        return settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+    }
+    
+    // Ak sa pýtame na statistics, vrátime hodnotu pre matches
+    if (pageId === 'statistics') {
         return settings['matches'] !== undefined ? settings['matches'] : true;
     }
     
@@ -383,7 +426,16 @@ const checkPageVisibilityForUser = async (pageName, userProfileData) => {
     let isVisible;
     if (pageId === 'tables') {
         isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
-    } else {
+    }
+    // Pre teams použijeme viditeľnosť z teams-in-groups
+    else if (pageId === 'teams') {
+        isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
+    }
+    // Pre statistics použijeme viditeľnosť z matches
+    else if (pageId === 'statistics') {
+        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
+    }
+    else {
         if (settings[pageId] === undefined) {
             return true;
         }
