@@ -2729,21 +2729,19 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 
             React.createElement(
                 'div',
-                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                { className: 'mb-4 p-3 bg-green-50 rounded-lg border border-green-200' },
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between flex-wrap gap-2' },
                     React.createElement(
                         'div',
                         { className: 'flex items-center gap-2' },
-                        React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-600' }),
                         React.createElement('span', { className: 'font-medium text-gray-700' }, 'Hala:'),
                         React.createElement('span', { className: 'text-gray-800 font-semibold' }, hallName)
                     ),
                     React.createElement(
                         'div',
                         { className: 'flex items-center gap-2' },
-                        React.createElement('i', { className: 'fa-solid fa-calendar-day text-blue-600' }),
                         React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dátum:'),
                         React.createElement('span', { className: 'text-gray-800 font-semibold' }, formattedDate || 'Nezadaný dátum')
                     )
