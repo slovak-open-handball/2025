@@ -1944,6 +1944,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
 
+        const isNewTeamModal = title.includes('Pridať nový tím') && isNewEntry;
+
         // Inicializácia polí pre dobrovoľníka
         if (isEditingVolunteer) {
             // Najprv skúsime načítať z privateData (ak už je načítaná)
@@ -2007,6 +2009,37 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (!initialData) {
                 initialData = {};
             }
+
+            if (isNewTeamModal) {
+                // VYNULUJEME VŠETKY STAVY NA PRÁZDNE HODNOTY
+                setSelectedCategory('');
+                setSelectedArrivalType('');
+                setArrivalTime('');
+                setSelectedAccommodationType('');
+                setSelectedPackageName('');
+                setTeamTshirts([]);
+                
+                // Nastavíme čisté dáta
+                const emptyTeamData = {
+                    teamName: '',
+                    _category: '',
+                    category: '',
+                    arrival: { type: '', time: '' },
+                    accommodation: { type: '' },
+                    packageDetails: { name: '' },
+                    tshirts: [],
+                    jerseyHomeColor: '',
+                    jerseyAwayColor: '',
+                    playerDetails: [],
+                    menTeamMemberDetails: [],
+                    womenTeamMemberDetails: [],
+                    driverDetailsMale: [],
+                    driverDetailsFemale: []
+                };
+                setLocalEditedData(emptyTeamData);
+                return;
+            }
+            
             setSelectedCategory(initialData._category || initialData.category || '');
             if (initialData.teamName === undefined) initialData.teamName = '';
             setSelectedArrivalType(initialData.arrival?.type || '');
@@ -3417,6 +3450,14 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
       setEditingDocRef(null);
       setEditingDataPath('');
       setIsNewEntry(false);
+      setSelectedCategory('');
+      setSelectedArrivalType('');
+      setArrivalTime('');
+      setSelectedAccommodationType('');
+      setSelectedPackageName('');
+      setTeamTshirts([]);
+      setDisplayDialCode('');
+      setDisplayPhoneNumber('');
   };
 
   const handleOpenAddMemberTypeModal = (team) => {
