@@ -5852,7 +5852,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 targetGroupNames.add(`skupina ${letter}`);
             });
             
-            // Nájdeme všetky zápasy v tej istej kategórii
+            // 🔥 Nájdeme VŠETKY zápasy v tej istej kategórii (bez ohľadu na deň)
             const categoryMatches = matches.filter(m => 
                 m.categoryId === match.categoryId && 
                 m.id !== match.id // Vylúčime aktuálny zápas
@@ -5864,14 +5864,28 @@ const AddMatchesApp = ({ userProfileData }) => {
             });
             
             if (matchingMatches.length > 0) {
-                console.log(`Nájdených ${matchingMatches.length} zápasov v skupinách s rovnakými písmenami:`);
-                matchingMatches.forEach((m, index) => {
+                // 🔥 Zoradíme zápasy podľa dátumu a času (ak majú scheduledTime)
+                const sortedMatches = [...matchingMatches].sort((a, b) => {
+                    const getTime = (match) => {
+                        if (!match.scheduledTime) return Infinity;
+                        try {
+                            const date = match.scheduledTime.toDate ? match.scheduledTime.toDate() : new Date(match.scheduledTime);
+                            return date.getTime();
+                        } catch (e) {
+                            return Infinity;
+                        }
+                    };
+                    return getTime(a) - getTime(b);
+                });
+                
+                console.log(`Nájdených ${sortedMatches.length} zápasov v skupinách s rovnakými písmenami (všetky dni):`);
+                sortedMatches.forEach((m, index) => {
                     const mHome = getTeamNameByIdentifier(m.homeTeamIdentifier);
                     const mAway = getTeamNameByIdentifier(m.awayTeamIdentifier);
                     const mHomeLastChar = extractLastChar(mHome);
                     const mAwayLastChar = extractLastChar(mAway);
                     
-                    // 🔥 NOVÉ: Formátovanie dátumu a času zápasu
+                    // 🔥 Formátovanie dátumu a času zápasu
                     let dateTimeStr = 'neurčené';
                     if (m.scheduledTime) {
                         try {
