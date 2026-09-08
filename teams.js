@@ -459,8 +459,10 @@ const TeamsOverviewApp = (props) => {
             if (!identifier) return identifier;
             
             // Skúsime použiť teamManager na synchrónnu konverziu
+            // Toto konvertuje "Tatran Prešov A" -> "U12 CH A1"
             if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                 try {
+                    // Najprv skúsime konvertovať zobrazený názov na identifikátor
                     const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
                     if (convertedName && convertedName !== identifier) {
                         console.log(`[Stats Effect] 🔄 Konverzia: "${identifier}" -> "${convertedName}"`);
@@ -479,6 +481,7 @@ const TeamsOverviewApp = (props) => {
         const matchesRef = collection(window.db, 'matches');
     
         // Použijeme konvertovaný názov pre vyhľadávanie
+        // Toto konvertuje "Tatran Prešov A" na "U12 CH A1"
         const processedTeamName = convertTeamIdentifierSync(currentTeamName);
         console.log('[Stats Effect] 🔍 Vyhľadávam zápasy pre tím (konvertovaný):', processedTeamName);
         console.log('[Stats Effect] 🔍 Pôvodný názov:', currentTeamName);
@@ -749,7 +752,7 @@ const TeamsOverviewApp = (props) => {
             console.log('[Stats Effect] DOMÁCE zápasy - počet:', homeSnapshot.size);
             homeSnapshot.forEach(doc => {
                 const matchData = doc.data();
-                // Konvertujeme identifikátory tímov z zápasu
+                // Konvertujeme identifikátory tímov z zápasu pre zobrazenie
                 const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
                 const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
                 console.log(`[Stats Effect]   Domáci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
@@ -759,7 +762,6 @@ const TeamsOverviewApp = (props) => {
             console.log('[Stats Effect] HOSŤUJÚCE zápasy - počet:', awaySnapshot.size);
             awaySnapshot.forEach(doc => {
                 const matchData = doc.data();
-                // Konvertujeme identifikátory tímov z zápasu
                 const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
                 const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
                 console.log(`[Stats Effect]   Hosťujúci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
