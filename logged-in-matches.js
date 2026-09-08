@@ -2766,7 +2766,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     );
 };
 
-const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText, initialFilters, blockedBreaks, groupsByCategory }) => {
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText, initialFilters, blockedBreaks, groupsByCategory = {} }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
@@ -2801,7 +2801,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
-    // 🔥 NOVÁ FUNKCIA: Získanie všetkých súvisiacich zápasov pre nadstavbovú skupinu
     const getRelatedMatchesForAdvancedGroup = (currentMatch) => {
         console.log('🔍 [getRelatedMatches] Zavolaná funkcia pre zápas:', currentMatch.homeTeamIdentifier, 'vs', currentMatch.awayTeamIdentifier);
         
