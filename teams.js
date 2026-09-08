@@ -910,9 +910,9 @@ const TeamsOverviewApp = (props) => {
             
             console.log('[Stats Effect] 📦 Všetky zápasy - počet:', matchesSnapshot.size);
             
-            // Získame základný názov tímu (bez sufixu)
-            const baseTeamName = getBaseTeamName(currentTeamName);
-            console.log('[Stats Effect] Základný názov tímu (bez sufixu):', baseTeamName);
+            // Použijeme celý názov tímu (nie základný)
+            const fullTeamName = currentTeamName;
+            console.log('[Stats Effect] Celý názov tímu (vrátane sufixu):', fullTeamName);
             
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
@@ -920,31 +920,27 @@ const TeamsOverviewApp = (props) => {
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // Získame základné názvy tímov z zápasu (bez sufixov)
-                const baseHome = getBaseTeamName(convertedHome);
-                const baseAway = getBaseTeamName(convertedAway);
-                
-                // Skontrolujeme, či sa niektorý zo základných názvov zhoduje s baseTeamName
-                if (baseHome === baseTeamName || baseAway === baseTeamName) {
-                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${currentTeamName}": ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} (základ: ${baseHome}) vs ${matchData.awayTeamIdentifier} -> ${convertedAway} (základ: ${baseAway})`);
+                // Porovnávame CELÉ názvy (vrátane sufixu)
+                if (convertedHome === fullTeamName || convertedAway === fullTeamName) {
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${fullTeamName}": ${doc.id} - ${convertedHome} vs ${convertedAway}`);
                     newMatchIds.add(doc.id);
                 }
             });
-    
+        
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-    
+        
             console.log('[Stats Effect] Celkovo nájdených zápasov pre tím:', newMatchIdsArray.length);
             console.log('[Stats Effect] matchIdsChanged:', matchIdsChanged);
-    
+        
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
-    
+        
             console.log('[Stats Effect] 📋 Všetky matchId pre tím:', Array.from(matchIds));
         };
     
