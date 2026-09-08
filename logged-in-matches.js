@@ -4177,8 +4177,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                                 }` 
                             },
                             carryOverPoints 
-                                ? 'Zápasy zo základnej skupiny SA PRENÁŠAJÚ'
-                                : 'Zápasy zo základnej skupiny SA NEPRENÁŠAJÚ'
+                                ? 'Zápasy zo základnej a nadstavbovej skupiny SA PRENÁŠAJÚ'
+                                : 'Zápasy zo základnej a nadstavbovej skupiny SA NEPRENÁŠAJÚ'
                         ),
                         React.createElement(
                             'p', 
@@ -4188,8 +4188,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                                 }` 
                             },
                             carryOverPoints 
-                                ? 'Nebudú sa generovať zápasy medzi tímami, ktoré pochádzajú z rovnakej základnej skupiny.'
-                                : 'Budú sa generovať všetky zápasy medzi všetkými tímami v tejto nadstavbovej skupine.'
+                                ? 'Nebudú sa generovať zápasy medzi tímami, ktoré pochádzajú z rovnakej základnej alebo nadstavbovej skupiny.'
+                                : 'Budú sa generovať všetky zápasy medzi všetkými tímami v skupine.'
                         )
                     )
                 )
