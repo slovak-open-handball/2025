@@ -6146,11 +6146,32 @@ const clearFilter = (column) => {
                                                             className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
                                                         }, '✏️')
                                                     ),
-                                                columnOrder.map(col => (
-                                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
+                                                columnOrder.map(col => {
+                                                    // Špeciálne spracovanie pre názov tímu
+                                                    if (col.id === 'teamName' && showTeams) {
+                                                        const teamName = getNestedValue(u, col.id);
+                                                        let isDuplicate = false;
+                                                        if (teamName) {
+                                                            const normalizedTeamName = teamName.trim().replace(/\s+/g, ' ').toLowerCase();
+                                                            let count = 0;
+                                                            allTeamsFlattened.forEach(t => {
+                                                                const tName = t.teamName || '';
+                                                                if (tName) {
+                                                                    const normName = tName.trim().replace(/\s+/g, ' ').toLowerCase();
+                                                                    if (normName === normalizedTeamName) count++;
+                                                                }
+                                                            });
+                                                            isDuplicate = count > 1;
+                                                        }
+                                                        return React.createElement('td', { 
+                                                            key: col.id, 
+                                                            className: `py-3 px-6 text-left whitespace-nowrap min-w-max ${isDuplicate ? 'text-red-600 font-bold' : ''}`
+                                                        }, teamName || '-');
+                                                    }
+                                                    return React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
                                                         formatTableCellValue(getNestedValue(u, col.id), col.id, u)
-                                                    )
-                                                ))
+                                                    );
+                                                })
                                             ),
                                             expandedRows[u.id] && showTeams && React.createElement(
                                                 'tr',
