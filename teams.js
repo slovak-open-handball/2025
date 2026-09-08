@@ -607,7 +607,8 @@ const TeamsOverviewApp = (props) => {
         };
     }, [selectedTeamDetails, teamRoster]);
 
-    // --- REAL-TIME LISTENER PRE MATCHEVENTS PRE ŠTATISTIKY ---
+    // Vymeňte celý useEffect pre štatistiky (od riadku cca 612) za tento:
+    
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
@@ -635,12 +636,25 @@ const TeamsOverviewApp = (props) => {
     
         // --- 1. ZÍSKAME VŠETKY matchId PRE TÍM ---
         const matchesRef = collection(window.db, 'matches');
-        
-        // Načítame všetky zápasy a budeme ich filtrovať podľa konvertovaných názvov
         const matchesQuery = query(matchesRef);
     
         let matchIds = new Set();
         let isFirstLoad = true;
+    
+        // --- FUNKCIA NA ZÍSKANIE ZÁKLADNÉHO NÁZVU BEZ SUFIXU ---
+        const getBaseTeamName = (teamName) => {
+            if (!teamName) return teamName;
+            // Odstránime sufix (posledné písmeno oddelené medzerou)
+            const parts = teamName.trim().split(' ');
+            if (parts.length >= 2) {
+                const lastPart = parts[parts.length - 1];
+                // Ak je posledná časť jedno písmeno (A-Z), považujeme to za sufix
+                if (lastPart.length === 1 && /[A-ZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽa-záäčďéíĺľňóôřšťúýž]/.test(lastPart)) {
+                    return parts.slice(0, -1).join(' ');
+                }
+            }
+            return teamName;
+        };
     
         // --- 2. FUNKCIA NA VYPOČÍTANIE ŠTATISTÍK Z UDALOSTÍ ---
         const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {
@@ -668,7 +682,7 @@ const TeamsOverviewApp = (props) => {
     
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
-                const event = doc.data();
+                const event = event.data();
                 console.log(`[Stats Effect] 📄 Udalosť:`, {
                     id: doc.id,
                     eventType: event.eventType,
@@ -727,7 +741,7 @@ const TeamsOverviewApp = (props) => {
                         break;
                 }
             });
-
+    
             console.log(`[Stats Effect] 📊 Spracovaných udalostí pre chunk ${chunkIndex}: ${eventsSnapshot.size}`);
             console.log(`[Stats Effect] 📊 Počet členov so štatistikami: ${Object.keys(stats).length}`);
     
@@ -896,22 +910,24 @@ const TeamsOverviewApp = (props) => {
             
             console.log('[Stats Effect] 📦 Všetky zápasy - počet:', matchesSnapshot.size);
             
+            // Získame základný názov tímu (bez sufixu)
+            const baseTeamName = getBaseTeamName(currentTeamName);
+            console.log('[Stats Effect] Základný názov tímu (bez sufixu):', baseTeamName);
+            
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
                 // Konvertujeme identifikátory tímov z zápasu na zobrazené názvy
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // Skontrolujeme, či sa niektorý z konvertovaných názvov zhoduje s currentTeamName
-                if (convertedHome === currentTeamName || convertedAway === currentTeamName) {
-                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${currentTeamName}": ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
+                // Získame základné názvy tímov z zápasu (bez sufixov)
+                const baseHome = getBaseTeamName(convertedHome);
+                const baseAway = getBaseTeamName(convertedAway);
+                
+                // Skontrolujeme, či sa niektorý zo základných názvov zhoduje s baseTeamName
+                if (baseHome === baseTeamName || baseAway === baseTeamName) {
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${currentTeamName}": ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} (základ: ${baseHome}) vs ${matchData.awayTeamIdentifier} -> ${convertedAway} (základ: ${baseAway})`);
                     newMatchIds.add(doc.id);
-                } else {
-                    // Pre debug - ukážeme aj ostatné zápasy (iba ak došlo ku konverzii)
-                    if (convertedHome !== matchData.homeTeamIdentifier || convertedAway !== matchData.awayTeamIdentifier) {
-                        // Len pre debug, nebudeme to logovať všetky, aby sme nezahlcovali konzolu
-                        // console.log(`[Stats Effect]   Zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
-                    }
                 }
             });
     
@@ -928,7 +944,7 @@ const TeamsOverviewApp = (props) => {
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
-
+    
             console.log('[Stats Effect] 📋 Všetky matchId pre tím:', Array.from(matchIds));
         };
     
