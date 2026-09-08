@@ -1467,6 +1467,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [hallName, setHallName] = React.useState(null);
     const [loadingHall, setLoadingHall] = React.useState(true);
 
+    const [isRostersVisible, setIsRostersVisible] = React.useState(
+        window.pagesVisibility && 
+        window.pagesVisibility['rosters'] && 
+        window.pagesVisibility['rosters'].visible === true
+    );
+
     React.useEffect(() => {
         if (!window.db) return;
 
