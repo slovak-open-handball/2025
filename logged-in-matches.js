@@ -2824,7 +2824,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             for (let i = trimmed.length - 1; i >= 0; i--) {
                 const char = trimmed[i];
                 if (char >= 'A' && char <= 'Z') {
-                    return `skupina ${char}`;
+                    return char; // Vrátime písmeno (C, A)
                 }
             }
             return null;
@@ -2833,13 +2833,26 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const homeTeamName = getTeamNameByIdentifier(currentMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(currentMatch.awayTeamIdentifier);
 
-        const homeGroupName = getGroupNameFromTeamName(homeTeamName);
-        const awayGroupName = getGroupNameFromTeamName(awayTeamName);
+        const homeLetter = getGroupNameFromTeamName(homeTeamName);
+        const awayLetter = getGroupNameFromTeamName(awayTeamName);
 
-        // Vytvoríme množinu skupín, z ktorých tímy pochádzajú
+        // Vytvoríme množinu písmen, z ktorých tímy pochádzajú
+        const targetLetters = new Set();
+        if (homeLetter) targetLetters.add(homeLetter);
+        if (awayLetter) targetLetters.add(awayLetter);
+
+        if (targetLetters.size === 0) return [];
+
+        // Nájdeme všetky skupiny v kategórii, ktorých názov obsahuje jedno z písmen
+        // Napr. "skupina A" obsahuje "A", "skupina C" obsahuje "C"
         const targetGroupNames = new Set();
-        if (homeGroupName) targetGroupNames.add(homeGroupName);
-        if (awayGroupName) targetGroupNames.add(awayGroupName);
+        categoryGroups.forEach(group => {
+            const groupNameWithoutPrefix = group.name.replace('skupina ', '');
+            // Ak názov skupiny obsahuje jedno z písmen (napr. "skupina A" obsahuje "A")
+            if (groupNameWithoutPrefix.length === 1 && targetLetters.has(groupNameWithoutPrefix)) {
+                targetGroupNames.add(group.name);
+            }
+        });
 
         if (targetGroupNames.size === 0) return [];
 
