@@ -2961,7 +2961,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const occupiedIntervals = [];
         
-        // 🔥 PRIDAJTE: Získame VŠETKY zápasy pre túto halu a deň (BEZ FILTRA)
+        // 🔥 Získame VŠETKY zápasy pre túto halu a deň (BEZ FILTRA) - vrátane relatedMatches
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
@@ -3007,6 +3007,44 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             });
         });
         
+        // 🔥 PRIDÁME SÚVISIACE ZÁPASY (NADSTAVBOVÁ SKUPINA) - aj v iných halách!
+        if (isAdvancedGroup && relatedMatches.length > 0) {
+            const relatedMatchesForDay = relatedMatches.filter(relatedMatch => {
+                if (!relatedMatch.scheduledTime) return false;
+                const matchDate = relatedMatch.scheduledTime.toDate();
+                const matchDateStr = getLocalDateStr(matchDate);
+                return matchDateStr === date;
+            });
+            
+            relatedMatchesForDay.forEach(relatedMatch => {
+                const matchStart = relatedMatch.scheduledTime.toDate();
+                const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
+                
+                const matchCategory = categories.find(c => c.name === relatedMatch.categoryName);
+                let matchDuration = 0;
+                let matchBreak = 5;
+                
+                if (matchCategory) {
+                    const periods = matchCategory.periods || 2;
+                    const periodDuration = matchCategory.periodDuration || 20;
+                    const breakDuration = matchCategory.breakDuration || 2;
+                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                    matchBreak = matchCategory.matchBreak || 5;
+                }
+                
+                const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
+                
+                // Pridáme aj zápasy v iných halách, aby sme zabezpečili, že hráči nebudú mať konflikty
+                occupiedIntervals.push({
+                    start: matchStartMinutes,
+                    end: matchEndWithBreakMinutes,
+                    type: 'related_match',
+                    id: relatedMatch.id,
+                    hallId: relatedMatch.hallId
+                });
+            });
+        }
+        
         // PRIDÁME ZABLOKOVANÉ ČASY
         if (blockedBreaks) {
             Object.keys(blockedBreaks).forEach(key => {
@@ -3029,8 +3067,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             });
         }
-        
-        // 🔥 ODSTRÁNENÁ KONTROLA relatedMatches - už ich nepotrebujeme, pretože používame VŠETKY zápasy
         
         occupiedIntervals.sort((a, b) => a.start - b.start);
         
@@ -3396,7 +3432,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         };
     
         loadHallStartTime();
-    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks]);
+    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, relatedMatches]); // 🔥 PRIDAJTE relatedMatches
 
     // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (vrátane logickej postupnosti)
     useEffect(() => {
