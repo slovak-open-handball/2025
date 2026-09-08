@@ -3472,14 +3472,6 @@ function AllRegistrationsApp() {
       setEditingDocRef(null);
       setEditingDataPath('');
       setIsNewEntry(false);
-      setSelectedCategory('');
-      setSelectedArrivalType('');
-      setArrivalTime('');
-      setSelectedAccommodationType('');
-      setSelectedPackageName('');
-      setTeamTshirts([]);
-      setDisplayDialCode('');
-      setDisplayPhoneNumber('');
   };
 
   const handleOpenAddMemberTypeModal = (team) => {
