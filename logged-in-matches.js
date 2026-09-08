@@ -3131,22 +3131,25 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
-    // 🔥 NOVÝ useEffect: Načítanie súvisiacich zápasov pri otvorení modálu A PRI ZMENE VYBRANÉHO DÁTUMU
+    // V AssignMatchModal - opravený useEffect pre relatedMatches
     useEffect(() => {
         if (isOpen && match) {
             console.log('--- useEffect: Načítavam súvisiace zápasy ---');
             console.log('💡 currentMatch.groupName:', match.groupName);
             console.log('💡 currentMatch.categoryId:', match.categoryId);
+            console.log('💡 groupsByCategory (props):', groupsByCategory);
+            console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory || {}));
             
             // 🔥 BEZPEČNOSTNÁ KONTROLA pre groupsByCategory
-            if (groupsByCategory) {
-                console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory));
-            } else {
+            if (!groupsByCategory) {
                 console.log('💡 groupsByCategory je undefined/null!');
+                setRelatedMatches([]);
+                setIsAdvancedGroup(false);
+                return;
             }
             
             // 🔥 KONTROLA: Ak match.groupName neexistuje, ale match.categoryId existuje, skúsime ho nájsť
-            if (!match.groupName && match.categoryId && groupsByCategory && groupsByCategory[match.categoryId]) {
+            if (!match.groupName && match.categoryId && groupsByCategory[match.categoryId]) {
                 // Skúsime nájsť groupName podľa homeTeamIdentifier alebo awayTeamIdentifier
                 const extractGroupNameFromIdentifier = (identifier) => {
                     if (!identifier) return null;
@@ -3154,9 +3157,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     if (parts.length < 2) return null;
                     const groupAndOrder = parts[parts.length - 1];
                     
-                    const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
-                    if (match) {
-                        return `skupina ${match[1]}`;
+                    const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+                    if (matchResult) {
+                        return `skupina ${matchResult[1]}`;
                     }
                     return null;
                 };
@@ -3175,12 +3178,24 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
-            const related = getRelatedMatchesForAdvancedGroup(match, groupsByCategory, allMatches, categories);
+            // 🔥 OPRAVENÉ: Použijeme groupsByCategory z props a odovzdáme všetky potrebné parametre
+            const related = getRelatedMatchesForAdvancedGroup(
+                match,           // currentMatch
+                groupsByCategory, // groupsByCategory
+                allMatches,       // allMatches
+                categories        // categories
+            );
             setRelatedMatches(related);
             
+            // Zistíme, či ide o nadstavbovú skupinu
+            const categoryGroups = groupsByCategory[match.categoryId] || [];
+            const currentGroup = categoryGroups.find(g => g.name === match.groupName);
+            setIsAdvancedGroup(currentGroup?.type === 'nadstavbová skupina');
+            
             console.log('📊 [useEffect] relatedMatches po načítaní:', related.length);
+            console.log('📊 [useEffect] isAdvancedGroup:', currentGroup?.type === 'nadstavbová skupina');
         }
-    }, [isOpen, match, groupsByCategory]); // 🔥 PRIDANÉ: Len tieto závislosti
+    }, [isOpen, match, groupsByCategory, allMatches, categories]); // 🔥 PRIDANÉ všetky závislosti
 
     useEffect(() => {
         if (isOpen && match && !initialized) {            
