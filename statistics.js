@@ -471,20 +471,6 @@ const TeamsOverviewApp = (props) => {
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('70vh');
 
-    useEffect(() => {
-        const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 300)}px`);
-            }
-        };
-
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, [allMembers]);
-
     // Načítanie kategórií
     useEffect(() => {
         if (!window.db) return;
@@ -856,8 +842,7 @@ const TeamsOverviewApp = (props) => {
         return React.createElement(
             'div',
             { 
-                className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden',
-                ref: tableContainerRef
+                className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden'
             },
             React.createElement(
                 'div',
@@ -876,7 +861,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'overflow-x-auto overflow-y-auto',
+                    className: 'overflow-x-auto'
                     style: { maxHeight: maxTableHeight }
                 },
                 React.createElement(
