@@ -426,10 +426,6 @@ const TeamsOverviewApp = (props) => {
     const [statsUnsubscribe, setStatsUnsubscribe] = useState(null);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
-    // --- SEM PRIDAJ TOTO: ---
-    const tableContainerRef = useRef(null);
-    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
-
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(...);
 
