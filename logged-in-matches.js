@@ -3880,7 +3880,7 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
-// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom + PRIDANÁ KONTROLA DUPLICÍT
+// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom + PRIDANÁ KONTROLA DUPLICÍT (ignoruje veľkosť písmen a medzery)
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -3913,7 +3913,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Funkcia na kontrolu duplicitných názvov tímov v kategórii
+    // 🔥 UPRAVENÁ FUNKCIA: Kontrola duplicitných názvov tímov v kategórii (ignoruje veľkosť písmen a medzery)
     const checkForDuplicateTeamNames = (categoryId) => {
         if (!categoryId || !window.__teamManagerData?.allTeams) return false;
         
@@ -3925,11 +3925,17 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             t.category === category.name
         );
         
-        // Skontrolujeme duplicitné názvy tímov
-        const teamNames = teamsInCategory.map(t => t.teamName);
-        const uniqueNames = new Set(teamNames);
+        // 🔥 NORMALIZÁCIA NÁZVU: odstránenie medzier a malé písmená
+        const normalizeTeamName = (name) => {
+            if (!name) return '';
+            return name.replace(/\s+/g, '').toLowerCase();
+        };
         
-        return teamNames.length !== uniqueNames.size;
+        // Skontrolujeme duplicitné názvy tímov (ignorujeme medzery a veľkosť písmen)
+        const normalizedTeamNames = teamsInCategory.map(t => normalizeTeamName(t.teamName));
+        const uniqueNames = new Set(normalizedTeamNames);
+        
+        return normalizedTeamNames.length !== uniqueNames.size;
     };
 
     // Aktualizácia dostupných skupín pri zmene kategórie
@@ -3950,7 +3956,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setHasAdvancedGroupWithCarryOver(hasAdvanced && carryOver);
             setCarryOverPoints(carryOver);
             
-            // NOVÉ: Skontrolujeme duplicitné názvy tímov v tejto kategórii
+            // NOVÉ: Skontrolujeme duplicitné názvy tímov v tejto kategórii (ignorujeme medzery a veľkosť písmen)
             const hasDuplicates = checkForDuplicateTeamNames(selectedCategory);
             setHasDuplicateTeamNames(hasDuplicates);
             
@@ -4058,7 +4064,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // NOVÁ ČASŤ: Kontrola duplicitných názvov tímov - ZOBRAZÍ SA PRED VŠETKÝM OSTATNÝM
+            // 🔥 UPRAVENÁ ČASŤ: Kontrola duplicitných názvov tímov - ZOBRAZÍ SA PRED VŠETKÝM OSTATNÝM
             selectedCategory && hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg' },
@@ -4085,6 +4091,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         React.createElement(
                             'p',
                             { className: 'text-xs text-red-500 mt-2' },
+                            'Duplicitné názvy sa porovnávajú bez ohľadu na veľkosť písmen a medzery (napr. "1A" a "1 a" sú považované za duplicitné).'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-red-500 mt-1' },
                             'Prosím, opravte duplicitné názvy tímov v správe tímov a skúste to znova.'
                         )
                     )
