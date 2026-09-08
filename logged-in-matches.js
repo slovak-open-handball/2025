@@ -3514,6 +3514,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedHallId, selectedDate, hallStartTime, match, matchDuration, allMatches, categories, groupsByCategory, blockedBreaks, existingMatches]);
 
+    // ============================================================
+    // UPRAVENÝ useEffect: Načítanie súvisiacich zápasov (aj pre špeciálne zápasy)
+    // ============================================================
     useEffect(() => {
         if (isOpen && match) {
             console.log('--- useEffect: Načítavam súvisiace zápasy ---');
@@ -3617,6 +3620,75 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('📊 [useEffect] isAdvancedGroup:', currentGroup?.type === 'nadstavbová skupina');
         }
     }, [isOpen, match, groupsByCategory, allMatches, categories]);
+
+    // ============================================================
+    // 🔥 SEM VLOŽTE NOVÝ useEffect: Kontrola dňa pre špeciálne zápasy
+    // ============================================================
+    useEffect(() => {
+        // Kontrola len pre špeciálne zápasy, ktoré majú súvisiace zápasy
+        if (match && (match.isPlacementMatch || match.matchType) && relatedMatches.length > 0 && selectedDate) {
+            
+            // Získame všetky súvisiace zápasy, ktoré majú naplánovaný čas
+            const scheduledRelated = relatedMatches.filter(m => m.scheduledTime);
+            
+            if (scheduledRelated.length === 0) {
+                return;
+            }
+            
+            const selectedDateObj = getLocalDateFromStr(selectedDate);
+            if (!selectedDateObj) return;
+            
+            let earliestDate = null;
+            let latestDate = null;
+            
+            scheduledRelated.forEach(m => {
+                try {
+                    const date = m.scheduledTime.toDate();
+                    const dateStr = getLocalDateStr(date);
+                    const dateObj = getLocalDateFromStr(dateStr);
+                    
+                    if (!earliestDate || dateObj < earliestDate) {
+                        earliestDate = dateObj;
+                    }
+                    if (!latestDate || dateObj > latestDate) {
+                        latestDate = dateObj;
+                    }
+                } catch (e) {
+                    console.error('Chyba pri parsovaní dátumu súvisiaceho zápasu:', e);
+                }
+            });
+            
+            if (!earliestDate || !latestDate) return;
+            
+            const formatDateForMessage = (date) => {
+                return date.toLocaleDateString('sk-SK', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            };
+            
+            // KONTROLA 1: Vybraný deň je skorší ako najskorší súvisiaci zápas
+            if (selectedDateObj < earliestDate) {
+                const earliestFormatted = formatDateForMessage(earliestDate);
+                setTimeError(`⛔ Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${earliestFormatted}. Vyberte neskorší deň.`);
+                return;
+            }
+            
+            // KONTROLA 2: Vybraný deň je neskorší ako najneskorší súvisiaci zápas
+            if (selectedDateObj > latestDate) {
+                const latestFormatted = formatDateForMessage(latestDate);
+                setTimeError(`ℹ️ Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých súvisiacich zápasoch (posledný: ${latestFormatted}). Je to v poriadku.`);
+                return;
+            }
+            
+            // KONTROLA 3: Vybraný deň je medzi súvisiacimi zápasmi
+            if (timeError && (timeError.includes('skorší') || timeError.includes('neskorší'))) {
+                setTimeError('');
+            }
+            
+        }
+    }, [selectedDate, relatedMatches, match, timeError]);
 
     useEffect(() => {
         if (isOpen && match && !initialized) {            
@@ -3907,7 +3979,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, match, categories, groupsByCategory]);
 
     // ============================================================
-    // UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy logickú postupnosť nadstavbových skupín (AJ NESKORŠIE DNI)
+    // UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy aj špeciálne zápasy a nadstavbové skupiny
     // ============================================================
     useEffect(() => {
         if (selectedTime && matchDuration > 0 && match) {
@@ -3951,7 +4023,44 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             allConflicts.push(...overlapping);
             
-            // 2. 🔥 KONTROLA NADSTAVBOVEJ SKUPINY - LOGICKÁ POSTUPNOSŤ VRÁTANE NESKORŠÍCH DNÍ
+            // 2. 🔥 KONTROLA PRE ŠPECIÁLNE ZÁPASY (pavúk/umiestnenie) - deň musí byť PO súvisiacich zápasoch
+            if (match && (match.isPlacementMatch || match.matchType) && relatedMatches.length > 0 && selectedDate) {
+                const scheduledRelated = relatedMatches.filter(m => m.scheduledTime);
+                
+                if (scheduledRelated.length > 0) {
+                    const selectedDateObjForCheck = getLocalDateFromStr(selectedDate);
+                    if (selectedDateObjForCheck) {
+                        // Zistíme najskorší dátum medzi súvisiacimi zápasmi
+                        let earliestDate = null;
+                        scheduledRelated.forEach(m => {
+                            try {
+                                const date = m.scheduledTime.toDate();
+                                const dateStr = getLocalDateStr(date);
+                                const dateObj = getLocalDateFromStr(dateStr);
+                                if (!earliestDate || dateObj < earliestDate) {
+                                    earliestDate = dateObj;
+                                }
+                            } catch (e) {
+                                console.error('Chyba pri parsovaní dátumu súvisiaceho zápasu:', e);
+                            }
+                        });
+                        
+                        if (earliestDate && selectedDateObjForCheck < earliestDate) {
+                            const formattedDate = earliestDate.toLocaleDateString('sk-SK', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+                            allConflicts.push({
+                                type: 'special_match_earlier_than_related',
+                                _displayName: `⛔ Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${formattedDate}.`
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // 3. 🔥 KONTROLA NADSTAVBOVEJ SKUPINY - LOGICKÁ POSTUPNOSŤ VRÁTANE NESKORŠÍCH DNÍ
             if (match && match.groupName && groupsByCategory) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -3959,7 +4068,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 if (isAdvancedGroup) {
                     // Nájdeme VŠETKY súvisiace zápasy (rovnaká kategória a skupina)
-                    const relatedMatches = allMatches.filter(m => 
+                    const relatedMatchesForAdvanced = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.groupName === match.groupName &&
                         m.id !== match.id &&
@@ -3967,7 +4076,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     );
                     
                     // Zoradíme podľa dátumu a času
-                    const sortedRelated = [...relatedMatches].sort((a, b) => {
+                    const sortedRelated = [...relatedMatchesForAdvanced].sort((a, b) => {
                         const timeA = a.scheduledTime.toDate().getTime();
                         const timeB = b.scheduledTime.toDate().getTime();
                         return timeA - timeB;
@@ -4062,6 +4171,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             // Aktualizácia chybovej správy
             if (allConflicts.length > 0) {
+                const specialConflicts = allConflicts.filter(c => c.type === 'special_match_earlier_than_related');
                 const advancedConflicts = allConflicts.filter(c => 
                     c.type === 'advanced_group_earlier_day' || 
                     c.type === 'advanced_group_later_day' ||
@@ -4069,7 +4179,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     c.type === 'advanced_group_same_day_earlier_no_break'
                 );
                 
-                if (advancedConflicts.length > 0) {
+                if (specialConflicts.length > 0) {
+                    const messages = specialConflicts.map(c => c._displayName);
+                    setTimeError(messages.join('; '));
+                } else if (advancedConflicts.length > 0) {
                     const messages = advancedConflicts.map(c => c._displayName);
                     setTimeError(messages.join('; '));
                 } else {
@@ -4086,7 +4199,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 if (timeError && 
                     !timeError.includes('nie je nastavený čas začiatku') && 
                     !timeError.includes('žiadny voľný čas') &&
-                    !timeError.includes('Nadstavbová skupina')) {
+                    !timeError.includes('Nadstavbová skupina') &&
+                    !timeError.includes('pavúk/umiestnenie') &&
+                    !timeError.includes('Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých')) {
                     setTimeError('');
                 }
             }
@@ -4094,7 +4209,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         } else {
             setOverlappingMatches([]);
         }
-    }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName, match, allMatches, selectedDate, selectedHallId, groupsByCategory]);
+    }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName, match, allMatches, selectedDate, selectedHallId, groupsByCategory, relatedMatches]);
     
     // Pomocná funkcia na formátovanie času z minút
     const formatTimeFromMinutes = (minutes) => {
