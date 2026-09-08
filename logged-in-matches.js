@@ -3345,7 +3345,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadHallStartTime();
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks]);
 
-    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (bez ohľadu na deň)
+    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (vrátane dňa)
     useEffect(() => {
         if (selectedTime && matchDuration > 0) {
             const [newHours, newMinutes] = selectedTime.split(':').map(Number);
@@ -3382,34 +3382,46 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             });
     
             // 🔥 PRIDANÉ: Kontrola konfliktov so súvisiacimi zápasmi (nadstavbová skupina)
-            // 🔥 ZMENA: Kontrolujeme VŠETKY súvisiace zápasy bez ohľadu na deň
             let relatedConflicts = [];
             if (isAdvancedGroup && relatedMatches.length > 0) {
-                // 🔥 Odstránili sme filter podľa dňa - kontrolujeme všetky súvisiace zápasy
+                // Získame vybraný dátum
+                const selectedDateObj = getLocalDateFromStr(selectedDate);
+                const selectedDateStr = selectedDateObj ? getLocalDateStr(selectedDateObj) : null;
+                
                 relatedConflicts = relatedMatches.filter(relatedMatch => {
                     if (!relatedMatch.scheduledTime) return false;
                     
                     const relatedDate = relatedMatch.scheduledTime.toDate();
-                    const relatedHours = relatedDate.getHours();
-                    const relatedMinutes = relatedDate.getMinutes();
-                    const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
+                    const relatedDateStr = getLocalDateStr(relatedDate);
                     
-                    const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
-                    let relatedDuration = 0;
-                    let relatedMatchBreak = 5;
-                    
-                    if (relatedCategory) {
-                        const periods = relatedCategory.periods || 2;
-                        const periodDuration = relatedCategory.periodDuration || 20;
-                        const breakDuration = relatedCategory.breakDuration || 2;
-                        relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                        relatedMatchBreak = relatedCategory.matchBreak || 5;
+                    // 🔥 KONTROLA DŇA: Ak je zápas v ROVNAKÝ DEŇ, je to konflikt
+                    // Tím 1C nemôže hrať v ten istý deň, ak už má zápas v skupine C
+                    if (selectedDateStr && relatedDateStr === selectedDateStr) {
+                        // Rovnaký deň - kontrolujeme časové prekrývanie
+                        const relatedHours = relatedDate.getHours();
+                        const relatedMinutes = relatedDate.getMinutes();
+                        const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
+                        
+                        const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
+                        let relatedDuration = 0;
+                        let relatedMatchBreak = 5;
+                        
+                        if (relatedCategory) {
+                            const periods = relatedCategory.periods || 2;
+                            const periodDuration = relatedCategory.periodDuration || 20;
+                            const breakDuration = relatedCategory.breakDuration || 2;
+                            relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                            relatedMatchBreak = relatedCategory.matchBreak || 5;
+                        }
+                        
+                        const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
+                        
+                        // Časové prekrývanie v rovnaký deň = KONFLIKT
+                        return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
                     }
                     
-                    const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
-    
-                    // 🔥 Kontrola časového prekrývania (bez ohľadu na deň)
-                    return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
+                    // 🔥 RÔZNY DEŇ - NIE JE KONFLIKT (tím môže hrať v rôznych dňoch)
+                    return false;
                 });
             }
     
