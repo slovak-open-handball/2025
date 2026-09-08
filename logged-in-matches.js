@@ -3549,7 +3549,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
                 
                 // 🔥 2. LOGICKÁ KONTROLA - tím NESMIE hrať v nadstavbovej skupine, kým neskončia VŠETKY zápasy v pôvodnej skupine
-                // Zistíme, či existujú zápasy v pôvodných skupinách v neskorších dňoch
+                // Toto je HLAVNÁ OPRAVA - kontrolujeme VŠETKY zápasy v pôvodných skupinách naprieč VŠETKÝMI dňami
+                // a porovnávame ich s DÁTUMOM A ČASOM, ktorý používateľ vybral
+                
+                // Získame všetky zápasy v pôvodných skupinách (tie, ktoré sú v relatedMatches)
+                // relatedMatches už obsahuje všetky zápasy v skupinách, z ktorých tímy pochádzajú
+                
+                // Najprv zistíme, či existujú zápasy v pôvodných skupinách v NESKORŠÍCH dňoch
                 const laterMatches = relatedMatches.filter(relatedMatch => {
                     if (!relatedMatch.scheduledTime) return false;
                     
@@ -3565,15 +3571,23 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 // Ak existujú zápasy v neskorších dňoch, vytvoríme konflikt
                 if (laterMatches.length > 0) {
-                    // Získame písmená skupín pre chybovú správu
-                    const targetLetters = new Set();
-                    const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                    const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                    const homeLetter = extractLetterFromTeamName(homeTeamName);
-                    const awayLetter = extractLetterFromTeamName(awayTeamName);
-                    if (homeLetter) targetLetters.add(homeLetter);
-                    if (awayLetter) targetLetters.add(awayLetter);
-                    const groupLetters = Array.from(targetLetters).join(', ');
+                    // Získame názvy skupín pre chybovú správu
+                    const getGroupNameFromIdentifier = (identifier) => {
+                        if (!identifier) return null;
+                        const parts = identifier.split(' ');
+                        if (parts.length < 2) return null;
+                        const groupAndOrder = parts[parts.length - 1];
+                        
+                        const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+                        if (match) {
+                            return `skupina ${match[1]}`;
+                        }
+                        return null;
+                    };
+                    
+                    const homeGroupName = getGroupNameFromIdentifier(match.homeTeamIdentifier);
+                    const awayGroupName = getGroupNameFromIdentifier(match.awayTeamIdentifier);
+                    const groupNames = [homeGroupName, awayGroupName].filter(Boolean).join(', ');
                     
                     // Zistíme najneskorší dátum zápasu v pôvodných skupinách
                     const latestDate = laterMatches.reduce((latest, m) => {
@@ -3594,7 +3608,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             }
                         },
                         homeTeamIdentifier: 'POSLEDNÝ ZÁPAS SKUPINY',
-                        awayTeamIdentifier: `SKUPINA ${groupLetters} (${latestDateStr})`,
+                        awayTeamIdentifier: `SKUPINA ${groupNames} (${latestDateStr})`,
                         categoryName: match.categoryName,
                         hallId: null
                     };
@@ -3602,7 +3616,80 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     relatedConflicts.push(dummyConflict);
                     
                     // Nastavíme chybovú správu
-                    setTimeError(`Tím zo skupiny ${groupLetters} nemôže hrať v nadstavbovej skupine pred ${latestDateStr}, pretože skupina ešte má zápasy v tento deň.`);
+                    setTimeError(`Tím zo skupiny ${groupNames} nemôže hrať v nadstavbovej skupine pred ${latestDateStr}, pretože skupina ešte má zápasy v tento deň.`);
+                }
+                
+                // 🔥 3. NOVÁ KONTROLA: Zápasy v pôvodných skupinách v ROVNAKÝ deň, ale NESKORŠIE
+                // Toto je kľúčová oprava - kontrolujeme, či existujú zápasy v pôvodných skupinách
+                // v rovnaký deň, ktoré začínajú NESKÔR ako vybraný čas
+                const sameDayLaterMatches = relatedMatches.filter(relatedMatch => {
+                    if (!relatedMatch.scheduledTime) return false;
+                    
+                    const relatedDate = relatedMatch.scheduledTime.toDate();
+                    const relatedDateStr = getLocalDateStr(relatedDate);
+                    
+                    // Iba ak je v rovnaký deň
+                    if (selectedDateStr !== relatedDateStr) return false;
+                    
+                    const relatedHours = relatedDate.getHours();
+                    const relatedMinutes = relatedDate.getMinutes();
+                    const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
+                    
+                    // Ak zápas začína NESKÔR ako vybraný čas
+                    return relatedStartMinutes > newStartMinutes;
+                });
+                
+                if (sameDayLaterMatches.length > 0) {
+                    // Získame najneskorší čas zápasu v pôvodných skupinách
+                    const latestTime = sameDayLaterMatches.reduce((latest, m) => {
+                        const d = m.scheduledTime.toDate();
+                        return d > latest ? d : latest;
+                    }, new Date(0));
+                    
+                    // Formátujeme čas
+                    const latestHours = latestTime.getHours().toString().padStart(2, '0');
+                    const latestMinutes = latestTime.getMinutes().toString().padStart(2, '0');
+                    const latestTimeStr = `${latestHours}:${latestMinutes}`;
+                    
+                    // Získame názvy skupín pre chybovú správu
+                    const getGroupNameFromIdentifier = (identifier) => {
+                        if (!identifier) return null;
+                        const parts = identifier.split(' ');
+                        if (parts.length < 2) return null;
+                        const groupAndOrder = parts[parts.length - 1];
+                        
+                        const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+                        if (match) {
+                            return `skupina ${match[1]}`;
+                        }
+                        return null;
+                    };
+                    
+                    const homeGroupName = getGroupNameFromIdentifier(match.homeTeamIdentifier);
+                    const awayGroupName = getGroupNameFromIdentifier(match.awayTeamIdentifier);
+                    const groupNames = [homeGroupName, awayGroupName].filter(Boolean).join(', ');
+                    
+                    // Vytvoríme "umelý" konflikt
+                    const dummyConflict = {
+                        id: 'group-last-match-same-day',
+                        type: 'related_match',
+                        scheduledTime: {
+                            toDate: () => {
+                                const date = new Date(latestTime);
+                                date.setHours(23, 59, 0);
+                                return date;
+                            }
+                        },
+                        homeTeamIdentifier: 'POSLEDNÝ ZÁPAS SKUPINY',
+                        awayTeamIdentifier: `SKUPINA ${groupNames} (${latestTimeStr})`,
+                        categoryName: match.categoryName,
+                        hallId: null
+                    };
+                    
+                    relatedConflicts.push(dummyConflict);
+                    
+                    // Nastavíme chybovú správu
+                    setTimeError(`Tím zo skupiny ${groupNames} nemôže hrať v nadstavbovej skupine pred ${latestTimeStr}, pretože skupina ešte má zápasy v tento deň.`);
                 }
                 
                 // Pridáme aj prekrývajúce sa zápasy do konfliktov
