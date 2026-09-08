@@ -5771,7 +5771,7 @@ function AllRegistrationsApp() {
                 duplicateTeams.map((item, index) => {
                     const teamNames = item.teams.map(t => {
                         const clubName = t._registeredBy || 'Neznámy klub';
-                        return `${t.teamName || 'Bez názvu'} (klub: ${clubName})`;
+                        return `${t.teamName || 'Bez názvu'} (používateľ: ${clubName})`;
                     }).join(', ');
                     
                     return React.createElement(
