@@ -916,6 +916,56 @@ const TeamsOverviewApp = (props) => {
     );
 };
 
+let isEmailSyncListenerSetup = false;
+
+const handleDataUpdateAndRender = (event) => {
+    const userProfileData = event?.detail || null;
+    const rootElement = document.getElementById('root');
+    
+    if (!rootElement || typeof ReactDOM === 'undefined' || typeof React === 'undefined') {
+        return;
+    }
+
+    try {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(TeamsOverviewApp, { 
+            userProfileData: userProfileData || null 
+        }));
+        
+        if (window.auth && window.db && !isEmailSyncListenerSetup && userProfileData) {
+            onAuthStateChanged(window.auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(window.db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                await updateDoc(userProfileRef, { email: user.email });
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email,
+                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(),
+                                });
+                            }
+                        }
+                    } catch (error) {
+                    }
+                }
+            });
+            isEmailSyncListenerSetup = true;
+        }
+    } catch (error) {
+        rootElement.innerHTML = `
+            <div class="text-center py-16">
+                <p class="text-red-600 text-lg">Chyba pri načítaní aplikácie</p>
+                <p class="text-gray-500 text-sm">${error.message}</p>
+            </div>
+        `;
+    }
+};
+
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 const rootElement = document.getElementById('root');
