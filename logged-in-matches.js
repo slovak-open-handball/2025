@@ -2953,9 +2953,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return false;
     };
 
-    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, relatedMatchesList, isAdvanced) => {
-        if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
-        
+    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, relatedMatchesList, isAdvanced, currentMatchId) => {
+        if (!hallId || !date || !hallStartTimeStr || matchDur === 0) {
+            return null;
+        }
+    
         const [startHours, startMinutes] = hallStartTimeStr.split(':').map(Number);
         const hallStartMinutes = startHours * 60 + startMinutes;
         
@@ -2965,7 +2967,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
-            m.id !== match?.id
+            m.id !== currentMatchId  // ← POUŽIJTE currentMatchId namiesto match?.id
         ).filter(m => {
             const matchDate = m.scheduledTime.toDate();
             const matchDateStr = getLocalDateStr(matchDate);
@@ -3406,8 +3408,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             matchDuration,
                             blockedBreaks,
                             allMatches,
-                            relatedMatches,  // ← PRIDAJTE relatedMatches
-                            isAdvancedGroup  // ← PRIDAJTE isAdvancedGroup
+                            relatedMatches,
+                            isAdvancedGroup, 
+                            match?.id
                         );
                         
                         if (firstAvailable) {
@@ -3432,7 +3435,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         };
     
         loadHallStartTime();
-    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, relatedMatches, isAdvancedGroup]);
+    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, relatedMatches, isAdvancedGroup, match?.id]);
 
     // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (vrátane logickej postupnosti)
     useEffect(() => {
@@ -3700,7 +3703,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     if (!isOpen || !match) return null;
 
     const hasError = timeError || overlappingMatches.length > 0;
-    const canSave = selectedHallId && selectedDate && selectedTime && !hasError;
+    const canSave = selectedHallId && selectedDate && selectedTime && !hasError && match?.id;
 
     return React.createElement(
         'div',
