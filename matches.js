@@ -2657,29 +2657,52 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam nastavenia časovača...')
         ),
         
+        // V MatchDetailView komponente, nájdite časť kde sa renderujú TeamMembersList a upravte ju:
+        
         React.createElement(
             'div',
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
-            React.createElement(TeamMembersList, {
-                teamName: homeTeamDisplay,
-                categoryName: categoryDisplayName,
-                teamType: 'home',
-                timerRef: matchTimerRef,
-                onMappedNameUpdate: setHomeTeamMappedName,
-                matchId: match.id,
-                periodDuration: categorySettings?.periodDuration || 15,
-                blueCardSuspensions: blueCardSuspensions
-            }),
-            React.createElement(TeamMembersList, {
-                teamName: awayTeamDisplay,
-                categoryName: categoryDisplayName,
-                teamType: 'away',
-                timerRef: matchTimerRef,
-                onMappedNameUpdate: setAwayTeamMappedName,
-                matchId: match.id,
-                periodDuration: categorySettings?.periodDuration || 15,
-                blueCardSuspensions: blueCardSuspensions
-            })
+            // Pridáme podmienku - zobrazíme iba ak sú súpisky viditeľné
+            (() => {
+                // Skontrolujeme viditeľnosť súpisiek z globálnej premennej
+                const isRostersVisible = window.pagesVisibility && 
+                                         window.pagesVisibility['rosters'] && 
+                                         window.pagesVisibility['rosters'].visible === true;
+                
+                // Ak nie sú viditeľné, vrátime prázdny div s informáciou
+                if (!isRostersVisible) {
+                    return React.createElement(
+                        'div',
+                        { className: 'col-span-2 text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200' },
+                        React.createElement('i', { className: 'fa-solid fa-eye-slash text-2xl mb-2 opacity-50' }),
+                        React.createElement('p', { className: 'text-sm' }, 'Súpisky tímov sú momentálne skryté')
+                    );
+                }
+                
+                // Ak sú viditeľné, zobrazíme oba tímy
+                return React.createElement(React.Fragment, null,
+                    React.createElement(TeamMembersList, {
+                        teamName: homeTeamDisplay,
+                        categoryName: categoryDisplayName,
+                        teamType: 'home',
+                        timerRef: matchTimerRef,
+                        onMappedNameUpdate: setHomeTeamMappedName,
+                        matchId: match.id,
+                        periodDuration: categorySettings?.periodDuration || 15,
+                        blueCardSuspensions: blueCardSuspensions
+                    }),
+                    React.createElement(TeamMembersList, {
+                        teamName: awayTeamDisplay,
+                        categoryName: categoryDisplayName,
+                        teamType: 'away',
+                        timerRef: matchTimerRef,
+                        onMappedNameUpdate: setAwayTeamMappedName,
+                        matchId: match.id,
+                        periodDuration: categorySettings?.periodDuration || 15,
+                        blueCardSuspensions: blueCardSuspensions
+                    })
+                );
+            })()
         ),
         
         renderMatchEvents()
