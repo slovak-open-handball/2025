@@ -36,7 +36,7 @@ const getLocalDateStr = (date) => {
 
 // Funkcia na extrakciu posledného písmena z identifikátora tímu
 // Napr. z "U10 A1" vráti "A", z "U12 B3" vráti "B"
-const extractGroupLetterFromTeamIdentifier = (teamIdentifier) => {
+const extractGroupLetterFromTeamName = (teamName) => {
     if (!teamIdentifier) return '';
     
     const parts = teamIdentifier.split(' ');
@@ -87,8 +87,8 @@ const getLastMatchTimeForLetter = (letter, categoryId, allMatches, excludeMatchI
             const matchDateStr = getLocalDateStr(matchDate);
             
             // Extrahujeme písmená z oboch tímov zápasu
-            const matchHomeLetter = extractGroupLetterFromTeamIdentifier(match.homeTeamIdentifier);
-            const matchAwayLetter = extractGroupLetterFromTeamIdentifier(match.awayTeamIdentifier);
+            const matchHomeLetter = extractGroupLetterFromTeamName(match.homeTeamName);
+            const matchAwayLetter = extractGroupLetterFromTeamName(match.awayTeamName);
             
             // Ak niektorý z tímov má rovnaké písmeno, berieme tento zápas do úvahy
             if (matchHomeLetter === letter || matchAwayLetter === letter) {
@@ -142,8 +142,8 @@ const canInsertMatchAtTime = (match, newTimeMinutes, newDateStr, allMatches, cat
     if (!match || !match.categoryId || !newDateStr) return true;
     
     // Extrahujeme písmená z oboch tímov zápasu
-    const homeLetter = extractGroupLetterFromTeamIdentifier(match.homeTeamIdentifier);
-    const awayLetter = extractGroupLetterFromTeamIdentifier(match.awayTeamIdentifier);
+    const homeLetter = extractGroupLetterFromTeamName(match.homeTeamName);
+    const awayLetter = extractGroupLetterFromTeamName(match.awayTeamName);
     
     // Zistíme, či ide o nadstavbovú skupinu
     const isAdvancedMatch = isMatchFromAdvancedGroup(match);
@@ -3399,8 +3399,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const newEndMinutes = newStartMinutes + matchDuration + newMatchBreak;
     
             // Extrahujeme písmená z tímov priraďovaného zápasu
-            const homeLetter = match ? extractGroupLetterFromTeamIdentifier(match.homeTeamIdentifier) : '';
-            const awayLetter = match ? extractGroupLetterFromTeamIdentifier(match.awayTeamIdentifier) : '';
+            const homeLetter = match ? extractGroupLetterFromTeamName(match.homeTeamName) : '';
+            const awayLetter = match ? extractGroupLetterFromTeamName(match.awayTeamName) : '';
             
             // Zistíme, či ide o nadstavbovú skupinu
             const isAdvancedMatch = match ? isMatchFromAdvancedGroup(match) : false;
@@ -3480,8 +3480,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     match?.categoryId === existingMatch.categoryId) {
                     
                     // Extrahujeme písmená z tímov existujúceho zápasu
-                    const existingHomeLetter = extractGroupLetterFromTeamIdentifier(existingMatch.homeTeamIdentifier);
-                    const existingAwayLetter = extractGroupLetterFromTeamIdentifier(existingMatch.awayTeamIdentifier);
+                    const existingHomeLetter = extractGroupLetterFromTeamName(existingMatch.homeTeamName);
+                    const existingAwayLetter = extractGroupLetterFromTeamName(existingMatch.awayTeamName);
                     
                     // Kontrola, či sa písmeno priraďovaného tímu zhoduje s niektorým písmenom v existujúcom zápase
                     const letterMatches = (homeLetter && 
@@ -6512,7 +6512,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         
         // EXTRAHUJEME PÍSMENO Z IDENTIFIKÁTORA AKTUÁLNEHO TÍMU
-        const currentTeamLetter = extractGroupLetterFromTeamIdentifier(teamIdentifier);
+        const currentTeamLetter = extractGroupLetterFromTeamName(teamName);
         
         // Získame groupsByCategory z globálnej premennej
         const groupsByCategory = window.__groupsByCategory || {};
@@ -6607,8 +6607,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 currentMatch.categoryId === otherMatch.categoryId) {
                 
                 // Extrahujeme písmená z oboch tímov v druhom zápase
-                const otherHomeLetter = extractGroupLetterFromTeamIdentifier(otherMatch.homeTeamIdentifier);
-                const otherAwayLetter = extractGroupLetterFromTeamIdentifier(otherMatch.awayTeamIdentifier);
+                const otherHomeLetter = extractGroupLetterFromTeamName(otherMatch.homeTeamName);
+                const otherAwayLetter = extractGroupLetterFromTeamName(otherMatch.awayTeamName);
                 
                 // Kontrola, či sa písmeno aktuálneho tímu zhoduje s niektorým písmenom v druhom zápase
                 const letterMatches = (currentTeamLetter && 
@@ -6835,8 +6835,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             // ============================================================
             // PRIDANÉ: Extrahovanie písmena z identifikátorov tímov
             // ============================================================
-            const homeLetter = extractGroupLetterFromTeamIdentifier(match.homeTeamIdentifier);
-            const awayLetter = extractGroupLetterFromTeamIdentifier(match.awayTeamIdentifier);
+            const homeLetter = extractGroupLetterFromTeamName(match.homeTeamName);
+            const awayLetter = extractGroupLetterFromTeamName(match.awayTeamname);
     
             return {
                 ...match,
