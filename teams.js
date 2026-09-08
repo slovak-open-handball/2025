@@ -2188,5 +2188,3 @@ if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefine
         userProfileData: window.globalUserProfileData || null 
     }));
 }
-
-pri prepnutí na iný detail timu sa tabulka statistik nepsravne vymaže a nespravne sa naičtavaju aktualne informacie pre konkretny iny tim
