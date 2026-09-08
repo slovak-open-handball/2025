@@ -5825,6 +5825,58 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         
         console.log(`Skupina: ${groupName} (typ: ${groupType})`);
+        
+        // 🔥 NOVÉ: Extrahovanie koncového písmena zo skupiny
+        const extractGroupLetter = (groupName) => {
+            if (!groupName) return null;
+            // Odstráni "skupina " a vezme posledný znak
+            const cleanName = groupName.replace(/^skupina\s+/i, '').trim();
+            return cleanName.charAt(cleanName.length - 1).toUpperCase();
+        };
+        
+        const homeGroupLetter = extractGroupLetter(match.groupName);
+        const awayGroupLetter = extractGroupLetter(match.groupName);
+        
+        // Získame všetky unikátne písmená z domáceho a hosťovského tímu
+        const targetLetters = new Set();
+        if (homeGroupLetter) targetLetters.add(homeGroupLetter);
+        if (awayGroupLetter) targetLetters.add(awayGroupLetter);
+        
+        if (targetLetters.size > 0) {
+            console.log(`Hľadám zápasy v skupinách s písmenami: ${Array.from(targetLetters).join(', ')}`);
+            
+            // Nájdeme všetky zápasy v tej istej kategórii
+            const categoryMatches = matches.filter(m => 
+                m.categoryId === match.categoryId && 
+                m.id !== match.id // Vylúčime aktuálny zápas
+            );
+            
+            // Filtrujeme zápasy podľa skupín, ktoré obsahujú hľadané písmená
+            const matchingMatches = categoryMatches.filter(m => {
+                const matchGroupLetter = extractGroupLetter(m.groupName);
+                return matchGroupLetter && targetLetters.has(matchGroupLetter);
+            });
+            
+            if (matchingMatches.length > 0) {
+                console.log(`Nájdených ${matchingMatches.length} zápasov v skupinách s rovnakými písmenami:`);
+                matchingMatches.forEach((m, index) => {
+                    const home = getTeamNameByIdentifier(m.homeTeamIdentifier);
+                    const away = getTeamNameByIdentifier(m.awayTeamIdentifier);
+                    const groupLetter = extractGroupLetter(m.groupName);
+                    const isHome = m.homeTeamIdentifier === match.homeTeamIdentifier || 
+                                  m.homeTeamIdentifier === match.awayTeamIdentifier;
+                    const isAway = m.awayTeamIdentifier === match.homeTeamIdentifier || 
+                                  m.awayTeamIdentifier === match.awayTeamIdentifier;
+                    const isSameTeam = isHome || isAway;
+                    console.log(`  ${index + 1}. [${groupLetter}] ${home} vs ${away}${isSameTeam ? ' ⚠️ OBSAHUJE ROVNAKÝ TÍM' : ''}`);
+                });
+            } else {
+                console.log(`Žiadne ďalšie zápasy v skupinách s písmenami: ${Array.from(targetLetters).join(', ')}`);
+            }
+        } else {
+            console.log('Nepodarilo sa extrahovať písmeno skupiny.');
+        }
+        
         console.log('---');
         
         setSelectedMatchForAssign(match);
