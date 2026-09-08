@@ -6612,26 +6612,30 @@ const AddMatchesApp = ({ userProfileData }) => {
     
     // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
+        let unsubscribe = null;
+        
         if (window.teamManager) {
-            
             // Okamžite skúsime načítať existujúce dáta
             if (window.__teamManagerData) {
                 setTeamData(window.__teamManagerData);
             }
             
-            const unsubscribe = window.teamManager.subscribe((data) => {
+            unsubscribe = window.teamManager.subscribe((data) => {
                 setTeamData(data);
             });
-            
-            return () => {
-                if (unsubscribe) unsubscribe();
-            };
-        } else {            
-            // Skúsime načítať dáta priamo z window.__teamManagerData
+        } else {
+            // Ak teamManager nie je dostupný, skúsime načítať dáta priamo
             if (window.__teamManagerData) {
                 setTeamData(window.__teamManagerData);
             }
         }
+        
+        // Čistiace funkcia - odhlásenie z odberu
+        return () => {
+            if (unsubscribe && typeof unsubscribe === 'function') {
+                unsubscribe();
+            }
+        };
     }, []);
 
     useEffect(() => {
