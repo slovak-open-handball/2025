@@ -656,7 +656,6 @@ const TeamsOverviewApp = (props) => {
             return teamName;
         };
     
-        // --- 2. FUNKCIA NA VYPOČÍTANIE ŠTATISTÍK Z UDALOSTÍ ---
         const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {
             console.log(`[Stats Effect] 📦 chunk ${chunkIndex}: spracúvam ${eventsSnapshot.size} udalostí`);
             
@@ -676,13 +675,16 @@ const TeamsOverviewApp = (props) => {
                     dbIndex: member.originalIndex,
                     name: `${member.firstName} ${member.lastName}`.trim(),
                     jerseyNumber: member.jerseyNumber || '',
-                    memberType: member.type
+                    memberType: member.type,
+                    // Pridáme informáciu o kategórii a názve tímu pre kontrolu
+                    teamName: member.teamName,
+                    categoryName: member.categoryName
                 };
             });
         
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
-                const eventData = doc.data(); // <--- OPRAVA: zmenené z "event" na "eventData"
+                const eventData = doc.data();
                 console.log(`[Stats Effect] 📄 Udalosť:`, {
                     id: doc.id,
                     eventType: eventData.eventType,
@@ -690,8 +692,15 @@ const TeamsOverviewApp = (props) => {
                     memberTypeKey: eventData.memberTypeKey,
                     memberIndex: eventData.memberIndex,
                     team: eventData.team,
-                    matchId: eventData.matchId
+                    matchId: eventData.matchId,
+                    categoryName: eventData.categoryName  // Pridané pre debug
                 });
+                
+                // Kontrola kategórie - udalosť musí byť v rovnakej kategórii ako tím
+                if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
+                    console.log(`[Stats Effect] ⏭️ Preskakujem udalosť - kategória sa nezhoduje: udalosť=${eventData.categoryName}, tím=${currentCategoryName}`);
+                    return;
+                }
                 
                 // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
                 let foundMemberKey = null;
@@ -708,7 +717,7 @@ const TeamsOverviewApp = (props) => {
                 }
                 
                 const stat = stats[foundMemberKey];
-                console.log(`[Stats Effect] ✅ Priradené k členovi: ${stat.name} (${foundMemberKey})`);
+                console.log(`[Stats Effect] ✅ Priradené k členovi: ${stat.name} (${foundMemberKey}) v kategórii ${currentCategoryName}`);
                 
                 // Pripočítame štatistiky podľa typu udalosti
                 switch (eventData.eventType) {
