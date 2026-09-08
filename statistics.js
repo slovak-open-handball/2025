@@ -1,4 +1,4 @@
-// statistics.js - Zjednodušená verzia len so súhrnnou tabuľkou všetkých členov
+// statistics.js - Opravená verzia s lepším priraďovaním udalostí
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -81,6 +81,7 @@ const loadAllTeamMembers = (onUpdate) => {
     
     const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
         const allMembers = [];
+        const memberMap = new Map(); // Pre kontrolu duplicít
         
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
@@ -96,63 +97,97 @@ const loadAllTeamMembers = (onUpdate) => {
                     // Hráči
                     if (team.playerDetails && Array.isArray(team.playerDetails)) {
                         team.playerDetails.forEach((player, idx) => {
-                            allMembers.push({
-                                type: 'Hráč',
-                                typeKey: 'playerDetails',
-                                firstName: player.firstName || '',
-                                lastName: player.lastName || '',
-                                jerseyNumber: player.jerseyNumber || '',
-                                registrationNumber: player.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'playerDetails',
-                                teamName: teamName,
-                                categoryName: categoryName,
-                                teamId: team.id || null,
-                                memberIdentifier: `playerDetails_${idx}`
-                            });
+                            // Vytvoríme unikátny identifikátor
+                            const uniqueId = `${userId}_playerDetails_${idx}`;
+                            if (!memberMap.has(uniqueId)) {
+                                const member = {
+                                    type: 'Hráč',
+                                    typeKey: 'playerDetails',
+                                    firstName: player.firstName || '',
+                                    lastName: player.lastName || '',
+                                    jerseyNumber: player.jerseyNumber || '',
+                                    registrationNumber: player.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'playerDetails',
+                                    teamName: teamName,
+                                    categoryName: categoryName,
+                                    teamId: team.id || null,
+                                    // Vytvoríme viacero identifikátorov pre lepšie párovanie
+                                    memberIdentifiers: [
+                                        `playerDetails_${idx}`,
+                                        `players_${idx}`,
+                                        `player_${idx}`,
+                                        `hráč_${idx}`
+                                    ],
+                                    // Uložíme aj celé meno pre fallback
+                                    fullName: `${player.firstName || ''} ${player.lastName || ''}`.trim()
+                                };
+                                memberMap.set(uniqueId, member);
+                                allMembers.push(member);
+                            }
                         });
                     }
                     
                     // Členovia RT (muži)
                     if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
                         team.menTeamMemberDetails.forEach((member, idx) => {
-                            allMembers.push({
-                                type: 'Člen RT (muž)',
-                                typeKey: 'menTeamMemberDetails',
-                                firstName: member.firstName || '',
-                                lastName: member.lastName || '',
-                                jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'menTeamMemberDetails',
-                                teamName: teamName,
-                                categoryName: categoryName,
-                                teamId: team.id || null,
-                                memberIdentifier: `menTeamMemberDetails_${idx}`
-                            });
+                            const uniqueId = `${userId}_menTeamMemberDetails_${idx}`;
+                            if (!memberMap.has(uniqueId)) {
+                                const m = {
+                                    type: 'Člen RT (muž)',
+                                    typeKey: 'menTeamMemberDetails',
+                                    firstName: member.firstName || '',
+                                    lastName: member.lastName || '',
+                                    jerseyNumber: '',
+                                    registrationNumber: member.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'menTeamMemberDetails',
+                                    teamName: teamName,
+                                    categoryName: categoryName,
+                                    teamId: team.id || null,
+                                    memberIdentifiers: [
+                                        `menTeamMemberDetails_${idx}`,
+                                        `men_${idx}`,
+                                        `rt_muz_${idx}`
+                                    ],
+                                    fullName: `${member.firstName || ''} ${member.lastName || ''}`.trim()
+                                };
+                                memberMap.set(uniqueId, m);
+                                allMembers.push(m);
+                            }
                         });
                     }
                     
                     // Členovia RT (ženy)
                     if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
                         team.womenTeamMemberDetails.forEach((member, idx) => {
-                            allMembers.push({
-                                type: 'Člen RT (žena)',
-                                typeKey: 'womenTeamMemberDetails',
-                                firstName: member.firstName || '',
-                                lastName: member.lastName || '',
-                                jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'womenTeamMemberDetails',
-                                teamName: teamName,
-                                categoryName: categoryName,
-                                teamId: team.id || null,
-                                memberIdentifier: `womenTeamMemberDetails_${idx}`
-                            });
+                            const uniqueId = `${userId}_womenTeamMemberDetails_${idx}`;
+                            if (!memberMap.has(uniqueId)) {
+                                const m = {
+                                    type: 'Člen RT (žena)',
+                                    typeKey: 'womenTeamMemberDetails',
+                                    firstName: member.firstName || '',
+                                    lastName: member.lastName || '',
+                                    jerseyNumber: '',
+                                    registrationNumber: member.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'womenTeamMemberDetails',
+                                    teamName: teamName,
+                                    categoryName: categoryName,
+                                    teamId: team.id || null,
+                                    memberIdentifiers: [
+                                        `womenTeamMemberDetails_${idx}`,
+                                        `women_${idx}`,
+                                        `rt_zena_${idx}`
+                                    ],
+                                    fullName: `${member.firstName || ''} ${member.lastName || ''}`.trim()
+                                };
+                                memberMap.set(uniqueId, m);
+                                allMembers.push(m);
+                            }
                         });
                     }
                 }
@@ -169,6 +204,8 @@ const loadAllTeamMembers = (onUpdate) => {
             return slovakCollator.compare(aName, bName);
         });
         
+        console.log('[loadAllTeamMembers] Načítaných členov:', sortedMembers.length);
+        
         if (onUpdate) onUpdate(sortedMembers);
     }, (error) => {
         console.error('[loadAllTeamMembers] Chyba:', error);
@@ -178,7 +215,7 @@ const loadAllTeamMembers = (onUpdate) => {
     return unsubscribe;
 };
 
-// Funkcia na výpočet štatistík z udalostí
+// Funkcia na výpočet štatistík z udalostí - VYLEPŠENÉ PÁROVANIE
 const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
     console.log('[Stats] Spracúvam udalosti, počet:', eventsSnapshot.size);
     
@@ -193,68 +230,64 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             redCards: 0,
             blueCards: 0,
             exclusions: 0,
-            name: `${member.firstName} ${member.lastName}`.trim(),
+            name: member.fullName || `${member.firstName} ${member.lastName}`.trim(),
             jerseyNumber: member.jerseyNumber || '',
             memberType: member.type,
             teamName: member.teamName,
             categoryName: member.categoryName,
-            userId: member.userId
+            userId: member.userId,
+            // Uložíme si aj referencie na člena pre debug
+            memberIdentifiers: member.memberIdentifiers || []
         };
     });
+
+    let matchedEvents = 0;
+    let unmatchedEvents = 0;
 
     // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
     eventsSnapshot.forEach((doc) => {
         const event = doc.data();
-        
         let foundMemberKey = null;
+        let matchMethod = null;
         
-        // 1. Skúsime nájsť podľa memberIdentifier (memberTypeKey + memberIndex)
-        const memberIdentifier = `${event.memberTypeKey}_${event.memberIndex}`;
-        for (const [key, member] of membersMap) {
-            if (member.memberIdentifier === memberIdentifier) {
-                foundMemberKey = key;
-                break;
-            }
-        }
-        
-        // 2. Skúsime nájsť podľa userId + memberTypeKey + memberIndex
-        if (!foundMemberKey && event.userId) {
+        // 1. Skúsime nájsť podľa userId + memberTypeKey + memberIndex (NAJPRESNEJŠIE)
+        if (event.userId && event.memberTypeKey !== undefined && event.memberIndex !== undefined) {
             for (const [key, member] of membersMap) {
                 if (member.userId === event.userId && 
                     member.dbArrayName === event.memberTypeKey && 
                     member.originalIndex === event.memberIndex) {
                     foundMemberKey = key;
+                    matchMethod = 'userId + memberTypeKey + memberIndex';
                     break;
                 }
             }
         }
         
-        // 3. Skúsime nájsť podľa memberTypeKey + memberIndex (bez userId)
-        if (!foundMemberKey) {
+        // 2. Skúsime nájsť podľa userId + memberIndex (ak memberTypeKey nie je dostupný)
+        if (!foundMemberKey && event.userId && event.memberIndex !== undefined) {
             for (const [key, member] of membersMap) {
-                if (member.dbArrayName === event.memberTypeKey && 
+                if (member.userId === event.userId && 
                     member.originalIndex === event.memberIndex) {
                     foundMemberKey = key;
+                    matchMethod = 'userId + memberIndex';
                     break;
                 }
             }
         }
         
-        // 4. Skúsime nájsť podľa mena
-        if (!foundMemberKey) {
-            const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
-            if (eventMemberName) {
-                for (const [key, member] of membersMap) {
-                    const memberName = `${member.firstName} ${member.lastName}`.trim();
-                    if (memberName === eventMemberName) {
-                        foundMemberKey = key;
-                        break;
-                    }
+        // 3. Skúsime nájsť podľa memberIdentifier (memberTypeKey + memberIndex)
+        if (!foundMemberKey && event.memberTypeKey !== undefined && event.memberIndex !== undefined) {
+            const memberIdentifier = `${event.memberTypeKey}_${event.memberIndex}`;
+            for (const [key, member] of membersMap) {
+                if (member.memberIdentifiers && member.memberIdentifiers.includes(memberIdentifier)) {
+                    foundMemberKey = key;
+                    matchMethod = 'memberIdentifier';
+                    break;
                 }
             }
         }
         
-        // 5. Skúsime nájsť podľa mena a tímu
+        // 4. Skúsime nájsť podľa mena a priezviska + tímu
         if (!foundMemberKey) {
             const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
             if (eventMemberName) {
@@ -262,41 +295,90 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
                     const memberName = `${member.firstName} ${member.lastName}`.trim();
                     if (memberName === eventMemberName && member.teamName === event.team) {
                         foundMemberKey = key;
+                        matchMethod = 'fullName + team';
                         break;
                     }
                 }
             }
         }
         
-        // 6. Skúsime nájsť podľa čísla dresu a tímu
+        // 5. Skúsime nájsť podľa mena a priezviska (bez tímu)
+        if (!foundMemberKey) {
+            const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
+            if (eventMemberName) {
+                for (const [key, member] of membersMap) {
+                    const memberName = `${member.firstName} ${member.lastName}`.trim();
+                    if (memberName === eventMemberName) {
+                        foundMemberKey = key;
+                        matchMethod = 'fullName';
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 6. Skúsime nájsť podľa čísla dresu + tímu
         if (!foundMemberKey && event.memberJerseyNumber) {
             for (const [key, member] of membersMap) {
                 if (member.jerseyNumber === event.memberJerseyNumber && 
                     member.teamName === event.team) {
                     foundMemberKey = key;
+                    matchMethod = 'jerseyNumber + team';
                     break;
                 }
             }
         }
         
+        // 7. Skúsime nájsť podľa čísla dresu (bez tímu)
+        if (!foundMemberKey && event.memberJerseyNumber) {
+            for (const [key, member] of membersMap) {
+                if (member.jerseyNumber === event.memberJerseyNumber) {
+                    foundMemberKey = key;
+                    matchMethod = 'jerseyNumber';
+                    break;
+                }
+            }
+        }
+        
+        // 8. Skúsime nájsť podľa userId (ak máme iba userId)
+        if (!foundMemberKey && event.userId) {
+            for (const [key, member] of membersMap) {
+                if (member.userId === event.userId) {
+                    // Ak máme viac členov s rovnakým userId, skúsime podľa mena
+                    const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
+                    if (eventMemberName) {
+                        const memberName = `${member.firstName} ${member.lastName}`.trim();
+                        if (memberName === eventMemberName) {
+                            foundMemberKey = key;
+                            matchMethod = 'userId + fullName';
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
         if (!foundMemberKey) {
-            // Logujeme len prvé 3 nepriradené udalosti
+            unmatchedEvents++;
+            // Logujeme len prvé 5 nepriradených udalostí
             if (!window._unmatchedEventsLogged) {
                 window._unmatchedEventsLogged = 0;
             }
-            if (window._unmatchedEventsLogged < 3) {
+            if (window._unmatchedEventsLogged < 5) {
                 console.log('[Stats] ⚠️ Nenašiel sa člen pre udalosť:', {
                     memberTypeKey: event.memberTypeKey,
                     memberIndex: event.memberIndex,
                     userId: event.userId,
                     memberName: `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim(),
-                    team: event.team
+                    team: event.team,
+                    eventType: event.eventType
                 });
                 window._unmatchedEventsLogged++;
             }
             return;
         }
         
+        matchedEvents++;
         const stat = stats[foundMemberKey];
         
         // Pripočítame štatistiky podľa typu udalosti
@@ -327,7 +409,8 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
         }
     });
 
-    console.log('[Stats] Spracovaných udalostí:', eventsSnapshot.size);
+    console.log('[Stats] Priradených udalostí:', matchedEvents);
+    console.log('[Stats] Nepriradených udalostí:', unmatchedEvents);
     console.log('[Stats] Počet členov so štatistikami:', Object.keys(stats).length);
     
     return stats;
@@ -440,6 +523,7 @@ const TeamsOverviewApp = (props) => {
             const key = `${member.type}_${member.originalIndex}_${member.userId}`;
             membersMap.set(key, member);
         });
+        console.log('[Stats] Vytvorená mapa členov, veľkosť:', membersMap.size);
 
         if (statsUnsubscribe) {
             try {
@@ -477,7 +561,7 @@ const TeamsOverviewApp = (props) => {
                         redCards: 0,
                         blueCards: 0,
                         exclusions: 0,
-                        name: `${member.firstName} ${member.lastName}`.trim(),
+                        name: member.fullName || `${member.firstName} ${member.lastName}`.trim(),
                         jerseyNumber: member.jerseyNumber || '',
                         memberType: member.type,
                         teamName: member.teamName,
@@ -559,7 +643,7 @@ const TeamsOverviewApp = (props) => {
                                     redCards: 0,
                                     blueCards: 0,
                                     exclusions: 0,
-                                    name: `${member.firstName} ${member.lastName}`.trim(),
+                                    name: member.fullName || `${member.firstName} ${member.lastName}`.trim(),
                                     jerseyNumber: member.jerseyNumber || '',
                                     memberType: member.type,
                                     teamName: member.teamName,
@@ -608,6 +692,7 @@ const TeamsOverviewApp = (props) => {
             allMembers.forEach(member => {
                 teamNamesSet.add(member.teamName);
             });
+            console.log('[Stats] Tímy v systéme:', Array.from(teamNamesSet));
             
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
@@ -617,6 +702,7 @@ const TeamsOverviewApp = (props) => {
                 
                 if (teamNamesSet.has(homeTeam) || teamNamesSet.has(awayTeam)) {
                     newMatchIds.add(doc.id);
+                    console.log(`[Stats] ✅ Zápas pre tím: ${homeTeam} vs ${awayTeam} (${doc.id})`);
                 }
             });
             
@@ -849,7 +935,7 @@ const TeamsOverviewApp = (props) => {
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
                         allMembers.map((member, index) => {
-                            const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
+                            const fullName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
                             const stats = getMemberStats(member);
                             const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                             const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
