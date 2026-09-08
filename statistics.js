@@ -720,8 +720,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Render tabuľky všetkých členov
-    const renderAllMembersTable = () => {
+ const renderAllMembersTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
                 'div',
@@ -787,8 +786,8 @@ const TeamsOverviewApp = (props) => {
         return React.createElement(
             'div',
             { 
-                className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden',
-                ref: tableContainerRef
+                className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden'
+                // Odstránime ref a maxHeight
             },
             React.createElement(
                 'div',
@@ -807,8 +806,8 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'overflow-x-auto overflow-y-auto',
-                    style: { maxHeight: maxTableHeight }
+                    className: 'overflow-x-auto'
+                    // Odstránime overflow-y-auto a maxHeight
                 },
                 React.createElement(
                     'table',
