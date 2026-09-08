@@ -676,14 +676,20 @@ const TeamsOverviewApp = (props) => {
             console.log('[Stats Effect] DOMÁCE zápasy - počet:', homeSnapshot.size);
             homeSnapshot.forEach(doc => {
                 const matchData = doc.data();
-                console.log(`[Stats Effect]   Domáci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} vs ${matchData.awayTeamIdentifier}`);
+                // Konvertujeme identifikátory tímov z zápasu
+                const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
+                const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
+                console.log(`[Stats Effect]   Domáci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
                 newMatchIds.add(doc.id);
             });
             
             console.log('[Stats Effect] HOSŤUJÚCE zápasy - počet:', awaySnapshot.size);
             awaySnapshot.forEach(doc => {
                 const matchData = doc.data();
-                console.log(`[Stats Effect]   Hosťujúci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} vs ${matchData.awayTeamIdentifier}`);
+                // Konvertujeme identifikátory tímov z zápasu
+                const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
+                const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
+                console.log(`[Stats Effect]   Hosťujúci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
                 newMatchIds.add(doc.id);
             });
     
