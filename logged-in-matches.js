@@ -2814,24 +2814,27 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         setIsAdvancedGroup(true);
 
-        // Získame názvy skupín pre oba tímy z ich identifikátorov
-        const getGroupNameFromIdentifier = (identifier) => {
-            if (!identifier) return null;
-            // Identifikátor je v tvare "Kategória SkupinaČíslo" (napr. "U12 CH G2")
-            const parts = identifier.split(' ');
-            if (parts.length < 2) return null;
-            const groupAndOrder = parts[parts.length - 1];
-            
-            // Extrahujeme názov skupiny (všetko okrem číslice na konci)
-            const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
-            if (match) {
-                return `skupina ${match[1]}`; // Vrátime "skupina G"
+        // 🔥 SPRÁVNA EXTRAKCIA NÁZVOV SKUPÍN Z NÁZVOV TÍMOV
+        // Názvy tímov sú napr. "U12 CH 1C", "U12 CH 3A"
+        // Extrahujeme posledné písmeno z názvu tímu (C, A)
+        const getGroupNameFromTeamName = (teamName) => {
+            if (!teamName) return null;
+            const trimmed = teamName.trim();
+            // Hľadáme posledný znak, ktorý je písmeno
+            for (let i = trimmed.length - 1; i >= 0; i--) {
+                const char = trimmed[i];
+                if (char >= 'A' && char <= 'Z') {
+                    return `skupina ${char}`;
+                }
             }
             return null;
         };
 
-        const homeGroupName = getGroupNameFromIdentifier(currentMatch.homeTeamIdentifier);
-        const awayGroupName = getGroupNameFromIdentifier(currentMatch.awayTeamIdentifier);
+        const homeTeamName = getTeamNameByIdentifier(currentMatch.homeTeamIdentifier);
+        const awayTeamName = getTeamNameByIdentifier(currentMatch.awayTeamIdentifier);
+
+        const homeGroupName = getGroupNameFromTeamName(homeTeamName);
+        const awayGroupName = getGroupNameFromTeamName(awayTeamName);
 
         // Vytvoríme množinu skupín, z ktorých tímy pochádzajú
         const targetGroupNames = new Set();
