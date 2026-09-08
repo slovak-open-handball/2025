@@ -6178,16 +6178,7 @@ const clearFilter = (column) => {
                                                 'tr',
                                                 { key: `${u.id}-details`, className: 'bg-gray-100' },
                                                 React.createElement('td', { colSpan: columnOrder.length + 1, className: 'p-0' },
-                                                    // ZMENA: Tlačidlo + sa zobrazuje IBA pre používateľov s rolou 'club'
-                                                    u.role === 'club' && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
-                                                        React.createElement('button', {
-                                                            className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
-                                                            onClick: (e) => {
-                                                                e.stopPropagation();
-                                                                handleOpenAddTeamModal(u.id);
-                                                            }
-                                                        }, '+')
-                                                    ),
+                                                    // Najprv vyrenderujeme všetky tímy
                                                     Object.entries(u.teams || {}).map(([category, teamListRaw]) =>
                                                         (Array.isArray(teamListRaw) ? teamListRaw : []).map((team, teamIndex) => {
                                                             let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
@@ -6225,6 +6216,16 @@ const clearFilter = (column) => {
                                                                 duplicateTeamIds: duplicateTeamIds
                                                             })
                                                         })
+                                                    ),
+                                                    // Tlačidlo + presunieme SEM - pod všetky tímy
+                                                    u.role === 'club' && React.createElement('div', { className: 'flex justify-center mt-4 mb-2' },
+                                                        React.createElement('button', {
+                                                            className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenAddTeamModal(u.id);
+                                                            }
+                                                        }, '+')
                                                     )
                                                 )
                                             )
