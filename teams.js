@@ -676,7 +676,6 @@ const TeamsOverviewApp = (props) => {
                     name: `${member.firstName} ${member.lastName}`.trim(),
                     jerseyNumber: member.jerseyNumber || '',
                     memberType: member.type,
-                    // Pridáme informáciu o kategórii a názve tímu pre kontrolu
                     teamName: member.teamName,
                     categoryName: member.categoryName
                 };
@@ -685,20 +684,42 @@ const TeamsOverviewApp = (props) => {
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
+                const matchId = eventData.matchId;
+                
                 console.log(`[Stats Effect] 📄 Udalosť:`, {
                     id: doc.id,
+                    matchId: matchId,
                     eventType: eventData.eventType,
                     eventSubtype: eventData.eventSubtype,
                     memberTypeKey: eventData.memberTypeKey,
                     memberIndex: eventData.memberIndex,
                     team: eventData.team,
-                    matchId: eventData.matchId,
-                    categoryName: eventData.categoryName  // Pridané pre debug
+                    categoryName: eventData.categoryName
                 });
                 
                 // Kontrola kategórie - udalosť musí byť v rovnakej kategórii ako tím
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     console.log(`[Stats Effect] ⏭️ Preskakujem udalosť - kategória sa nezhoduje: udalosť=${eventData.categoryName}, tím=${currentCategoryName}`);
+                    return;
+                }
+                
+                // Získame informácie o zápase z mapovania
+                const matchInfo = matchTeamMap[matchId];
+                if (!matchInfo) {
+                    console.log(`[Stats Effect] ⚠️ Nenašli sa informácie o zápase ${matchId}`);
+                    return;
+                }
+                
+                // Zistíme, či udalosť patrí nášmu tímu
+                let isOurTeam = false;
+                if (eventData.team === 'home' && matchInfo.homeTeam === currentTeamName) {
+                    isOurTeam = true;
+                    console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako DOMÁCI`);
+                } else if (eventData.team === 'away' && matchInfo.awayTeam === currentTeamName) {
+                    isOurTeam = true;
+                    console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako HOSŤ`);
+                } else {
+                    console.log(`[Stats Effect] ⏭️ Preskakujem udalosť - nepatrí nášmu tímu (team=${eventData.team}, matchInfo: home=${matchInfo.homeTeam}, away=${matchInfo.awayTeam})`);
                     return;
                 }
                 
@@ -913,9 +934,11 @@ const TeamsOverviewApp = (props) => {
     
         // --- 4. POČÚVAME NA ZMENY V ZÁPASOCH A AKTUALIZUJEME UDALOSTI ---
         let unsubscribeMatches = null;
+        let matchTeamMap = {};
     
         const processMatches = (matchesSnapshot) => {
             const newMatchIds = new Set();
+            const newMatchTeamMap = {};
             
             console.log('[Stats Effect] 📦 Všetky zápasy - počet:', matchesSnapshot.size);
             
@@ -925,16 +948,27 @@ const TeamsOverviewApp = (props) => {
             
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
+                const matchId = doc.id;
+                
                 // Konvertujeme identifikátory tímov z zápasu na zobrazené názvy
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
+                // Uložíme si mapovanie pre tento zápas
+                newMatchTeamMap[matchId] = {
+                    homeTeam: convertedHome,
+                    awayTeam: convertedAway
+                };
+                
                 // Porovnávame CELÉ názvy (vrátane sufixu)
                 if (convertedHome === fullTeamName || convertedAway === fullTeamName) {
-                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${fullTeamName}": ${doc.id} - ${convertedHome} vs ${convertedAway}`);
-                    newMatchIds.add(doc.id);
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${fullTeamName}": ${matchId} - ${convertedHome} vs ${convertedAway}`);
+                    newMatchIds.add(matchId);
                 }
             });
+        
+            // Aktualizujeme mapovanie tímov pre zápasy
+            matchTeamMap = newMatchTeamMap;
         
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
