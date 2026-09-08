@@ -2801,23 +2801,23 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
-    const getRelatedMatchesForAdvancedGroup = (currentMatch) => {
+    const getRelatedMatchesForAdvancedGroup = (currentMatch, groupsByCategory, allMatches, categories) => {
         console.log('🔍 [getRelatedMatches] Zavolaná funkcia pre zápas:', currentMatch.homeTeamIdentifier, 'vs', currentMatch.awayTeamIdentifier);
-        
+    
         if (!currentMatch || !currentMatch.groupName || !groupsByCategory) {
             console.log('❌ [getRelatedMatches] Chýbajú povinné údaje (currentMatch, groupName, groupsByCategory)');
             return [];
         }
-
+    
         // Zistíme, či ide o nadstavbovú skupinu
         const categoryGroups = groupsByCategory[currentMatch.categoryId] || [];
+        console.log('💡 categoryGroups pre kategóriu:', categoryGroups);
+        
         const currentGroup = categoryGroups.find(g => g.name === currentMatch.groupName);
         if (!currentGroup || currentGroup.type !== 'nadstavbová skupina') {
             console.log('❌ [getRelatedMatches] Toto nie je nadstavbová skupina (typ:', currentGroup?.type, ')');
-            setIsAdvancedGroup(false);
             return [];
         }
-        setIsAdvancedGroup(true);
         console.log('✅ [getRelatedMatches] Toto JE nadstavbová skupina:', currentMatch.groupName);
 
         // 🔥 SPRÁVNA EXTRAKCIA NÁZVOV SKUPÍN Z NÁZVOV TÍMOV
@@ -3175,12 +3175,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
-            const related = getRelatedMatchesForAdvancedGroup(match);
+            const related = getRelatedMatchesForAdvancedGroup(match, groupsByCategory, allMatches, categories);
             setRelatedMatches(related);
             
             console.log('📊 [useEffect] relatedMatches po načítaní:', related.length);
         }
-    }, [isOpen, match]); // 🔥 PRIDANÉ: Len tieto závislosti
+    }, [isOpen, match, groupsByCategory]); // 🔥 PRIDANÉ: Len tieto závislosti
 
     useEffect(() => {
         if (isOpen && match && !initialized) {            
