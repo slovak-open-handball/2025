@@ -2655,10 +2655,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             { className: 'bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-4 text-white shadow-xl text-center' },
             React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto' }),
             React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam nastavenia časovača...')
-        ),
-        
-        // V MatchDetailView komponente, nájdite časť kde sa renderujú TeamMembersList a upravte ju:
-        
+        ),       
         React.createElement(
             'div',
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
@@ -2669,16 +2666,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                          window.pagesVisibility['rosters'] && 
                                          window.pagesVisibility['rosters'].visible === true;
                 
-                // Ak nie sú viditeľné, vrátime prázdny div s informáciou
+                // Ak nie sú viditeľné, vrátime prázdny div (nič sa nezobrazí)
                 if (!isRostersVisible) {
-                    return React.createElement(
-                        'div',
-                        { className: 'col-span-2 text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200' },
-                        React.createElement('i', { className: 'fa-solid fa-eye-slash text-2xl mb-2 opacity-50' }),
-                        React.createElement('p', { className: 'text-sm' }, 'Súpisky tímov sú momentálne skryté')
-                    );
+                    return null; // Vrátime null - nič sa nevykreslí
                 }
-                
+        
                 // Ak sú viditeľné, zobrazíme oba tímy
                 return React.createElement(React.Fragment, null,
                     React.createElement(TeamMembersList, {
