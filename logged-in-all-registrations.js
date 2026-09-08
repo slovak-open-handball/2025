@@ -53,7 +53,10 @@ const getDuplicateTeamNamesInCategory = (allTeamsData) => {
         const teamName = team.teamName || '';
         if (!teamName) return;
         
-        const key = `${category}|${teamName}`;
+        // Normalizácia: odstránenie medzier na začiatku a konci, nahradenie viacnásobných medzier jednou, prevod na malé písmená
+        const normalizedTeamName = teamName.trim().replace(/\s+/g, ' ').toLowerCase();
+        const key = `${category}|${normalizedTeamName}`;
+        
         if (!categoryTeamNames.has(key)) {
             categoryTeamNames.set(key, []);
         }
@@ -556,11 +559,18 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
     const titleParts = [];
 
+    // Spoločné položky pre oba režimy
+    const categoryElement = React.createElement('span', { 
+        className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' 
+    }, `Kategória: ${team._category || '-'}`);
+
+    const teamNameElement = React.createElement('span', { 
+        className: `text-gray-700 mr-4 whitespace-nowrap ${isDuplicate ? 'text-red-600 font-bold' : ''}`
+    }, `Názov tímu: ${team.teamName || 'Tím'}`);
+
     if (forCollapsibleSection || (showUsersChecked && showTeamsChecked)) {
-        titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, `Kategória: ${team._category || '-'}`));
-        titleParts.push(React.createElement('span', { 
-            className: `text-gray-700 mr-4 whitespace-nowrap ${isDuplicate ? 'text-red-600 font-bold' : ''}`
-        }, `Názov tímu: ${team.teamName || `Tím`}`));
+        titleParts.push(categoryElement);
+        titleParts.push(teamNameElement);
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `Hráči: ${playersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (ž): ${womenTeamMembersCount}`));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 mr-2 whitespace-nowrap' }, `R. tím (m): ${menTeamMembersCount}`));
@@ -585,9 +595,7 @@ const generateTeamHeaderTitle = (team, availableTshirtSizes, forCollapsibleSecti
 
     } else {
         titleParts.push(React.createElement('span', { className: 'font-semibold text-gray-900 mr-2 whitespace-nowrap' }, team._category || '-'));
-        titleParts.push(React.createElement('span', { 
-            className: `text-gray-700 mr-4 whitespace-nowrap ${isDuplicate ? 'text-red-600 font-bold' : ''}`
-        }, team.teamName || `Tím`));
+        titleParts.push(teamNameElement);
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden sm:inline mr-2 whitespace-nowrap' }, playersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden md:inline mr-2 whitespace-nowrap' }, womenTeamMembersCount));
         titleParts.push(React.createElement('span', { className: 'text-gray-600 hidden lg:inline mr-2 whitespace-nowrap' }, menTeamMembersCount));
