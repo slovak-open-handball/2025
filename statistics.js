@@ -436,23 +436,6 @@ const TeamsOverviewApp = (props) => {
         window.pagesVisibility['rosters'].visible === true
     );
 
-    const tableContainerRef = useRef(null);
-    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
-
-    useEffect(() => {
-        const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 300)}px`);
-            }
-        };
-
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, [allMembers]);
-
     // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
     useEffect(() => {
         if (!window.db) return;
