@@ -2895,17 +2895,14 @@ const AddTeamsGroupApp = (props) => {
         const getCleanDisplayName = (team) => {
             // Pre superstructure tímy
             if (team.isSuperstructureTeam) {
-                // Ak má byť zobrazený prefix, vrátime celý názov
                 if (showCategoryPrefix) {
                     return team.teamName;
                 }
-                // Ak nemá byť zobrazený prefix, odstránime ho
                 if (team.category && team.teamName.startsWith(team.category + ' ')) {
                     return team.teamName.substring(team.category.length + 1).trim();
                 }
                 return team.teamName;
             }
-            // Pre ostatné tímy odstránime prefix kategórie, ak existuje
             let name = team.teamName;
             if (team.category && name.startsWith(team.category + ' ')) {
                 name = name.substring(team.category.length + 1).trim();
@@ -2913,20 +2910,24 @@ const AddTeamsGroupApp = (props) => {
             return name;
         };
     
-        // 🔥 UPRAVENÁ FUNKCIA: Získanie duplicitných názvov v kategórii LEN PRE POUŽÍVATEĽSKÉ TÍMY
-        // Ignoruje veľkosť písmen a medzery
+        // 🔥 FUNKCIA: Získanie duplicitných názvov v kategórii LEN PRE POUŽÍVATEĽSKÉ TÍMY
+        // Ignoruje veľkosť písmen, medzery a kontroluje naprieč všetkými skupinami v rámci kategórie
         const getDuplicateTeamsInCategory = (categoryName) => {
-            const teamsInCategory = allTeams.filter(t => t.category === categoryName && !t.isSuperstructureTeam);
+            // Všetky používateľské tímy v danej kategórii (bez ohľadu na skupinu)
+            const teamsInCategory = allTeams.filter(t => 
+                t.category === categoryName && 
+                !t.isSuperstructureTeam
+            );
+            
             const teamNameCount = new Map();
             const duplicateNames = new Set();
             
             teamsInCategory.forEach(t => {
-                // Odstránime medzery a prevedieme na malé písmená pre porovnanie
+                // Normalizácia: odstránenie medzier, malé písmená
                 const cleanName = t.teamName.trim().replace(/\s+/g, '').toLowerCase();
                 const count = teamNameCount.get(cleanName) || 0;
                 teamNameCount.set(cleanName, count + 1);
                 if (count >= 1) {
-                    // Uložíme pôvodný názov (alebo normalizovaný) pre neskoršie porovnanie
                     duplicateNames.add(cleanName);
                 }
             });
@@ -2934,7 +2935,7 @@ const AddTeamsGroupApp = (props) => {
             return duplicateNames;
         };
     
-        // Funkcia na získanie mapovaného názvu tímu (maximálne 2 iterácie)
+        // Funkcia na získanie mapovaného názvu tímu
         const getMappedTeamName = (team, displayName) => {
             if (!team.isSuperstructureTeam) return displayName;
         
@@ -2952,33 +2953,24 @@ const AddTeamsGroupApp = (props) => {
                     
                     if (mappedName && mappedName !== currentName) {
                         currentName = mappedName;
-                        
                         const secondMappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
                         if (secondMappedName && secondMappedName !== currentName) {
                             currentName = secondMappedName;
                         }
-                        
                         return currentName;
                     }
-                } catch (e) {
-                }
+                } catch (e) {}
             }
     
-            // Fallback na globálne mapovanie (tiež max 2 iterácie)
             if (window.__teamNameMapping) {
                 let currentName = team.teamName;
                 let mappedName = window.__teamNameMapping[currentName]?.teamName;
-                
-                // Prvé mapovanie
                 if (mappedName && mappedName !== currentName) {
                     currentName = mappedName;
-                    
-                    // Druhé mapovanie
                     const secondMappedName = window.__teamNameMapping[currentName]?.teamName;
                     if (secondMappedName && secondMappedName !== currentName) {
                         currentName = secondMappedName;
                     }
-                    
                     if (currentName !== team.teamName) {
                         return currentName;
                     }
@@ -2995,12 +2987,10 @@ const AddTeamsGroupApp = (props) => {
             const teamName = team.teamName;
             const cleanTeamName = getCleanDisplayName(team);
             
-            // Získame názov ubytovne z mapovania
             const accommodationName = teamAccommodations?.get(team.id) || 
                                       teamAccommodations?.get(teamName) || 
                                       teamAccommodations?.get(cleanTeamName);
             
-            // Ak názov tímu obsahuje názov kategórie, vrátime žltú farbu
             if (teamName.includes(categoryName)) {
                 return '#ffff00';
             }
@@ -3017,12 +3007,12 @@ const AddTeamsGroupApp = (props) => {
         };
     
         if (isWithoutGroup) {
-            // Tímy bez skupiny → triedime len podľa názvu, bez čísel a placeholderov
+            // Tímy bez skupiny
             const sortedTeams = [...teamsToRender].sort((a, b) =>
                 a.teamName.localeCompare(b.teamName)
             );
     
-            // 🔥 Získame duplicitné názvy LEN PRE POUŽÍVATEĽSKÉ TÍMY
+            // Získame duplicitné názvy pre kategóriu (alebo všetky kategórie)
             let allDuplicateNames = new Set();
             if (selectedCategoryId) {
                 const categoryName = categoryIdToNameMap[selectedCategoryId];
@@ -3030,7 +3020,6 @@ const AddTeamsGroupApp = (props) => {
                     allDuplicateNames = getDuplicateTeamsInCategory(categoryName);
                 }
             } else {
-                // Ak nie je vybraná kategória, skontrolujeme všetky kategórie
                 Object.values(categoryIdToNameMap).forEach(catName => {
                     const dupes = getDuplicateTeamsInCategory(catName);
                     dupes.forEach(d => allDuplicateNames.add(d));
@@ -3040,15 +3029,14 @@ const AddTeamsGroupApp = (props) => {
             const items = sortedTeams.map((team, idx) => {
                 let display = getCleanDisplayName(team);
                 if (!selectedCategoryId) {
-                    // ak zobrazujeme všetky kategórie → ukážeme aj názov kategórie
                     display = `${team.category}: ${display}`;
                 }
     
-                // 🔥 KONTROLA DUPLICITY LEN PRE POUŽÍVATEĽSKÉ TÍMY
+                // 🔥 KONTROLA DUPLICITY - normalizácia názvu
                 let isDuplicate = false;
                 if (!team.isSuperstructureTeam) {
                     const cleanNameForCheck = team.teamName.trim().replace(/\s+/g, '').toLowerCase();
-                    isDuplicate = duplicateNamesInCategory.has(cleanNameForCheck);
+                    isDuplicate = allDuplicateNames.has(cleanNameForCheck);
                 }
     
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
@@ -3072,7 +3060,6 @@ const AddTeamsGroupApp = (props) => {
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-1' },
-                        // FAREBNÝ KRUH (na začiatku pre tímy bez skupiny)
                         React.createElement('div', {
                             className: 'w-3 h-3 rounded-full flex-shrink-0',
                             style: { 
@@ -3119,10 +3106,9 @@ const AddTeamsGroupApp = (props) => {
         }
     
         // ────────────────────────────────────────────────
-        // Skupina → zoradíme podľa order + doplníme missing placeholder-y
+        // Tímy v skupine
         // ────────────────────────────────────────────────
         
-        // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
         const categoryName = categoryIdToNameMap[targetCategoryId];
         const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
     
@@ -3132,7 +3118,6 @@ const AddTeamsGroupApp = (props) => {
             return oa - ob;
         });
     
-        // Zoznam všetkých použitých poradových čísel (iba platné celé čísla ≥ 1)
         const usedOrders = new Set(
             sortedTeams
                 .map(t => t.order)
@@ -3141,74 +3126,68 @@ const AddTeamsGroupApp = (props) => {
     
         const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
     
-        // 🔥 Získame duplicitné názvy LEN PRE POUŽÍVATEĽSKÉ TÍMY
+        // 🔥 Získame duplicitné názvy PRE CELÚ KATEGÓRIU (nie len skupinu)
         const duplicateNamesInCategory = categoryName ? getDuplicateTeamsInCategory(categoryName) : new Set();
     
         const items = [];
     
-        // Vytvoríme riadky od 1 po maxOrder (vrátane dier)
         for (let pos = 1; pos <= maxOrder; pos++) {
             const teamsAtThisPosition = sortedTeams.filter(t => t.order === pos);
             const hasDuplicate = teamsAtThisPosition.length > 1;
     
             if (teamsAtThisPosition.length === 0) {
-              // CHÝBAJÚCI tím → placeholder + kôš (len ak nie sú zápasy)
-              if (!groupHasMatches) {
-                  items.push(
-                    React.createElement(
-                      'li',
-                      {
-                        key: `missing-${targetGroupId || 'global'}-${pos}`,
-                        className: 'flex items-center justify-between px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
-                      },
-                      React.createElement(
-                        'div',
-                        { className: 'flex items-center space-x-3 flex-grow' },
+                if (!groupHasMatches) {
+                    items.push(
                         React.createElement(
-                          'span',
-                          { className: 'text-center flex-grow' },
-                          `V skupine chýba tím s poradovým číslom ${pos}.`
+                            'li',
+                            {
+                                key: `missing-${targetGroupId || 'global'}-${pos}`,
+                                className: 'flex items-center justify-between px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
+                            },
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center space-x-3 flex-grow' },
+                                React.createElement(
+                                    'span',
+                                    { className: 'text-center flex-grow' },
+                                    `V skupine chýba tím s poradovým číslom ${pos}.`
+                                )
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => {
+                                        setDeleteGapModal({
+                                            categoryName: categoryIdToNameMap[targetCategoryId],
+                                            groupName: targetGroupId,
+                                            position: pos,
+                                            open: true
+                                        });
+                                    },
+                                    className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                                    title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
+                                },
+                                React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                                )
+                            )
                         )
-                      ),
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => {
-                            // otvoríme modálne okno na potvrdenie odstránenia diery
-                            setDeleteGapModal({
-                              categoryName: categoryIdToNameMap[targetCategoryId],
-                              groupName: targetGroupId,
-                              position: pos,
-                              open: true
-                            });
-                          },
-                          className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                          title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
-                        },
-                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
-                        )
-                      )
-                    )
-                  );
-              }
+                    );
+                }
             } else {
-                // Jeden alebo viac tímov na tomto poradovom čísle
                 teamsAtThisPosition.forEach((team, teamIdx) => {
                     let displayName = getCleanDisplayName(team);
                     const textColor = hasDuplicate ? 'text-red-700 font-semibold' : 'text-gray-800';
                     
-                    // 🔥 ZÍSKAME MAPOVANÝ NÁZOV TÍMU (ak je matchTracker dostupný)
                     let mappedDisplayName = getMappedTeamName(team, displayName);
     
-                    // 🔥 KONTROLA DUPLICITY LEN PRE POUŽÍVATEĽSKÉ TÍMY
+                    // 🔥 KONTROLA DUPLICITY - normalizácia a kontrola v CELEJ KATEGÓRII
                     let isDuplicate = false;
                     if (!team.isSuperstructureTeam) {
-                        const cleanNameForCheck = team.teamName.trim();
+                        const cleanNameForCheck = team.teamName.trim().replace(/\s+/g, '').toLowerCase();
                         isDuplicate = duplicateNamesInCategory.has(cleanNameForCheck);
                     }
     
-                    // NOVÁ KONTROLA: Je tím v nadstavbovej skupine a chýba v základnej?
                     const isSuperstructureTeam = team.isSuperstructureTeam;
                     const isInSuperstructureGroup = team.groupName && 
                         allGroupsByCategoryId[targetCategoryId]?.some(g => 
@@ -3217,7 +3196,7 @@ const AddTeamsGroupApp = (props) => {
     
                     let additionalClasses = '';
                     let title = isDuplicate ? `Duplicitný názov tímu v kategórii ${team.category}!` : '';
-                    let existsInBasic = true; // Predvolene true
+                    let existsInBasic = true;
                     
                     if (isSuperstructureTeam && isInSuperstructureGroup) {
                         existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
@@ -3227,12 +3206,11 @@ const AddTeamsGroupApp = (props) => {
                         }
                     }
                     
-                    // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu
                     const categoryName = categoryIdToNameMap[targetCategoryId];
                     const isCategoryBlocked = categoryName && categoryMatchStatus[categoryName] === true;
                     const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
                     
-                    // 🔥 ZLÚČENIE tried: ak je duplicita a je to používateľský tím, pridáme červenú a bold
+                    // 🔥 ZLÚČENIE TRIED - duplicitný tím = červená + bold
                     const combinedClasses = `flex-grow ${textColor} ${additionalClasses} ${isDuplicate ? 'text-red-600 font-bold' : ''}`;
                     
                     items.push(
@@ -3255,13 +3233,12 @@ const AddTeamsGroupApp = (props) => {
                                         className: combinedClasses,
                                         title: title
                                     },
-                                    `${pos}. ${mappedDisplayName}`
+                                    `${pos}. ${mappedDisplayName}}`
                                 )
                             ),
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
-                                // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
                                 showAccommodationCircle && React.createElement('div', {
                                     className: 'w-3 h-3 rounded-full flex-shrink-0',
                                     style: { 
@@ -3299,7 +3276,6 @@ const AddTeamsGroupApp = (props) => {
                                     )
                                 ),
                                 
-                                // 🔥 EDIT TLAČIDLO - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
                                 !groupHasMatches && React.createElement(
                                     'button',
                                     {
@@ -3315,7 +3291,6 @@ const AddTeamsGroupApp = (props) => {
                                     )
                                 ),
                                 
-                                // 🔥 KÔŠ TLAČIDLO - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
                                 !groupHasMatches && React.createElement(
                                     'button',
                                     {
@@ -3334,19 +3309,17 @@ const AddTeamsGroupApp = (props) => {
             }
         }
     
-        // Extra tímy s order > maxOrder (napr. ručne nastavené vysoké číslo)
+        // Extra tímy s order > maxOrder
         sortedTeams
             .filter(t => typeof t.order === 'number' && t.order > maxOrder)
             .forEach(team => {
                 let displayName = getCleanDisplayName(team);
-                
-                // 🔥 ZÍSKAME MAPOVANÝ NÁZOV TÍMU (ak je matchTracker dostupný)
                 let mappedDisplayName = getMappedTeamName(team, displayName);
     
-                // 🔥 KONTROLA DUPLICITY LEN PRE POUŽÍVATEĽSKÉ TÍMY
+                // 🔥 KONTROLA DUPLICITY PRE EXTRA TÍMY
                 let isDuplicate = false;
                 if (!team.isSuperstructureTeam) {
-                    const cleanNameForCheck = team.teamName.trim();
+                    const cleanNameForCheck = team.teamName.trim().replace(/\s+/g, '').toLowerCase();
                     isDuplicate = duplicateNamesInCategory.has(cleanNameForCheck);
                 }
                 
@@ -3358,7 +3331,7 @@ const AddTeamsGroupApp = (props) => {
                 
                 let additionalClasses = '';
                 let title = isDuplicate ? `Duplicitný názov tímu v kategórii ${team.category}!` : '';
-                let existsInBasic = true; // Predvolene true
+                let existsInBasic = true;
                 
                 if (isSuperstructureTeam && isInSuperstructureGroup) {
                     existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
@@ -3369,7 +3342,6 @@ const AddTeamsGroupApp = (props) => {
                 }
                 
                 const categoryName = categoryIdToNameMap[targetCategoryId];
-                // 🔥 KONTROLA: Či zobraziť farebný kruh pre ubytovňu (pre extra tímy)
                 const showAccommodationCircle = !(isInSuperstructureGroup && team.teamName && team.teamName.includes(categoryName));
                 
                 const combinedClasses = `flex-grow text-orange-800 ${additionalClasses} ${isDuplicate ? 'text-red-600 font-bold' : ''}`;
@@ -3400,7 +3372,6 @@ const AddTeamsGroupApp = (props) => {
                         React.createElement(
                             'div',
                             { className: 'flex items-center space-x-1' },
-                            // 🔥 FAREBNÝ KRUH PRE UBYTOVNIE - ZOBRAZÍ SA LEN AK JE POVOLENÝ
                             showAccommodationCircle && React.createElement('div', {
                                 className: 'w-3 h-3 rounded-full flex-shrink-0',
                                 style: { 
@@ -3414,7 +3385,6 @@ const AddTeamsGroupApp = (props) => {
                                 })()
                             }),
                             
-                            // 🔥 EDIT TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
                             !groupHasMatches && React.createElement(
                                 'button',
                                 {
@@ -3427,7 +3397,6 @@ const AddTeamsGroupApp = (props) => {
                                 )
                             ),
                             
-                            // 🔥 KÔŠ TLAČIDLO PRE EXTRA TÍMY - ZOBRAZÍ SA LEN AK NIE SÚ ZÁPASY
                             !groupHasMatches && React.createElement(
                                 'button',
                                 {
