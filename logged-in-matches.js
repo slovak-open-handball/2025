@@ -4329,7 +4329,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // 🔥 PRIDANÉ: Zobrazenie súvisiacich zápasov (nadstavbová skupina)
+                // 🔥 PRIDANÉ: Zobrazenie súvisiacich zápasov (nadstavbová skupina) - S DÁTUMOM
                 isAdvancedGroup && relatedMatches.length > 0 && React.createElement(
                     'div',
                     { className: 'text-sm bg-purple-50 p-3 rounded-lg border border-purple-200' },
@@ -4355,6 +4355,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 const minutes = startTime.getMinutes().toString().padStart(2, '0');
                                 const dateStr = getLocalDateStr(startTime);
                                 
+                                // 🔥 FORMATOVANIE DÁTUMU PRE ZOBRAZENIE
+                                const dateObj = getLocalDateFromStr(dateStr);
+                                const formattedDate = dateObj ? formatDateWithDay(dateObj) : dateStr;
+                                
                                 const rmCategory = categories.find(c => c.name === rm.categoryName);
                                 let rmDuration = 0;
                                 let rmMatchBreak = 5;
@@ -4373,17 +4377,38 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 
                                 const isRelatedConflict = overlappingMatches.some(om => om.id === rm.id);
                                 
+                                // 🔥 ZISTÍME, ČI IDE O INÝ DEŇ (pre zvýraznenie)
+                                const selectedDateObj = getLocalDateFromStr(selectedDate);
+                                const selectedDateStr = selectedDateObj ? getLocalDateStr(selectedDateObj) : null;
+                                const isDifferentDay = dateStr !== selectedDateStr;
+                                
                                 return React.createElement(
                                     'div',
                                     { 
                                         key: idx,
-                                        className: `flex items-center gap-2 p-1 rounded border ${isRelatedConflict ? 'bg-red-50 border-red-300' : 'bg-white border-gray-100'}`
+                                        className: `flex items-center gap-2 p-1 rounded border ${isRelatedConflict ? 'bg-red-50 border-red-300' : 'bg-white border-gray-100'} ${isDifferentDay ? 'border-l-4 border-l-purple-400' : ''}`
                                     },
-                                    React.createElement('span', { className: 'text-gray-500 font-mono' }, `${hours}:${minutes} - ${endHours}:${endMinutes}`),
+                                    // 🔥 ČAS + DÁTUM (zobrazené spolu)
+                                    React.createElement(
+                                        'span', 
+                                        { 
+                                            className: `text-gray-500 font-mono ${isDifferentDay ? 'text-purple-600' : ''}`,
+                                            title: isDifferentDay ? `Iný deň: ${formattedDate}` : formattedDate
+                                        }, 
+                                        isDifferentDay 
+                                            ? `${formattedDate} ${hours}:${minutes} - ${endHours}:${endMinutes}`
+                                            : `${hours}:${minutes} - ${endHours}:${endMinutes}`
+                                    ),
                                     React.createElement('span', { className: isRelatedConflict ? 'text-red-700 font-medium' : 'text-gray-700' }, rm.homeTeamIdentifier),
                                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
                                     React.createElement('span', { className: isRelatedConflict ? 'text-red-700 font-medium' : 'text-gray-700' }, rm.awayTeamIdentifier),
                                     React.createElement('span', { className: 'text-xs text-purple-500 ml-auto' }, hallName),
+                                    // 🔥 INDIKÁTOR INÉHO DŇA
+                                    isDifferentDay && React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-purple-400 ml-1' },
+                                        React.createElement('i', { className: 'fa-solid fa-calendar-day' })
+                                    ),
                                     isRelatedConflict && React.createElement(
                                         'span',
                                         { className: 'text-xs text-red-500 ml-1' },
