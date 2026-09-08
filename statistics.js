@@ -861,7 +861,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'overflow-x-auto'
+                    className: 'overflow-x-auto',
                     style: { maxHeight: maxTableHeight }
                 },
                 React.createElement(
