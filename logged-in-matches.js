@@ -1953,7 +1953,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, accommodations, teamAccommodations, allMatches, groupsByCategory, blockedBreaks }) => {
+const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, accommodations, teamAccommodations, allMatches, groupsByCategory, blockedBreaks, sportHalls }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredByConditions, setFilteredByConditions] = useState([]);
@@ -2409,6 +2409,20 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 
     if (!isOpen) return null;
 
+    const hallName = sportHalls?.find(h => h.id === hallId)?.name || 'Neznáma hala';
+
+    // Formátovanie dátumu
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+        const dayName = days[dateObj.getDay()];
+        return `${dayName} ${day}. ${month}. ${year}`;
+    };
+    
+    const formattedDate = date ? formatDateForDisplay(date) : '';
+
     const getTeamNameByIdentifierLocal = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -2710,6 +2724,29 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         className: 'text-gray-500 hover:text-gray-700'
                     },
                     React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between flex-wrap gap-2' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-600' }),
+                        React.createElement('span', { className: 'font-medium text-gray-700' }, 'Hala:'),
+                        React.createElement('span', { className: 'text-gray-800 font-semibold' }, hallName)
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-calendar-day text-blue-600' }),
+                        React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dátum:'),
+                        React.createElement('span', { className: 'text-gray-800 font-semibold' }, formattedDate || 'Nezadaný dátum')
+                    )
                 )
             ),
 
@@ -10380,9 +10417,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             getTeamDisplayText: getTeamDisplayText,
             accommodations: accommodations,
             teamAccommodations: teamAccommodations,
-            allMatches: matches,  // Pridané
-            groupsByCategory: groupsByCategory,  // Pridané
-            blockedBreaks: blockedBreaks  // Pridané
+            allMatches: matches,
+            groupsByCategory: groupsByCategory,
+            blockedBreaks: blockedBreaks,
+            sportHalls: sportHalls 
         }),
         React.createElement(AssignMatchModal, {
             isOpen: isAssignModalOpen,
