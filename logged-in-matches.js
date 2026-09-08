@@ -40,6 +40,129 @@ const getLocalDateFromStr = (dateStr) => {
     return new Date(year, month - 1, day);
 };
 
+const getLastCharFromTeamName = (teamIdentifier) => {
+    if (!teamIdentifier) return '';
+    
+    // Extrahujeme poslednú časť identifikátora (napr. "A1" z "U10 A1")
+    const parts = teamIdentifier.split(' ');
+    const lastPart = parts.length > 1 ? parts[parts.length - 1] : teamIdentifier;
+    
+    // Hľadáme posledný nečíselný znak
+    for (let i = lastPart.length - 1; i >= 0; i--) {
+        const char = lastPart[i];
+        if (char >= '0' && char <= '9') {
+            continue;
+        }
+        return char;
+    }
+    
+    // Fallback - posledný znak
+    return lastPart.slice(-1);
+};
+
+// Funkcia na nájdenie posledného zápasu s daným písmenom vo všetkých halách a všetkých dňoch
+// PRIDAJTE TOTO ZA getLastCharFromTeamName
+const getLastMatchForLetterInAllHalls = (matchToCheck, allMatches) => {
+    if (!matchToCheck) return null;
+    
+    // Získame posledné písmeno z oboch tímov zápasu
+    const homeLastChar = getLastCharFromTeamName(matchToCheck.homeTeamIdentifier);
+    const awayLastChar = getLastCharFromTeamName(matchToCheck.awayTeamIdentifier);
+    
+    // Ak sú písmená rovnaké, použijeme ho, inak berieme obe
+    const lettersToCheck = homeLastChar === awayLastChar 
+        ? [homeLastChar] 
+        : [homeLastChar, awayLastChar].filter(l => l);
+    
+    if (lettersToCheck.length === 0) return null;
+    
+    let latestMatch = null;
+    let latestTime = null;
+    
+    // Prejdeme všetky zápasy
+    for (const m of allMatches) {
+        // Preskočíme samotný zápas
+        if (m.id === matchToCheck.id) continue;
+        
+        // Preskočíme zápasy bez naplánovaného času
+        if (!m.scheduledTime) continue;
+        
+        const mHomeLastChar = getLastCharFromTeamName(m.homeTeamIdentifier);
+        const mAwayLastChar = getLastCharFromTeamName(m.awayTeamIdentifier);
+        
+        // Kontrola, či má zápas rovnaké písmeno (aspoň jeden tím)
+        let hasMatchingLetter = false;
+        for (const letter of lettersToCheck) {
+            if (mHomeLastChar === letter || mAwayLastChar === letter) {
+                hasMatchingLetter = true;
+                break;
+            }
+        }
+        
+        if (!hasMatchingLetter) continue;
+        
+        // Získame čas zápasu
+        try {
+            const mTime = m.scheduledTime.toDate();
+            if (!latestTime || mTime > latestTime) {
+                latestTime = mTime;
+                latestMatch = m;
+            }
+        } catch (e) {
+            continue;
+        }
+    }
+    
+    return latestMatch;
+};
+
+// Funkcia na získanie detailných informácií o poslednom zápase s daným písmenom
+// PRIDAJTE TOTO ZA getLastMatchForLetterInAllHalls
+const getLastMatchForLetterInAllHallsWithDetails = (matchToCheck, allMatches, categories, sportHalls) => {
+    const lastMatch = getLastMatchForLetterInAllHalls(matchToCheck, allMatches);
+    if (!lastMatch || !lastMatch.scheduledTime) return null;
+    
+    try {
+        const matchTime = lastMatch.scheduledTime.toDate();
+        const category = categories.find(c => c.name === lastMatch.categoryName);
+        
+        // Výpočet dĺžky zápasu vrátane prestávky
+        let matchDuration = 0;
+        let matchBreak = 5;
+        if (category) {
+            const periods = category.periods || 2;
+            const periodDuration = category.periodDuration || 20;
+            const breakDuration = category.breakDuration || 2;
+            matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            matchBreak = category.matchBreak || 5;
+        }
+        
+        // Čas konca zápasu vrátane prestávky
+        const endTime = new Date(matchTime.getTime() + (matchDuration + matchBreak) * 60000);
+        
+        return {
+            match: lastMatch,
+            startTime: matchTime,
+            endTime: endTime,
+            duration: matchDuration,
+            matchBreak: matchBreak,
+            hallId: lastMatch.hallId,
+            hallName: sportHalls ? sportHalls.find(h => h.id === lastMatch.hallId)?.name || 'Neznáma hala' : 'Neznáma hala',
+            date: getLocalDateStr(matchTime)
+        };
+    } catch (e) {
+        return null;
+    }
+};
+
+const isAdvancedGroupMatch = (match, groupsByCategory) => {
+    if (!match || !match.categoryId || !match.groupName) return false;
+    
+    const groups = groupsByCategory[match.categoryId] || [];
+    const group = groups.find(g => g.name === match.groupName);
+    return group?.type === 'nadstavbová skupina';
+};
+
 const getDayName = (date) => {
     const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
     return days[date.getDay()];
@@ -2806,6 +2929,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [suggestedTime, setSuggestedTime] = useState(null);
     const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
     const [loadingHallStartTime, setLoadingHallStartTime] = useState(false);
+    const [lastMatchInfo, setLastMatchInfo] = useState(null);
 
     // Funkcia na načítanie dostupných dátumov
     const loadAvailableDates = () => {
@@ -2831,8 +2955,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return false;
     };
 
-    // Upravená funkcia calculateFirstAvailableTime - používa VŠETKY zápasy
-    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches) => {
+    // UPRAVENÁ FUNKCIA calculateFirstAvailableTime - zohľadňuje posledný zápas s rovnakým písmenom vo všetkých halách a dňoch
+    // TOTO JE CELÁ NOVÁ FUNKCIA - NAHRAĎTE PÔVODNÚ
+    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, matchToCheck, categories, sportHalls, categoryDetails) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
         // Konvertujeme hallStartTime na minúty
@@ -2842,12 +2967,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         // Vytvoríme zoznam všetkých obsadených intervalov (zápasy + zablokované časy)
         const occupiedIntervals = [];
         
-        // 1. Pridáme VŠETKY existujúce zápasy pre túto halu a deň (NIE len vyfiltrované)
-        // Použijeme allMatches namiesto existingMatchesList
+        // 1. Pridáme VŠETKY existujúce zápasy pre túto halu a deň
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
-            m.id !== match?.id  // Vynecháme aktuálny zápas, ak už má ID
+            m.id !== matchToCheck?.id
         ).filter(m => {
             const matchDate = m.scheduledTime.toDate();
             const matchDateStr = getLocalDateStr(matchDate);
@@ -2868,7 +2992,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const matchStart = match.scheduledTime.toDate();
             const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
             
-            // Výpočet dĺžky zápasu
             const matchCategory = categories.find(c => c.name === match.categoryName);
             let matchDuration = 0;
             let matchBreak = 5;
@@ -2881,7 +3004,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 matchBreak = matchCategory.matchBreak || 5;
             }
             
-            // Zápas zaberá čas od začiatku do konca VRÁTANE prestávky po ňom
             const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
             
             occupiedIntervals.push({
@@ -2891,6 +3013,35 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 id: match.id
             });
         });
+        
+        // ============================================================
+        // NOVÁ ČASŤ: Kontrola posledného zápasu s rovnakým písmenom vo VŠETKÝCH HALÁCH A DŇOCH
+        // ============================================================
+        if (matchToCheck) {
+            const lastMatchDetails = getLastMatchForLetterInAllHallsWithDetails(matchToCheck, allMatches, categories, sportHalls);
+            
+            if (lastMatchDetails) {
+                // Získame dátum posledného zápasu
+                const lastMatchDateStr = getLocalDateStr(lastMatchDetails.startTime);
+                const currentDateStr = date;
+                
+                // Ak je posledný zápas v ROVNAKÝ DEŇ ako priraďovaný, musíme ho zohľadniť
+                if (lastMatchDateStr === currentDateStr) {
+                    const lastEndMinutes = lastMatchDetails.endTime.getHours() * 60 + lastMatchDetails.endTime.getMinutes();
+                    
+                    // Pridáme ako špeciálny interval (blokáda od začiatku dňa do času posledného zápasu)
+                    occupiedIntervals.push({
+                        start: 0,
+                        end: lastEndMinutes,
+                        type: 'letter_constraint',
+                        id: 'letter_constraint_' + lastMatchDetails.match.id,
+                        description: `Posledný zápas s rovnakým písmenom: ${lastMatchDetails.match.homeTeamIdentifier} vs ${lastMatchDetails.match.awayTeamIdentifier}`
+                    });
+                }
+                // Ak je posledný zápas v SKORŠOM DNI, ignorujeme ho (priraďovaný zápas je v neskorší deň)
+                // Ak je posledný zápas v NESKORŠOM DNI (čo by nemalo nastať), zohľadníme ho
+            }
+        }
         
         // 2. Pridáme zablokované intervaly
         if (blockedBreaks) {
@@ -3211,12 +3362,29 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             startTime,
                             matchDuration,
                             blockedBreaks,
-                            allMatches  // allMatches obsahuje VŠETKY zápasy
+                            allMatches,  // allMatches obsahuje VŠETKY zápasy
+                            match,  // Pridáme aktuálny zápas ako parameter
+                            categories,  // Pridáme kategórie
+                            sportHalls,  // Pridáme športové haly
+                            categoryDetails  // Pridáme detaily kategórie
                         );
                         
                         if (firstAvailable) {
                             setSuggestedTime(firstAvailable);
                             console.log('Navrhovaný prvý dostupný čas (podľa všetkých zápasov v hale):', firstAvailable);
+                        }
+
+                        // Získanie informácie o poslednom zápase s rovnakým písmenom
+                        if (match && allMatches) {
+                            const lastDetails = getLastMatchForLetterInAllHallsWithDetails(match, allMatches, categories, sportHalls);
+                            if (lastDetails && lastDetails.startTime) {
+                                const lastDateStr = getLocalDateStr(lastDetails.startTime);
+                                if (lastDateStr === selectedDate) {
+                                    setLastMatchInfo(lastDetails);
+                                } else {
+                                    setLastMatchInfo(null);
+                                }
+                            }
                         }
                     }
                     
@@ -3440,6 +3608,26 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     null,
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
                         'Športová hala:'
+                    ),
+                    lastMatchInfo && React.createElement(
+                        'div',
+                        { className: 'mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2 text-yellow-700' },
+                            React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                            React.createElement('span', { className: 'font-medium' }, 'Posledný zápas s rovnakým písmenom:')
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'mt-1 text-xs text-gray-600' },
+                            React.createElement('p', null, 
+                                `${lastMatchInfo.match.homeTeamIdentifier} vs ${lastMatchInfo.match.awayTeamIdentifier}`
+                            ),
+                            React.createElement('p', null,
+                                `Hala: ${lastMatchInfo.hallName}, ${lastMatchInfo.startTime.toLocaleTimeString()} - ${lastMatchInfo.endTime.toLocaleTimeString()}`
+                            )
+                        )
                     ),
                     React.createElement(
                         'select',
@@ -6243,7 +6431,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };    
 
-    const checkTeamConflicts = (teamIdentifier, currentMatch, allMatches, categories) => {
+    // UPRAVENÁ FUNKCIA checkTeamConflicts - PRIDANÁ KONTROLA PORADIA PRE NADSTAVBOVÉ SKUPINY
+    // TOTO JE CELÁ NOVÁ FUNKCIA - NAHRAĎTE PÔVODNÚ
+    const checkTeamConflicts = (teamIdentifier, currentMatch, allMatches, categories, groupsByCategory) => {
         if (!teamIdentifier || !currentMatch || !currentMatch.scheduledTime) return false;
         
         const currentTime = currentMatch.scheduledTime.toDate();
@@ -6253,7 +6443,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         // Získame kategóriu aktuálneho zápasu pre výpočet dĺžky
         const currentCategory = categories.find(c => c.name === currentMatch.categoryName);
         let currentMatchDuration = 0;
-        let standardBreak = 5; // štandardná prestávka medzi zápasmi
+        let standardBreak = 5;
         
         if (currentCategory) {
             const periods = currentCategory.periods || 2;
@@ -6266,12 +6456,85 @@ const AddMatchesApp = ({ userProfileData }) => {
         // Koniec aktuálneho zápasu (vrátane prestávky)
         const currentEndWithBreak = currentStartMinutes + currentMatchDuration + standardBreak;
         
-        // Prejdeme všetky ostatné zápasy toho istého tímu
+        // ============================================================
+        // NOVÁ ČASŤ: Kontrola poradia pre nadstavbové skupiny
+        // ============================================================
+        const isAdvanced = isAdvancedGroupMatch(currentMatch, groupsByCategory);
+        
+        if (isAdvanced) {
+            // Získame posledné písmeno z názvu tímu, ktorý kontrolujeme
+            const teamLastChar = getLastCharFromTeamName(teamIdentifier);
+            
+            // Prejdeme všetky zápasy vo všetkých dňoch
+            for (const otherMatch of allMatches) {
+                if (otherMatch.id === currentMatch.id) continue;
+                if (!otherMatch.scheduledTime) continue;
+                
+                const otherTime = otherMatch.scheduledTime.toDate();
+                const otherDateStr = getLocalDateStr(otherTime);
+                
+                // Kontrola, či má iný zápas rovnaké posledné písmeno
+                const otherHomeLastChar = getLastCharFromTeamName(otherMatch.homeTeamIdentifier);
+                const otherAwayLastChar = getLastCharFromTeamName(otherMatch.awayTeamIdentifier);
+                
+                const hasMatchingLetter = (teamLastChar && (otherHomeLastChar === teamLastChar || otherAwayLastChar === teamLastChar));
+                
+                if (!hasMatchingLetter) continue;
+                
+                const otherStartMinutes = otherTime.getHours() * 60 + otherTime.getMinutes();
+                
+                // POROVNANIE DÁTUMOV - ak je iný zápas v neskoršom dni, je to konflikt
+                const currentDate = new Date(currentDateStr);
+                const otherDate = new Date(otherDateStr);
+                
+                if (otherDate > currentDate) {
+                    // Iný zápas je v neskoršom dni - aktuálny zápas by mal byť skôr
+                    return true;
+                }
+                
+                if (otherDate < currentDate) {
+                    // Iný zápas je v skoršom dni - to je v poriadku, preskočíme
+                    continue;
+                }
+                
+                // ROVNAKÝ DEŇ - kontrolujeme čas
+                if (otherStartMinutes < currentStartMinutes) {
+                    // Iný zápas je skôr - to je v poriadku
+                    continue;
+                }
+                
+                // Iný zápas je neskôr v ten istý deň
+                // Rôzne haly - kontrolujeme, či sa neprekrývajú
+                if (currentMatch.hallId !== otherMatch.hallId) {
+                    const otherCategory = categories.find(c => c.name === otherMatch.categoryName);
+                    let otherMatchDuration = 0;
+                    let otherStandardBreak = 5;
+                    
+                    if (otherCategory) {
+                        const periods = otherCategory.periods || 2;
+                        const periodDuration = otherCategory.periodDuration || 20;
+                        const breakDuration = otherCategory.breakDuration || 2;
+                        otherMatchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                        otherStandardBreak = otherCategory.matchBreak || 5;
+                    }
+                    
+                    const otherEndWithBreak = otherStartMinutes + otherMatchDuration + otherStandardBreak;
+                    
+                    // Prekrývanie časov = konflikt
+                    if (currentStartMinutes < otherEndWithBreak && otherStartMinutes < currentEndWithBreak) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // ============================================================
+        // PÔVODNÁ ČASŤ: Kontrola konfliktov (zachovaná)
+        // ============================================================
         for (const otherMatch of allMatches) {
             if (otherMatch.id === currentMatch.id) continue;
             if (!otherMatch.scheduledTime) continue;
             
-            // Kontrola, či ide o ten istý tím (domáci alebo hosť)
             const isSameTeam = (otherMatch.homeTeamIdentifier === teamIdentifier || 
                                 otherMatch.awayTeamIdentifier === teamIdentifier);
             
@@ -6280,14 +6543,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             const otherTime = otherMatch.scheduledTime.toDate();
             const otherDateStr = getLocalDateStr(otherTime);
             
-            // AK JE TO INÝ DEŇ - NIE JE KONFLIKT (PRESKOČÍME)
             if (currentDateStr !== otherDateStr) {
                 continue;
             }
             
             const otherStartMinutes = otherTime.getHours() * 60 + otherTime.getMinutes();
             
-            // Získame kategóriu druhého zápasu
             const otherCategory = categories.find(c => c.name === otherMatch.categoryName);
             let otherMatchDuration = 0;
             let otherStandardBreak = 5;
@@ -6300,45 +6561,34 @@ const AddMatchesApp = ({ userProfileData }) => {
                 otherStandardBreak = otherCategory.matchBreak || 5;
             }
             
-            // Koniec druhého zápasu (vrátane prestávky)
             const otherEndWithBreak = otherStartMinutes + otherMatchDuration + otherStandardBreak;
             
-            // RÔZNE HALY - kontrola prekrývania časov
             if (currentMatch.hallId !== otherMatch.hallId) {
-                // Ak sú časy prekrývajúce sa (zápasy v rovnakom čase na rôznych miestach)
                 if (currentStartMinutes < otherEndWithBreak && otherStartMinutes < currentEndWithBreak) {
-                    return true; // KONFLIKT - rovnaký čas v rôznych halách v TEN ISTÝ DEŇ
+                    return true;
                 }
-                
-                // Ak je medzi zápasmi menej ako štandardná prestávka
                 const gap = Math.abs(currentStartMinutes - otherStartMinutes);
                 if (gap < standardBreak && gap > 0) {
-                    return true; // KONFLIKT - príliš blízko seba v rôznych halách v TEN ISTÝ DEŇ
+                    return true;
                 }
             }
             
-            // ROVNAKÁ HALA - kontrola, či nasleduje hneď po sebe s malou prestávkou
             if (currentMatch.hallId === otherMatch.hallId) {
-                // Zápasy v rovnaký deň v rovnakej hale
-                // Kontrola, či jeden začína hneď po skončení druhého (alebo sa prekrývajú)
                 if (currentStartMinutes < otherStartMinutes) {
-                    // Aktuálny je skôr, druhý neskôr
                     if (otherStartMinutes < currentEndWithBreak) {
-                        return true; // KONFLIKT - prekrývanie alebo žiadna pauza
+                        return true;
                     }
-                    // Pauza medzi zápasmi je menšia ako štandardná prestávka
                     const gap = otherStartMinutes - currentEndWithBreak;
                     if (gap < standardBreak && gap >= 0) {
-                        return true; // KONFLIKT - príliš krátka pauza
+                        return true;
                     }
                 } else {
-                    // Aktuálny je neskôr, druhý skôr
                     if (currentStartMinutes < otherEndWithBreak) {
-                        return true; // KONFLIKT - prekrývanie
+                        return true;
                     }
                     const gap = currentStartMinutes - otherEndWithBreak;
                     if (gap < standardBreak && gap >= 0) {
-                        return true; // KONFLIKT - príliš krátka pauza
+                        return true;
                     }
                 }
             }
@@ -6401,8 +6651,8 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte, farby ubytovní A NOVÉ POLE totalMembersCount
         const filteredWithColors = filteredMatches.map(match => {
-            const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
-            const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
+            const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories, groupsByCategory);
+            const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories, groupsByCategory);
     
             // Získanie farieb ubytovní pre tímy
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
