@@ -3360,6 +3360,74 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
+    // Funkcia na extrahovanie písmena z názvu tímu
+    const extractLetterFromTeamName = (teamName) => {
+        if (!teamName) return null;
+        const trimmed = teamName.trim();
+        // Hľadáme posledný znak, ktorý je písmeno
+        for (let i = trimmed.length - 1; i >= 0; i--) {
+            const char = trimmed[i];
+            if (char >= 'A' && char <= 'Z') {
+                return char;
+            }
+        }
+        return null;
+    };
+    
+    // Funkcia na extrahovanie názvu skupiny z identifikátora
+    const extractGroupNameFromIdentifier = (identifier) => {
+        if (!identifier) return null;
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return null;
+        const groupAndOrder = parts[parts.length - 1];
+    
+        const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+        if (matchResult) {
+            return `skupina ${matchResult[1]}`;
+        }
+        return null;
+    };
+    
+    // Funkcia na získanie názvu tímu podľa identifikátora (pre použitie v useEffect)
+    const getTeamNameByIdentifierForEffect = (identifier) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return identifier;
+        
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupName = '';
+        let order = '';
+        
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupName = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) {
+            order = '?';
+            groupName = groupAndOrder;
+        }
+        
+        if (window.__teamManagerData?.allTeams) {
+            const groupNameWithPrefix = `skupina ${groupName}`;
+            const team = window.__teamManagerData.allTeams.find(t => 
+                t.category === category && 
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            if (team) return team.teamName;
+        }
+        
+        return `${category} ${groupName}${order}`;
+    };
+
     // ============================================================
     // NOVÝ useEffect: Kontrola dostupnosti času po zmene dňa alebo haly
     // ============================================================
@@ -3468,16 +3536,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('💡 groupsByCategory (props):', groupsByCategory);
             console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory || {}));
     
-            // 🔥 PRIDAJTE TÚTO KONTROLU PRE ŠPECIÁLNE ZÁPASY (pavúk, o umiestnenie)
-            if (match.isPlacementMatch || match.matchType) {
-                // Pre zápasy o umiestnenie alebo pavúk nehľadáme súvisiace zápasy
-                console.log('ℹ️ Špeciálny zápas (pavúk/umiestnenie) - preskakujem kontrolu skupiny');
-                setRelatedMatches([]);
-                setIsAdvancedGroup(false);
-                return;
-            }
-    
-            if (!match.groupName) {
+            // 🔥 KONTROLA: Ak match.groupName neexistuje, ale match.categoryId existuje, skúsime ho nájsť
+            if (!match.groupName && match.categoryId && groupsByCategory[match.categoryId]) {
                 const homeGroup = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
                 const awayGroup = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
                 
@@ -3489,44 +3549,68 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     console.log('✅ Extrahovaný groupName z hosťovského tímu:', awayGroup);
                 }
             }
-            
+    
+            // 🔥 PRIDANÉ: Pre špeciálne zápasy (pavúk/umiestnenie) použijeme alternatívnu logiku
+            if (match.isPlacementMatch || match.matchType) {
+                console.log('ℹ️ Špeciálny zápas (pavúk/umiestnenie) - hľadám súvisiace zápasy podľa písmen z názvov tímov');
+                
+                // Získame názvy tímov
+                const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                
+                // Extrahujeme písmená z názvov tímov (posledné písmeno)
+                const homeLetter = extractLetterFromTeamName(homeTeamName);
+                const awayLetter = extractLetterFromTeamName(awayTeamName);
+                
+                console.log('🔍 Extrahované písmená z názvov tímov:', homeLetter, 'a', awayLetter);
+                
+                const targetLetters = new Set();
+                if (homeLetter) targetLetters.add(homeLetter);
+                if (awayLetter) targetLetters.add(awayLetter);
+                
+                if (targetLetters.size > 0) {
+                    // Vytvoríme množinu názvov skupín, ktoré hľadáme
+                    const targetGroupNames = new Set();
+                    targetLetters.forEach(letter => {
+                        targetGroupNames.add(`skupina ${letter}`);
+                    });
+                    
+                    console.log('🔍 Hľadám zápasy v skupinách s písmenami:', Array.from(targetLetters));
+                    
+                    // Nájdeme VŠETKY zápasy v tej istej kategórii (okrem aktuálneho)
+                    const categoryMatches = allMatches.filter(m => 
+                        m.categoryId === match.categoryId && 
+                        m.id !== match.id &&
+                        m.groupName
+                    );
+                    
+                    // Filtrujeme zápasy podľa názvu skupiny
+                    const related = categoryMatches.filter(m => {
+                        return targetGroupNames.has(m.groupName);
+                    });
+                    
+                    console.log('✅ Nájdených súvisiacich zápasov:', related.length);
+                    related.forEach(m => {
+                        console.log('  - Zápas:', m.homeTeamIdentifier, 'vs', m.awayTeamIdentifier, '(skupina:', m.groupName, ')');
+                    });
+                    
+                    setRelatedMatches(related);
+                    setIsAdvancedGroup(true); // Označíme ako "nadstavbová" pre účely zobrazenia
+                } else {
+                    console.log('❌ Nepodarilo sa extrahovať písmená z názvov tímov');
+                    setRelatedMatches([]);
+                    setIsAdvancedGroup(false);
+                }
+                
+                return; // Ukončíme useEffect
+            }
+    
             // 🔥 BEZPEČNOSTNÁ KONTROLA pre groupsByCategory
             if (!groupsByCategory) {
                 console.log('💡 groupsByCategory je undefined/null!');
                 setRelatedMatches([]);
                 setIsAdvancedGroup(false);
                 return;
-            }
-            
-            // 🔥 KONTROLA: Ak match.groupName neexistuje, ale match.categoryId existuje, skúsime ho nájsť
-            if (!match.groupName && match.categoryId && groupsByCategory[match.categoryId]) {
-                // Skúsime nájsť groupName podľa homeTeamIdentifier alebo awayTeamIdentifier
-                const extractGroupNameFromIdentifier = (identifier) => {
-                    if (!identifier) return null;
-                    const parts = identifier.split(' ');
-                    if (parts.length < 2) return null;
-                    const groupAndOrder = parts[parts.length - 1];
-                
-                    // Extrahujeme písmená z groupAndOrder (napr. z "A1" extrahujeme "A")
-                    const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
-                    if (matchResult) {
-                        return `skupina ${matchResult[1]}`;
-                    }
-                    return null;
-                };
-                
-                const homeGroupName = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
-                const awayGroupName = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
-                
-                console.log('💡 Extrahované skupiny z identifikátorov:', homeGroupName, 'a', awayGroupName);
-                
-                if (homeGroupName) {
-                    match.groupName = homeGroupName;
-                    console.log('✅ Nastavený match.groupName na:', match.groupName);
-                } else if (awayGroupName) {
-                    match.groupName = awayGroupName;
-                    console.log('✅ Nastavený match.groupName na:', match.groupName);
-                }
             }
             
             // 🔥 OPRAVENÉ: Použijeme groupsByCategory z props a odovzdáme všetky potrebné parametre
