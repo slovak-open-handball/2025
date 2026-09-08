@@ -3143,7 +3143,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             if (!match.groupName) {
                 const homeGroup = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
                 const awayGroup = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
-            
+                
                 if (homeGroup) {
                     match.groupName = homeGroup;
                     console.log('✅ Extrahovaný groupName z domáceho tímu:', homeGroup);
@@ -3169,7 +3169,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     const parts = identifier.split(' ');
                     if (parts.length < 2) return null;
                     const groupAndOrder = parts[parts.length - 1];
-                    
+    
                     // Extrahujeme písmená z groupAndOrder (napr. z "A1" extrahujeme "A")
                     const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
                     if (matchResult) {
