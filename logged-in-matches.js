@@ -6710,7 +6710,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
-    
+        
         const dateStr = getLocalDateStr(date);
     
         // VŠETKY zápasy pre túto halu a deň (BEZ FILTRA) - použijeme na výpočet voľného času
@@ -6754,6 +6754,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte, farby ubytovní A NOVÉ POLE totalMembersCount
         const filteredWithColors = filteredMatches.map(match => {
+            // ============================================================
+            // OPRAVA: Najprv definujeme premenné homeTeamName a awayTeamName
+            // ============================================================
+            const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            
             const homeInConflict = checkTeamConflicts(homeTeamName, match, matches, categories);
             const awayInConflict = checkTeamConflicts(awayTeamName, match, matches, categories);
     
@@ -6766,24 +6772,24 @@ const AddMatchesApp = ({ userProfileData }) => {
             const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
     
             // Kontrola, či názov tímu obsahuje názov kategórie
-            const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-            const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            const homeTeamNameForColor = getTeamNameByIdentifier(match.homeTeamIdentifier);
+            const awayTeamNameForColor = getTeamNameByIdentifier(match.awayTeamIdentifier);
     
-            if (homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
+            if (homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
                 const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                 if (accommodation) {
                     homeTeamColor = accommodation.headerColor;
                 }
-            } else if (!homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
+            } else if (!homeAccommodationName && !homeTeamNameForColor.includes(match.categoryName)) {
                 homeTeamColor = '#ffff00';
             }
     
-            if (awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
+            if (awayAccommodationName && !awayTeamNameForColor.includes(match.categoryName)) {
                 const accommodation = accommodations.find(a => a.name === awayAccommodationName);
                 if (accommodation) {
                     awayTeamColor = accommodation.headerColor;
                 }
-            } else if (!awayAccommodationName && !awayTeamName.includes(match.categoryName)) {
+            } else if (!awayAccommodationName && !awayTeamNameForColor.includes(match.categoryName)) {
                 awayTeamColor = '#ffff00';
             }
     
@@ -6836,7 +6842,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             // PRIDANÉ: Extrahovanie písmena z identifikátorov tímov
             // ============================================================
             const homeLetter = extractGroupLetterFromTeamName(match.homeTeamName);
-            const awayLetter = extractGroupLetterFromTeamName(match.awayTeamname);
+            const awayLetter = extractGroupLetterFromTeamName(match.awayTeamName);
     
             return {
                 ...match,
