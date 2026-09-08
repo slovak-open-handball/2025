@@ -330,6 +330,103 @@ setTimeout(() => {
 // Pridáme funkciu do window objektu
 window.debugMatches = debugMatches;
 
+// Pridajte túto funkciu do kódu (napríklad pred TeamsOverviewApp)
+const debugMatchEvents = async () => {
+    if (!window.db) {
+        console.log('❌ window.db nie je dostupné');
+        return;
+    }
+    
+    try {
+        console.log('🔍 DEBUG: Načítavam všetky udalosti z kolekcie matchEvents...');
+        const eventsRef = collection(window.db, 'matchEvents');
+        const querySnapshot = await getDocs(eventsRef);
+        
+        console.log(`📊 Celkový počet udalostí: ${querySnapshot.size}`);
+        
+        if (querySnapshot.size === 0) {
+            console.log('ℹ️ Kolekcia matchEvents je prázdna');
+            return;
+        }
+        
+        console.log('📋 Zoznam všetkých udalostí:');
+        console.log('─────────────────────────────────────────────────────────────');
+        
+        querySnapshot.forEach((doc, index) => {
+            const event = doc.data();
+            console.log(`📄 Udalosť #${index + 1}`);
+            console.log(`   ID: ${doc.id}`);
+            console.log(`   matchId: ${event.matchId || 'N/A'}`);
+            console.log(`   eventType: ${event.eventType || 'N/A'}`);
+            console.log(`   eventSubtype: ${event.eventSubtype || 'N/A'}`);
+            console.log(`   team: ${event.team || 'N/A'}`);
+            console.log(`   memberType: ${event.memberType || 'N/A'}`);
+            console.log(`   memberTypeKey: ${event.memberTypeKey || 'N/A'}`);
+            console.log(`   memberIndex: ${event.memberIndex !== undefined ? event.memberIndex : 'N/A'}`);
+            console.log(`   userId: ${event.userId || 'N/A'}`);
+            console.log(`   totalTime: ${event.totalTime !== undefined ? event.totalTime : 'N/A'}`);
+            console.log(`   periodTime: ${event.periodTime !== undefined ? event.periodTime : 'N/A'}`);
+            console.log(`   period: ${event.period || 'N/A'}`);
+            console.log(`   categoryName: ${event.categoryName || 'N/A'}`);
+            console.log(`   Dáta:`, event);
+            console.log('─────────────────────────────────────────────────────────────');
+        });
+        
+        // Štatistika podľa typov udalostí
+        const eventTypes = {};
+        const eventSubtypes = {};
+        const teamTypes = {};
+        
+        querySnapshot.forEach((doc) => {
+            const event = doc.data();
+            const type = event.eventType || 'unknown';
+            eventTypes[type] = (eventTypes[type] || 0) + 1;
+            
+            if (event.eventSubtype) {
+                const subtype = event.eventSubtype;
+                eventSubtypes[subtype] = (eventSubtypes[subtype] || 0) + 1;
+            }
+            
+            if (event.team) {
+                const team = event.team;
+                teamTypes[team] = (teamTypes[team] || 0) + 1;
+            }
+        });
+        
+        console.log('📊 Štatistika typov udalostí:');
+        Object.entries(eventTypes).forEach(([type, count]) => {
+            console.log(`   ${type}: ${count}`);
+        });
+        
+        if (Object.keys(eventSubtypes).length > 0) {
+            console.log('📊 Štatistika podtypov udalostí:');
+            Object.entries(eventSubtypes).forEach(([subtype, count]) => {
+                console.log(`   ${subtype}: ${count}`);
+            });
+        }
+        
+        if (Object.keys(teamTypes).length > 0) {
+            console.log('📊 Štatistika tímov:');
+            Object.entries(teamTypes).forEach(([team, count]) => {
+                console.log(`   ${team}: ${count}`);
+            });
+        }
+        
+        console.log('✅ DEBUG udalostí dokončený');
+        
+    } catch (error) {
+        console.error('❌ Chyba pri debugovaní udalostí:', error);
+    }
+};
+
+// Spustíme debug udalostí po načítaní
+setTimeout(() => {
+    debugMatchEvents();
+}, 4000);
+
+// Pridáme funkciu do window objektu
+window.debugMatchEvents = debugMatchEvents;
+
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
