@@ -5803,6 +5803,16 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (hasCompletedMatch) {
             return;
         }
+
+        // 🔥 VYPIŠ DO KONZOLY NÁZVY TÍMOV
+        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+        console.log(`Kliknutie na nepriradený zápas:`);
+        console.log(`Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+        console.log(`Hosť:   ${awayTeamName} (${match.awayTeamIdentifier})`);
+        console.log(`Kategória: ${match.categoryName || 'nezadaná'}`);
+        console.log('---');
+        
         setSelectedMatchForAssign(match);
         setIsAssignModalOpen(true);
     };
