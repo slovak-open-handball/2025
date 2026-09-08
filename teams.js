@@ -279,21 +279,31 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // Načítame štatistiky - použitá logika z logged-in-matches-hall.js
+    // Načítame štatistiky - použitá logika z logged-in-matches-hall.js s logovaním
     useEffect(() => {
+        console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
+        console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
+        console.log('[Stats Effect] rosterTeamName:', rosterTeamName);
+        console.log('[Stats Effect] rosterCategoryName:', rosterCategoryName);
+    
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
+            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
             setMembersStats({});
             return;
         }
-
+    
         const currentTeamName = rosterTeamName || selectedTeamDetails?.teamName || '';
         const currentCategoryName = rosterCategoryName || selectedTeamDetails?.category || '';
-
+    
+        console.log('[Stats Effect] currentTeamName:', currentTeamName);
+        console.log('[Stats Effect] currentCategoryName:', currentCategoryName);
+    
         if (!currentTeamName || !currentCategoryName) {
+            console.log('[Stats Effect] Podmienka TRUE: chýba teamName alebo categoryName');
             setMembersStats({});
             return;
         }
-
+    
         // --- 1. ZÍSKAME VŠETKY matchId PRE TÍM ---
         const matchesRef = collection(window.db, 'matches');
         
@@ -306,11 +316,14 @@ const TeamsOverviewApp = (props) => {
             matchesRef,
             where('awayTeamIdentifier', '==', currentTeamName)
         );
-
+    
         let matchIds = new Set();
-
+        let isFirstLoad = true;
+    
         // --- 2. FUNKCIA NA VYPOČÍTANIE ŠTATISTÍK Z UDALOSTÍ ---
-        const calculateStatsFromEvents = (eventsSnapshot) => {
+        const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {
+            console.log(`[Stats Effect] 📦 chunk ${chunkIndex}: spracúvam ${eventsSnapshot.size} udalostí`);
+            
             // Inicializujeme štatistiky pre každého člena
             const stats = {};
             teamRoster.forEach((member, idx) => {
@@ -330,10 +343,19 @@ const TeamsOverviewApp = (props) => {
                     memberType: member.type
                 };
             });
-
+    
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
                 const event = doc.data();
+                console.log(`[Stats Effect] 📄 Udalosť:`, {
+                    id: doc.id,
+                    eventType: event.eventType,
+                    eventSubtype: event.eventSubtype,
+                    memberTypeKey: event.memberTypeKey,
+                    memberIndex: event.memberIndex,
+                    team: event.team,
+                    matchId: event.matchId
+                });
                 
                 // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
                 let foundMemberKey = null;
@@ -344,53 +366,66 @@ const TeamsOverviewApp = (props) => {
                     }
                 }
                 
-                if (!foundMemberKey) return;
+                if (!foundMemberKey) {
+                    console.log(`[Stats Effect] ⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${event.memberTypeKey}, memberIndex=${event.memberIndex}`);
+                    return;
+                }
+                
                 const stat = stats[foundMemberKey];
+                console.log(`[Stats Effect] ✅ Priradené k členovi: ${stat.name} (${foundMemberKey})`);
                 
                 // Pripočítame štatistiky podľa typu udalosti
                 switch (event.eventType) {
                     case 'goal':
                         stat.goals++;
+                        console.log(`[Stats Effect] ⚽ Gól pre ${stat.name} (celkom: ${stat.goals})`);
                         if (event.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
                         }
                         break;
                     case 'penalty':
                         stat.missedPenalties++;
+                        console.log(`[Stats Effect] ❌ Nepremenená 7m pre ${stat.name}`);
                         break;
                     case 'card':
                         if (event.eventSubtype === 'yellow') {
                             stat.yellowCards++;
+                            console.log(`[Stats Effect] 🟨 ŽK pre ${stat.name} (celkom: ${stat.yellowCards})`);
                         } else if (event.eventSubtype === 'red') {
                             stat.redCards++;
+                            console.log(`[Stats Effect] 🟥 ČK pre ${stat.name} (celkom: ${stat.redCards})`);
                         } else if (event.eventSubtype === 'blue') {
                             stat.blueCards++;
+                            console.log(`[Stats Effect] 🟦 MK pre ${stat.name} (celkom: ${stat.blueCards})`);
                         }
                         break;
                     case 'exclusion':
                         stat.exclusions++;
+                        console.log(`[Stats Effect] ⏱️ Vylúčenie pre ${stat.name} (celkom: ${stat.exclusions})`);
                         break;
                 }
             });
-
+    
             return stats;
         };
-
+    
         // --- 3. POČÚVAME NA UDALOSTI PRE VŠETKY ZÁPASY TÍMU ---
         let eventsUnsubscribe = null;
-        let isFirstLoad = true;
-
+    
         const setupEventsListener = (matchIdsArray) => {
+            console.log('[Stats Effect] setupEventsListener - matchIds:', matchIdsArray);
+            
             // Zrušíme predchádzajúci listener
             if (eventsUnsubscribe) {
+                console.log('[Stats Effect] Ruším predchádzajúci listener na udalosti');
                 try {
                     eventsUnsubscribe();
                 } catch (e) {}
                 eventsUnsubscribe = null;
             }
-
+    
             if (matchIdsArray.length === 0) {
-                // Žiadne zápasy - vynulujeme štatistiky
+                console.log('[Stats Effect] Žiadne zápasy pre tím, vymazávam štatistiky');
                 const emptyStats = {};
                 teamRoster.forEach((member, idx) => {
                     const memberKey = `${member.type}_${member.originalIndex}`;
@@ -412,29 +447,34 @@ const TeamsOverviewApp = (props) => {
                 setMembersStats(emptyStats);
                 return;
             }
-
+    
             // Firebase umožňuje max 10 hodnôt v "in" operátore
             const chunkSize = 10;
             const chunks = [];
             for (let i = 0; i < matchIdsArray.length; i += chunkSize) {
                 chunks.push(matchIdsArray.slice(i, i + chunkSize));
             }
-
+            console.log(`[Stats Effect] Rozdelené do ${chunks.length} chunkov`);
+    
             // Pre každý chunk vytvoríme listener
             const listeners = [];
             let processedChunks = 0;
             const combinedStats = {};
-
+    
             chunks.forEach((chunk, index) => {
+                console.log(`[Stats Effect] Vytváram listener pre chunk ${index + 1}:`, chunk);
+                
                 const eventsRef = collection(window.db, 'matchEvents');
                 const eventsQuery = query(
                     eventsRef,
                     where('matchId', 'in', chunk)
                 );
-
+    
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
+                    console.log(`[Stats Effect] 📦 chunk ${index + 1}: prijatých ${eventsSnapshot.size} udalostí`);
+                    
                     // Spracujeme udalosti pre tento chunk
-                    const chunkStats = calculateStatsFromEvents(eventsSnapshot);
+                    const chunkStats = calculateStatsFromEvents(eventsSnapshot, index + 1);
                     
                     // Kombinujeme štatistiky
                     Object.entries(chunkStats).forEach(([memberKey, stat]) => {
@@ -463,13 +503,15 @@ const TeamsOverviewApp = (props) => {
                         combinedStats[memberKey].blueCards += stat.blueCards;
                         combinedStats[memberKey].exclusions += stat.exclusions;
                     });
-
+    
                     processedChunks++;
-
+    
                     // Ak sme spracovali všetky chunk-y, aktualizujeme stav
                     if (processedChunks === chunks.length) {
+                        console.log('[Stats Effect] ✅ Všetky chunk-y spracované, aktualizujem štatistiky');
+                        console.log('[Stats Effect] 📊 Výsledné štatistiky:', combinedStats);
+                        
                         // Overíme, či nejaký člen nemá duplicitné štatistiky
-                        // Vytvoríme nový objekt s čistými hodnotami
                         const finalStats = {};
                         Object.entries(combinedStats).forEach(([memberKey, stat]) => {
                             finalStats[memberKey] = {
@@ -489,6 +531,7 @@ const TeamsOverviewApp = (props) => {
                         });
                         setMembersStats(finalStats);
                         processedChunks = 0;
+                        
                         // Resetujeme kombinované štatistiky pre ďalšiu aktualizáciu
                         Object.keys(combinedStats).forEach(key => {
                             combinedStats[key] = {
@@ -508,17 +551,19 @@ const TeamsOverviewApp = (props) => {
                         });
                     }
                 }, (error) => {
-                    console.error('[Stats Effect] Chyba pri načítaní udalostí pre chunk:', error);
+                    console.error(`[Stats Effect] ❌ Chyba pri načítaní udalostí pre chunk ${index + 1}:`, error);
                     processedChunks++;
                     if (processedChunks === chunks.length) {
+                        console.log('[Stats Effect] Všetky chunk-y spracované (s chybami)');
                         processedChunks = 0;
                     }
                 });
-
+    
                 listeners.push(listener);
             });
-
+    
             eventsUnsubscribe = () => {
+                console.log('[Stats Effect] Ruším všetky listenery na udalosti');
                 listeners.forEach(listener => {
                     try {
                         listener();
@@ -526,53 +571,66 @@ const TeamsOverviewApp = (props) => {
                 });
             };
         };
-
+    
         // --- 4. POČÚVAME NA ZMENY V ZÁPASOCH A AKTUALIZUJEME UDALOSTI ---
         let unsubscribeHome = null;
         let unsubscribeAway = null;
-
+    
         const processMatches = (homeSnapshot, awaySnapshot) => {
             const newMatchIds = new Set();
             
+            console.log('[Stats Effect] DOMÁCE zápasy - počet:', homeSnapshot.size);
             homeSnapshot.forEach(doc => {
+                console.log(`[Stats Effect]   Domáci zápas: ${doc.id} - ${doc.data().homeTeamIdentifier} vs ${doc.data().awayTeamIdentifier}`);
                 newMatchIds.add(doc.id);
             });
             
+            console.log('[Stats Effect] HOSŤUJÚCE zápasy - počet:', awaySnapshot.size);
             awaySnapshot.forEach(doc => {
+                console.log(`[Stats Effect]   Hosťujúci zápas: ${doc.id} - ${doc.data().homeTeamIdentifier} vs ${doc.data().awayTeamIdentifier}`);
                 newMatchIds.add(doc.id);
             });
-
+    
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-
+    
+            console.log('[Stats Effect] Celkovo nájdených zápasov:', newMatchIdsArray.length);
+            console.log('[Stats Effect] matchIdsChanged:', matchIdsChanged);
+    
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
         };
-
+    
+        console.log('[Stats Effect] ✅ Spúšťam listener na DOMÁCE zápasy');
         unsubscribeHome = onSnapshot(matchesQueryHome, (homeSnapshot) => {
+            console.log('[Stats Effect] 📦 DOMÁCE zápasy - zmena, počet:', homeSnapshot.size);
+    
             if (unsubscribeAway) {
                 try {
                     unsubscribeAway();
                 } catch (e) {}
                 unsubscribeAway = null;
             }
-
+    
+            console.log('[Stats Effect] ✅ Spúšťam listener na HOSŤUJÚCE zápasy');
             unsubscribeAway = onSnapshot(matchesQueryAway, (awaySnapshot) => {
+                console.log('[Stats Effect] 📦 HOSŤUJÚCE zápasy - zmena, počet:', awaySnapshot.size);
                 processMatches(homeSnapshot, awaySnapshot);
             }, (error) => {
-                console.error('[Stats Effect] Chyba pri načítaní hosťujúcich zápasov:', error);
+                console.error('[Stats Effect] ❌ Chyba pri načítaní hosťujúcich zápasov:', error);
             });
         }, (error) => {
-            console.error('[Stats Effect] Chyba pri načítaní domácich zápasov:', error);
+            console.error('[Stats Effect] ❌ Chyba pri načítaní domácich zápasov:', error);
         });
-
+    
         // --- 5. CLEANUP ---
         return () => {
+            console.log('[Stats Effect] 🧹 CLEANUP - ruším všetky listenery');
             if (unsubscribeHome) {
                 try {
                     unsubscribeHome();
@@ -591,6 +649,7 @@ const TeamsOverviewApp = (props) => {
                 } catch (e) {}
                 eventsUnsubscribe = null;
             }
+            console.log('[Stats Effect] 🧹 CLEANUP dokončený');
         };
     }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails]);
     
