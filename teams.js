@@ -1,6 +1,6 @@
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
-import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef } = React;
 const listeners = new Set();
@@ -278,13 +278,22 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // Funkcia na načítanie štatistík členov tímu
+    // Načítame udalosti z matchEvents - FILTROVANÉ podľa aktuálneho tímu a kategórie
     useEffect(() => {
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
             setMembersStats({});
             return;
         }
-
+    
+        // Získame názov tímu a kategórie pre filtrovanie
+        const currentTeamName = rosterTeamName || selectedTeamDetails?.teamName || '';
+        const currentCategoryName = rosterCategoryName || selectedTeamDetails?.category || '';
+    
+        if (!currentTeamName || !currentCategoryName) {
+            setMembersStats({});
+            return;
+        }
+    
         // Vytvoríme mapu pre štatistiky
         const initialStats = {};
         teamRoster.forEach((member, idx) => {
@@ -304,17 +313,32 @@ const TeamsOverviewApp = (props) => {
                 memberType: member.type
             };
         });
-
-        // Nastavíme počiatočné štatistiky
+    
         setMembersStats(initialStats);
-
-        // Načítame udalosti z matchEvents
+    
+        // NAČÍTAME LEN UDALOSTI PRE AKTUÁLNY TÍM A KATEGÓRIU
+        // Použijeme query na filtrovanie podľa teamName a category
         const eventsRef = collection(window.db, 'matchEvents');
-        const unsubscribeEvents = onSnapshot(eventsRef, (snapshot) => {
-            const newStats = { ...initialStats };
-
+        const q = query(
+            eventsRef,
+            where('teamName', '==', currentTeamName),
+            where('category', '==', currentCategoryName)
+        );
+        
+        const unsubscribeEvents = onSnapshot(q, (snapshot) => {
+            // Vytvoríme kópiu počiatočných štatistík
+            const newStats = {};
+            Object.keys(initialStats).forEach(key => {
+                newStats[key] = { ...initialStats[key] };
+            });
+    
             snapshot.forEach((doc) => {
                 const event = doc.data();
+                
+                // Skontrolujeme, či udalosť patrí k tomuto týmu a kategórii
+                if (event.teamName !== currentTeamName || event.category !== currentCategoryName) {
+                    return; // Preskočíme udalosti, ktoré nepatria do aktuálneho tímu/kategórie
+                }
                 
                 // Zistíme, či udalosť patrí k niektorému členovi tímu
                 for (const [memberKey, stat] of Object.entries(newStats)) {
@@ -342,16 +366,17 @@ const TeamsOverviewApp = (props) => {
                     }
                 }
             });
-
+    
             setMembersStats(newStats);
         }, (error) => {
             // Ak nastane chyba, ponecháme počiatočné štatistiky
+            console.error('Chyba pri načítaní štatistík:', error);
         });
-
+    
         return () => {
             unsubscribeEvents();
         };
-    }, [teamRoster]);
+    }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails]);
 
     // Funkcia na načítanie súpisky tímu pomocou loadTeamMembers
     const loadTeamRoster = (teamName, categoryName) => {
