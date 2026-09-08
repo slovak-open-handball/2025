@@ -346,19 +346,15 @@ const TeamsOverviewApp = (props) => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
         console.log('[Stats Effect] currentTeamKey:', currentTeamKey);
-        console.log('[Stats Effect] isTeamSwitchInProgress:', isTeamSwitchInProgress);
-        
-        // AK PREBIEHA PREPÍNANIE TÍMU, NEROBÍME NIČ
-        if (isTeamSwitchInProgress) {
-            console.log('[Stats Effect] ⏳ Prepínanie tímu prebieha, čakám...');
-            return;
-        }
         
         const teamKey = `${rosterTeamName || selectedTeamDetails?.teamName || ''}_${rosterCategoryName || selectedTeamDetails?.category || ''}`;
         
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
             console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
-            setMembersStats({});
+            // VYMAŽEME ŠTATISTIKY LEN AK NIE JE ŽIADNY TÍM
+            if (!rosterTeamName && !selectedTeamDetails?.teamName) {
+                setMembersStats({});
+            }
             return;
         }
     
@@ -648,7 +644,7 @@ const TeamsOverviewApp = (props) => {
                 eventsUnsubscribe = null;
             }
         };
-    }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails, updateTrigger, isTeamSwitchInProgress]);
+    }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails, updateTrigger]);
 
     // OPRAVENÁ FUNKCIA loadTeamRoster
     const loadTeamRoster = (teamName, categoryName) => {
@@ -808,13 +804,14 @@ const TeamsOverviewApp = (props) => {
                     categoryName = categoryIdToNameMap[categoryName];
                 }
                 // VOLÁME LEN AK SA ZMENIL NÁZOV TÍMU ALEBO KATEGÓRIA
-                const currentTeamName = rosterTeamName || selectedTeamDetails?.teamName || '';
-                const currentCategoryName = rosterCategoryName || selectedTeamDetails?.category || '';
+                const currentTeamName = rosterTeamName || '';
+                const currentCategoryName = rosterCategoryName || '';
                 if (selectedOcc.teamName !== currentTeamName || categoryName !== currentCategoryName) {
                     loadTeamRoster(selectedOcc.teamName, categoryName);
                 }
             }
         } else {
+            // ZATVORENIE DETAILU - VYMAŽEME VŠETKO
             if (rosterUnsubscribe) {
                 try {
                     rosterUnsubscribe();
@@ -1244,7 +1241,6 @@ const TeamsOverviewApp = (props) => {
         }
     };
 
-    // OPRAVENÁ FUNKCIA closeTeamDetails
     const closeTeamDetails = () => {
         const { categoryName: categoryNameFromUrl } = parseUrlHash();
         
@@ -1277,7 +1273,6 @@ const TeamsOverviewApp = (props) => {
         updateUrlHash(null, categoryNameFromUrl || null);
     };
 
-    // OPRAVENÁ FUNKCIA handleTeamOccurrenceClick
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
