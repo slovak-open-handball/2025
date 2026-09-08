@@ -526,6 +526,25 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
+    // --- FUNKCIA NA KONVERZIU IDENTIFIKÁTORA NA ZOBRAZENÝ NÁZOV ---
+    const convertIdentifierToDisplayName = (identifier) => {
+        if (!identifier) return identifier;
+        
+        // Skúsime použiť teamManager na synchrónnu konverziu
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                if (convertedName && convertedName !== identifier) {
+                    console.log(`[Stats Effect] 🔄 Konverzia: "${identifier}" -> "${convertedName}"`);
+                    return convertedName;
+                }
+            } catch (err) {
+                console.log(`[Stats Effect] ⚠️ Chyba pri konverzii "${identifier}":`, err);
+            }
+        }
+        return identifier;
+    };
+
     // Načítame štatistiky - použitá logika z logged-in-matches-hall.js s logovaním a konverziou názvov
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
@@ -551,47 +570,11 @@ const TeamsOverviewApp = (props) => {
             return;
         }
     
-        // --- 0. FUNKCIA NA KONVERZIU NÁZVU TÍMU (SYNCHRÓNNA) ---
-        const convertTeamIdentifierSync = (identifier) => {
-            if (!identifier) return identifier;
-            
-            // Skúsime použiť teamManager na synchrónnu konverziu
-            // Toto konvertuje "Tatran Prešov A" -> "U12 CH A1"
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                try {
-                    // Najprv skúsime konvertovať zobrazený názov na identifikátor
-                    const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                    if (convertedName && convertedName !== identifier) {
-                        console.log(`[Stats Effect] 🔄 Konverzia: "${identifier}" -> "${convertedName}"`);
-                        return convertedName;
-                    }
-                } catch (err) {
-                    console.log(`[Stats Effect] ⚠️ Chyba pri konverzii "${identifier}":`, err);
-                }
-            } else {
-                console.log('[Stats Effect] ⚠️ window.teamManager.getTeamNameByDisplayIdSync nie je dostupný');
-            }
-            return identifier;
-        };
-    
         // --- 1. ZÍSKAME VŠETKY matchId PRE TÍM ---
         const matchesRef = collection(window.db, 'matches');
-    
-        // Použijeme konvertovaný názov pre vyhľadávanie
-        // Toto konvertuje "Tatran Prešov A" na "U12 CH A1"
-        const processedTeamName = convertTeamIdentifierSync(currentTeamName);
-        console.log('[Stats Effect] 🔍 Vyhľadávam zápasy pre tím (konvertovaný):', processedTeamName);
-        console.log('[Stats Effect] 🔍 Pôvodný názov:', currentTeamName);
-    
-        const matchesQueryHome = query(
-            matchesRef,
-            where('homeTeamIdentifier', '==', processedTeamName)
-        );
         
-        const matchesQueryAway = query(
-            matchesRef,
-            where('awayTeamIdentifier', '==', processedTeamName)
-        );
+        // Načítame všetky zápasy a budeme ich filtrovať podľa konvertovaných názvov
+        const matchesQuery = query(matchesRef);
     
         let matchIds = new Set();
         let isFirstLoad = true;
@@ -843,29 +826,30 @@ const TeamsOverviewApp = (props) => {
         };
     
         // --- 4. POČÚVAME NA ZMENY V ZÁPASOCH A AKTUALIZUJEME UDALOSTI ---
-        let unsubscribeHome = null;
-        let unsubscribeAway = null;
+        let unsubscribeMatches = null;
     
-        const processMatches = (homeSnapshot, awaySnapshot) => {
+        const processMatches = (matchesSnapshot) => {
             const newMatchIds = new Set();
             
-            console.log('[Stats Effect] DOMÁCE zápasy - počet:', homeSnapshot.size);
-            homeSnapshot.forEach(doc => {
-                const matchData = doc.data();
-                // Konvertujeme identifikátory tímov z zápasu pre zobrazenie
-                const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
-                const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
-                console.log(`[Stats Effect]   Domáci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
-                newMatchIds.add(doc.id);
-            });
+            console.log('[Stats Effect] 📦 Všetky zápasy - počet:', matchesSnapshot.size);
             
-            console.log('[Stats Effect] HOSŤUJÚCE zápasy - počet:', awaySnapshot.size);
-            awaySnapshot.forEach(doc => {
+            matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
-                const convertedHome = convertTeamIdentifierSync(matchData.homeTeamIdentifier);
-                const convertedAway = convertTeamIdentifierSync(matchData.awayTeamIdentifier);
-                console.log(`[Stats Effect]   Hosťujúci zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
-                newMatchIds.add(doc.id);
+                // Konvertujeme identifikátory tímov z zápasu na zobrazené názvy
+                const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
+                const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
+                
+                // Skontrolujeme, či sa niektorý z konvertovaných názvov zhoduje s currentTeamName
+                if (convertedHome === currentTeamName || convertedAway === currentTeamName) {
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${currentTeamName}": ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
+                    newMatchIds.add(doc.id);
+                } else {
+                    // Pre debug - ukážeme aj ostatné zápasy (iba ak došlo ku konverzii)
+                    if (convertedHome !== matchData.homeTeamIdentifier || convertedAway !== matchData.awayTeamIdentifier) {
+                        // Len pre debug, nebudeme to logovať všetky, aby sme nezahlcovali konzolu
+                        // console.log(`[Stats Effect]   Zápas: ${doc.id} - ${matchData.homeTeamIdentifier} -> ${convertedHome} vs ${matchData.awayTeamIdentifier} -> ${convertedAway}`);
+                    }
+                }
             });
     
             const newMatchIdsArray = Array.from(newMatchIds);
@@ -873,7 +857,7 @@ const TeamsOverviewApp = (props) => {
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
     
-            console.log('[Stats Effect] Celkovo nájdených zápasov:', newMatchIdsArray.length);
+            console.log('[Stats Effect] Celkovo nájdených zápasov pre tím:', newMatchIdsArray.length);
             console.log('[Stats Effect] matchIdsChanged:', matchIdsChanged);
     
             if (matchIdsChanged || isFirstLoad) {
@@ -885,42 +869,21 @@ const TeamsOverviewApp = (props) => {
             console.log('[Stats Effect] 📋 Všetky matchId pre tím:', Array.from(matchIds));
         };
     
-        console.log('[Stats Effect] ✅ Spúšťam listener na DOMÁCE zápasy');
-        unsubscribeHome = onSnapshot(matchesQueryHome, (homeSnapshot) => {
-            console.log('[Stats Effect] 📦 DOMÁCE zápasy - zmena, počet:', homeSnapshot.size);
-    
-            if (unsubscribeAway) {
-                try {
-                    unsubscribeAway();
-                } catch (e) {}
-                unsubscribeAway = null;
-            }
-    
-            console.log('[Stats Effect] ✅ Spúšťam listener na HOSŤUJÚCE zápasy');
-            unsubscribeAway = onSnapshot(matchesQueryAway, (awaySnapshot) => {
-                console.log('[Stats Effect] 📦 HOSŤUJÚCE zápasy - zmena, počet:', awaySnapshot.size);
-                processMatches(homeSnapshot, awaySnapshot);
-            }, (error) => {
-                console.error('[Stats Effect] ❌ Chyba pri načítaní hosťujúcich zápasov:', error);
-            });
+        console.log('[Stats Effect] ✅ Spúšťam listener na všetky zápasy');
+        unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
+            processMatches(matchesSnapshot);
         }, (error) => {
-            console.error('[Stats Effect] ❌ Chyba pri načítaní domácich zápasov:', error);
+            console.error('[Stats Effect] ❌ Chyba pri načítaní zápasov:', error);
         });
     
         // --- 5. CLEANUP ---
         return () => {
             console.log('[Stats Effect] 🧹 CLEANUP - ruším všetky listenery');
-            if (unsubscribeHome) {
+            if (unsubscribeMatches) {
                 try {
-                    unsubscribeHome();
+                    unsubscribeMatches();
                 } catch (e) {}
-                unsubscribeHome = null;
-            }
-            if (unsubscribeAway) {
-                try {
-                    unsubscribeAway();
-                } catch (e) {}
-                unsubscribeAway = null;
+                unsubscribeMatches = null;
             }
             if (eventsUnsubscribe) {
                 try {
