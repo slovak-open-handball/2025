@@ -2913,18 +2913,20 @@ const AddTeamsGroupApp = (props) => {
             return name;
         };
     
-        // 🔥 NOVÁ FUNKCIA: Získanie duplicitných názvov v kategórii LEN PRE POUŽÍVATEĽSKÉ TÍMY
+        // 🔥 UPRAVENÁ FUNKCIA: Získanie duplicitných názvov v kategórii LEN PRE POUŽÍVATEĽSKÉ TÍMY
+        // Ignoruje veľkosť písmen a medzery
         const getDuplicateTeamsInCategory = (categoryName) => {
-            const teamsInCategory = allTeams.filter(t => t.category === categoryName && !t.isSuperstructureTeam); // LEN používateľské tímy
+            const teamsInCategory = allTeams.filter(t => t.category === categoryName && !t.isSuperstructureTeam);
             const teamNameCount = new Map();
             const duplicateNames = new Set();
             
             teamsInCategory.forEach(t => {
-                // Pre používateľské tímy používame priamo teamName
-                const cleanName = t.teamName.trim();
+                // Odstránime medzery a prevedieme na malé písmená pre porovnanie
+                const cleanName = t.teamName.trim().replace(/\s+/g, '').toLowerCase();
                 const count = teamNameCount.get(cleanName) || 0;
                 teamNameCount.set(cleanName, count + 1);
                 if (count >= 1) {
+                    // Uložíme pôvodný názov (alebo normalizovaný) pre neskoršie porovnanie
                     duplicateNames.add(cleanName);
                 }
             });
@@ -3045,8 +3047,8 @@ const AddTeamsGroupApp = (props) => {
                 // 🔥 KONTROLA DUPLICITY LEN PRE POUŽÍVATEĽSKÉ TÍMY
                 let isDuplicate = false;
                 if (!team.isSuperstructureTeam) {
-                    const cleanNameForCheck = team.teamName.trim();
-                    isDuplicate = allDuplicateNames.has(cleanNameForCheck);
+                    const cleanNameForCheck = team.teamName.trim().replace(/\s+/g, '').toLowerCase();
+                    isDuplicate = duplicateNamesInCategory.has(cleanNameForCheck);
                 }
     
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
