@@ -171,15 +171,18 @@ const canInsertMatchAtTime = (match, newTimeMinutes, newDateStr, allMatches, cat
     return true;
 };
 
-// Funkcia na kontrolu, či zápas patrí do nadstavbovej skupiny
 const isMatchFromAdvancedGroup = (match) => {
     if (!match || !match.groupName || !match.categoryId) return false;
     
-    // Použijeme globálnu premennú
     const groups = window.__groupsByCategory?.[match.categoryId];
+    console.log('isMatchFromAdvancedGroup - match:', match.id, match.groupName);
+    console.log('isMatchFromAdvancedGroup - groups:', groups);
+    
     if (!groups || !Array.isArray(groups)) return false;
     
-    return groups.some(g => g.name === match.groupName && g.type === 'nadstavbová skupina');
+    const result = groups.some(g => g.name === match.groupName && g.type === 'nadstavbová skupina');
+    console.log('isMatchFromAdvancedGroup - result:', result);
+    return result;
 };
 
 const getLocalDateFromStr = (dateStr) => {
@@ -3409,31 +3412,41 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             if (isAdvancedMatch && match && selectedDate) {
                 const letters = [homeLetter, awayLetter].filter(l => l !== '');
                 
+                console.log('=== KONTROLA NADSTAVBOVEJ SKUPINY ===');
+                console.log('match.categoryId:', match.categoryId);
+                console.log('selectedDate:', selectedDate);
+                console.log('letters:', letters);
+                console.log('allMatches count:', allMatches.length);
+                
                 for (const letter of letters) {
-                    // Nájdeme posledný zápas pre toto písmeno v tejto kategórii (VO VŠETKÝCH DŇOCH)
+                    console.log(`Hľadám posledný zápas pre písmeno: ${letter}`);
+                    
                     const lastMatchInfo = getLastMatchTimeForLetter(
                         letter, 
                         match.categoryId, 
                         allMatches,
-                        match.id // vynecháme aktuálny zápas
+                        match.id
                     );
+        
+                    console.log(`lastMatchInfo pre ${letter}:`, lastMatchInfo);
                     
                     if (lastMatchInfo) {
-                        // Porovnáme dátumy
+                        console.log(`selectedDate: ${selectedDate} vs lastMatchInfo.date: ${lastMatchInfo.date}`);
+                        console.log(`newStartMinutes: ${newStartMinutes} vs lastMatchInfo.time: ${lastMatchInfo.time}`);
+                        
                         if (selectedDate < lastMatchInfo.date) {
-                            // Nový deň je SKÔR ako posledný zápas -> nedovolíme vložiť
                             setTimeError(`Zápas s tímom ${letter} nemôže byť v dni ${selectedDate} pred posledným zápasom skupiny ${letter} (dňa ${lastMatchInfo.date} o ${formatTimeFromMinutes(lastMatchInfo.time)})`);
                             return;
                         } else if (selectedDate === lastMatchInfo.date && newStartMinutes < lastMatchInfo.time) {
-                            // Rovnaký deň, ale čas je skôr -> nedovolíme vložiť
                             setTimeError(`Zápas s tímom ${letter} nemôže byť pred posledným zápasom skupiny ${letter} (končí o ${formatTimeFromMinutes(lastMatchInfo.time)})`);
                             return;
                         }
-                        // Ak je nový deň neskôr, je to v poriadku
+                    } else {
+                        console.log(`Žiadny posledný zápas pre písmeno ${letter}`);
                     }
                 }
             }
-    
+                
             // PÔVODNÁ KONTROLA PREKRÝVANIA (iba v rámci vybraného dňa a haly)
             const overlapping = existingMatches.filter(existingMatch => {
                 if (!existingMatch.scheduledTime) return false;
