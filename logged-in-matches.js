@@ -2815,42 +2815,41 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         setIsAdvancedGroup(true);
 
-        // Získame názvy tímov pre aktuálny zápas
-        const homeTeamName = getTeamNameByIdentifier(currentMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(currentMatch.awayTeamIdentifier);
+        // Získame názvy skupín pre oba tímy z ich identifikátorov
+        const getGroupNameFromIdentifier = (identifier) => {
+            if (!identifier) return null;
+            // Identifikátor je v tvare "Kategória SkupinaČíslo" (napr. "U12 CH G2")
+            const parts = identifier.split(' ');
+            if (parts.length < 2) return null;
+            const groupAndOrder = parts[parts.length - 1];
+            
+            // Extrahujeme názov skupiny (všetko okrem číslice na konci)
+            const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+            if (match) {
+                return `skupina ${match[1]}`; // Vrátime "skupina G"
+            }
+            return null;
+        };
 
-        // Extrahujeme písmená z názvov tímov
-        const homeLetter = extractLetterFromTeamName(homeTeamName);
-        const awayLetter = extractLetterFromTeamName(awayTeamName);
+        const homeGroupName = getGroupNameFromIdentifier(currentMatch.homeTeamIdentifier);
+        const awayGroupName = getGroupNameFromIdentifier(currentMatch.awayTeamIdentifier);
 
-        // Získame všetky unikátne písmená
-        const targetLetters = new Set();
-        if (homeLetter) targetLetters.add(homeLetter);
-        if (awayLetter) targetLetters.add(awayLetter);
+        // Vytvoríme množinu skupín, z ktorých tímy pochádzajú
+        const targetGroupNames = new Set();
+        if (homeGroupName) targetGroupNames.add(homeGroupName);
+        if (awayGroupName) targetGroupNames.add(awayGroupName);
 
-        if (targetLetters.size === 0) return [];
+        if (targetGroupNames.size === 0) return [];
 
-        // Nájdeme všetky zápasy v tej istej kategórii, ktoré majú skupinu s rovnakým písmenom
+        // Nájdeme všetky zápasy v tej istej kategórii, ktoré patria do týchto skupín
         const allCategoryMatches = allMatches.filter(m => 
             m.categoryId === currentMatch.categoryId && 
             m.id !== currentMatch.id &&
-            m.hallId && // Iba priradené zápasy
-            m.scheduledTime
+            m.groupName && // Musí mať skupinu
+            targetGroupNames.has(m.groupName) // Musí patriť do jednej z našich skupín
         );
 
-        const related = allCategoryMatches.filter(m => {
-            // Získame názvy tímov pre tento zápas
-            const mHomeName = getTeamNameByIdentifier(m.homeTeamIdentifier);
-            const mAwayName = getTeamNameByIdentifier(m.awayTeamIdentifier);
-            const mHomeLetter = extractLetterFromTeamName(mHomeName);
-            const mAwayLetter = extractLetterFromTeamName(mAwayName);
-
-            // Kontrola, či aspoň jeden tím v zápase má písmeno, ktoré hľadáme
-            return (mHomeLetter && targetLetters.has(mHomeLetter)) || 
-                   (mAwayLetter && targetLetters.has(mAwayLetter));
-        });
-
-        return related;
+        return allCategoryMatches;
     };
 
     // Funkcia na získanie názvu tímu podľa identifikátora
