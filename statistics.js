@@ -97,7 +97,6 @@ const loadAllTeamMembers = (onUpdate) => {
                     // Hráči
                     if (team.playerDetails && Array.isArray(team.playerDetails)) {
                         team.playerDetails.forEach((player, idx) => {
-                            // Vytvoríme unikátny identifikátor
                             const uniqueId = `${userId}_playerDetails_${idx}`;
                             if (!memberMap.has(uniqueId)) {
                                 const member = {
@@ -113,14 +112,12 @@ const loadAllTeamMembers = (onUpdate) => {
                                     teamName: teamName,
                                     categoryName: categoryName,
                                     teamId: team.id || null,
-                                    // Vytvoríme viacero identifikátorov pre lepšie párovanie
                                     memberIdentifiers: [
                                         `playerDetails_${idx}`,
                                         `players_${idx}`,
                                         `player_${idx}`,
                                         `hráč_${idx}`
                                     ],
-                                    // Uložíme aj celé meno pre fallback
                                     fullName: `${player.firstName || ''} ${player.lastName || ''}`.trim()
                                 };
                                 memberMap.set(uniqueId, member);
@@ -194,7 +191,6 @@ const loadAllTeamMembers = (onUpdate) => {
             }
         }
         
-        // Zoradenie: najprv RT členovia, potom hráči, podľa priezviska
         const rtMembers = allMembers.filter(m => m.type !== 'Hráč');
         const players = allMembers.filter(m => m.type === 'Hráč');
         
@@ -215,11 +211,10 @@ const loadAllTeamMembers = (onUpdate) => {
     return unsubscribe;
 };
 
-// Funkcia na výpočet štatistík z udalostí - VYLEPŠENÉ PÁROVANIE
+// Funkcia na výpočet štatistík z udalostí
 const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
     console.log('[Stats] Spracúvam udalosti, počet:', eventsSnapshot.size);
     
-    // Inicializujeme štatistiky pre každého člena
     const stats = {};
     membersMap.forEach((member, key) => {
         stats[key] = {
@@ -236,7 +231,6 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             teamName: member.teamName,
             categoryName: member.categoryName,
             userId: member.userId,
-            // Uložíme si aj referencie na člena pre debug
             memberIdentifiers: member.memberIdentifiers || []
         };
     });
@@ -244,13 +238,12 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
     let matchedEvents = 0;
     let unmatchedEvents = 0;
 
-    // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
     eventsSnapshot.forEach((doc) => {
         const event = doc.data();
         let foundMemberKey = null;
         let matchMethod = null;
         
-        // 1. Skúsime nájsť podľa userId + memberTypeKey + memberIndex (NAJPRESNEJŠIE)
+        // 1. userId + memberTypeKey + memberIndex
         if (event.userId && event.memberTypeKey !== undefined && event.memberIndex !== undefined) {
             for (const [key, member] of membersMap) {
                 if (member.userId === event.userId && 
@@ -263,7 +256,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 2. Skúsime nájsť podľa userId + memberIndex (ak memberTypeKey nie je dostupný)
+        // 2. userId + memberIndex
         if (!foundMemberKey && event.userId && event.memberIndex !== undefined) {
             for (const [key, member] of membersMap) {
                 if (member.userId === event.userId && 
@@ -275,7 +268,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 3. Skúsime nájsť podľa memberIdentifier (memberTypeKey + memberIndex)
+        // 3. memberIdentifier
         if (!foundMemberKey && event.memberTypeKey !== undefined && event.memberIndex !== undefined) {
             const memberIdentifier = `${event.memberTypeKey}_${event.memberIndex}`;
             for (const [key, member] of membersMap) {
@@ -287,7 +280,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 4. Skúsime nájsť podľa mena a priezviska + tímu
+        // 4. fullName + team
         if (!foundMemberKey) {
             const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
             if (eventMemberName) {
@@ -302,7 +295,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 5. Skúsime nájsť podľa mena a priezviska (bez tímu)
+        // 5. fullName
         if (!foundMemberKey) {
             const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
             if (eventMemberName) {
@@ -317,7 +310,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 6. Skúsime nájsť podľa čísla dresu + tímu
+        // 6. jerseyNumber + team
         if (!foundMemberKey && event.memberJerseyNumber) {
             for (const [key, member] of membersMap) {
                 if (member.jerseyNumber === event.memberJerseyNumber && 
@@ -329,7 +322,7 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 7. Skúsime nájsť podľa čísla dresu (bez tímu)
+        // 7. jerseyNumber
         if (!foundMemberKey && event.memberJerseyNumber) {
             for (const [key, member] of membersMap) {
                 if (member.jerseyNumber === event.memberJerseyNumber) {
@@ -340,11 +333,10 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
             }
         }
         
-        // 8. Skúsime nájsť podľa userId (ak máme iba userId)
+        // 8. userId + fullName
         if (!foundMemberKey && event.userId) {
             for (const [key, member] of membersMap) {
                 if (member.userId === event.userId) {
-                    // Ak máme viac členov s rovnakým userId, skúsime podľa mena
                     const eventMemberName = `${event.memberFirstName || ''} ${event.memberLastName || ''}`.trim();
                     if (eventMemberName) {
                         const memberName = `${member.firstName} ${member.lastName}`.trim();
@@ -360,7 +352,6 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
         
         if (!foundMemberKey) {
             unmatchedEvents++;
-            // Logujeme len prvé 5 nepriradených udalostí
             if (!window._unmatchedEventsLogged) {
                 window._unmatchedEventsLogged = 0;
             }
@@ -381,7 +372,6 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
         matchedEvents++;
         const stat = stats[foundMemberKey];
         
-        // Pripočítame štatistiky podľa typu udalosti
         switch (event.eventType) {
             case 'goal':
                 stat.goals++;
@@ -416,6 +406,9 @@ const calculateStatsFromEvents = (eventsSnapshot, membersMap) => {
     return stats;
 };
 
+// ============================================================
+// HLAVNÁ KOMPONENTA
+// ============================================================
 const TeamsOverviewApp = (props) => {
     const [allMembers, setAllMembers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -427,14 +420,30 @@ const TeamsOverviewApp = (props) => {
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
-    const [isRostersVisible, setIsRostersVisible] = useState(...);
-
-    // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
         window.pagesVisibility['rosters'].visible === true
     );
+
+    // --- REFERENCIA PRE KONTROLU VÝŠKY TABUĽKY ---
+    const tableContainerRef = useRef(null);
+    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
+
+    // --- EFFECT PRE DYNAMICKÚ VÝŠKU TABUĽKY ---
+    useEffect(() => {
+        const updateHeight = () => {
+            if (tableContainerRef.current) {
+                const rect = tableContainerRef.current.getBoundingClientRect();
+                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
+                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 300)}px`);
+            }
+        };
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, [allMembers]);
 
     // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
     useEffect(() => {
@@ -471,24 +480,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    const tableContainerRef = useRef(null);
-    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
-
-    useEffect(() => {
-        const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 300)}px`);
-            }
-        };
-
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, [allMembers]);
-
-    // Načítanie kategórií
+    // --- Načítanie kategórií ---
     useEffect(() => {
         if (!window.db) return;
 
@@ -510,7 +502,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Načítanie štatistík pre všetkých členov
+    // --- Načítanie štatistík pre všetkých členov ---
     useEffect(() => {
         if (!allMembers || allMembers.length === 0 || !window.db) {
             setMembersStats({});
@@ -520,7 +512,6 @@ const TeamsOverviewApp = (props) => {
         console.log('[Stats] Spúšťam načítanie štatistík pre', allMembers.length, 'členov');
         setIsLoadingStats(true);
 
-        // Vytvoríme mapu členov pre rýchle vyhľadávanie
         const membersMap = new Map();
         allMembers.forEach((member, index) => {
             const key = `${member.type}_${member.originalIndex}_${member.userId}`;
@@ -742,7 +733,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, [allMembers]);
 
-    // Načítanie všetkých členov
+    // --- Načítanie všetkých členov ---
     useEffect(() => {
         console.log('[TeamsOverviewApp] Spúšťam načítanie všetkých členov');
         
@@ -793,6 +784,9 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
+    // ============================================================
+    // RENDER FUNKCIA
+    // ============================================================
     const renderAllMembersTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
@@ -855,12 +849,11 @@ const TeamsOverviewApp = (props) => {
             return stats;
         };
         
-        // ===== UPRAVENÁ ČASŤ S REF A STYLE =====
         return React.createElement(
             'div',
             { 
                 className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden',
-                ref: tableContainerRef  // <--- PRIDAJ TOTO
+                ref: tableContainerRef
             },
             React.createElement(
                 'div',
@@ -879,22 +872,99 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'overflow-x-auto overflow-y-auto',  // <--- PRIDAJ overflow-y-auto
-                    style: { maxHeight: maxTableHeight }  // <--- PRIDAJ TOTO
+                    className: 'overflow-x-auto overflow-y-auto',
+                    style: { maxHeight: maxTableHeight }
                 },
                 React.createElement(
                     'table',
                     { className: 'w-full border-collapse text-sm' },
-                    // ... zvyšok tabuľky (hlavička a telo) zostáva rovnaký ...
                     React.createElement(
                         'thead',
                         { className: 'bg-gray-100 sticky top-0 z-10' },
-                        // ... hlavička ...
+                        React.createElement(
+                            'tr',
+                            { className: 'border-b border-gray-200' },
+                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { width: '35px' } }, ''),
+                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { width: '50px' } }, 'Č.'),
+                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '150px' } }, 'Meno a priezvisko'),
+                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '120px' } }, 'Kategória'),
+                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '150px' } }, 'Tím'),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'G')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '60px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, '7m')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-yellow-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ŽK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-red-600 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ČK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-blue-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'MK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '60px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-clock text-orange-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vyl.')
+                                )
+                            )
+                        )
                     ),
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
-                        // ... riadky ...
+                        allMembers.map((member, index) => {
+                            const fullName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
+                            const stats = getMemberStats(member);
+                            const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
+                            const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
+                            
+                            const memberIcon = member.type === 'Hráč' 
+                                ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
+                                : (member.type === 'Člen RT (muž)' 
+                                    ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 text-sm' })
+                                    : (member.type === 'Člen RT (žena)'
+                                        ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-sm' })
+                                        : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-sm' })));
+                            
+                            const rowClass = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                            
+                            return React.createElement(
+                                'tr',
+                                { 
+                                    key: `${member.type}_${member.originalIndex}_${member.userId}_${index}`,
+                                    className: `${rowClass} transition-colors cursor-default`
+                                },
+                                React.createElement('td', { className: 'px-3 py-2 text-center' }, memberIcon),
+                                React.createElement('td', { className: 'px-3 py-2 font-mono font-medium text-gray-700 text-center' }, member.jerseyNumber || ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-gray-800 whitespace-nowrap' }, fullName),
+                                React.createElement('td', { className: 'px-3 py-2 text-gray-600 text-sm' }, member.categoryName || ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-gray-600 text-sm' }, member.teamName || ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
+                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
+                            );
+                        })
                     )
                 )
             ),
@@ -928,6 +998,9 @@ const TeamsOverviewApp = (props) => {
     );
 };
 
+// ============================================================
+// RENDER A INIT
+// ============================================================
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
