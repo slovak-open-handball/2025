@@ -2970,6 +2970,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             m.scheduledTime &&
             m.id !== currentMatch?.id
         ).filter(m => {
+            if (!m.scheduledTime) return false;
             const matchDate = m.scheduledTime.toDate();
             const matchDateStr = getLocalDateStr(matchDate);
             return matchDateStr === date;
