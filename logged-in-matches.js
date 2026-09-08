@@ -4087,16 +4087,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             'p',
                             { className: 'text-sm text-red-600 mt-1' },
                             'Vo vybranej kategórii sa nachádzajú tímy s duplicitným názvom. Zápasy nie je možné vygenerovať, kým nebudú názvy tímov unikátne.'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-red-500 mt-2' },
-                            'Duplicitné názvy sa porovnávajú bez ohľadu na veľkosť písmen a medzery (napr. "1A" a "1 a" sú považované za duplicitné).'
-                        ),
+                        )
                         React.createElement(
                             'p',
                             { className: 'text-xs text-red-500 mt-1' },
-                            'Prosím, opravte duplicitné názvy tímov v správe tímov a skúste to znova.'
+                            'Prosím, opravte duplicitné názvy tímov v časti "Všetky registrácie" a skúste to znova.'
                         )
                     )
                 )
