@@ -1603,7 +1603,8 @@ const TeamsOverviewApp = (props) => {
         loadTeamRoster(occ.teamName, categoryName);
     };
 
-    // Render súpisky tímu so štatistikami
+    // Vymeňte časť renderTeamRoster v teams.js (od cca riadku 1500) za:
+    
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
         const hasCategoryInUrl = !!categoryFromUrl;
@@ -1675,6 +1676,10 @@ const TeamsOverviewApp = (props) => {
             }
             return stats;
         };
+        
+        // Debug - vypíšeme štatistiky do konzoly
+        console.log('[renderTeamRoster] membersStats:', membersStats);
+        console.log('[renderTeamRoster] teamRoster:', teamRoster);
         
         return React.createElement(
             'div',
@@ -1754,6 +1759,9 @@ const TeamsOverviewApp = (props) => {
                             const stats = getMemberStats(member);
                             const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                             const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
+                            
+                            // Debug pre každého člena
+                            console.log(`[renderTeamRoster] ${fullName} (${member.type}_${member.originalIndex}):`, stats);
                             
                             const memberIcon = member.type === 'Hráč' 
                                 ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
