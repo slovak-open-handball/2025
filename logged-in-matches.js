@@ -5858,7 +5858,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             min: hallStartTime || undefined
                         }),
                         
-                        suggestedTime && !selectedTime && React.createElement(
+                        suggestedTime && !selectedTime && !timeError?.includes('pavúk/umiestnenie') && !timeError?.includes('PO súvisiacich') && React.createElement(
                             'button',
                             {
                                 onClick: handleApplySuggestedTime,
