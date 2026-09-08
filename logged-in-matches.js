@@ -4091,7 +4091,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         React.createElement(
                             'p',
                             { className: 'text-xs text-red-500 mt-1' },
-                            'Prosím, opravte duplicitné názvy tímov v časti "Všetky registrácie" a skúste to znova.'
+                            'Prosím, opravte duplicitné názvy tímov v časti "Registrácie" a skúste znova.'
                         )
                     )
                 )
