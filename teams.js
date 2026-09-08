@@ -279,13 +279,13 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // Načítame štatistiky cez zápasy - ROVNAKÝ SPÔSOB AKO V logged-in-matches-hall.js
+    // Načítame štatistiky - ROVNAKÁ LOGIKA AKO V logged-in-matches-hall.js
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
         console.log('[Stats Effect] rosterTeamName:', rosterTeamName);
         console.log('[Stats Effect] rosterCategoryName:', rosterCategoryName);
-        
+    
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
             console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
             setMembersStats({});
@@ -304,42 +304,40 @@ const TeamsOverviewApp = (props) => {
             return;
         }
     
-        // Vytvoríme mapu pre štatistiky
-        const initialStats = {};
-        teamRoster.forEach((member, idx) => {
-            const memberKey = `${member.type}_${member.originalIndex}`;
-            initialStats[memberKey] = {
-                goals: 0,
-                convertedPenalties: 0,
-                missedPenalties: 0,
-                yellowCards: 0,
-                redCards: 0,
-                blueCards: 0,
-                exclusions: 0,
-                dbArrayName: member.dbArrayName,
-                dbIndex: member.originalIndex,
-                name: `${member.firstName} ${member.lastName}`.trim(),
-                jerseyNumber: member.jerseyNumber || '',
-                memberType: member.type
-            };
-        });
+        // --- 1. ZÍSKAME VŠETKY matchId PRE TÍM ---
+        const matchesRef = collection(window.db, 'matches');
+        
+        // Hľadáme zápasy, kde je tím ako domáci ALEBO hosťujúci
+        const matchesQueryHome = query(
+            matchesRef,
+            where('homeTeamIdentifier', '==', currentTeamName)
+        );
+        
+        const matchesQueryAway = query(
+            matchesRef,
+            where('awayTeamIdentifier', '==', currentTeamName)
+        );
     
-        console.log('[Stats Effect] Vytvorených initialStats pre', Object.keys(initialStats).length, 'členov');
-        setMembersStats(initialStats);
+        let matchIds = new Set();
+        let isFirstLoad = true;
     
-        // Uložíme si referencie na unsubscribe funkcie
-        let unsubscribeMatches = null;
-        let unsubscribeEvents = null;
-        let unsubscribeAway = null;
+        // --- 2. FUNKCIA NA ZÍSKANIE UDALOSTÍ PRE matchId ---
+        const getEventsForMatches = (matchIdsArray) => {
+            // Firebase umožňuje max 10 hodnôt v "in" operátore
+            const chunkSize = 10;
+            const chunks = [];
+            for (let i = 0; i < matchIdsArray.length; i += chunkSize) {
+                chunks.push(matchIdsArray.slice(i, i + chunkSize));
+            }
     
-        // Funkcia na spracovanie udalostí - ROVNAKÁ AKO V TeamMembersList
-        const processEvents = (eventsSnapshot, teamType) => {
-            const newStats = {};
-            
-            // Inicializujeme štatistiky pre každého člena
+            const eventListeners = [];
+            let processedChunks = 0;
+            let combinedStats = {};
+    
+            // Inicializujeme štatistiky pre každého člena - ROVNAKO AKO V TeamMembersList
             teamRoster.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
-                newStats[memberKey] = {
+                combinedStats[memberKey] = {
                     goals: 0,
                     convertedPenalties: 0,
                     missedPenalties: 0,
@@ -355,234 +353,183 @@ const TeamsOverviewApp = (props) => {
                 };
             });
     
-            // Spracujeme každú udalosť - FILTRUJEME PODĽA teamType
-            eventsSnapshot.forEach((doc) => {
-                const event = doc.data();
-                
-                // Filtrujeme podľa teamType (home/away) - ROVNAKO AKO V TeamMembersList
-                if (event.team !== teamType) return;
-                
-                // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
-                let foundMemberKey = null;
-                for (const [memberKey, stat] of Object.entries(newStats)) {
-                    if (stat.dbArrayName === event.memberTypeKey && stat.dbIndex === event.memberIndex) {
-                        foundMemberKey = memberKey;
-                        break;
+            // Pre každý chunk vytvoríme listener na udalosti
+            chunks.forEach((chunk, index) => {
+                const eventsRef = collection(window.db, 'matchEvents');
+                const eventsQuery = query(
+                    eventsRef,
+                    where('matchId', 'in', chunk)
+                );
+    
+                const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
+                    console.log(`[Stats Effect] 📦 chunk ${index + 1}: prijatých ${eventsSnapshot.size} udalostí`);
+    
+                    // Spracujeme udalosti - ROVNAKÁ LOGIKA AKO V TeamMembersList
+                    // V TeamMembersList sa filtruje podľa event.team !== teamType
+                    // Ale keďže nevieme, či je tím domáci alebo hosťujúci, musíme skontrolovať oba
+                    eventsSnapshot.forEach((doc) => {
+                        const event = doc.data();
+                        
+                        // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
+                        let foundMemberKey = null;
+                        for (const [memberKey, stat] of Object.entries(combinedStats)) {
+                            if (stat.dbArrayName === event.memberTypeKey && stat.dbIndex === event.memberIndex) {
+                                foundMemberKey = memberKey;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundMemberKey) return;
+                        const stat = combinedStats[foundMemberKey];
+                        
+                        // Pripočítame štatistiky - ROVNAKÉ AKO V TeamMembersList
+                        switch (event.eventType) {
+                            case 'goal':
+                                stat.goals++;
+                                if (event.eventSubtype === 'converted_penalty') {
+                                    stat.convertedPenalties++;
+                                }
+                                break;
+                            case 'penalty':
+                                stat.missedPenalties++;
+                                break;
+                            case 'card':
+                                if (event.eventSubtype === 'yellow') {
+                                    stat.yellowCards++;
+                                } else if (event.eventSubtype === 'red') {
+                                    stat.redCards++;
+                                } else if (event.eventSubtype === 'blue') {
+                                    stat.blueCards++;
+                                }
+                                break;
+                            case 'exclusion':
+                                stat.exclusions++;
+                                break;
+                        }
+                    });
+    
+                    processedChunks++;
+    
+                    // Ak sme spracovali všetky chunk-y, aktualizujeme stav
+                    if (processedChunks === chunks.length) {
+                        console.log('[Stats Effect] ✅ Všetky chunk-y spracované, aktualizujem štatistiky');
+                        setMembersStats({ ...combinedStats });
+                        processedChunks = 0;
+                        // Resetujeme štatistiky pre ďalšiu aktualizáciu
+                        teamRoster.forEach((member, idx) => {
+                            const memberKey = `${member.type}_${member.originalIndex}`;
+                            combinedStats[memberKey] = {
+                                goals: 0,
+                                convertedPenalties: 0,
+                                missedPenalties: 0,
+                                yellowCards: 0,
+                                redCards: 0,
+                                blueCards: 0,
+                                exclusions: 0,
+                                dbArrayName: member.dbArrayName,
+                                dbIndex: member.originalIndex,
+                                name: `${member.firstName} ${member.lastName}`.trim(),
+                                jerseyNumber: member.jerseyNumber || '',
+                                memberType: member.type
+                            };
+                        });
                     }
-                }
-                
-                if (!foundMemberKey) return;
-                const stat = newStats[foundMemberKey];
-                
-                // Pripočítame štatistiky podľa typu udalosti
-                switch (event.eventType) {
-                    case 'goal':
-                        stat.goals++;
-                        if (event.eventSubtype === 'converted_penalty') {
-                            stat.convertedPenalties++;
-                        }
-                        break;
-                    case 'penalty':
-                        stat.missedPenalties++;
-                        break;
-                    case 'card':
-                        if (event.eventSubtype === 'yellow') {
-                            stat.yellowCards++;
-                        } else if (event.eventSubtype === 'red') {
-                            stat.redCards++;
-                        } else if (event.eventSubtype === 'blue') {
-                            stat.blueCards++;
-                        }
-                        break;
-                    case 'exclusion':
-                        stat.exclusions++;
-                        break;
-                }
+                }, (error) => {
+                    console.error(`[Stats Effect] ❌ Chyba pri načítaní udalostí pre chunk ${index + 1}:`, error);
+                    processedChunks++;
+                    if (processedChunks === chunks.length) {
+                        console.log('[Stats Effect] Všetky chunk-y spracované (s chybami)');
+                        processedChunks = 0;
+                        teamRoster.forEach((member, idx) => {
+                            const memberKey = `${member.type}_${member.originalIndex}`;
+                            combinedStats[memberKey] = {
+                                goals: 0,
+                                convertedPenalties: 0,
+                                missedPenalties: 0,
+                                yellowCards: 0,
+                                redCards: 0,
+                                blueCards: 0,
+                                exclusions: 0,
+                                dbArrayName: member.dbArrayName,
+                                dbIndex: member.originalIndex,
+                                name: `${member.firstName} ${member.lastName}`.trim(),
+                                jerseyNumber: member.jerseyNumber || '',
+                                memberType: member.type
+                            };
+                        });
+                    }
+                });
+    
+                eventListeners.push(listener);
             });
     
-            return newStats;
+            return eventListeners;
         };
     
-        // 1. Najprv načítame zápasy pre aktuálny tím
-        const matchesRef = collection(window.db, 'matches');
-        
-        // Hľadáme zápasy, kde je náš tím ako domáci alebo hosťujúci
-        const matchesQueryHome = query(
-            matchesRef,
-            where('homeTeamIdentifier', '==', currentTeamName)
-        );
-        
-        const matchesQueryAway = query(
-            matchesRef,
-            where('awayTeamIdentifier', '==', currentTeamName)
-        );
+        let unsubscribeEvents = null;
     
-        console.log('[Stats Effect] Hľadám zápasy pre tím:', currentTeamName);
-    
-        let matchIds = new Set();
-        let isFirstLoad = true;
-    
-        // Funkcia na spracovanie zápasov a načítanie udalostí
-        const processMatchesAndLoadEvents = (homeMatches, awayMatches) => {
-            console.log('[Stats Effect] processMatchesAndLoadEvents - homeMatches:', homeMatches.size, 'awayMatches:', awayMatches.size);
-            
+        // --- 3. SPOJENIE DOMÁCICH A HOSŤUJÚCICH ZÁPASOV ---
+        const processMatchesAndLoadEvents = (homeSnapshot, awaySnapshot) => {
             const newMatchIds = new Set();
             
-            homeMatches.forEach(doc => {
+            homeSnapshot.forEach(doc => {
                 newMatchIds.add(doc.id);
             });
             
-            awayMatches.forEach(doc => {
+            awaySnapshot.forEach(doc => {
                 newMatchIds.add(doc.id);
             });
-            
-            console.log('[Stats Effect] Celkovo nájdených zápasov:', newMatchIds.size);
-            
-            const matchIdsArray = Array.from(newMatchIds);
+    
+            const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
-            const matchIdsChanged = matchIdsArray.length !== oldMatchIdsArray.length || 
-                                   matchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-            
+            const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
+                                   newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
+    
+            console.log('[Stats Effect] Celkovo nájdených zápasov:', newMatchIdsArray.length);
+            console.log('[Stats Effect] matchIdsChanged:', matchIdsChanged);
+    
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
-                
+    
                 // Zrušíme predchádzajúci listener na udalosti
                 if (unsubscribeEvents) {
+                    console.log('[Stats Effect] Ruším predchádzajúci listener na udalosti');
                     try {
                         unsubscribeEvents();
                     } catch (e) {}
                     unsubscribeEvents = null;
                 }
-                
-                if (matchIds.size === 0) {
+    
+                if (newMatchIdsArray.length === 0) {
                     console.log('[Stats Effect] Žiadne zápasy pre tím, vymazávam štatistiky');
                     const emptyStats = {};
-                    Object.keys(initialStats).forEach(key => {
-                        emptyStats[key] = { ...initialStats[key] };
+                    teamRoster.forEach((member, idx) => {
+                        const memberKey = `${member.type}_${member.originalIndex}`;
+                        emptyStats[memberKey] = {
+                            goals: 0,
+                            convertedPenalties: 0,
+                            missedPenalties: 0,
+                            yellowCards: 0,
+                            redCards: 0,
+                            blueCards: 0,
+                            exclusions: 0,
+                            dbArrayName: member.dbArrayName,
+                            dbIndex: member.originalIndex,
+                            name: `${member.firstName} ${member.lastName}`.trim(),
+                            jerseyNumber: member.jerseyNumber || '',
+                            memberType: member.type
+                        };
                     });
                     setMembersStats(emptyStats);
                     return;
                 }
-                
-                // 2. Načítame udalosti pre všetky zápasy tímu
-                const matchIdsArrayChunks = [];
-                const chunkSize = 10;
-                const idsArray = Array.from(matchIds);
-                
-                for (let i = 0; i < idsArray.length; i += chunkSize) {
-                    matchIdsArrayChunks.push(idsArray.slice(i, i + chunkSize));
-                }
-                
-                console.log('[Stats Effect] Počet chunkoch:', matchIdsArrayChunks.length);
-                
-                const eventListeners = [];
-                let processedChunks = 0;
-                let combinedHomeStats = { ...initialStats };
-                let combinedAwayStats = { ...initialStats };
-                
-                matchIdsArrayChunks.forEach((chunk, index) => {
-                    const eventsRef = collection(window.db, 'matchEvents');
-                    const eventsQuery = query(
-                        eventsRef,
-                        where('matchId', 'in', chunk)
-                    );
-                    
-                    const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
-                        // Spracujeme udalosti z tohto chunku - DOMÁCE
-                        const homeStats = processEvents(eventsSnapshot, 'home');
-                        // Spracujeme udalosti z tohto chunku - HOSŤUJÚCE
-                        const awayStats = processEvents(eventsSnapshot, 'away');
-                        
-                        // Kombinujeme domáce štatistiky
-                        Object.keys(homeStats).forEach(key => {
-                            if (!combinedHomeStats[key]) {
-                                combinedHomeStats[key] = { ...homeStats[key] };
-                            } else {
-                                const stat = combinedHomeStats[key];
-                                const chunkStat = homeStats[key];
-                                stat.goals += chunkStat.goals || 0;
-                                stat.convertedPenalties += chunkStat.convertedPenalties || 0;
-                                stat.missedPenalties += chunkStat.missedPenalties || 0;
-                                stat.yellowCards += chunkStat.yellowCards || 0;
-                                stat.redCards += chunkStat.redCards || 0;
-                                stat.blueCards += chunkStat.blueCards || 0;
-                                stat.exclusions += chunkStat.exclusions || 0;
-                            }
-                        });
-                        
-                        // Kombinujeme hosťujúce štatistiky
-                        Object.keys(awayStats).forEach(key => {
-                            if (!combinedAwayStats[key]) {
-                                combinedAwayStats[key] = { ...awayStats[key] };
-                            } else {
-                                const stat = combinedAwayStats[key];
-                                const chunkStat = awayStats[key];
-                                stat.goals += chunkStat.goals || 0;
-                                stat.convertedPenalties += chunkStat.convertedPenalties || 0;
-                                stat.missedPenalties += chunkStat.missedPenalties || 0;
-                                stat.yellowCards += chunkStat.yellowCards || 0;
-                                stat.redCards += chunkStat.redCards || 0;
-                                stat.blueCards += chunkStat.blueCards || 0;
-                                stat.exclusions += chunkStat.exclusions || 0;
-                            }
-                        });
-                        
-                        processedChunks++;
-                        
-                        if (processedChunks === matchIdsArrayChunks.length) {
-                            // Skombinujeme domáce a hosťujúce štatistiky do jedného objektu
-                            const finalStats = { ...initialStats };
-                            
-                            // Pripočítame domáce štatistiky
-                            Object.keys(combinedHomeStats).forEach(key => {
-                                if (finalStats[key]) {
-                                    finalStats[key].goals += combinedHomeStats[key].goals || 0;
-                                    finalStats[key].convertedPenalties += combinedHomeStats[key].convertedPenalties || 0;
-                                    finalStats[key].missedPenalties += combinedHomeStats[key].missedPenalties || 0;
-                                    finalStats[key].yellowCards += combinedHomeStats[key].yellowCards || 0;
-                                    finalStats[key].redCards += combinedHomeStats[key].redCards || 0;
-                                    finalStats[key].blueCards += combinedHomeStats[key].blueCards || 0;
-                                    finalStats[key].exclusions += combinedHomeStats[key].exclusions || 0;
-                                }
-                            });
-                            
-                            // Pripočítame hosťujúce štatistiky
-                            Object.keys(combinedAwayStats).forEach(key => {
-                                if (finalStats[key]) {
-                                    finalStats[key].goals += combinedAwayStats[key].goals || 0;
-                                    finalStats[key].convertedPenalties += combinedAwayStats[key].convertedPenalties || 0;
-                                    finalStats[key].missedPenalties += combinedAwayStats[key].missedPenalties || 0;
-                                    finalStats[key].yellowCards += combinedAwayStats[key].yellowCards || 0;
-                                    finalStats[key].redCards += combinedAwayStats[key].redCards || 0;
-                                    finalStats[key].blueCards += combinedAwayStats[key].blueCards || 0;
-                                    finalStats[key].exclusions += combinedAwayStats[key].exclusions || 0;
-                                }
-                            });
-                            
-                            console.log('[Stats Effect] ✅ Všetky chunk-y spracované, aktualizujem štatistiky');
-                            setMembersStats(finalStats);
-                            
-                            processedChunks = 0;
-                            combinedHomeStats = { ...initialStats };
-                            combinedAwayStats = { ...initialStats };
-                        }
-                    }, (error) => {
-                        console.error('[Stats Effect] ❌ Chyba pri načítaní udalostí:', error);
-                        processedChunks++;
-                        if (processedChunks === matchIdsArrayChunks.length) {
-                            processedChunks = 0;
-                            combinedHomeStats = { ...initialStats };
-                            combinedAwayStats = { ...initialStats };
-                        }
-                    });
-                    
-                    eventListeners.push(listener);
-                });
-                
+    
+                // Načítame udalosti pre všetky matchId
+                const listeners = getEventsForMatches(newMatchIdsArray);
                 unsubscribeEvents = () => {
                     console.log('[Stats Effect] Ruším všetky listenery na udalosti');
-                    eventListeners.forEach(listener => {
+                    listeners.forEach(listener => {
                         try {
                             listener();
                         } catch (e) {}
@@ -591,62 +538,52 @@ const TeamsOverviewApp = (props) => {
             }
         };
     
-        // Počúvame na zmeny v zápasoch - domáce
+        // --- 4. POČÚVAME NA ZMENY V ZÁPASOCH ---
+        let unsubscribeHome = null;
+        let unsubscribeAway = null;
+    
         console.log('[Stats Effect] ✅ Spúšťam listener na DOMÁCE zápasy');
-        const unsubscribeHome = onSnapshot(matchesQueryHome, (homeSnapshot) => {
+        unsubscribeHome = onSnapshot(matchesQueryHome, (homeSnapshot) => {
             console.log('[Stats Effect] 📦 DOMÁCE zápasy - zmena, počet:', homeSnapshot.size);
-            
+    
             if (unsubscribeAway) {
                 try {
                     unsubscribeAway();
                 } catch (e) {}
                 unsubscribeAway = null;
             }
-            
+    
             console.log('[Stats Effect] ✅ Spúšťam listener na HOSŤUJÚCE zápasy');
-            const awayUnsub = onSnapshot(matchesQueryAway, (awaySnapshot) => {
+            unsubscribeAway = onSnapshot(matchesQueryAway, (awaySnapshot) => {
                 console.log('[Stats Effect] 📦 HOSŤUJÚCE zápasy - zmena, počet:', awaySnapshot.size);
                 processMatchesAndLoadEvents(homeSnapshot, awaySnapshot);
             }, (error) => {
                 console.error('[Stats Effect] ❌ Chyba pri načítaní hosťujúcich zápasov:', error);
             });
-            
-            unsubscribeAway = awayUnsub;
-            
         }, (error) => {
             console.error('[Stats Effect] ❌ Chyba pri načítaní domácich zápasov:', error);
         });
     
-        unsubscribeMatches = () => {
-            console.log('[Stats Effect] Ruším listener na zápasy');
-            try {
-                unsubscribeHome();
-            } catch (e) {}
+        // --- 5. CLEANUP ---
+        return () => {
+            console.log('[Stats Effect] 🧹 CLEANUP - ruším všetky listenery');
+            if (unsubscribeHome) {
+                try {
+                    unsubscribeHome();
+                } catch (e) {}
+                unsubscribeHome = null;
+            }
             if (unsubscribeAway) {
                 try {
                     unsubscribeAway();
                 } catch (e) {}
                 unsubscribeAway = null;
-            }
-        };
-    
-        return () => {
-            console.log('[Stats Effect] 🧹 CLEANUP - ruším všetky listenery');
-            if (unsubscribeMatches) {
-                try {
-                    unsubscribeMatches();
-                } catch (e) {}
             }
             if (unsubscribeEvents) {
                 try {
                     unsubscribeEvents();
                 } catch (e) {}
-            }
-            if (unsubscribeAway) {
-                try {
-                    unsubscribeAway();
-                } catch (e) {}
-                unsubscribeAway = null;
+                unsubscribeEvents = null;
             }
             console.log('[Stats Effect] 🧹 CLEANUP dokončený');
         };
