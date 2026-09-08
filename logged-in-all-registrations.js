@@ -1937,15 +1937,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
     React.useEffect(() => {
         const safeData = data || {};
         const initialData = JSON.parse(JSON.stringify(safeData));
-
+    
         const isEditingMember = title.toLowerCase().includes('upraviť hráča') ||
             title.toLowerCase().includes('upraviť člena realizačného tímu') ||
             title.toLowerCase().includes('upraviť šoféra');
-
+    
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
-
+    
+        // ============================================================
+        // PRIDANIE NOVÉHO TÍMU - VŽDY ČISTÝ FORMULÁR
+        // ============================================================
         const isNewTeamModal = title === 'Pridať nový tím' || (title.includes('Pridať nový tím') && isNewEntry);
-
+    
+        // Ak je to modál na pridanie nového tímu, VŽDY resetujeme všetky stavy
+        if (isNewTeamModal) {
+            // VYNULUJEME VŠETKY STAVY NA PRÁZDNE HODNOTY
+            setSelectedCategory('');
+            setSelectedArrivalType('');
+            setArrivalTime('');
+            setSelectedAccommodationType('');
+            setSelectedPackageName('');
+            setTeamTshirts([]);
+            setDisplayDialCode('');
+            setDisplayPhoneNumber('');
+            
+            // Nastavíme čisté dáta
+            const emptyTeamData = {
+                teamName: '',
+                _category: '',
+                category: '',
+                arrival: { type: '', time: '' },
+                accommodation: { type: '' },
+                packageDetails: { name: '' },
+                tshirts: [],
+                jerseyHomeColor: '',
+                jerseyAwayColor: '',
+                playerDetails: [],
+                menTeamMemberDetails: [],
+                womenTeamMemberDetails: [],
+                driverDetailsMale: [],
+                driverDetailsFemale: []
+            };
+            setLocalEditedData(emptyTeamData);
+            return;
+        }
+    
         // Inicializácia polí pre dobrovoľníka
         if (isEditingVolunteer) {
             // Najprv skúsime načítať z privateData (ak už je načítaná)
@@ -1971,8 +2007,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.tshirtSize === undefined) initialData.tshirtSize = '';
             if (initialData.gender === undefined) initialData.gender = '';
             if (initialData.note === undefined) initialData.note = '';
+            
+            const mergedData = mergePrivateData(initialData);
+            setLocalEditedData(mergedData);
+            return;
         }
-
+    
         // VŽDY inicializujeme všetky polia pre používateľa
         if (title.includes('Upraviť používateľa')) {
             if (initialData.firstName === undefined) initialData.firstName = '';
@@ -1989,10 +2029,14 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.postalCode === undefined) initialData.postalCode = '';
             if (initialData.country === undefined) initialData.country = '';
             if (initialData.note === undefined) initialData.note = '';
-
+    
             const { dialCode, numberWithoutDialCode } = parsePhoneNumber(initialData.contactPhoneNumber, countryDialCodes);
             setDisplayDialCode(dialCode);
             setDisplayPhoneNumber(formatNumberGroups(numberWithoutDialCode));
+            
+            const mergedData = mergePrivateData(initialData);
+            setLocalEditedData(mergedData);
+            return;
         } else if (isEditingMember || isNewEntry) {
             if (!initialData.address) initialData.address = {};
             if (initialData.address.street === undefined) initialData.address.street = '';
@@ -2005,43 +2049,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
             if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
             if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
-        } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
+            
+            const mergedData = mergePrivateData(initialData);
+            setLocalEditedData(mergedData);
+            return;
+        } else if (title.includes('Upraviť tím')) {
+            // ÚPRAVA EXISTUJÚCEHO TÍMU - NAČÍTAME DÁTA
             if (!initialData) {
                 initialData = {};
             }
-
-            if (isNewTeamModal) {
-                // VYNULUJEME VŠETKY STAVY NA PRÁZDNE HODNOTY
-                setSelectedCategory('');
-                setSelectedArrivalType('');
-                setArrivalTime('');
-                setSelectedAccommodationType('');
-                setSelectedPackageName('');
-                setTeamTshirts([]);
-                setDisplayDialCode('');
-                setDisplayPhoneNumber('');
-                
-                // Nastavíme čisté dáta
-                const emptyTeamData = {
-                    teamName: '',
-                    _category: '',
-                    category: '',
-                    arrival: { type: '', time: '' },
-                    accommodation: { type: '' },
-                    packageDetails: { name: '' },
-                    tshirts: [],
-                    jerseyHomeColor: '',
-                    jerseyAwayColor: '',
-                    playerDetails: [],
-                    menTeamMemberDetails: [],
-                    womenTeamMemberDetails: [],
-                    driverDetailsMale: [],
-                    driverDetailsFemale: []
-                };
-                setLocalEditedData(emptyTeamData);
-                return;
-            }
-            
             setSelectedCategory(initialData._category || initialData.category || '');
             if (initialData.teamName === undefined) initialData.teamName = '';
             setSelectedArrivalType(initialData.arrival?.type || '');
@@ -2059,8 +2075,12 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     quantity: tshirt.quantity || 0
                 }));
             setTeamTshirts(initialTshirts);
+            
+            const mergedData = mergePrivateData(initialData);
+            setLocalEditedData(mergedData);
+            return;
         }
-
+    
         const mergedData = mergePrivateData(initialData);
         setLocalEditedData(mergedData);
     }, [data, title, db, availableTshirtSizes, isNewEntry, accommodationTypes, privateData, mergePrivateData]);
