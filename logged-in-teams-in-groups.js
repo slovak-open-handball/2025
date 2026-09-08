@@ -3054,7 +3054,7 @@ const AddTeamsGroupApp = (props) => {
                             className: `flex-grow text-gray-800 ${isDuplicate ? 'text-red-600 font-bold' : ''}`,
                             title: isDuplicate ? `Duplicitný názov tímu v kategórii ${team.category}!` : ''
                         }, 
-                        isDuplicate ? `${display}` : display
+                        display
                     ),
                 
                     React.createElement(
@@ -3233,7 +3233,7 @@ const AddTeamsGroupApp = (props) => {
                                         className: combinedClasses,
                                         title: title
                                     },
-                                    `${pos}. ${mappedDisplayName}}`
+                                    `${pos}. ${mappedDisplayName}`
                                 )
                             ),
                             React.createElement(
@@ -3366,7 +3366,7 @@ const AddTeamsGroupApp = (props) => {
                                     className: combinedClasses,
                                     title: title
                                 },
-                                `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
+                                `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)` 
                             )
                         ),
                         React.createElement(
