@@ -1468,6 +1468,46 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [loadingHall, setLoadingHall] = React.useState(true);
 
     React.useEffect(() => {
+        if (!window.db) return;
+
+        // Funkcia na aktualizáciu stavu viditeľnosti
+        const updateRostersVisibility = () => {
+            const visible = window.pagesVisibility && 
+                           window.pagesVisibility['rosters'] && 
+                           window.pagesVisibility['rosters'].visible === true;
+            setIsRostersVisible(visible);
+        };
+
+        // Najprv skontrolujeme aktuálny stav
+        updateRostersVisibility();
+
+        // Nastavíme listener na zmeny v pages kolekcii
+        const pagesRef = collection(window.db, 'pages');
+        const unsubscribe = onSnapshot(pagesRef, (snapshot) => {
+            let rostersVisible = false;
+            
+            snapshot.forEach((doc) => {
+                if (doc.id === 'rosters') {
+                    const data = doc.data();
+                    rostersVisible = data.visible === true;
+                }
+            });
+            
+            // Aktualizujeme globálnu premennú
+            if (!window.pagesVisibility) window.pagesVisibility = {};
+            window.pagesVisibility['rosters'] = { visible: rostersVisible };
+            
+            // Aktualizujeme lokálny stav
+            setIsRostersVisible(rostersVisible);
+        }, (error) => {
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
+    React.useEffect(() => {
         const loadHallName = async () => {
             if (!window.db || !match.hallId) {
                 setLoadingHall(false);
@@ -2659,16 +2699,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         React.createElement(
             'div',
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
-            // Pridáme podmienku - zobrazíme iba ak sú súpisky viditeľné
             (() => {
-                // Skontrolujeme viditeľnosť súpisiek z globálnej premennej
-                const isRostersVisible = window.pagesVisibility && 
-                                         window.pagesVisibility['rosters'] && 
-                                         window.pagesVisibility['rosters'].visible === true;
-                
-                // Ak nie sú viditeľné, vrátime prázdny div (nič sa nezobrazí)
+                // Použijeme lokálny stav namiesto priameho čítania z window
                 if (!isRostersVisible) {
-                    return null; // Vrátime null - nič sa nevykreslí
+                    return null;
                 }
         
                 // Ak sú viditeľné, zobrazíme oba tímy
