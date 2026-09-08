@@ -6494,6 +6494,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         // EXTRAHUJEME PÍSMENO Z IDENTIFIKÁTORA AKTUÁLNEHO TÍMU
         const currentTeamLetter = extractGroupLetterFromTeamIdentifier(teamIdentifier);
         
+        // Získame groupsByCategory z globálnej premennej
+        const groupsByCategory = window.__groupsByCategory || {};
+        
         // Zistíme, či ide o nadstavbovú skupinu
         const isCurrentAdvanced = currentMatch.groupName && 
             groupsByCategory[currentMatch.categoryId]?.some(
