@@ -53,7 +53,7 @@ const slovakCollator = new Intl.Collator('sk', {
     numeric: false
 });
 
-// Funkcia na odstránenie sufixu - používame pre zobrazenie v tabuľke a pre načítanie z URL
+// Funkcia na odstránenie sufixu
 const removeSuffix = (teamName) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
     const lettersLower = letters.toLowerCase();
@@ -71,7 +71,7 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
-// Funkcia na načítanie členov tímu s reálnym sledovaním
+// Funkcia na načítanie členov tímu
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         if (onUpdate) onUpdate([]);
@@ -212,7 +212,6 @@ const TeamsOverviewApp = (props) => {
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [currentTeamKey, setCurrentTeamKey] = useState('');
-    const [isTeamSwitchInProgress, setIsTeamSwitchInProgress] = useState(false);
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
@@ -326,7 +325,6 @@ const TeamsOverviewApp = (props) => {
         const eventsQuery = query(eventsRef);
         
         const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
-            // SKONTROLUJEME, ČI STÁLE PLATÍ AKTÍVNY TÍM
             if (selectedTeamDetails && teamRoster.length > 0) {
                 console.log('🔄 [UI Updater] Zmena v matchEvents, aktualizujem štatistiky pre:', selectedTeamDetails.teamName);
                 setUpdateTrigger(prev => prev + 1);
@@ -349,12 +347,17 @@ const TeamsOverviewApp = (props) => {
         
         const teamKey = `${rosterTeamName || selectedTeamDetails?.teamName || ''}_${rosterCategoryName || selectedTeamDetails?.category || ''}`;
         
+        // AK NIE JE ŽIADNY TÍM, VYMAŽEME ŠTATISTIKY
+        if (!rosterTeamName && !selectedTeamDetails?.teamName) {
+            console.log('[Stats Effect] Žiadny vybraný tím, vymazávam štatistiky');
+            setMembersStats({});
+            setCurrentTeamKey('');
+            return;
+        }
+        
+        // AK NIE SÚ ČLENOVIA ALEBO DB, POČKÁME
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
-            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
-            // VYMAŽEME ŠTATISTIKY LEN AK NIE JE ŽIADNY TÍM
-            if (!rosterTeamName && !selectedTeamDetails?.teamName) {
-                setMembersStats({});
-            }
+            console.log('[Stats Effect] Čakám na načítanie členov tímu...');
             return;
         }
     
@@ -365,7 +368,7 @@ const TeamsOverviewApp = (props) => {
         console.log('[Stats Effect] currentCategoryName:', currentCategoryName);
     
         if (!currentTeamName || !currentCategoryName) {
-            console.log('[Stats Effect] Podmienka TRUE: chýba teamName alebo categoryName');
+            console.log('[Stats Effect] Chýba teamName alebo categoryName');
             setMembersStats({});
             return;
         }
@@ -375,6 +378,12 @@ const TeamsOverviewApp = (props) => {
             console.log('[Stats Effect] 🧹 Zmena tímu, vymazávam staré štatistiky');
             setMembersStats({});
             setCurrentTeamKey('');
+            return;
+        }
+    
+        // AK SME UŽ NASTAVILI KĽÚČ A JE ROVNAKÝ, NEROBÍME NIČ
+        if (currentTeamKey === teamKey) {
+            console.log('[Stats Effect] Tím je už načítaný, preskakujem');
             return;
         }
     
@@ -501,7 +510,6 @@ const TeamsOverviewApp = (props) => {
                 );
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
-                    // SKONTROLUJEME, ČI STÁLE IDE O ROVNAKÝ TÍM
                     const currentTeamKeyCheck = `${rosterTeamName || selectedTeamDetails?.teamName || ''}_${rosterCategoryName || selectedTeamDetails?.category || ''}`;
                     if (currentTeamKeyCheck !== teamKey) {
                         console.log('[Stats Effect] ⚠️ Tím sa zmenil, ignorujem výsledky chunk-u');
@@ -539,7 +547,6 @@ const TeamsOverviewApp = (props) => {
                     processedChunks++;
     
                     if (processedChunks === chunks.length) {
-                        // SKONTROLUJEME, ČI STÁLE IDE O ROVNAKÝ TÍM
                         const currentTeamKeyCheck2 = `${rosterTeamName || selectedTeamDetails?.teamName || ''}_${rosterCategoryName || selectedTeamDetails?.category || ''}`;
                         if (currentTeamKeyCheck2 === teamKey && isStatsMounted) {
                             const finalStats = {};
@@ -646,7 +653,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails, updateTrigger]);
 
-    // OPRAVENÁ FUNKCIA loadTeamRoster
+    // OPRAVENÁ FUNKCIA loadTeamRoster - odstránený isTeamSwitchInProgress
     const loadTeamRoster = (teamName, categoryName) => {
         console.log('[loadTeamRoster] Volaná s teamName:', teamName, 'categoryName:', categoryName);
         
@@ -661,9 +668,6 @@ const TeamsOverviewApp = (props) => {
             setRosterUnsubscribe(null);
         }
         
-        // NASTAVÍME, ŽE PREBIEHA PREPÍNANIE TÍMU
-        setIsTeamSwitchInProgress(true);
-        
         // OKAMŽITE VYMAŽEME STARÉ DÁTA
         setTeamRoster([]);
         setMembersStats({});
@@ -674,7 +678,6 @@ const TeamsOverviewApp = (props) => {
             setIsLoadingRoster(false);
             setRosterTeamName('');
             setRosterCategoryName('');
-            setIsTeamSwitchInProgress(false);
             return;
         }        
         
@@ -698,7 +701,6 @@ const TeamsOverviewApp = (props) => {
             
             setTeamRoster(members);
             setIsLoadingRoster(false);
-            setIsTeamSwitchInProgress(false);
         };
         
         const handleMappedName = (mappedName) => {
@@ -715,7 +717,6 @@ const TeamsOverviewApp = (props) => {
                 setIsLoadingRoster(false);
                 setTeamRoster([]);
                 setMembersStats({});
-                setIsTeamSwitchInProgress(false);
             }
         }
         
@@ -723,7 +724,6 @@ const TeamsOverviewApp = (props) => {
             if (isMounted) {
                 console.log('[loadTeamRoster] Timeout - ukončujem loading');
                 setIsLoadingRoster(false);
-                setIsTeamSwitchInProgress(false);
             }
         }, 10000);
         
@@ -751,10 +751,8 @@ const TeamsOverviewApp = (props) => {
                 clearTimeout(window.__rosterTimeoutId);
                 window.__rosterTimeoutId = null;
             }
-            // VYMAŽEME ŠTATISTIKY PRI ODMOUNTOVANÍ
             setMembersStats({});
             setCurrentTeamKey('');
-            setIsTeamSwitchInProgress(false);
         };
     }, []);
 
@@ -824,7 +822,6 @@ const TeamsOverviewApp = (props) => {
             setRosterCategoryName('');
             setMembersStats({});
             setCurrentTeamKey('');
-            setIsTeamSwitchInProgress(false);
         }
     }, [selectedTeamDetails, categoryIdToNameMap]);
 
@@ -1244,7 +1241,6 @@ const TeamsOverviewApp = (props) => {
     const closeTeamDetails = () => {
         const { categoryName: categoryNameFromUrl } = parseUrlHash();
         
-        // ZRUŠÍME LISTENER
         if (rosterUnsubscribe) {
             try {
                 rosterUnsubscribe();
@@ -1252,14 +1248,12 @@ const TeamsOverviewApp = (props) => {
             setRosterUnsubscribe(null);
         }
         
-        // VYMAŽEME VŠETKY DÁTA
         setSelectedTeamDetails(null);
         setTeamRoster([]);
         setRosterTeamName('');
         setRosterCategoryName('');
         setMembersStats({});
         setCurrentTeamKey('');
-        setIsTeamSwitchInProgress(false);
         
         if (categoryNameFromUrl) {
             const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
@@ -1311,14 +1305,12 @@ const TeamsOverviewApp = (props) => {
                 order: team.order
             }));
         
-        // NASTAVÍME NOVÝ DETAIL TÍMU
         setSelectedTeamDetails({
             teamName: normalizedTeamName,
             category: normalizedCategory,
             occurrences: allOccurrences
         });
         
-        // NAČÍTAME SÚPISKU
         let categoryName = occ.category;
         if (categoryIdToNameMap[categoryName]) {
             categoryName = categoryIdToNameMap[categoryName];
