@@ -4087,7 +4087,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             'p',
                             { className: 'text-sm text-red-600 mt-1' },
                             'Vo vybranej kategórii sa nachádzajú tímy s duplicitným názvom. Zápasy nie je možné vygenerovať, kým nebudú názvy tímov unikátne.'
-                        )
+                        ),
                         React.createElement(
                             'p',
                             { className: 'text-xs text-red-500 mt-1' },
