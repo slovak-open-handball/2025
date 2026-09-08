@@ -5803,7 +5803,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (hasCompletedMatch) {
             return;
         }
-
+    
         // 🔥 VYPIŠ DO KONZOLY NÁZVY TÍMOV
         const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
@@ -5811,6 +5811,20 @@ const AddMatchesApp = ({ userProfileData }) => {
         console.log(`Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
         console.log(`Hosť:   ${awayTeamName} (${match.awayTeamIdentifier})`);
         console.log(`Kategória: ${match.categoryName || 'nezadaná'}`);
+        
+        // 🔥 NOVÉ: Vypíš názov a typ skupiny
+        const groupName = match.groupName || 'nezadaná';
+        let groupType = 'nezadaný';
+        
+        // Získanie typu skupiny z groupsByCategory
+        if (match.categoryId && groupsByCategory[match.categoryId]) {
+            const foundGroup = groupsByCategory[match.categoryId].find(g => g.name === match.groupName);
+            if (foundGroup) {
+                groupType = foundGroup.type || 'nezadaný';
+            }
+        }
+        
+        console.log(`Skupina: ${groupName} (typ: ${groupType})`);
         console.log('---');
         
         setSelectedMatchForAssign(match);
