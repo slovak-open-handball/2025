@@ -682,7 +682,7 @@ const TeamsOverviewApp = (props) => {
     
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
-                const event = event.data();
+                const eventData = doc.data();
                 console.log(`[Stats Effect] 📄 Udalosť:`, {
                     id: doc.id,
                     eventType: event.eventType,
