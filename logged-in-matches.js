@@ -3460,7 +3460,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedHallId, selectedDate, hallStartTime, match, matchDuration, allMatches, categories, groupsByCategory, blockedBreaks, existingMatches]);
 
-    // V AssignMatchModal - PRIDAJTE TÚTO KONTROLU NA ZAČIATOK useEffect pre relatedMatches
     useEffect(() => {
         if (isOpen && match) {
             console.log('--- useEffect: Načítavam súvisiace zápasy ---');
@@ -3468,7 +3467,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('💡 currentMatch.categoryId:', match.categoryId);
             console.log('💡 groupsByCategory (props):', groupsByCategory);
             console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory || {}));
-
+    
+            // 🔥 PRIDAJTE TÚTO KONTROLU PRE ŠPECIÁLNE ZÁPASY (pavúk, o umiestnenie)
+            if (match.isPlacementMatch || match.matchType) {
+                // Pre zápasy o umiestnenie alebo pavúk nehľadáme súvisiace zápasy
+                console.log('ℹ️ Špeciálny zápas (pavúk/umiestnenie) - preskakujem kontrolu skupiny');
+                setRelatedMatches([]);
+                setIsAdvancedGroup(false);
+                return;
+            }
+    
             if (!match.groupName) {
                 const homeGroup = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
                 const awayGroup = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
@@ -3498,7 +3506,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     const parts = identifier.split(' ');
                     if (parts.length < 2) return null;
                     const groupAndOrder = parts[parts.length - 1];
-    
+                
                     // Extrahujeme písmená z groupAndOrder (napr. z "A1" extrahujeme "A")
                     const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
                     if (matchResult) {
