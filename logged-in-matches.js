@@ -3555,6 +3555,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return new Date(year, month - 1, day);
     };
 
+    const formatTimeFromMinutes = (minutes) => {
+        if (minutes === null || minutes === undefined) return '--:--';
+        const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+        const mins = (minutes % 60).toString().padStart(2, '0');
+        return `${hours}:${mins}`;
+    };
+
     if (!isOpen || !match) return null;
 
     console.log('DEBUG - timeError:', timeError);
