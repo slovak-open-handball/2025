@@ -195,6 +195,48 @@ const TeamsOverviewApp = (props) => {
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
 
+    // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
+    const [isRostersVisible, setIsRostersVisible] = useState(
+        window.pagesVisibility && 
+        window.pagesVisibility['rosters'] && 
+        window.pagesVisibility['rosters'].visible === true
+    );
+
+    // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
+    useEffect(() => {
+        if (!window.db) return;
+
+        const updateRostersVisibility = () => {
+            const visible = window.pagesVisibility && 
+                           window.pagesVisibility['rosters'] && 
+                           window.pagesVisibility['rosters'].visible === true;
+            setIsRostersVisible(visible);
+        };
+
+        updateRostersVisibility();
+
+        const pagesRef = collection(window.db, 'pages');
+        const unsubscribe = onSnapshot(pagesRef, (snapshot) => {
+            let rostersVisible = false;
+            
+            snapshot.forEach((doc) => {
+                if (doc.id === 'rosters') {
+                    const data = doc.data();
+                    rostersVisible = data.visible === true;
+                }
+            });
+            
+            if (!window.pagesVisibility) window.pagesVisibility = {};
+            window.pagesVisibility['rosters'] = { visible: rostersVisible };
+            setIsRostersVisible(rostersVisible);
+        }, (error) => {
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
     const tableContainerRef = useRef(null);
 
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -991,7 +1033,7 @@ const TeamsOverviewApp = (props) => {
         loadTeamRoster(occ.teamName, categoryName);
     };
 
-    // Render súpisky tímu so štatistikami
+    // Render súpisky tímu so štatistikami - UPRAVENÉ s kontrolou viditeľnosti
     const renderTeamRoster = () => {
         // Zistíme, či je v URL kategória
         const categoryFromUrl = getCategoryFromUrl();
@@ -999,6 +1041,12 @@ const TeamsOverviewApp = (props) => {
         
         // Ak nie je v URL kategória, nezobrazujeme súpisku
         if (!hasCategoryInUrl) {
+            return null;
+        }
+        
+        // --- KONTROLA VIDITEĽNOSTI SÚPISIEK ---
+        // Ak nie sú súpisky viditeľné, nezobrazíme nič
+        if (!isRostersVisible) {
             return null;
         }
         
@@ -1275,7 +1323,7 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // Box so súpiskou tímu so štatistikami - zobrazí sa LEN ak je v URL kategória
+            // Box so súpiskou tímu so štatistikami - zobrazí sa LEN ak je v URL kategória A súpisky sú viditeľné
             renderTeamRoster()
         );
     };
