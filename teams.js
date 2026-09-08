@@ -681,6 +681,9 @@ const TeamsOverviewApp = (props) => {
                         break;
                 }
             });
+
+            console.log(`[Stats Effect] 📊 Spracovaných udalostí pre chunk ${chunkIndex}: ${eventsSnapshot.size}`);
+            console.log(`[Stats Effect] 📊 Počet členov so štatistikami: ${Object.keys(stats).length}`);
     
             return stats;
         };
@@ -878,6 +881,8 @@ const TeamsOverviewApp = (props) => {
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
+
+            console.log('[Stats Effect] 📋 Všetky matchId pre tím:', Array.from(matchIds));
         };
     
         console.log('[Stats Effect] ✅ Spúšťam listener na DOMÁCE zápasy');
