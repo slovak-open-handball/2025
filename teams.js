@@ -187,6 +187,13 @@ const debugMatches = async () => {
         return;
     }
     
+    // Skontrolujeme, či je teamManager dostupný
+    if (!window.teamManager || typeof window.teamManager.getTeamNameByDisplayIdSync !== 'function') {
+        console.log('⚠️ window.teamManager.getTeamNameByDisplayIdSync nie je dostupný');
+    } else {
+        console.log('✅ window.teamManager.getTeamNameByDisplayIdSync je dostupný');
+    }
+    
     try {
         console.log('🔍 DEBUG: Načítavam všetky zápasy z databázy...');
         const matchesRef = collection(window.db, 'matches');
@@ -199,29 +206,79 @@ const debugMatches = async () => {
             return;
         }
         
-        console.log('📋 Zoznam všetkých zápasov:');
-        console.log('─────────────────────────────────────────────');
+        console.log('📋 Zoznam všetkých zápasov (s konvertovanými názvami tímov):');
+        console.log('─────────────────────────────────────────────────────────────');
         
         querySnapshot.forEach((doc, index) => {
             const match = doc.data();
+            
+            // Konvertujeme identifikátory tímov
+            let homeTeamDisplay = match.homeTeamIdentifier || 'N/A';
+            let awayTeamDisplay = match.awayTeamIdentifier || 'N/A';
+            
+            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                try {
+                    if (match.homeTeamIdentifier) {
+                        const convertedHome = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                        if (convertedHome && convertedHome !== match.homeTeamIdentifier) {
+                            homeTeamDisplay = `${match.homeTeamIdentifier} -> ${convertedHome}`;
+                        } else {
+                            homeTeamDisplay = match.homeTeamIdentifier;
+                        }
+                    }
+                } catch (err) {
+                    console.log(`   ⚠️ Chyba pri konverzii domáceho tímu "${match.homeTeamIdentifier}":`, err);
+                }
+                
+                try {
+                    if (match.awayTeamIdentifier) {
+                        const convertedAway = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+                        if (convertedAway && convertedAway !== match.awayTeamIdentifier) {
+                            awayTeamDisplay = `${match.awayTeamIdentifier} -> ${convertedAway}`;
+                        } else {
+                            awayTeamDisplay = match.awayTeamIdentifier;
+                        }
+                    }
+                } catch (err) {
+                    console.log(`   ⚠️ Chyba pri konverzii hosťujúceho tímu "${match.awayTeamIdentifier}":`, err);
+                }
+            }
+            
             console.log(`📄 Zápas #${index + 1}`);
             console.log(`   ID: ${doc.id}`);
-            console.log(`   Domáci (homeTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.homeTeamIdentifier}) || 'N/A'`);
-            console.log(`   Hostia (awayTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.awayTeamIdentifier}) || 'N/A'`);
+            console.log(`   Domáci (homeTeamIdentifier): ${homeTeamDisplay}`);
+            console.log(`   Hostia (awayTeamIdentifier): ${awayTeamDisplay}`);
             console.log(`   Kategória: ${match.categoryName || match.categoryId || 'N/A'}`);
             console.log(`   Stav: ${match.status || 'N/A'}`);
             console.log(`   Dáta:`, match);
-            console.log('─────────────────────────────────────────────');
+            console.log('─────────────────────────────────────────────────────────────');
         });
         
-        // Skontrolujeme, či existuje zápas s tímom Tatran Prešov A
-        console.log('🔍 Hľadám zápasy s tímom "Tatran Prešov A"...');
+        // Skontrolujeme, či existuje zápas s tímom Tatran Prešov A (po konverzii)
+        console.log('🔍 Hľadám zápasy s tímom "Tatran Prešov A" (po konverzii)...');
         let found = false;
         querySnapshot.forEach((doc) => {
             const match = doc.data();
-            if (match.homeTeamIdentifier === 'Tatran Prešov A' || 
-                match.awayTeamIdentifier === 'Tatran Prešov A') {
-                console.log(`✅ Nájdený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+            let homeConverted = match.homeTeamIdentifier;
+            let awayConverted = match.awayTeamIdentifier;
+            
+            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                try {
+                    if (match.homeTeamIdentifier) {
+                        const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                        if (converted) homeConverted = converted;
+                    }
+                } catch (e) {}
+                try {
+                    if (match.awayTeamIdentifier) {
+                        const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+                        if (converted) awayConverted = converted;
+                    }
+                } catch (e) {}
+            }
+            
+            if (homeConverted === 'Tatran Prešov A' || awayConverted === 'Tatran Prešov A') {
+                console.log(`✅ Nájdený zápas: ${homeConverted} vs ${awayConverted}`);
                 found = true;
             }
         });
@@ -230,14 +287,30 @@ const debugMatches = async () => {
             console.log('❌ Žiadny zápas s tímom "Tatran Prešov A" nebol nájdený.');
             console.log('💡 Skúste hľadať pod iným názvom (napr. "Tatran Prešov" bez sufixu)');
             
-            // Skúsime nájsť podobné názvy
-            console.log('🔍 Hľadám podobné názvy...');
+            // Skúsime nájsť podobné názvy (po konverzii)
+            console.log('🔍 Hľadám podobné názvy (po konverzii)...');
             querySnapshot.forEach((doc) => {
                 const match = doc.data();
-                const home = match.homeTeamIdentifier || '';
-                const away = match.awayTeamIdentifier || '';
-                if (home.includes('Tatran') || away.includes('Tatran')) {
-                    console.log(`   Nájdený podobný zápas: ${home} vs ${away}`);
+                let homeConverted = match.homeTeamIdentifier || '';
+                let awayConverted = match.awayTeamIdentifier || '';
+                
+                if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                    try {
+                        if (match.homeTeamIdentifier) {
+                            const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                            if (converted) homeConverted = converted;
+                        }
+                    } catch (e) {}
+                    try {
+                        if (match.awayTeamIdentifier) {
+                            const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+                            if (converted) awayConverted = converted;
+                        }
+                    } catch (e) {}
+                }
+                
+                if (homeConverted.includes('Tatran') || awayConverted.includes('Tatran')) {
+                    console.log(`   Nájdený podobný zápas: ${homeConverted} vs ${awayConverted}`);
                 }
             });
         }
