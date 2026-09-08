@@ -5798,7 +5798,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
-
+    
     const handleMatchCardClick = (match) => {
         if (hasCompletedMatch) {
             return;
@@ -5871,6 +5871,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const mHomeLastChar = extractLastChar(mHome);
                     const mAwayLastChar = extractLastChar(mAway);
                     
+                    // 🔥 NOVÉ: Formátovanie dátumu a času zápasu
+                    let dateTimeStr = 'neurčené';
+                    if (m.scheduledTime) {
+                        try {
+                            const date = m.scheduledTime.toDate ? m.scheduledTime.toDate() : new Date(m.scheduledTime);
+                            if (!isNaN(date.getTime())) {
+                                const day = date.getDate().toString().padStart(2, '0');
+                                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                                const year = date.getFullYear();
+                                const hours = date.getHours().toString().padStart(2, '0');
+                                const minutes = date.getMinutes().toString().padStart(2, '0');
+                                dateTimeStr = `${day}.${month}.${year} ${hours}:${minutes}`;
+                            }
+                        } catch (e) {
+                            dateTimeStr = 'chybný dátum';
+                        }
+                    }
+                    
                     // Zistíme, či zápas obsahuje rovnaký tím ako pôvodný
                     const isHomeTeamSame = m.homeTeamIdentifier === match.homeTeamIdentifier || 
                                           m.homeTeamIdentifier === match.awayTeamIdentifier;
@@ -5878,9 +5896,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                           m.awayTeamIdentifier === match.awayTeamIdentifier;
                     const isSameTeam = isHomeTeamSame || isAwayTeamSame;
                     
-                    // Zobrazíme písmená oboch tímov a názov skupiny
+                    // Zobrazíme písmená oboch tímov, názov skupiny, dátum a čas
                     const letters = `[${mHomeLastChar || '?'}/${mAwayLastChar || '?'}]`;
-                    console.log(`  ${index + 1}. ${letters} ${mHome} vs ${mAway} (skupina: ${m.groupName})${isSameTeam ? ' ⚠️ OBSAHUJE ROVNAKÝ TÍM' : ''}`);
+                    console.log(`  ${index + 1}. ${letters} ${mHome} vs ${mAway} (skupina: ${m.groupName}) [${dateTimeStr}]${isSameTeam ? ' ⚠️ OBSAHUJE ROVNAKÝ TÍM' : ''}`);
                 });
             } else {
                 console.log(`Žiadne ďalšie zápasy v skupinách s písmenami: ${Array.from(targetLetters).join(', ')}`);
