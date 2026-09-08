@@ -1,4 +1,4 @@
-// teams.js - Zjednodušená verzia len so súhrnnou tabuľkou všetkých členov
+// statistics.js - Zjednodušená verzia len so súhrnnou tabuľkou všetkých členov
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
