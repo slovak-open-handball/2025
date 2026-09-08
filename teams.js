@@ -206,8 +206,8 @@ const debugMatches = async () => {
             const match = doc.data();
             console.log(`📄 Zápas #${index + 1}`);
             console.log(`   ID: ${doc.id}`);
-            console.log(`   Domáci (homeTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.homeTeamIdentifier) || 'N/A'}`);
-            console.log(`   Hostia (awayTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.awayTeamIdentifier) || 'N/A'}`);
+            console.log(`   Domáci (homeTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.homeTeamIdentifier}) || 'N/A'`);
+            console.log(`   Hostia (awayTeamIdentifier): teamManager.getTeamNameByDisplayIdSync(${match.awayTeamIdentifier}) || 'N/A'`);
             console.log(`   Kategória: ${match.categoryName || match.categoryId || 'N/A'}`);
             console.log(`   Stav: ${match.status || 'N/A'}`);
             console.log(`   Dáta:`, match);
