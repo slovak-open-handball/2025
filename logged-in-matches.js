@@ -6511,8 +6511,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             standardBreak = currentCategory.matchBreak || 5;
         }
         
-        // EXTRAHUJEME PÍSMENO Z IDENTIFIKÁTORA AKTUÁLNEHO TÍMU
-        const currentTeamLetter = extractGroupLetterFromTeamName(teamName);
+        // EXTRAHUJEME PÍSMENO Z IDENTIFIKÁTORA - POUŽÍVAME teamIdentifier namiesto teamName
+        const currentTeamLetter = extractGroupLetterFromTeamName(teamIdentifier);
         
         // Získame groupsByCategory z globálnej premennej
         const groupsByCategory = window.__groupsByCategory || {};
