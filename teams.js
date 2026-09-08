@@ -433,6 +433,30 @@ setTimeout(() => {
 // Pridáme funkciu do window objektu
 window.debugMatchEvents = debugMatchEvents;
 
+// --- FUNKCIA NA MANUÁLNU AKTUALIZÁCIU UI ---
+const forceUpdateUI = () => {
+    console.log('🔄 [forceUpdateUI] Manuálna aktualizácia UI...');
+    
+    // Nájdeme root element a znovu vykreslíme aplikáciu
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        try {
+            // Získame aktuálny stav z window objektu
+            const userProfileData = window.globalUserProfileData || null;
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(TeamsOverviewApp, { 
+                userProfileData: userProfileData 
+            }));
+            console.log('✅ [forceUpdateUI] UI bolo aktualizované');
+        } catch (error) {
+            console.error('❌ [forceUpdateUI] Chyba pri aktualizácii UI:', error);
+        }
+    }
+};
+
+// Pridáme do window objektu
+window.forceUpdateUI = forceUpdateUI;
+
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
@@ -448,6 +472,7 @@ const TeamsOverviewApp = (props) => {
     const [rosterCategoryName, setRosterCategoryName] = useState('');
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
+    const [updateTrigger, setUpdateTrigger] = useState(0); // Trigger pre aktualizáciu UI
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
@@ -551,12 +576,44 @@ const TeamsOverviewApp = (props) => {
         return identifier;
     };
 
-    // Načítame štatistiky - všeobecná logika
+    // --- LISTENER PRE ZMENY V matchEvents PRE AKTUALIZÁCIU UI ---
+    useEffect(() => {
+        if (!window.db) return;
+
+        console.log('🔄 [UI Updater] Nastavujem listener na matchEvents pre aktualizáciu UI...');
+        
+        // Počúvame na všetky zmeny v matchEvents
+        const eventsRef = collection(window.db, 'matchEvents');
+        const eventsQuery = query(eventsRef);
+        
+        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+            console.log(`🔄 [UI Updater] Zmena v matchEvents: ${snapshot.size} udalostí`);
+            
+            // Ak máme otvorený detail tímu, aktualizujeme štatistiky
+            if (selectedTeamDetails && teamRoster.length > 0) {
+                console.log('🔄 [UI Updater] Aktualizujem UI po zmene v matchEvents');
+                // Zvýšime trigger pre aktualizáciu
+                setUpdateTrigger(prev => prev + 1);
+            } else {
+                console.log('🔄 [UI Updater] Žiadny otvorený detail tímu, UI sa neaktualizuje');
+            }
+        }, (error) => {
+            console.error('❌ [UI Updater] Chyba pri počúvaní matchEvents:', error);
+        });
+
+        return () => {
+            console.log('🔄 [UI Updater] Ruším listener na matchEvents');
+            if (unsubscribe) unsubscribe();
+        };
+    }, [selectedTeamDetails, teamRoster]);
+
+    // --- REAL-TIME LISTENER PRE MATCHEVENTS PRE ŠTATISTIKY ---
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
         console.log('[Stats Effect] rosterTeamName:', rosterTeamName);
         console.log('[Stats Effect] rosterCategoryName:', rosterCategoryName);
+        console.log('[Stats Effect] updateTrigger:', updateTrigger);
     
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
             console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
@@ -899,7 +956,7 @@ const TeamsOverviewApp = (props) => {
             }
             console.log('[Stats Effect] 🧹 CLEANUP dokončený');
         };
-    }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails]);
+    }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails, updateTrigger]);
     
     // Funkcia na načítanie súpisky tímu pomocou loadTeamMembers
     const loadTeamRoster = (teamName, categoryName) => {
