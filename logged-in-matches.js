@@ -2924,15 +2924,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return false;
     };
 
-    // 🔥 UPRAVENÁ FUNKCIA: Kontrola časov s prihliadnutím na súvisiace zápasy
     const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
-        // Konvertujeme hallStartTime na minúty
         const [startHours, startMinutes] = hallStartTimeStr.split(':').map(Number);
         const hallStartMinutes = startHours * 60 + startMinutes;
         
-        // Vytvoríme zoznam všetkých obsadených intervalov (zápasy + zablokované časy)
         const occupiedIntervals = [];
         
         // 1. Pridáme VŠETKY existujúce zápasy pre túto halu a deň
@@ -2946,14 +2943,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             return matchDateStr === date;
         });
         
-        // Zoradíme zápasy podľa času
         allMatchesForHallAndDay.sort((a, b) => {
             const timeA = a.scheduledTime.toDate().getTime();
             const timeB = b.scheduledTime.toDate().getTime();
             return timeA - timeB;
         });
         
-        // Pridáme všetky zápasy do obsadených intervalov
         allMatchesForHallAndDay.forEach(match => {
             if (!match.scheduledTime) return;
             
@@ -3004,17 +2999,18 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             });
         }
-
-        // 🔥 3. PRIDANÉ: Ak ide o nadstavbovú skupinu, pridáme aj súvisiace zápasy z iných hál
+    
+        // 🔥 3. PRIDANÉ: Ak ide o nadstavbovú skupinu, pridáme aj súvisiace zápasy z iných hál (VŠETKY DNI)
         if (isAdvancedGroup && relatedMatches.length > 0) {
-            // Získame všetky súvisiace zápasy pre tento deň
+            // 🔥 ZMENA: Berieme VŠETKY súvisiace zápasy bez ohľadu na deň
+            // Ale pre výpočet voľného času v konkrétny deň potrebujeme len tie v rovnaký deň
             const relatedMatchesForDay = relatedMatches.filter(m => {
                 if (!m.scheduledTime) return false;
                 const matchDate = m.scheduledTime.toDate();
                 const matchDateStr = getLocalDateStr(matchDate);
                 return matchDateStr === date;
             });
-
+    
             relatedMatchesForDay.forEach(m => {
                 const matchStart = m.scheduledTime.toDate();
                 const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
@@ -3031,7 +3027,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     matchBreak = matchCategory.matchBreak || 5;
                 }
                 
-                // Súvisiaci zápas zaberá čas od začiatku do konca VRÁTANE prestávky
                 const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
                 
                 occupiedIntervals.push({
@@ -3350,7 +3345,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadHallStartTime();
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks]);
 
-    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy súvisiace zápasy
+    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (bez ohľadu na deň)
     useEffect(() => {
         if (selectedTime && matchDuration > 0) {
             const [newHours, newMinutes] = selectedTime.split(':').map(Number);
@@ -3359,7 +3354,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const newCategory = categories.find(c => c.name === match?.categoryName);
             const newMatchBreak = newCategory?.matchBreak || 5;
             const newEndMinutes = newStartMinutes + matchDuration + newMatchBreak;
-
+    
             // Kontrola konfliktov s existujúcimi zápasmi v rovnakej hale
             const overlapping = existingMatches.filter(existingMatch => {
                 if (!existingMatch.scheduledTime) return false;
@@ -3382,49 +3377,42 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
                 
                 const existingEndMinutes = existingStartMinutes + existingDuration + existingMatchBreak;
-
+    
                 return (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes);
             });
-
+    
             // 🔥 PRIDANÉ: Kontrola konfliktov so súvisiacimi zápasmi (nadstavbová skupina)
+            // 🔥 ZMENA: Kontrolujeme VŠETKY súvisiace zápasy bez ohľadu na deň
             let relatedConflicts = [];
             if (isAdvancedGroup && relatedMatches.length > 0) {
-                const selectedDateObj = getLocalDateFromStr(selectedDate);
-                if (selectedDateObj) {
-                    const selectedDateStr = getLocalDateStr(selectedDateObj);
+                // 🔥 Odstránili sme filter podľa dňa - kontrolujeme všetky súvisiace zápasy
+                relatedConflicts = relatedMatches.filter(relatedMatch => {
+                    if (!relatedMatch.scheduledTime) return false;
                     
-                    relatedConflicts = relatedMatches.filter(relatedMatch => {
-                        if (!relatedMatch.scheduledTime) return false;
-                        
-                        const relatedDate = relatedMatch.scheduledTime.toDate();
-                        const relatedDateStr = getLocalDateStr(relatedDate);
-                        
-                        // Iba ak je v rovnaký deň
-                        if (selectedDateStr !== relatedDateStr) return false;
-                        
-                        const relatedHours = relatedDate.getHours();
-                        const relatedMinutes = relatedDate.getMinutes();
-                        const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
-                        
-                        const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
-                        let relatedDuration = 0;
-                        let relatedMatchBreak = 5;
-                        
-                        if (relatedCategory) {
-                            const periods = relatedCategory.periods || 2;
-                            const periodDuration = relatedCategory.periodDuration || 20;
-                            const breakDuration = relatedCategory.breakDuration || 2;
-                            relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                            relatedMatchBreak = relatedCategory.matchBreak || 5;
-                        }
-                        
-                        const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
-
-                        return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
-                    });
-                }
+                    const relatedDate = relatedMatch.scheduledTime.toDate();
+                    const relatedHours = relatedDate.getHours();
+                    const relatedMinutes = relatedDate.getMinutes();
+                    const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
+                    
+                    const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
+                    let relatedDuration = 0;
+                    let relatedMatchBreak = 5;
+                    
+                    if (relatedCategory) {
+                        const periods = relatedCategory.periods || 2;
+                        const periodDuration = relatedCategory.periodDuration || 20;
+                        const breakDuration = relatedCategory.breakDuration || 2;
+                        relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                        relatedMatchBreak = relatedCategory.matchBreak || 5;
+                    }
+                    
+                    const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
+    
+                    // 🔥 Kontrola časového prekrývania (bez ohľadu na deň)
+                    return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
+                });
             }
-
+    
             // Spojíme obe polia konfliktov
             const allConflicts = [...overlapping, ...relatedConflicts];
             setOverlappingMatches(allConflicts);
