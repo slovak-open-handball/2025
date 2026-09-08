@@ -6640,9 +6640,6 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     useEffect(() => {
         if (existingMatchesToProcess.length > 0 && !isExistingMatchModalOpen && currentMatchIndex === 0) {
-                count: existingMatchesToProcess.length,
-                firstMatch: existingMatchesToProcess[0]
-            });
             
             setTimeout(() => {
                 processNextExistingMatch();
