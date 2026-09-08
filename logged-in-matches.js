@@ -6491,8 +6491,8 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };    
 
-    const checkTeamConflicts = (teamIdentifier, currentMatch, allMatches, categories) => {
-        if (!teamIdentifier || !currentMatch || !currentMatch.scheduledTime) return false;
+    const checkTeamConflicts = (teamName, currentMatch, allMatches, categories) => {
+        if (!teamName || !currentMatch || !currentMatch.scheduledTime) return false;
         
         const currentTime = currentMatch.scheduledTime.toDate();
         const currentStartMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
@@ -6511,8 +6511,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             standardBreak = currentCategory.matchBreak || 5;
         }
         
-        // EXTRAHUJEME PÍSMENO Z IDENTIFIKÁTORA - POUŽÍVAME teamIdentifier namiesto teamName
-        const currentTeamLetter = extractGroupLetterFromTeamName(teamIdentifier);
+        // EXTRAHUJEME PÍSMENO Z NÁZVU TÍMU (teamName)
+        const currentTeamLetter = extractGroupLetterFromTeamName(teamName);
         
         // Získame groupsByCategory z globálnej premennej
         const groupsByCategory = window.__groupsByCategory || {};
@@ -6562,10 +6562,11 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (otherMatch.id === currentMatch.id) continue;
             if (!otherMatch.scheduledTime) continue;
             
-            // Kontrola, či ide o ten istý tím (domáci alebo hosť)
-            const isSameTeam = (otherMatch.homeTeamIdentifier === teamIdentifier || 
-                                otherMatch.awayTeamIdentifier === teamIdentifier);
+            // Kontrola, či ide o ten istý tím - porovnávame NÁZVY TÍMOV
+            const otherHomeTeamName = getTeamNameByIdentifier(otherMatch.homeTeamIdentifier);
+            const otherAwayTeamName = getTeamNameByIdentifier(otherMatch.awayTeamIdentifier);
             
+            const isSameTeam = (otherHomeTeamName === teamName || otherAwayTeamName === teamName);
             if (!isSameTeam) continue;
             
             const otherTime = otherMatch.scheduledTime.toDate();
@@ -6606,9 +6607,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (isCurrentAdvanced && isOtherAdvanced && 
                 currentMatch.categoryId === otherMatch.categoryId) {
                 
-                // Extrahujeme písmená z oboch tímov v druhom zápase
-                const otherHomeLetter = extractGroupLetterFromTeamName(otherMatch.homeTeamName);
-                const otherAwayLetter = extractGroupLetterFromTeamName(otherMatch.awayTeamName);
+                // Extrahujeme písmená z oboch tímov v druhom zápase - POUŽÍVAME NÁZVY TÍMOV
+                const otherHomeLetter = extractGroupLetterFromTeamName(otherHomeTeamName);
+                const otherAwayLetter = extractGroupLetterFromTeamName(otherAwayTeamName);
                 
                 // Kontrola, či sa písmeno aktuálneho tímu zhoduje s niektorým písmenom v druhom zápase
                 const letterMatches = (currentTeamLetter && 
