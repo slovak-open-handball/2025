@@ -71,6 +71,105 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
+// NOVÁ FUNKCIA: Načítanie všetkých členov všetkých tímov do jedného zoznamu
+const loadAllTeamMembers = (onUpdate) => {
+    if (!window.db) {
+        if (onUpdate) onUpdate([]);
+        return () => {};
+    }
+    
+    const usersRef = collection(window.db, 'users');
+    
+    const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
+        const allMembers = [];
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const [categoryName, teamsArray] of Object.entries(teams)) {
+                if (!Array.isArray(teamsArray)) continue;
+                
+                for (const team of teamsArray) {
+                    const teamName = team.teamName || 'Neznámy tím';
+                    
+                    // Hráči
+                    if (team.playerDetails && Array.isArray(team.playerDetails)) {
+                        team.playerDetails.forEach((player, idx) => {
+                            allMembers.push({
+                                type: 'Hráč',
+                                firstName: player.firstName || '',
+                                lastName: player.lastName || '',
+                                jerseyNumber: player.jerseyNumber || '',
+                                registrationNumber: player.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'playerDetails',
+                                teamName: teamName,
+                                categoryName: categoryName
+                            });
+                        });
+                    }
+                    
+                    // Členovia RT (muži)
+                    if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+                        team.menTeamMemberDetails.forEach((member, idx) => {
+                            allMembers.push({
+                                type: 'Člen RT (muž)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'menTeamMemberDetails',
+                                teamName: teamName,
+                                categoryName: categoryName
+                            });
+                        });
+                    }
+                    
+                    // Členovia RT (ženy)
+                    if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+                        team.womenTeamMemberDetails.forEach((member, idx) => {
+                            allMembers.push({
+                                type: 'Člen RT (žena)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || '',
+                                userId: userId,
+                                originalIndex: idx,
+                                dbArrayName: 'womenTeamMemberDetails',
+                                teamName: teamName,
+                                categoryName: categoryName
+                            });
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Zoradenie: najprv RT členovia, potom hráči, podľa priezviska
+        const rtMembers = allMembers.filter(m => m.type !== 'Hráč');
+        const players = allMembers.filter(m => m.type === 'Hráč');
+        
+        const sortedMembers = [...rtMembers, ...players].sort((a, b) => {
+            const aName = `${a.lastName} ${a.firstName}`.trim();
+            const bName = `${b.lastName} ${b.firstName}`.trim();
+            return slovakCollator.compare(aName, bName);
+        });
+        
+        if (onUpdate) onUpdate(sortedMembers);
+    }, (error) => {
+        console.error('[loadAllTeamMembers] Chyba:', error);
+        if (onUpdate) onUpdate([]);
+    });
+    
+    return unsubscribe;
+};
+
 // Funkcia na načítanie členov tímu s reálnym sledovaním - POUŽÍVA CELÝ NÁZOV VRÁTANE SUFIXU
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
@@ -442,6 +541,11 @@ const TeamsOverviewApp = (props) => {
     const [rosterCategoryName, setRosterCategoryName] = useState('');
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
+    
+    // NOVÝ STAV: Všetci členovia všetkých tímov
+    const [allMembers, setAllMembers] = useState([]);
+    const [isLoadingAllMembers, setIsLoadingAllMembers] = useState(false);
+    const [allMembersUnsubscribe, setAllMembersUnsubscribe] = useState(null);
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
@@ -953,6 +1057,48 @@ const TeamsOverviewApp = (props) => {
         
         window.__rosterTimeoutId = timeoutId;
     };
+
+    // NOVÁ FUNKCIA: Načítanie všetkých členov všetkých tímov
+    const loadAllMembers = () => {
+        console.log('[loadAllMembers] Spúšťam načítanie všetkých členov');
+        
+        if (allMembersUnsubscribe) {
+            console.log('[loadAllMembers] Ruším predchádzajúci listener');
+            try {
+                allMembersUnsubscribe();
+            } catch (e) {}
+            setAllMembersUnsubscribe(null);
+        }
+        
+        setIsLoadingAllMembers(true);
+        
+        try {
+            const unsubscribe = loadAllTeamMembers((members) => {
+                console.log('[loadAllMembers] Načítaných', members.length, 'členov');
+                setAllMembers(members);
+                setIsLoadingAllMembers(false);
+            });
+            setAllMembersUnsubscribe(() => unsubscribe);
+        } catch (error) {
+            console.error('[loadAllMembers] Chyba pri načítaní:', error);
+            setIsLoadingAllMembers(false);
+            setAllMembers([]);
+        }
+    };
+
+    // Spustíme načítanie všetkých členov pri prvom načítaní
+    useEffect(() => {
+        loadAllMembers();
+        
+        return () => {
+            if (allMembersUnsubscribe) {
+                try {
+                    allMembersUnsubscribe();
+                } catch (e) {}
+                setAllMembersUnsubscribe(null);
+            }
+        };
+    }, []);
 
     // Čistenie listenera pri zmene výberu
     useEffect(() => {
@@ -1524,6 +1670,211 @@ const TeamsOverviewApp = (props) => {
         loadTeamRoster(occ.teamName, categoryName);
     };
 
+    // NOVÝ RENDER: Tabuľka všetkých členov
+    const renderAllMembersTable = () => {
+        const categoryFromUrl = getCategoryFromUrl();
+        const hasCategoryInUrl = !!categoryFromUrl;
+        
+        if (!hasCategoryInUrl) {
+            return null;
+        }
+        
+        if (!isRostersVisible) {
+            return null;
+        }
+        
+        if (isLoadingAllMembers) {
+            return React.createElement(
+                'div',
+                { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+                React.createElement(
+                    'div',
+                    { className: 'text-center text-gray-500 py-4' },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
+                    React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam všetkých členov...')
+                )
+            );
+        }
+        
+        if (!allMembers || allMembers.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-semibold text-gray-700 mb-2' },
+                    'Všetci členovia tímov'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-500' },
+                    'Momentálne nie sú žiadni členovia v žiadnom tíme.'
+                )
+            );
+        }
+        
+        // Zoskupenie členov podľa kategórie a tímu pre lepšiu čitateľnosť
+        const members = allMembers.filter(m => {
+            // Ak je vybraná kategória, filtrujeme podľa nej
+            if (selectedCategoryId) {
+                const selectedCategoryName = categoryIdToNameMap[selectedCategoryId];
+                return m.categoryName === selectedCategoryName;
+            }
+            return true;
+        });
+        
+        if (members.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-semibold text-gray-700 mb-2' },
+                    'Všetci členovia tímov'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-500' },
+                    'V tejto kategórii nie sú žiadni členovia.'
+                )
+            );
+        }
+        
+        return React.createElement(
+            'div',
+            { className: 'mt-4 bg-white rounded-xl shadow-xl p-6 overflow-hidden' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-semibold text-gray-700' },
+                    `Všetci členovia tímov${selectedCategoryId ? ` (kategória: ${categoryIdToNameMap[selectedCategoryId]})` : ''}`
+                ),
+                React.createElement(
+                    'span',
+                    { className: 'text-sm text-gray-500' },
+                    `Celkom: ${members.length} členov`
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' },
+                React.createElement(
+                    'table',
+                    { className: 'w-full border-collapse text-sm' },
+                    React.createElement(
+                        'thead',
+                        { className: 'bg-gray-100 sticky top-0' },
+                        React.createElement(
+                            'tr',
+                            { className: 'border-b border-gray-200' },
+                            React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
+                            React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '40px' } }, 'Č.'),
+                            React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
+                            // NOVÉ STĹPCE: Kategória a Tím
+                            React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Kategória'),
+                            React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Tím'),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'Gól')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, '7m')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-yellow-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ŽK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-red-600 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ČK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-square text-blue-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'MK')
+                                )
+                            ),
+                            React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                                React.createElement('div', { className: 'flex flex-col items-center' },
+                                    React.createElement('i', { className: 'fa-solid fa-clock text-orange-500 text-sm' }),
+                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vylúč.')
+                                )
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        { className: 'divide-y divide-gray-100' },
+                        members.map((member, index) => {
+                            const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
+                            
+                            // Štatistiky pre tohto člena (ak sú dostupné)
+                            const memberKey = `${member.type}_${member.originalIndex}`;
+                            const stats = membersStats[memberKey] || {
+                                goals: 0,
+                                convertedPenalties: 0,
+                                missedPenalties: 0,
+                                yellowCards: 0,
+                                redCards: 0,
+                                blueCards: 0,
+                                exclusions: 0
+                            };
+                            
+                            const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
+                            const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
+                            
+                            const memberIcon = member.type === 'Hráč' 
+                                ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
+                                : (member.type === 'Člen RT (muž)' 
+                                    ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 text-sm' })
+                                    : (member.type === 'Člen RT (žena)'
+                                        ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-sm' })
+                                        : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-sm' })));
+                            
+                            const rowClass = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
+                            
+                            return React.createElement(
+                                'tr',
+                                { 
+                                    key: `${member.type}_${member.originalIndex}_${index}`,
+                                    className: `${rowClass} transition-colors cursor-default`
+                                },
+                                React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
+                                React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center' }, member.jerseyNumber || ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-gray-800' }, fullName),
+                                // NOVÉ STĹPCE
+                                React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-sm' }, member.categoryName || ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-sm' }, member.teamName || ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
+                                React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
+                            );
+                        })
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'mt-4 pt-3 border-t border-gray-200 text-xs text-gray-400' },
+                `Celkový počet členov: ${members.length}`
+            )
+        );
+    };
+
     // Render súpisky tímu so štatistikami
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
@@ -1800,7 +2151,10 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            renderTeamRoster()
+            // Pôvodná súpiska tímu
+            renderTeamRoster(),
+            // NOVÁ TABUĽKA: Všetci členovia všetkých tímov
+            renderAllMembersTable()
         );
     };
 
