@@ -3345,7 +3345,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadHallStartTime();
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks]);
 
-    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (vrátane dňa a času ukončenia)
+    // 🔥 UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy VŠETKY súvisiace zápasy (vrátane logickej postupnosti)
     useEffect(() => {
         if (selectedTime && matchDuration > 0) {
             const [newHours, newMinutes] = selectedTime.split(':').map(Number);
@@ -3388,96 +3388,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 const selectedDateObj = getLocalDateFromStr(selectedDate);
                 const selectedDateStr = selectedDateObj ? getLocalDateStr(selectedDateObj) : null;
                 
-                // 🔥 ZISTÍME NAJNESKORŠÍ KONIEC ZÁPASU V SKUPINE PRE TENTO DEŇ
-                let latestEndMinutes = 0;
-                const relatedMatchesForDay = relatedMatches.filter(relatedMatch => {
-                    if (!relatedMatch.scheduledTime) return false;
-                    const relatedDate = relatedMatch.scheduledTime.toDate();
-                    const relatedDateStr = getLocalDateStr(relatedDate);
-                    return selectedDateStr && relatedDateStr === selectedDateStr;
-                });
-                
-                // Pre každý súvisiaci zápas v tento deň zistíme jeho koniec
-                relatedMatchesForDay.forEach(relatedMatch => {
-                    const relatedDate = relatedMatch.scheduledTime.toDate();
-                    const relatedHours = relatedDate.getHours();
-                    const relatedMinutes = relatedDate.getMinutes();
-                    const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
-                    
-                    const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
-                    let relatedDuration = 0;
-                    let relatedMatchBreak = 5;
-                    
-                    if (relatedCategory) {
-                        const periods = relatedCategory.periods || 2;
-                        const periodDuration = relatedCategory.periodDuration || 20;
-                        const breakDuration = relatedCategory.breakDuration || 2;
-                        relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                        relatedMatchBreak = relatedCategory.matchBreak || 5;
-                    }
-                    
-                    const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
-                    if (relatedEndMinutes > latestEndMinutes) {
-                        latestEndMinutes = relatedEndMinutes;
-                    }
-                });
-                
-                // 🔥 KONTROLA: Ak existujú zápasy v skupine v tento deň, zápas NESMIE začať skôr ako skončil posledný
-                if (latestEndMinutes > 0) {
-                    // Zápas musí začať PO skončení posledného zápasu v skupine
-                    // Pridáme minimálnu prestávku medzi zápasmi (napr. 5 minút)
-                    const minBreak = 5;
-                    const earliestStartMinutes = latestEndMinutes + minBreak;
-                    
-                    if (newStartMinutes < earliestStartMinutes) {
-                        // Konflikt - zápas začína príliš skoro (pred koncom posledného zápasu skupiny)
-                        // Vytvoríme "umelý" konflikt, ktorý zablokuje uloženie
-                        const dummyConflict = {
-                            id: 'group-last-match',
-                            type: 'related_match',
-                            scheduledTime: {
-                                toDate: () => {
-                                    const date = new Date();
-                                    date.setHours(Math.floor(latestEndMinutes / 60), latestEndMinutes % 60, 0);
-                                    return date;
-                                }
-                            },
-                            homeTeamIdentifier: 'POSLEDNÝ ZÁPAS SKUPINY',
-                            awayTeamIdentifier: 'SKUPINA ' + (() => {
-                                // Získame písmená skupín z targetLetters
-                                const targetLetters = new Set();
-                                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                                const homeLetter = extractLetterFromTeamName(homeTeamName);
-                                const awayLetter = extractLetterFromTeamName(awayTeamName);
-                                if (homeLetter) targetLetters.add(homeLetter);
-                                if (awayLetter) targetLetters.add(awayLetter);
-                                return Array.from(targetLetters).join(', ');
-                            })(),
-                            categoryName: match.categoryName,
-                            hallId: null
-                        };
-                        
-                        // Pridáme konflikt
-                        relatedConflicts.push(dummyConflict);
-                        
-                        // Nastavíme chybovú správu
-                        const latestEndTime = formatTimeFromMinutes(latestEndMinutes);
-                        const earliestStartTime = formatTimeFromMinutes(earliestStartMinutes);
-                        const targetLetters = new Set();
-                        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                        const homeLetter = extractLetterFromTeamName(homeTeamName);
-                        const awayLetter = extractLetterFromTeamName(awayTeamName);
-                        if (homeLetter) targetLetters.add(homeLetter);
-                        if (awayLetter) targetLetters.add(awayLetter);
-                        const groupLetters = Array.from(targetLetters).join(', ');
-                        
-                        setTimeError(`Tím zo skupiny ${groupLetters} nemôže hrať skôr ako o ${earliestStartTime}, pretože posledný zápas skupiny končí o ${latestEndTime} (vrátane ${minBreak} min prestávky).`);
-                    }
-                }
-                
-                // 🔥 PRIDANÉ: Kontrola časového prekrývania so súvisiacimi zápasmi v ROVNAKÝ DEŇ
+                // 🔥 1. KONTROLA ČASOVÉHO PREKRÝVANIA (v rovnaký deň)
                 const overlappingRelated = relatedMatches.filter(relatedMatch => {
                     if (!relatedMatch.scheduledTime) return false;
                     
@@ -3508,6 +3419,63 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     // Časové prekrývanie v rovnaký deň = KONFLIKT
                     return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
                 });
+                
+                // 🔥 2. LOGICKÁ KONTROLA - tím NESMIE hrať v nadstavbovej skupine, kým neskončia VŠETKY zápasy v pôvodnej skupine
+                // Zistíme, či existujú zápasy v pôvodných skupinách v neskorších dňoch
+                const laterMatches = relatedMatches.filter(relatedMatch => {
+                    if (!relatedMatch.scheduledTime) return false;
+                    
+                    const relatedDate = relatedMatch.scheduledTime.toDate();
+                    const relatedDateStr = getLocalDateStr(relatedDate);
+                    
+                    // Ak je zápas v neskorší deň (po vybranom dátume)
+                    if (selectedDateStr && relatedDateStr > selectedDateStr) {
+                        return true;
+                    }
+                    return false;
+                });
+                
+                // Ak existujú zápasy v neskorších dňoch, vytvoríme konflikt
+                if (laterMatches.length > 0) {
+                    // Získame písmená skupín pre chybovú správu
+                    const targetLetters = new Set();
+                    const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                    const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                    const homeLetter = extractLetterFromTeamName(homeTeamName);
+                    const awayLetter = extractLetterFromTeamName(awayTeamName);
+                    if (homeLetter) targetLetters.add(homeLetter);
+                    if (awayLetter) targetLetters.add(awayLetter);
+                    const groupLetters = Array.from(targetLetters).join(', ');
+                    
+                    // Zistíme najneskorší dátum zápasu v pôvodných skupinách
+                    const latestDate = laterMatches.reduce((latest, m) => {
+                        const d = m.scheduledTime.toDate();
+                        return d > latest ? d : latest;
+                    }, new Date(0));
+                    const latestDateStr = formatDateWithDay(latestDate);
+                    
+                    // Vytvoríme "umelý" konflikt
+                    const dummyConflict = {
+                        id: 'group-last-match-logical',
+                        type: 'related_match',
+                        scheduledTime: {
+                            toDate: () => {
+                                const date = new Date(latestDate);
+                                date.setHours(23, 59, 0);
+                                return date;
+                            }
+                        },
+                        homeTeamIdentifier: 'POSLEDNÝ ZÁPAS SKUPINY',
+                        awayTeamIdentifier: `SKUPINA ${groupLetters} (${latestDateStr})`,
+                        categoryName: match.categoryName,
+                        hallId: null
+                    };
+                    
+                    relatedConflicts.push(dummyConflict);
+                    
+                    // Nastavíme chybovú správu
+                    setTimeError(`Tím zo skupiny ${groupLetters} nemôže hrať v nadstavbovej skupine pred ${latestDateStr}, pretože skupina ešte má zápasy v tento deň.`);
+                }
                 
                 // Pridáme aj prekrývajúce sa zápasy do konfliktov
                 relatedConflicts = [...relatedConflicts, ...overlappingRelated];
