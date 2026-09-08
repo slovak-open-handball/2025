@@ -254,8 +254,6 @@ const debugMatches = async () => {
             console.log('─────────────────────────────────────────────────────────────');
         });
         
-        // Skontrolujeme, či existuje zápas s tímom Tatran Prešov A (po konverzii)
-        console.log('🔍 Hľadám zápasy s tímom "Tatran Prešov A" (po konverzii)...');
         let found = false;
         querySnapshot.forEach((doc) => {
             const match = doc.data();
@@ -276,16 +274,9 @@ const debugMatches = async () => {
                     }
                 } catch (e) {}
             }
-            
-            if (homeConverted === 'Tatran Prešov A' || awayConverted === 'Tatran Prešov A') {
-                console.log(`✅ Nájdený zápas: ${homeConverted} vs ${awayConverted}`);
-                found = true;
-            }
         });
         
         if (!found) {
-            console.log('❌ Žiadny zápas s tímom "Tatran Prešov A" nebol nájdený.');
-            console.log('💡 Skúste hľadať pod iným názvom (napr. "Tatran Prešov" bez sufixu)');
             
             // Skúsime nájsť podobné názvy (po konverzii)
             console.log('🔍 Hľadám podobné názvy (po konverzii)...');
@@ -307,10 +298,6 @@ const debugMatches = async () => {
                             if (converted) awayConverted = converted;
                         }
                     } catch (e) {}
-                }
-                
-                if (homeConverted.includes('Tatran') || awayConverted.includes('Tatran')) {
-                    console.log(`   Nájdený podobný zápas: ${homeConverted} vs ${awayConverted}`);
                 }
             });
         }
