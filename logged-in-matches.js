@@ -8035,7 +8035,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 hallId: selectedHallFilter || null,
                 day: selectedDayFilter || null
             },
-            blockedBreaks: blockedBreaks
+            blockedBreaks: blockedBreaks,
+            groupsByCategory: groupsByCategory
         }),
         React.createElement(AddBreakModal, {
             isOpen: isBreakModalOpen,
