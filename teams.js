@@ -679,31 +679,31 @@ const TeamsOverviewApp = (props) => {
                     memberType: member.type
                 };
             });
-    
+        
             // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
-                const eventData = doc.data();
+                const eventData = doc.data(); // <--- OPRAVA: zmenené z "event" na "eventData"
                 console.log(`[Stats Effect] 📄 Udalosť:`, {
                     id: doc.id,
-                    eventType: event.eventType,
-                    eventSubtype: event.eventSubtype,
-                    memberTypeKey: event.memberTypeKey,
-                    memberIndex: event.memberIndex,
-                    team: event.team,
-                    matchId: event.matchId
+                    eventType: eventData.eventType,
+                    eventSubtype: eventData.eventSubtype,
+                    memberTypeKey: eventData.memberTypeKey,
+                    memberIndex: eventData.memberIndex,
+                    team: eventData.team,
+                    matchId: eventData.matchId
                 });
                 
                 // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
                 let foundMemberKey = null;
                 for (const [memberKey, stat] of Object.entries(stats)) {
-                    if (stat.dbArrayName === event.memberTypeKey && stat.dbIndex === event.memberIndex) {
+                    if (stat.dbArrayName === eventData.memberTypeKey && stat.dbIndex === eventData.memberIndex) {
                         foundMemberKey = memberKey;
                         break;
                     }
                 }
                 
                 if (!foundMemberKey) {
-                    console.log(`[Stats Effect] ⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${event.memberTypeKey}, memberIndex=${event.memberIndex}`);
+                    console.log(`[Stats Effect] ⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${eventData.memberTypeKey}, memberIndex=${eventData.memberIndex}`);
                     return;
                 }
                 
@@ -711,11 +711,11 @@ const TeamsOverviewApp = (props) => {
                 console.log(`[Stats Effect] ✅ Priradené k členovi: ${stat.name} (${foundMemberKey})`);
                 
                 // Pripočítame štatistiky podľa typu udalosti
-                switch (event.eventType) {
+                switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
                         console.log(`[Stats Effect] ⚽ Gól pre ${stat.name} (celkom: ${stat.goals})`);
-                        if (event.eventSubtype === 'converted_penalty') {
+                        if (eventData.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
                         }
                         break;
@@ -724,13 +724,13 @@ const TeamsOverviewApp = (props) => {
                         console.log(`[Stats Effect] ❌ Nepremenená 7m pre ${stat.name}`);
                         break;
                     case 'card':
-                        if (event.eventSubtype === 'yellow') {
+                        if (eventData.eventSubtype === 'yellow') {
                             stat.yellowCards++;
                             console.log(`[Stats Effect] 🟨 ŽK pre ${stat.name} (celkom: ${stat.yellowCards})`);
-                        } else if (event.eventSubtype === 'red') {
+                        } else if (eventData.eventSubtype === 'red') {
                             stat.redCards++;
                             console.log(`[Stats Effect] 🟥 ČK pre ${stat.name} (celkom: ${stat.redCards})`);
-                        } else if (event.eventSubtype === 'blue') {
+                        } else if (eventData.eventSubtype === 'blue') {
                             stat.blueCards++;
                             console.log(`[Stats Effect] 🟦 MK pre ${stat.name} (celkom: ${stat.blueCards})`);
                         }
@@ -741,10 +741,10 @@ const TeamsOverviewApp = (props) => {
                         break;
                 }
             });
-    
+        
             console.log(`[Stats Effect] 📊 Spracovaných udalostí pre chunk ${chunkIndex}: ${eventsSnapshot.size}`);
             console.log(`[Stats Effect] 📊 Počet členov so štatistikami: ${Object.keys(stats).length}`);
-    
+        
             return stats;
         };
     
