@@ -1,5 +1,4 @@
 // logged-in-matches.js
-// Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -9,12 +8,10 @@ const faCSS = document.createElement('link');
 faCSS.rel = 'stylesheet';
 faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';document.head.appendChild(faCSS);
 
-// Definície typov pre športové haly
 const typeLabels = {
     sportova_hala: "Športová hala",
 };
 
-// Ikony pre typy miest
 const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
 };
@@ -22,12 +19,10 @@ const typeIcons = {
 const getLocalDateStr = (date) => {
     if (!date) return null;
     
-    // Ak už je to string (napr. z URL), vrátime ho priamo
     if (typeof date === 'string') {
         return date;
     }
     
-    // Ak je to Date objekt
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
@@ -45,7 +40,6 @@ const getDayName = (date) => {
     return days[date.getDay()];
 };
 
-// Funkcia na formátovanie dátumu s dňom v týždni
 const formatDateWithDay = (date) => {
     const dayName = getDayName(date);
     const formattedDate = date.toLocaleDateString('sk-SK', {
@@ -56,9 +50,6 @@ const formatDateWithDay = (date) => {
     return `${dayName} ${formattedDate}`;
 };
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -99,7 +90,6 @@ window.showGlobalNotification = (message, type = 'success') => {
 const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
     const matches = [];
     
-    // Pre každý tím vytvoríme identifikátor a extrahujeme potrebné údaje
     const teamIdentifiers = teams.map(t => {
         const category = categoryName || t.category || 'Neznáma kategória';
         
@@ -111,30 +101,23 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
         const order = t.order || '?';
         const teamIdentifier = `${category} ${groupName}${order}`;
         
-        // ---------- HLAVNÁ ZMENA: Extrahujeme posledný znak z názvu tímu ----------
-        // Názov tímu je v tvare napr. "U12 D 1A" - posledný znak je písmeno skupiny (A, B, C, ...)
         let lastCharFromTeamName = '';
         if (t.teamName) {
-            // Zoberieme celý názov a nájdeme posledný znak, ktorý nie je číslica
             const teamNameStr = t.teamName.toString();
-            // Hľadáme od konca prvý znak, ktorý nie je číselný
             for (let i = teamNameStr.length - 1; i >= 0; i--) {
                 const char = teamNameStr[i];
                 if (char >= '0' && char <= '9') {
-                    continue; // Preskočíme číslice
+                    continue;
                 }
-                // Našli sme nečíselný znak - to je naše písmeno
                 lastCharFromTeamName = char;
                 break;
             }
             
-            // Ak sme nenašli žiadne písmeno (napr. "U12 D 1"), použijeme posledný znak
             if (lastCharFromTeamName === '') {
                 lastCharFromTeamName = teamNameStr.slice(-1);
             }
         }
         
-        // Fallback: Ak nemáme teamName, skúsime extrahovať z orderu (ak obsahuje písmeno)
         let finalLastChar = lastCharFromTeamName;
         if (!finalLastChar && order && order !== '?') {
             const orderStr = order.toString();
@@ -158,16 +141,13 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     });
     
     if (withRepetitions) {
-        // Každý s každým doma/vonku
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = 0; j < teamIdentifiers.length; j++) {
                 if (i !== j) {
                     if (transferFromBasicGroup) {
-                        // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
                         const lastCharI = teamIdentifiers[i].lastChar;
                         const lastCharJ = teamIdentifiers[j].lastChar;
                         
-                        // Ak niektorý tím nemá lastChar (prázdny reťazec), generujeme zápas (pre istotu)
                         if (!lastCharI || !lastCharJ) {
                             matches.push({
                                 homeTeamIdentifier: teamIdentifiers[i].identifier,
@@ -189,7 +169,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             }
         }
     } else {
-        // Jedinečné dvojice
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
                 if (transferFromBasicGroup) {
@@ -220,7 +199,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     return matches;
 };
 
-// Modálne okno pre presun zápasov medzi dňami/halami (jednosmerný presun)
 const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
     const [targetHallId, setTargetHallId] = useState('');
     const [targetDate, setTargetDate] = useState('');
@@ -410,7 +388,6 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
     );
 };
 
-// Modálne okno pre výmenu zápasov medzi halami/dňami (bez checkboxov - vždy všetko)
 const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
     const [targetHallId, setTargetHallId] = useState('');
     const [targetDate, setTargetDate] = useState('');
@@ -426,22 +403,18 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
 
     if (!isOpen) return null;
 
-    // Zoradenie hál podľa abecedy
     const sortedHalls = [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
     
-    // Filtrovanie hál - pri výmene celej haly neukazujeme zdrojovú halu
     const availableHalls = isWholeHall 
         ? sortedHalls.filter(h => h.id !== sourceHallId)
         : sortedHalls;
 
-    // Pomocná funkcia na formátovanie dátumu pre zobrazenie
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr) return '';
         const [year, month, day] = dateStr.split('-').map(Number);
         return `${day}. ${month}. ${year}`;
     };
 
-    // Formátovanie zdrojového dátumu pre zobrazenie
     const formattedSourceDate = sourceDate ? formatDateForDisplay(sourceDate) : '';
 
     const isValid = targetHallId && (!isWholeHall ? targetDate : true);
@@ -454,8 +427,8 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
             targetHallId,
             targetDate: isWholeHall ? null : targetDate,
             isWholeHall,
-            swapMatches: true,   // Vždy true
-            swapSchedules: true  // Vždy true
+            swapMatches: true,
+            swapSchedules: true
         });
         setLoading(false);
         onClose();
@@ -473,7 +446,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -490,7 +462,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Informácia o zdroji - formátovaný dátum
             React.createElement(
                 'div',
                 { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
@@ -507,7 +478,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Výber cieľovej haly
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -528,7 +498,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Výber cieľového dňa (len ak nie je celá hala) - formátované zobrazenie v selectboxe
             !isWholeHall && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -544,7 +513,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                     },
                     React.createElement('option', { value: '' }, '-- Vyberte deň --'),
                     availableDays.map(day => {
-                        // Formátovanie dňa pre zobrazenie v selectboxe
                         const [year, month, dayNum] = day.value.split('-').map(Number);
                         const formattedDay = `${dayNum}. ${month}. ${year}`;
                         return React.createElement('option', { key: day.value, value: day.value }, formattedDay);
@@ -552,7 +520,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -583,7 +550,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
     );
 };
 
-// Modálne okno pre výber typu generovania
 const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
     if (!isOpen) return null;
 
@@ -599,7 +565,6 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -614,12 +579,10 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                 )
             ),
 
-            // Možnosti výberu
             React.createElement(
                 'div',
                 { className: 'space-y-3' },
                 
-                // Klasické zápasy
                 React.createElement(
                     'button',
                     {
@@ -643,7 +606,6 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                     )
                 ),
                 
-                // Zápas o umiestnenie
                 React.createElement(
                     'button',
                     {
@@ -668,7 +630,6 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                 )
             ),
 
-            // Tlačidlo Zrušiť
             React.createElement(
                 'div',
                 { className: 'flex justify-end mt-4' },
@@ -685,21 +646,20 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
     );
 };
 
-// Modálne okno pre vytvorenie zápasu o umiestnenie
 const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedGroupType, setSelectedGroupType] = useState(''); // 'základná skupina' alebo 'nadstavbová skupina'
+    const [selectedGroupType, setSelectedGroupType] = useState('');
     const [selectedGroup1, setSelectedGroup1] = useState('');
     const [selectedGroup2, setSelectedGroup2] = useState('');
     const [selectedOrder1, setSelectedOrder1] = useState('');
     const [selectedOrder2, setSelectedOrder2] = useState('');
-    const [placementRank, setPlacementRank] = useState(''); // Nový stav pre umiestnenie
+    const [placementRank, setPlacementRank] = useState(''); 
     const [matchTitle, setMatchTitle] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
     const [filteredGroupsByType, setFilteredGroupsByType] = useState([]);
     const [orderError1, setOrderError1] = useState('');
     const [orderError2, setOrderError2] = useState('');
-    const [rankError, setRankError] = useState(''); // Chyba pre umiestnenie
+    const [rankError, setRankError] = useState('');
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
     const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
 
@@ -723,18 +683,15 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [isOpen]);
 
-    // Zoradenie kategórií podľa abecedy
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Možnosti pre typ skupiny
     const groupTypeOptions = [
         { value: 'základná skupina', label: 'Základná skupina', icon: 'fa-layer-group', color: 'green' },
         { value: 'nadstavbová skupina', label: 'Nadstavbová skupina', icon: 'fa-chart-line', color: 'purple' }
     ];
 
-    // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory) {
             if (groupsByCategory[selectedCategory]) {
@@ -774,13 +731,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [selectedCategory, groupsByCategory]);
 
-    // Filtrovanie skupín podľa vybraného typu
     useEffect(() => {
         if (selectedCategory && selectedGroupType && availableGroups.length > 0) {
             const filtered = availableGroups.filter(group => group.type === selectedGroupType);
             setFilteredGroupsByType(filtered);
             
-            // Reset vybraných skupín pri zmene typu
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
@@ -806,7 +761,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [selectedCategory, selectedGroupType, availableGroups]);
 
-    // Zistenie počtu tímov v skupine podľa skupiny
     const getTeamCountInGroup = (groupName) => {
         if (!selectedCategory || !groupName || !window.__teamManagerData?.allTeams) {
             return 0;
@@ -815,7 +769,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         const category = categories.find(c => c.id === selectedCategory);
         if (!category) return 0;
         
-        // Filtrujeme tímy podľa kategórie a názvu skupiny
         const teamsInGroup = window.__teamManagerData.allTeams.filter(t => 
             t.category === category.name && 
             t.groupName === groupName
@@ -824,13 +777,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return teamsInGroup.length;
     };
 
-    // Aktualizácia maxTeams pre prvú skupinu pri zmene skupiny
     useEffect(() => {
         if (selectedGroup1) {
             const teamCount = getTeamCountInGroup(selectedGroup1);
             setMaxTeamsInGroup1(teamCount);
             
-            // Ak je už zadané poradie, skontrolujeme ho
             if (selectedOrder1) {
                 const numValue = parseInt(selectedOrder1, 10);
                 if (numValue > teamCount) {
@@ -845,13 +796,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [selectedGroup1, selectedCategory, categories]);
 
-    // Aktualizácia maxTeams pre druhú skupinu pri zmene skupiny
     useEffect(() => {
         if (selectedGroup2) {
             const teamCount = getTeamCountInGroup(selectedGroup2);
             setMaxTeamsInGroup2(teamCount);
             
-            // Ak je už zadané poradie, skontrolujeme ho
             if (selectedOrder2) {
                 const numValue = parseInt(selectedOrder2, 10);
                 if (numValue > teamCount) {
@@ -866,18 +815,15 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         }
     }, [selectedGroup2, selectedCategory, categories]);
 
-    // Validácia a spracovanie zmeny poradia pre prvý tím
     const handleOrder1Change = (e) => {
         const value = e.target.value;
         
-        // Povoliť prázdnu hodnotu
         if (value === '') {
             setSelectedOrder1('');
             setOrderError1('');
             return;
         }
         
-        // Skontrolovať, či je to číslo
         if (!/^\d+$/.test(value)) {
             setOrderError1('Zadajte platné číslo');
             return;
@@ -885,35 +831,29 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         
         const numValue = parseInt(value, 10);
         
-        // Skontrolovať, či je to kladné číslo (nie 0)
         if (numValue <= 0) {
             setOrderError1('Poradie musí byť väčšie ako 0');
             return;
         }
         
-        // Skontrolovať, či nepresahuje počet tímov v skupine
         if (numValue > maxTeamsInGroup1) {
             setOrderError1(`V skupine je len ${maxTeamsInGroup1} tímov`);
             return;
         }
         
-        // Všetko v poriadku
         setSelectedOrder1(value);
         setOrderError1('');
     };
 
-    // Validácia a spracovanie zmeny poradia pre druhý tím
     const handleOrder2Change = (e) => {
         const value = e.target.value;
         
-        // Povoliť prázdnu hodnotu
         if (value === '') {
             setSelectedOrder2('');
             setOrderError2('');
             return;
         }
         
-        // Skontrolovať, či je to číslo
         if (!/^\d+$/.test(value)) {
             setOrderError2('Zadajte platné číslo');
             return;
@@ -921,35 +861,29 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         
         const numValue = parseInt(value, 10);
         
-        // Skontrolovať, či je to kladné číslo (nie 0)
         if (numValue <= 0) {
             setOrderError2('Poradie musí byť väčšie ako 0');
             return;
         }
         
-        // Skontrolovať, či nepresahuje počet tímov v skupine
         if (numValue > maxTeamsInGroup2) {
             setOrderError2(`V skupine je len ${maxTeamsInGroup2} tímov`);
             return;
         }
         
-        // Všetko v poriadku
         setSelectedOrder2(value);
         setOrderError2('');
     };
 
-    // Validácia a spracovanie zmeny umiestnenia
     const handleRankChange = (e) => {
         const value = e.target.value;
         
-        // Povoliť prázdnu hodnotu
         if (value === '') {
             setPlacementRank('');
             setRankError('');
             return;
         }
         
-        // Skontrolovať, či je to číslo
         if (!/^\d+$/.test(value)) {
             setRankError('Zadajte platné číslo');
             return;
@@ -957,18 +891,15 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         
         const numValue = parseInt(value, 10);
         
-        // Skontrolovať, či je to kladné číslo (nie 0)
         if (numValue <= 0) {
             setRankError('Umiestnenie musí byť väčšie ako 0');
             return;
         }
         
-        // Všetko v poriadku
         setPlacementRank(value);
         setRankError('');
     };
 
-    // Automatické generovanie názvu zápasu (len pre informáciu)
     useEffect(() => {
         if (selectedCategory && selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2 && placementRank) {
             const category = categories.find(c => c.id === selectedCategory);
@@ -985,12 +916,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         if (selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2 && placementRank) {
             const category = categories.find(c => c.id === selectedCategory);
             
-            // Odstránime "skupina " z názvov skupín
             const cleanGroup1 = selectedGroup1.replace('skupina ', '');
             const cleanGroup2 = selectedGroup2.replace('skupina ', '');
             
-            // Vytvorenie identifikátorov v tvare: "Kategória PoradieSkupina"
-            // Napr. "U10 1A" alebo "Starší žiaci 3B"
             const homeTeamIdentifier = `${category.name} ${selectedOrder1}${cleanGroup1}`;
             const awayTeamIdentifier = `${category.name} ${selectedOrder2}${cleanGroup2}`;
             
@@ -1000,7 +928,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 categoryId: selectedCategory,
                 categoryName: category.name,
                 groupName: `${selectedGroup1} - ${selectedGroup2}`,
-                placementRank: parseInt(placementRank, 10), // Uložíme ako číslo
+                placementRank: parseInt(placementRank, 10),
                 matchTitle
             });
         }
@@ -1033,7 +961,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1048,7 +975,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Výber kategórie
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -1069,7 +995,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Výber typu skupiny
             selectedCategory && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -1093,13 +1018,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Prvý tím
             selectedCategory && selectedGroupType && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
                 React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Prvý tím'),
                 
-                // Výber skupiny pre prvý tím
                 React.createElement(
                     'div',
                     { className: 'mb-3' },
@@ -1130,7 +1053,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     )
                 ),
                 
-                // Výber poradia pre prvý tím (input)
                 selectedGroup1 && React.createElement(
                     'div',
                     { className: 'mb-3' },
@@ -1162,13 +1084,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Druhý tím
             selectedCategory && selectedGroupType && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200' },
                 React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Druhý tím'),
                 
-                // Výber skupiny pre druhý tím
                 React.createElement(
                     'div',
                     { className: 'mb-3' },
@@ -1199,7 +1119,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     )
                 ),
                 
-                // Výber poradia pre druhý tím (input)
                 selectedGroup2 && React.createElement(
                     'div',
                     { className: 'mb-3' },
@@ -1231,7 +1150,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Umiestnenie (o aké miesto sa hrá)
             selectedCategory && selectedGroupType && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200' },
@@ -1260,7 +1178,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Náhľad zápasu
             isValid && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-green-50 rounded-lg border border-green-200' },
@@ -1304,7 +1221,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1334,7 +1250,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     );
 };
 
-// Modálne okno pre výber mazania zápasov
 const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -1350,15 +1265,12 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
         }
     }, [isOpen]);
 
-    // Zoradenie kategórií podľa abecedy
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
-            // Zoradenie skupín podľa abecedy
             const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => 
                 a.name.localeCompare(b.name)
             );
@@ -1372,7 +1284,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
         }
     }, [selectedCategory, groupsByCategory]);
 
-    // Zistenie typu vybranej skupiny
     useEffect(() => {
         if (selectedGroup && availableGroups.length > 0) {
             const group = availableGroups.find(g => g.name === selectedGroup);
@@ -1406,7 +1317,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1421,7 +1331,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                 )
             ),
 
-            // Výber kategórie - zoradené podľa abecedy
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -1442,7 +1351,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                 )
             ),
 
-            // Výber skupiny (ak je kategória vybraná)
             selectedCategory && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -1462,7 +1370,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                     )
                 ),
                 
-                // Zobrazenie typu skupiny pod selectboxom
                 selectedGroup && selectedGroupType && React.createElement(
                     'div',
                     { className: 'mt-2 text-sm' },
@@ -1475,19 +1382,11 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                                     : 'bg-purple-100 text-purple-800'
                             }` 
                         },
-//                        React.createElement('i', { 
-//                            className: `fa-solid ${
-//                                selectedGroupType === 'Základná skupina' 
-//                                    ? 'fa-layer-group' 
-//                                    : 'fa-chart-line'
-//                            } mr-1 text-xs` 
-//                        }),
                         selectedGroupType
                     )
                 )
             ),
 
-            // Varovanie
             React.createElement(
                 'div',
                 { className: 'mb-6 p-3 bg-red-50 border border-red-200 rounded-lg' },
@@ -1499,7 +1398,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1535,7 +1433,6 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
     );
 };
 
-// Modálne okno pre potvrdenie opätovného generovania
 const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, groupName }) => {
     if (!isOpen) return null;
 
@@ -1551,7 +1448,6 @@ const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, grou
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1566,7 +1462,6 @@ const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -1585,7 +1480,6 @@ const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1628,7 +1522,6 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1643,7 +1536,6 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -1680,7 +1572,6 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1723,7 +1614,6 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1738,7 +1628,6 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -1778,7 +1667,6 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1806,7 +1694,6 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
-// Modálne okno pre potvrdenie hromadného odstránenia zápasov z haly/dňa
 const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, matchesCount, isWholeHall }) => {
     if (!isOpen) return null;
 
@@ -1822,7 +1709,6 @@ const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, 
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1839,7 +1725,6 @@ const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, 
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -1866,7 +1751,6 @@ const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, 
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1894,7 +1778,6 @@ const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, 
     );
 };
 
-// Modálne okno pre potvrdenie hromadného mazania
 const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, groupName, matchesCount }) => {
     if (!isOpen) return null;
 
@@ -1910,7 +1793,6 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -1925,7 +1807,6 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -1951,7 +1832,6 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -1994,7 +1874,6 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -2009,7 +1888,6 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -2048,7 +1926,6 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -2076,7 +1953,6 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-// Modálne okno pre priradenie/úpravu zápasu do haly - UPRAVENÉ ZOBRAZOVANIE
 const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, accommodations, teamAccommodations }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -2093,7 +1969,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     const getTeamNameByIdentifierLocal = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
         const parts = identifier.split(' ');
         
         if (parts.length < 2) {
@@ -2118,10 +1993,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         if (!order) {
             order = '?';
             groupName = groupAndOrder;
-        }
-        
-        // Hľadáme v availableMatches pre získanie kategórie (nemôžeme použiť teamData)
-        // Pre farbu ubytovne potrebujeme len názov tímu, ktorý získame z getTeamDisplayText
+        }        
         
         const display = getTeamDisplayText ? getTeamDisplayText(identifier) : identifier;
         if (typeof display === 'object') {
@@ -2133,7 +2005,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
         if (!teamIdentifier) return 0;
     
-        // KROK 1: Získame názov tímu
         let teamDisplayName = null;
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             try {
@@ -2145,7 +2016,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     
         const actualTeamName = teamDisplayName || teamIdentifier;
     
-        // KROK 2: Vyhľadáme v cache
         if (!window.__allUsersCache) {
             console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
             return 0;
@@ -2177,23 +2047,17 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return 0;
     };
 
-    // Funkcia na extrahovanie dvoch tímov z vyhľadávacieho reťazca
-    // Podporuje formáty: "tým1 = tým2", "tým1=tým2", "tým1= tým2", "tým1 =tým2"
     const extractTeamsFromSearch = (search) => {
-        // Odstránime nadbytočné medzery na začiatku a konci
         const trimmedSearch = search.trim();
         
-        // Hľadáme znak rovná sa - môže ale nemusí mať medzery okolo seba
         const equalIndex = trimmedSearch.indexOf('=');
         if (equalIndex === -1) {
             return { team1: null, team2: null };
         }
         
-        // Rozdelíme reťazec podľa znaku rovná sa
         const team1Raw = trimmedSearch.substring(0, equalIndex).trim();
         const team2Raw = trimmedSearch.substring(equalIndex + 1).trim();
         
-        // Ak je niektorá časť prázdna, vrátime null
         if (!team1Raw || !team2Raw) {
             return { team1: null, team2: null };
         }
@@ -2201,20 +2065,16 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return { team1: team1Raw, team2: team2Raw };
     };
 
-    // Funkcia na získanie textu pre porovnanie (pre názov aj ID)
     const getComparableStrings = (match) => {
         const homeDisplay = getTeamDisplayText ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier;
         const awayDisplay = getTeamDisplayText ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier;
         
-        // Názvy tímov (bez kategórie)
         const homeName = typeof homeDisplay === 'object' ? homeDisplay.name : homeDisplay;
         const awayName = typeof awayDisplay === 'object' ? awayDisplay.name : awayDisplay;
         
-        // Celé identifikátory (napr. "U10 B6")
         const homeId = match.homeTeamIdentifier;
         const awayId = match.awayTeamIdentifier;
         
-        // Čisté ID bez kategórie (napr. "B6")
         const extractPureId = (identifier) => {
             if (!identifier) return '';
             const parts = identifier.split(' ');
@@ -2234,32 +2094,26 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         };
     };
 
-    // Funkcia na kontrolu, či reťazec obsahuje tím (porovnáva všetky formy)
     const stringContainsTeam = (str, teamQuery) => {
         if (!str || !teamQuery) return false;
         return str.includes(teamQuery);
     };
 
-    // Funkcia na kontrolu, či zápas obsahuje daný tím (v ľubovoľnej forme)
     const matchContainsTeam = (matchStrings, teamQuery) => {
         const teamLower = teamQuery.toLowerCase();
         
-        // Kontrola v názvoch
         if (stringContainsTeam(matchStrings.homeName, teamLower)) return true;
         if (stringContainsTeam(matchStrings.awayName, teamLower)) return true;
         
-        // Kontrola v celých identifikátoroch
         if (stringContainsTeam(matchStrings.homeId, teamLower)) return true;
         if (stringContainsTeam(matchStrings.awayId, teamLower)) return true;
         
-        // Kontrola v čistých ID (bez kategórie)
         if (stringContainsTeam(matchStrings.homePureId, teamLower)) return true;
         if (stringContainsTeam(matchStrings.awayPureId, teamLower)) return true;
         
         return false;
     };
 
-    // Funkcia na kontrolu, či zápas obsahuje oba tímy (pre formát "tým1 = tým2" v rôznych variantoch)
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase();
         const team2Lower = team2.toLowerCase();
@@ -2267,72 +2121,54 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         let foundTeam1 = false;
         let foundTeam2 = false;
         
-        // Kontrola v názvoch
         if (stringContainsTeam(matchStrings.homeName, team1Lower) || stringContainsTeam(matchStrings.awayName, team1Lower)) foundTeam1 = true;
         if (stringContainsTeam(matchStrings.homeName, team2Lower) || stringContainsTeam(matchStrings.awayName, team2Lower)) foundTeam2 = true;
         
-        // Ak ešte nenašiel team1, skúsime v celých identifikátoroch
         if (!foundTeam1 && (stringContainsTeam(matchStrings.homeId, team1Lower) || stringContainsTeam(matchStrings.awayId, team1Lower))) foundTeam1 = true;
         
-        // Ak ešte nenašiel team2, skúsime v celých identifikátoroch
         if (!foundTeam2 && (stringContainsTeam(matchStrings.homeId, team2Lower) || stringContainsTeam(matchStrings.awayId, team2Lower))) foundTeam2 = true;
         
-        // Ak ešte nenašiel team1, skúsime v čistých ID
         if (!foundTeam1 && (stringContainsTeam(matchStrings.homePureId, team1Lower) || stringContainsTeam(matchStrings.awayPureId, team1Lower))) foundTeam1 = true;
         
-        // Ak ešte nenašiel team2, skúsime v čistých ID
         if (!foundTeam2 && (stringContainsTeam(matchStrings.homePureId, team2Lower) || stringContainsTeam(matchStrings.awayPureId, team2Lower))) foundTeam2 = true;
         
         return foundTeam1 && foundTeam2;
     };
 
-    // Funkcia na kontrolu, či zápas zodpovedá vyhľadávaniu (podporuje formát "tým1=tým2" s ľubovoľným počtom medzier)
     const matchSearch = (match, searchLower, matchStrings) => {
-        // Skúsime extrahovať dva tímy z vyhľadávania
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
         
         if (team1 && team2) {
-            // Ak máme dva tímy, kontrolujeme, či zápas obsahuje oba tímy
             return matchContainsBothTeams(matchStrings, team1, team2);
         }
         
-        // Pôvodné vyhľadávanie (jeden tím alebo časť textu)
-        // Kontrola v názvoch
         if (stringContainsTeam(matchStrings.homeName, searchLower) || stringContainsTeam(matchStrings.awayName, searchLower)) return true;
         
-        // Kontrola v celých identifikátoroch
         if (stringContainsTeam(matchStrings.homeId, searchLower) || stringContainsTeam(matchStrings.awayId, searchLower)) return true;
         
-        // Kontrola v čistých ID (bez kategórie)
         if (stringContainsTeam(matchStrings.homePureId, searchLower) || stringContainsTeam(matchStrings.awayPureId, searchLower)) return true;
         
-        // Kontrola v názve kategórie
         if (match.categoryName && stringContainsTeam(match.categoryName.toLowerCase(), searchLower)) return true;
         
         return false;
     };
 
-    // Filtrovanie zápasov podľa vyhľadávania (s podporou formátu "tým1=tým2")
     const filteredMatches = availableMatches.filter(match => {
         const searchLower = searchTerm.toLowerCase();
         
-        // Ak je vyhľadávací reťazec prázdny, vrátime všetky zápasy
         if (!searchLower) return true;
         
-        // Získame porovnateľné reťazce pre tento zápas
         const matchStrings = getComparableStrings(match);
         
         return matchSearch(match, searchLower, matchStrings);
     });
 
-    // Funkcia na získanie správneho tvaru slova "zápas" podľa počtu
     const getMatchCountText = (count) => {
         if (count === 1) return 'zápas';
         if (count >= 2 && count <= 4) return 'zápasy';
         return 'zápasov';
     };
 
-    // Funkcia na získanie zobrazenia tímu podľa režimu (rovnaká ako v nepriradených zápasoch)
     const getTeamDisplay = (identifier) => {
         if (!getTeamDisplayText) return identifier;
         
@@ -2350,7 +2186,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         }
     };
 
-    // Pomocná funkcia na extrahovanie písmena a čísla (rovnaká ako v nepriradených zápasoch)
     const extractLetterAndNumber = (identifier) => {
         if (!identifier) return { letter: '', number: '' };
         
@@ -2376,19 +2211,16 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return { letter: letter, number: number };
     };
 
-    // Funkcia na získanie farby kategórie
     const getCategoryColor = (categoryName) => {
         if (!categoryName) return '#f3f4f6';
         const category = categories.find(c => c.name === categoryName);
         return category?.drawColor || '#f3f4f6';
     };
 
-    // Funkcia na získanie farby ubytovne pre tím
     const getTeamAccommodationColor = (teamIdentifier, matchCategoryName) => {
         if (!teamAccommodations) return '#f3f4f6';
         const accommodationName = teamAccommodations.get(teamIdentifier);
         
-        // Použijeme lokálnu funkciu
         const teamName = getTeamNameByIdentifierLocal(teamIdentifier);
         
         if (accommodationName && !teamName.includes(matchCategoryName)) {
@@ -2402,7 +2234,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return '#f3f4f6';
     };
 
-    // Výpočet dĺžky zápasu pre kategóriu
     const getMatchDuration = (categoryName) => {
         const category = categories?.find(c => c.name === categoryName);
         if (!category) return 0;
@@ -2424,7 +2255,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -2439,7 +2269,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Informácia o voľnom čase
             React.createElement(
                 'div',
                 { className: 'mb-4 p-3 bg-green-50 rounded-lg border border-green-200' },
@@ -2460,7 +2289,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Vyhľadávanie - s placeholderom pre všetky formáty
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -2476,7 +2304,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         className: 'w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     })
                 ),
-                // Nápoveda pre formát vyhľadávania
                 React.createElement(
                     'p',
                     { className: 'text-xs text-gray-400 mt-1 flex items-center gap-1' },
@@ -2485,7 +2312,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Zoznam zápasov - ROVNAKÉ ZOBRAZENIE AKO V "Nepriradené zápasy"
             filteredMatches.length === 0 ? React.createElement(
                 'div',
                 { className: 'text-center py-8 text-gray-500' },
@@ -2495,11 +2321,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 'div',
                 { className: 'space-y-2 max-h-96 overflow-y-auto' },
                 filteredMatches.map(match => {
-                    // Získame zobrazenie pre tímy podľa režimu
                     const homeDisplay = getTeamDisplay(match.homeTeamIdentifier);
                     const awayDisplay = getTeamDisplay(match.awayTeamIdentifier);
                     
-                    // Extrahovanie písmena a čísla pre identifikátory
                     const homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
                     const awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
                     
@@ -2510,17 +2334,14 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                     const letterToShow = lettersAreSame ? homeExtracted.letter : '';
                     
-                    // Farba kategórie pre písmeno
                     const categoryColor = getCategoryColor(match.categoryName);
                     
-                    // Farby ubytovní pre tímy
                     const homeTeamColor = getTeamAccommodationColor(match.homeTeamIdentifier, match.categoryName);
                     const awayTeamColor = getTeamAccommodationColor(match.awayTeamIdentifier, match.categoryName);
 
                     const homeTeamMemberCount = getTotalMembersCountForMatch(match.homeTeamIdentifier, match.categoryName);
                     const awayTeamMemberCount = getTotalMembersCountForMatch(match.awayTeamIdentifier, match.categoryName);
                     
-                    // Zistenie, či ide o špeciálny zápas
                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
                     
                     let specialMatchText = '';
@@ -2535,7 +2356,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         specialMatchText = matchTypeText;
                     }
                     
-                    // Premenné pre zobrazenie podľa režimu
                     let homeName = '';
                     let awayName = '';
                     let homeId = '';
@@ -2554,10 +2374,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         awayId = match.awayTeamIdentifier;
                     }
 
-                    // Dĺžka zápasu
                     const matchDurationValue = getMatchDuration(match.categoryName);
 
-                    // Kontrola, či sa zápas zmestí do voľného času
                     const fitsInBreak = breakDuration === 0 || matchDurationValue <= breakDuration;
 
                     return React.createElement(
@@ -2581,7 +2399,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     width: '100%'
                                 }
                             },
-                            // Domáci tím
                             React.createElement(
                                 'div', 
                                 { 
@@ -2598,7 +2415,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     displayMode === 'both' ? homeName : homeDisplay
                                 )
                             ),
-                            // Stĺpec pre farbu domáceho tímu
                             React.createElement(
                                 'div', 
                                 { 
@@ -2616,7 +2432,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 },
                                 React.createElement('span', null, homeTeamMemberCount || 0)
                             ),
-                            // Hosťovský tím
                             React.createElement(
                                 'div', 
                                 { 
@@ -2633,7 +2448,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     displayMode === 'both' ? awayName : awayDisplay
                                 )
                             ),
-                            // Stĺpec pre farbu hosťovského tímu
                             React.createElement(
                                 'div', 
                                 { 
@@ -2651,7 +2465,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 },
                                 React.createElement('span', null, awayTeamMemberCount || 0)
                             ),
-                            // Kombinované čísla alebo špeciálny text
                             !isSpecialMatch ? React.createElement(
                                 React.Fragment,
                                 null,
@@ -2711,7 +2524,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                     )
                                 )
                             ),
-                            // Dĺžka zápasu
                             React.createElement(
                                 'div', 
                                 { 
@@ -2731,7 +2543,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 })
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3 mt-6' },
@@ -2783,15 +2594,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
     const [loadingHallStartTime, setLoadingHallStartTime] = useState(false);
     
-    // 🔥 NOVÉ: Stav pre súvisiace zápasy nadstavbovej skupiny
     const [relatedMatches, setRelatedMatches] = useState([]);
     const [isAdvancedGroup, setIsAdvancedGroup] = useState(false);
 
-    // 🔥 NOVÁ FUNKCIA: Extrahovanie písmena z názvu tímu
     const extractLetterFromTeamName = (teamName) => {
         if (!teamName) return null;
         const trimmed = teamName.trim();
-        // Hľadáme posledný znak, ktorý je písmeno
         for (let i = trimmed.length - 1; i >= 0; i--) {
             const char = trimmed[i];
             if (char >= 'A' && char <= 'Z') {
@@ -2802,25 +2610,18 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     };
 
     const getRelatedMatchesForAdvancedGroup = (currentMatch, groupsByCategory, allMatches, categories) => {
-        console.log('🔍 [getRelatedMatches] Zavolaná funkcia pre zápas:', currentMatch.homeTeamIdentifier, 'vs', currentMatch.awayTeamIdentifier);
     
         if (!currentMatch || !currentMatch.groupName || !groupsByCategory) {
-            console.log('❌ [getRelatedMatches] Chýbajú povinné údaje (currentMatch, groupName, groupsByCategory)');
             return [];
         }
     
-        // Zistíme, či ide o nadstavbovú skupinu
         const categoryGroups = groupsByCategory[currentMatch.categoryId] || [];
-        console.log('💡 categoryGroups pre kategóriu:', categoryGroups);
         
         const currentGroup = categoryGroups.find(g => g.name === currentMatch.groupName);
         if (!currentGroup || currentGroup.type !== 'nadstavbová skupina') {
-            console.log('❌ [getRelatedMatches] Toto nie je nadstavbová skupina (typ:', currentGroup?.type, ')');
             return [];
         }
-        console.log('✅ [getRelatedMatches] Toto JE nadstavbová skupina:', currentMatch.groupName);
 
-        // 🔥 SPRÁVNA EXTRAKCIA NÁZVOV SKUPÍN Z NÁZVOV TÍMOV
         const getGroupNameFromTeamName = (teamName) => {
             if (!teamName) return null;
             const trimmed = teamName.trim();
@@ -2839,19 +2640,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const homeLetter = getGroupNameFromTeamName(homeTeamName);
         const awayLetter = getGroupNameFromTeamName(awayTeamName);
 
-        console.log('🔍 [getRelatedMatches] Názvy tímov:', homeTeamName, 'a', awayTeamName);
-        console.log('🔍 [getRelatedMatches] Extrahované písmená:', homeLetter, 'a', awayLetter);
-
         const targetLetters = new Set();
         if (homeLetter) targetLetters.add(homeLetter);
         if (awayLetter) targetLetters.add(awayLetter);
 
         if (targetLetters.size === 0) {
-            console.log('❌ [getRelatedMatches] Nepodarilo sa extrahovať žiadne písmená z názvov tímov');
             return [];
         }
 
-        // Nájdeme všetky skupiny v kategórii, ktorých názov obsahuje jedno z písmen
         const targetGroupNames = new Set();
         categoryGroups.forEach(group => {
             const groupNameWithoutPrefix = group.name.replace('skupina ', '');
@@ -2860,14 +2656,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
         });
 
-        console.log('🔍 [getRelatedMatches] Cieľové skupiny (targetGroupNames):', Array.from(targetGroupNames));
-
         if (targetGroupNames.size === 0) {
-            console.log('❌ [getRelatedMatches] Nenašli sa žiadne skupiny s týmito písmenami');
             return [];
         }
 
-        // Nájdeme všetky zápasy v tej istej kategórii, ktoré patria do týchto skupín
         const allCategoryMatches = allMatches.filter(m => 
             m.categoryId === currentMatch.categoryId && 
             m.id !== currentMatch.id &&
@@ -2875,15 +2667,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             targetGroupNames.has(m.groupName)
         );
 
-        console.log('✅ [getRelatedMatches] Nájdených zápasov v skupinách:', allCategoryMatches.length);
-        allCategoryMatches.forEach(m => {
-            console.log('  - Zápas:', m.homeTeamIdentifier, 'vs', m.awayTeamIdentifier, '(skupina:', m.groupName, ')');
-        });
-
         return allCategoryMatches;
     };
 
-    // Funkcia na získanie názvu tímu podľa identifikátora
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -2930,7 +2716,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return `${category} ${groupName}${order}`;
     };
 
-    // Funkcia na načítanie dostupných dátumov
     const loadAvailableDates = () => {
         if (window.tournamentStartDate && window.tournamentEndDate) {
             const dates = [];
@@ -2979,7 +2764,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const currentDateStr = date;
         
-        // Kontrola: existuje súvisiaci zápas v SKORŠOM DNI?
         const earlierDayMatches = sortedRelated.filter(m => {
             const mDate = m.scheduledTime.toDate();
             const mDateStr = getLocalDateStr(mDate);
@@ -2987,10 +2771,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         });
         
         if (earlierDayMatches.length > 0) {
-            return true; // KONFLIKT
+            return true;
         }
         
-        // Kontrola: existuje súvisiaci zápas v NESKORŠOM DNI?
         const laterDayMatches = sortedRelated.filter(m => {
             const mDate = m.scheduledTime.toDate();
             const mDateStr = getLocalDateStr(mDate);
@@ -2998,7 +2781,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         });
         
         if (laterDayMatches.length > 0) {
-            return true; // KONFLIKT
+            return true;
         }
         
         return false;
@@ -3031,7 +2814,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const currentDateStr = date;
         let conflictMessages = [];
         
-        // Kontrola: existuje súvisiaci zápas v SKORŠOM DNI?
         const earlierDayMatches = sortedRelated.filter(m => {
             const mDate = m.scheduledTime.toDate();
             const mDateStr = getLocalDateStr(mDate);
@@ -3048,7 +2830,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             conflictMessages.push(`Nadstavbová skupina - súvisiaci zápas v skoršom dni (${formattedDate}) musí byť odohraný PRED týmto zápasom`);
         }
         
-        // Kontrola: existuje súvisiaci zápas v NESKORŠOM DNI?
         const laterDayMatches = sortedRelated.filter(m => {
             const mDate = m.scheduledTime.toDate();
             const mDateStr = getLocalDateStr(mDate);
@@ -3072,9 +2853,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return '';
     };
 
-    // ============================================================
-    // OPRAVENÁ FUNKCIA: calculateFirstAvailableTime - berie do úvahy súvisiace zápasy nadstavbovej skupiny (logická postupnosť - AJ NESKORŠIE DNI)
-    // ============================================================
     const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, currentMatch, categories, groupsByCategory) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
@@ -3083,7 +2861,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const occupiedIntervals = [];
         
-        // 1. ZÁPASY V ROVNAKEJ HALE A DNI
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
@@ -3129,18 +2906,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             });
         });
         
-        // 2. 🔥 KONTROLA SÚVISIACICH ZÁPASOV (NADSTAVBOVÁ SKUPINA) - LOGICKÁ POSTUPNOSŤ VRÁTANE NESKORŠÍCH DNÍ
         if (currentMatch && currentMatch.groupName && groupsByCategory) {
             const currentDateStr = date;
             const currentDateObj = getLocalDateFromStr(currentDateStr);
             
-            // Zistíme, či ide o nadstavbovú skupinu
             const categoryGroups = groupsByCategory[currentMatch.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === currentMatch.groupName);
             const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
             
             if (isAdvancedGroup && currentMatch.scheduledTime) {
-                // Nájdeme VŠETKY zápasy v tej istej kategórii a skupine (súvisiace zápasy)
                 const relatedMatches = allMatches.filter(m => 
                     m.categoryId === currentMatch.categoryId &&
                     m.groupName === currentMatch.groupName &&
@@ -3148,7 +2922,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     m.scheduledTime
                 );
                 
-                // Zoradíme súvisiace zápasy podľa dátumu a času
                 const sortedRelated = [...relatedMatches].sort((a, b) => {
                     const timeA = a.scheduledTime.toDate().getTime();
                     const timeB = b.scheduledTime.toDate().getTime();
@@ -3157,7 +2930,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 const currentStartMinutes = currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes();
                 
-                // 🔥 KONTROLA: Existuje súvisiaci zápas v SKORŠOM DNI?
                 const earlierDayMatches = sortedRelated.filter(m => {
                     if (!m.scheduledTime) return false;
                     const mDate = m.scheduledTime.toDate();
@@ -3166,7 +2938,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
                 
                 if (earlierDayMatches.length > 0) {
-                    // Zablokujeme CELÝ DEŇ - nadstavbový zápas nemôže byť pred skorším dňom
                     occupiedIntervals.push({
                         start: 0,
                         end: 24 * 60,
@@ -3176,8 +2947,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     });
                 }
                 
-                // 🔥 KONTROLA: Existuje súvisiaci zápas v NESKORŠOM DNI?
-                // Ak áno, aktuálny zápas MUSÍ byť PRED ním (t.j. nemôže byť po ňom)
                 const laterDayMatches = sortedRelated.filter(m => {
                     if (!m.scheduledTime) return false;
                     const mDate = m.scheduledTime.toDate();
@@ -3186,7 +2955,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
                 
                 if (laterDayMatches.length > 0) {
-                    // Zablokujeme CELÝ DEŇ - nadstavbový zápas nemôže byť po neskoršom dni
                     occupiedIntervals.push({
                         start: 0,
                         end: 24 * 60,
@@ -3196,7 +2964,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     });
                 }
                 
-                // 🔥 KONTROLA: Súvisiace zápasy v ROVNAKOM DNI
                 const sameDayMatches = sortedRelated.filter(m => {
                     if (!m.scheduledTime) return false;
                     const mDate = m.scheduledTime.toDate();
@@ -3205,14 +2972,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
                 
                 if (sameDayMatches.length > 0) {
-                    // Zistíme, či existuje zápas, ktorý začína SKÔR (musí byť pred aktuálnym + prestávka)
                     const earlierSameDay = sameDayMatches.filter(m => {
                         const mStart = m.scheduledTime.toDate().getHours() * 60 + m.scheduledTime.toDate().getMinutes();
                         return mStart < currentStartMinutes;
                     });
                     
                     if (earlierSameDay.length > 0) {
-                        // Nájdeme najneskorší skorší zápas
                         const latestEarlier = earlierSameDay.reduce((latest, m) => {
                             const mDate = m.scheduledTime.toDate();
                             return mDate > latest.scheduledTime.toDate() ? m : latest;
@@ -3221,7 +2986,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         const latestDate = latestEarlier.scheduledTime.toDate();
                         const latestEndMinutes = latestDate.getHours() * 60 + latestDate.getMinutes() + matchDur + 5;
                         
-                        // Ak nie je dostatočná prestávka
                         if (currentStartMinutes < latestEndMinutes) {
                             occupiedIntervals.push({
                                 start: currentStartMinutes,
@@ -3233,14 +2997,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         }
                     }
                     
-                    // Zistíme, či existuje zápas, ktorý začína NESKÔR (aktuálny musí byť PRED ním + prestávka)
                     const laterSameDay = sameDayMatches.filter(m => {
                         const mStart = m.scheduledTime.toDate().getHours() * 60 + m.scheduledTime.toDate().getMinutes();
                         return mStart > currentStartMinutes;
                     });
                     
                     if (laterSameDay.length > 0) {
-                        // Nájdeme najskorší neskorší zápas
                         const earliestLater = laterSameDay.reduce((earliest, m) => {
                             const mDate = m.scheduledTime.toDate();
                             return mDate < earliest.scheduledTime.toDate() ? m : earliest;
@@ -3249,7 +3011,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         const earliestDate = earliestLater.scheduledTime.toDate();
                         const earliestStartMinutes = earliestDate.getHours() * 60 + earliestDate.getMinutes();
                         
-                        // Aktuálny zápas + prestávka musí skončiť PRED začiatkom neskoršieho zápasu
                         const currentEndWithBreak = currentStartMinutes + matchDur + 5;
                         
                         if (currentEndWithBreak > earliestStartMinutes) {
@@ -3266,7 +3027,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
         }
         
-        // 3. ZABLOKOVANÉ ČASY
         if (blockedBreaks) {
             Object.keys(blockedBreaks).forEach(key => {
                 if (key.startsWith(`${hallId}_${date}_`)) {
@@ -3289,10 +3049,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             });
         }
         
-        // Zoradíme intervaly
         occupiedIntervals.sort((a, b) => a.start - b.start);
         
-        // Funkcia na kontrolu voľného časového intervalu
         const isTimeSlotFree = (startMinutes) => {
             const endMinutes = startMinutes + matchDur + (categories.find(c => c.name === currentMatch?.categoryName)?.matchBreak || 5);
             
@@ -3308,7 +3066,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             return true;
         };
         
-        // Hľadanie prvého voľného času
         const findNextAvailableTime = (startFromMinutes) => {
             let candidateTime = startFromMinutes;
             let found = false;
@@ -3360,7 +3117,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
     
-    // Funkcia na extrahovanie názvu skupiny z identifikátora
     const extractGroupNameFromIdentifier = (identifier) => {
         if (!identifier) return null;
         const parts = identifier.split(' ');
@@ -3374,7 +3130,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
     
-    // Funkcia na získanie názvu tímu podľa identifikátora (pre použitie v useEffect)
     const getTeamNameByIdentifierForEffect = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -3414,22 +3169,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return `${category} ${groupName}${order}`;
     };
 
-    // ============================================================
-    // NOVÝ useEffect: Kontrola dostupnosti času po zmene dňa alebo haly
-    // ============================================================
     useEffect(() => {
-        // Ak máme vybraný deň a halu, skontrolujeme dostupnosť
         if (selectedHallId && selectedDate && match && matchDuration > 0 && hallStartTime) {
-            // Skontrolujeme, či existujú konflikty s tímami v iných dňoch/halach
             const hasConflicts = checkTeamConflictsForMatch(selectedHallId, selectedDate, match, allMatches, categories, groupsByCategory);
             
             if (hasConflicts) {
-                // Získame detailné informácie o konfliktoch
                 const conflictInfo = getDetailedConflictInfo(selectedHallId, selectedDate, match, allMatches, categories, groupsByCategory);
                 setTimeError(conflictInfo);
                 setSuggestedTime(null);
             } else {
-                // Ak nie sú konflikty, skúsime nájsť prvý voľný čas
                 const firstAvailable = calculateFirstAvailableTime(
                     selectedHallId,
                     selectedDate,
@@ -3445,12 +3193,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 if (firstAvailable) {
                     setSuggestedTime(firstAvailable);
-                    // Vymažeme prípadnú chybu
                     if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                         setTimeError('');
                     }
                 } else {
-                    // Získame informácie o konfliktoch s nadstavbovou skupinou
                     let advancedGroupInfo = '';
                     if (match && match.groupName && groupsByCategory) {
                         const categoryGroups = groupsByCategory[match.categoryId] || [];
@@ -3514,121 +3260,79 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedHallId, selectedDate, hallStartTime, match, matchDuration, allMatches, categories, groupsByCategory, blockedBreaks, existingMatches]);
 
-    // ============================================================
-    // UPRAVENÝ useEffect: Načítanie súvisiacich zápasov (aj pre špeciálne zápasy)
-    // ============================================================
     useEffect(() => {
-        if (isOpen && match) {
-            console.log('--- useEffect: Načítavam súvisiace zápasy ---');
-            console.log('💡 currentMatch.groupName:', match.groupName);
-            console.log('💡 currentMatch.categoryId:', match.categoryId);
-            console.log('💡 groupsByCategory (props):', groupsByCategory);
-            console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory || {}));
-    
-            // 🔥 KONTROLA: Ak match.groupName neexistuje, ale match.categoryId existuje, skúsime ho nájsť
+        if (isOpen && match) {    
             if (!match.groupName && match.categoryId && groupsByCategory[match.categoryId]) {
                 const homeGroup = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
                 const awayGroup = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
                 
                 if (homeGroup) {
                     match.groupName = homeGroup;
-                    console.log('✅ Extrahovaný groupName z domáceho tímu:', homeGroup);
                 } else if (awayGroup) {
                     match.groupName = awayGroup;
-                    console.log('✅ Extrahovaný groupName z hosťovského tímu:', awayGroup);
                 }
             }
-    
-            // 🔥 PRIDANÉ: Pre špeciálne zápasy (pavúk/umiestnenie) použijeme alternatívnu logiku
-            if (match.isPlacementMatch || match.matchType) {
-                console.log('ℹ️ Špeciálny zápas (pavúk/umiestnenie) - hľadám súvisiace zápasy podľa písmen z názvov tímov');
-                
-                // Získame názvy tímov
+            
+            if (match.isPlacementMatch || match.matchType) {                
                 const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
                 const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
                 
-                // Extrahujeme písmená z názvov tímov (posledné písmeno)
                 const homeLetter = extractLetterFromTeamName(homeTeamName);
-                const awayLetter = extractLetterFromTeamName(awayTeamName);
-                
-                console.log('🔍 Extrahované písmená z názvov tímov:', homeLetter, 'a', awayLetter);
+                const awayLetter = extractLetterFromTeamName(awayTeamName);                
                 
                 const targetLetters = new Set();
                 if (homeLetter) targetLetters.add(homeLetter);
                 if (awayLetter) targetLetters.add(awayLetter);
                 
                 if (targetLetters.size > 0) {
-                    // Vytvoríme množinu názvov skupín, ktoré hľadáme
                     const targetGroupNames = new Set();
                     targetLetters.forEach(letter => {
                         targetGroupNames.add(`skupina ${letter}`);
-                    });
+                    });                    
                     
-                    console.log('🔍 Hľadám zápasy v skupinách s písmenami:', Array.from(targetLetters));
-                    
-                    // Nájdeme VŠETKY zápasy v tej istej kategórii (okrem aktuálneho)
                     const categoryMatches = allMatches.filter(m => 
                         m.categoryId === match.categoryId && 
                         m.id !== match.id &&
                         m.groupName
                     );
                     
-                    // Filtrujeme zápasy podľa názvu skupiny
                     const related = categoryMatches.filter(m => {
                         return targetGroupNames.has(m.groupName);
                     });
                     
-                    console.log('✅ Nájdených súvisiacich zápasov:', related.length);
-                    related.forEach(m => {
-                        console.log('  - Zápas:', m.homeTeamIdentifier, 'vs', m.awayTeamIdentifier, '(skupina:', m.groupName, ')');
-                    });
-                    
                     setRelatedMatches(related);
-                    setIsAdvancedGroup(true); // Označíme ako "nadstavbová" pre účely zobrazenia
+                    setIsAdvancedGroup(true);
                 } else {
-                    console.log('❌ Nepodarilo sa extrahovať písmená z názvov tímov');
                     setRelatedMatches([]);
                     setIsAdvancedGroup(false);
                 }
                 
-                return; // Ukončíme useEffect
+                return;
             }
     
-            // 🔥 BEZPEČNOSTNÁ KONTROLA pre groupsByCategory
             if (!groupsByCategory) {
-                console.log('💡 groupsByCategory je undefined/null!');
                 setRelatedMatches([]);
                 setIsAdvancedGroup(false);
                 return;
             }
             
-            // 🔥 OPRAVENÉ: Použijeme groupsByCategory z props a odovzdáme všetky potrebné parametre
             const related = getRelatedMatchesForAdvancedGroup(
-                match,           // currentMatch
-                groupsByCategory, // groupsByCategory
-                allMatches,       // allMatches
-                categories        // categories
+                match,
+                groupsByCategory,
+                allMatches,
+                categories
             );
             setRelatedMatches(related);
             
-            // Zistíme, či ide o nadstavbovú skupinu
             const categoryGroups = groupsByCategory[match.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === match.groupName);
-            setIsAdvancedGroup(currentGroup?.type === 'nadstavbová skupina');
-            
-            console.log('📊 [useEffect] relatedMatches po načítaní:', related.length);
-            console.log('📊 [useEffect] isAdvancedGroup:', currentGroup?.type === 'nadstavbová skupina');
+            setIsAdvancedGroup(currentGroup?.type === 'nadstavbová skupina');            
         }
     }, [isOpen, match, groupsByCategory, allMatches, categories]);
 
-    // ============================================================
-    // 🔥 SEM VLOŽTE NOVÝ useEffect: Kontrola dňa pre špeciálne zápasy
-    // ============================================================
     useEffect(() => {
-        // Kontrola len pre špeciálne zápasy, ktoré majú súvisiace zápasy
         if (match && (match.isPlacementMatch || match.matchType) && relatedMatches.length > 0 && selectedDate) {
             
-            // Získame všetky súvisiace zápasy, ktoré majú naplánovaný čas
             const scheduledRelated = relatedMatches.filter(m => m.scheduledTime);
             
             if (scheduledRelated.length === 0) {
@@ -3668,21 +3372,18 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
             };
             
-            // KONTROLA 1: Vybraný deň je skorší ako najskorší súvisiaci zápas
             if (selectedDateObj < earliestDate) {
                 const earliestFormatted = formatDateForMessage(earliestDate);
                 setTimeError(`Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${earliestFormatted}. Vyberte neskorší deň.`);
                 return;
             }
             
-            // KONTROLA 2: Vybraný deň je neskorší ako najneskorší súvisiaci zápas
             if (selectedDateObj > latestDate) {
                 const latestFormatted = formatDateForMessage(latestDate);
                 setTimeError(`Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých súvisiacich zápasoch (posledný: ${latestFormatted}). Je to v poriadku.`);
                 return;
             }
             
-            // KONTROLA 3: Vybraný deň je medzi súvisiacimi zápasmi
             if (timeError && (timeError.includes('skorší') || timeError.includes('neskorší'))) {
                 setTimeError('');
             }
@@ -3772,7 +3473,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [isOpen, match, initialFilters]);
 
-    // Dodatočný useEffect pre nastavenie dátumu z filtra, keď sa načítajú dátumy
     useEffect(() => {
         if (shouldSetDateFromFilter && availableDates.length > 0 && initialFilters?.day && !selectedDate) {
             const dateExists = availableDates.some(date => {
@@ -3787,7 +3487,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [availableDates, shouldSetDateFromFilter, initialFilters, selectedDate]);
 
-    // Načítanie detailov kategórie
     useEffect(() => {
         if (match && categories.length > 0) {
             const category = categories.find(c => c.name === match.categoryName);
@@ -3804,7 +3503,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [match, categories]);
 
-    // Načítanie existujúcich zápasov pre vybranú halu a deň
     useEffect(() => {
         const loadExistingMatches = async () => {
             if (selectedHallId && selectedDate && allMatches) {
@@ -3831,9 +3529,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
-    // ============================================================
-    // UPRAVENÝ useEffect pre výpočet navrhovaného času - berie do úvahy logickú postupnosť nadstavbových skupín
-    // ============================================================
     useEffect(() => {
         const loadHallStartTime = async () => {
             if (selectedHallId && selectedDate && window.db) {
@@ -3874,7 +3569,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
                     }
                     
-                    // 🔥 VÝPOČET NAVRHOVANÉHO ČASU - berie do úvahy logickú postupnosť nadstavbových skupín
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTime(
                             selectedHallId,
@@ -3886,7 +3580,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             allMatches,
                             match,
                             categories,
-                            groupsByCategory  // ← PRIDANÉ: groupsByCategory pre kontrolu nadstavbových skupín
+                            groupsByCategory
                         );
                         
                         if (firstAvailable) {
@@ -3895,13 +3589,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setTimeError('');
                             }
                         } else {
-                            // Získame informácie o konfliktoch s nadstavbovou skupinou
                             let advancedGroupInfo = '';
                             if (match && match.groupName && groupsByCategory) {
                                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
                                 if (currentGroup?.type === 'nadstavbová skupina') {
-                                    // Zistíme, či existujú súvisiace zápasy
                                     const relatedMatches = allMatches.filter(m => 
                                         m.categoryId === match.categoryId &&
                                         m.groupName === match.groupName &&
@@ -3910,14 +3602,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                     );
                                     
                                     if (relatedMatches.length > 0) {
-                                        // Zoradíme podľa dátumu
                                         const sortedRelated = [...relatedMatches].sort((a, b) => {
                                             const timeA = a.scheduledTime.toDate().getTime();
                                             const timeB = b.scheduledTime.toDate().getTime();
                                             return timeA - timeB;
                                         });
                                         
-                                        // Zistíme, či existuje zápas v skoršom dni
                                         const currentDateObj = getLocalDateFromStr(selectedDate);
                                         const earlierDayMatches = sortedRelated.filter(m => {
                                             const mDate = m.scheduledTime.toDate();
@@ -3934,7 +3624,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                             });
                                             advancedGroupInfo = ` Súvisiaci zápas nadstavbovej skupiny v skoršom dni (${formattedDate}) musí byť odohraný pred týmto zápasom.`;
                                         } else {
-                                            // Skontrolujeme zápasy v rovnakom dni
                                             const sameDayMatches = sortedRelated.filter(m => {
                                                 const mDate = m.scheduledTime.toDate();
                                                 const mDateStr = getLocalDateStr(mDate);
@@ -3942,7 +3631,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                             });
                                             
                                             if (sameDayMatches.length > 0) {
-                                                // Zistíme najneskorší čas medzi nimi
                                                 const latestSameDay = sameDayMatches.reduce((latest, m) => {
                                                     const mDate = m.scheduledTime.toDate();
                                                     return mDate > latest.scheduledTime.toDate() ? m : latest;
@@ -3978,9 +3666,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadHallStartTime();
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, match, categories, groupsByCategory]);
 
-    // ============================================================
-    // UPRAVENÝ useEffect pre kontrolu prekrývania - berie do úvahy aj špeciálne zápasy a nadstavbové skupiny
-    // ============================================================
     useEffect(() => {
         if (selectedTime && matchDuration > 0 && match) {
             const [newHours, newMinutes] = selectedTime.split(':').map(Number);
@@ -3995,7 +3680,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             const allConflicts = [];
             
-            // 1. Kontrola konfliktov s existujúcimi zápasmi v rovnakej hale a dni
             const overlapping = existingMatches.filter(existingMatch => {
                 if (!existingMatch.scheduledTime) return false;
                 
@@ -4023,14 +3707,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             allConflicts.push(...overlapping);
             
-            // 2. 🔥 KONTROLA PRE ŠPECIÁLNE ZÁPASY (pavúk/umiestnenie) - deň musí byť PO súvisiacich zápasoch
             if (match && (match.isPlacementMatch || match.matchType) && relatedMatches.length > 0 && selectedDate) {
                 const scheduledRelated = relatedMatches.filter(m => m.scheduledTime);
                 
                 if (scheduledRelated.length > 0) {
                     const selectedDateObjForCheck = getLocalDateFromStr(selectedDate);
                     if (selectedDateObjForCheck) {
-                        // Zistíme najskorší dátum medzi súvisiacimi zápasmi
                         let earliestDate = null;
                         scheduledRelated.forEach(m => {
                             try {
@@ -4060,14 +3742,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
-            // 3. 🔥 KONTROLA NADSTAVBOVEJ SKUPINY - LOGICKÁ POSTUPNOSŤ VRÁTANE NESKORŠÍCH DNÍ
             if (match && match.groupName && groupsByCategory) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
                 const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
                 
                 if (isAdvancedGroup) {
-                    // Nájdeme VŠETKY súvisiace zápasy (rovnaká kategória a skupina)
                     const relatedMatchesForAdvanced = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.groupName === match.groupName &&
@@ -4075,14 +3755,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         m.scheduledTime
                     );
                     
-                    // Zoradíme podľa dátumu a času
                     const sortedRelated = [...relatedMatchesForAdvanced].sort((a, b) => {
                         const timeA = a.scheduledTime.toDate().getTime();
                         const timeB = b.scheduledTime.toDate().getTime();
                         return timeA - timeB;
                     });
                     
-                    // 🔥 Kontrola: existuje súvisiaci zápas v SKORŠOM DNI?
                     const earlierDayMatches = sortedRelated.filter(m => {
                         const mDate = m.scheduledTime.toDate();
                         const mDateStr = getLocalDateStr(mDate);
@@ -4096,8 +3774,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         });
                     }
                     
-                    // 🔥 KONTROLA: existuje súvisiaci zápas v NESKORŠOM DNI?
-                    // Ak áno, aktuálny zápas musí byť PRED ním
                     const laterDayMatches = sortedRelated.filter(m => {
                         const mDate = m.scheduledTime.toDate();
                         const mDateStr = getLocalDateStr(mDate);
@@ -4111,14 +3787,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         });
                     }
                     
-                    // 🔥 Kontrola: súvisiace zápasy v ROVNAKOM DNI
                     const sameDayMatches = sortedRelated.filter(m => {
                         const mDate = m.scheduledTime.toDate();
                         const mDateStr = getLocalDateStr(mDate);
                         return mDateStr === selectedDateStr;
                     });
                     
-                    // Zistíme, či existuje zápas, ktorý začína NESKÔR (aktuálny musí byť PRED ním + prestávka)
                     const laterSameDayMatches = sameDayMatches.filter(m => {
                         const mDate = m.scheduledTime.toDate();
                         const mStartMinutes = mDate.getHours() * 60 + mDate.getMinutes();
@@ -4140,7 +3814,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         });
                     }
                     
-                    // Zistíme, či existuje zápas, ktorý začína SKÔR (potrebujeme prestávku po ňom)
                     const earlierSameDayMatches = sameDayMatches.filter(m => {
                         const mDate = m.scheduledTime.toDate();
                         const mStartMinutes = mDate.getHours() * 60 + mDate.getMinutes();
@@ -4169,7 +3842,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             setOverlappingMatches(allConflicts);
             
-            // Aktualizácia chybovej správy
             if (allConflicts.length > 0) {
                 const specialConflicts = allConflicts.filter(c => c.type === 'special_match_earlier_than_related');
                 const advancedConflicts = allConflicts.filter(c => 
@@ -4211,14 +3883,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName, match, allMatches, selectedDate, selectedHallId, groupsByCategory, relatedMatches]);
     
-    // Pomocná funkcia na formátovanie času z minút
     const formatTimeFromMinutes = (minutes) => {
         const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
         const mins = (minutes % 60).toString().padStart(2, '0');
         return `${hours}:${mins}`;
     };
 
-    // Upravte useEffect pre výpočet konca
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
@@ -4269,7 +3939,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -4286,7 +3955,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 )
             ),
 
-            // 🔥 PRIDANÉ: Informácia o nadstavbovej skupine a súvisiacich zápasoch
             isAdvancedGroup && relatedMatches.length > 0 && React.createElement(
                 'div',
                 { className: 'mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200' },
@@ -4311,7 +3979,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 )
             ),
 
-            // Informácie o zápase
             React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
@@ -4358,11 +4025,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     isAdvancedGroup && React.createElement(
                         'span',
                         { className: 'ml-2 text-purple-600 font-medium' },
-                        '🏆 Nadstavbová'
+                        'Nadstavbová'
                     )
                 ),
                 
-                // Informácia o dĺžke zápasu a prestávke
                 categoryDetails && React.createElement(
                     'div',
                     { className: 'mt-3 p-2 bg-white rounded border border-blue-100' },
@@ -4379,12 +4045,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 )
             ),
 
-            // Formulár pre priradenie
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
                 
-                // Výber haly
                 React.createElement(
                     'div',
                     null,
@@ -4399,7 +4063,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setSelectedHallId(e.target.value);
                                 setSelectedTime('');
                                 setSuggestedTime(null);
-                                // Vymažeme starú chybu, nová sa nastaví v useEffect
                                 if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                                     setTimeError('');
                                 }
@@ -4415,7 +4078,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // Výber dňa
                 React.createElement(
                     'div',
                     null,
@@ -4430,7 +4092,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setSelectedDate(e.target.value);
                                 setSelectedTime('');
                                 setSuggestedTime(null);
-                                // Vymažeme starú chybu, nová sa nastaví v useEffect
                                 if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                                     setTimeError('');
                                 }
@@ -4452,7 +4113,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // Zobrazenie času začiatku pre halu (ak existuje)
                 selectedHallId && selectedDate && hallStartTime && React.createElement(
                     'div',
                     { className: 'text-sm bg-blue-50 p-2 rounded-lg border border-blue-200' },
@@ -4461,7 +4121,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     React.createElement('span', { className: 'font-bold text-blue-800' }, hallStartTime)
                 ),
 
-                // Zobrazenie existujúcich zápasov pre prehľad
                 existingMatches.length > 0 && React.createElement(
                     'div',
                     { className: 'text-sm bg-gray-50 p-3 rounded-lg border border-gray-200' },
@@ -4522,7 +4181,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // 🔥 PRIDANÉ: Zobrazenie súvisiacich zápasov (nadstavbová skupina) - S DÁTUMOM
                 isAdvancedGroup && relatedMatches.length > 0 && React.createElement(
                     'div',
                     { className: 'text-sm bg-purple-50 p-3 rounded-lg border border-purple-200' },
@@ -4548,7 +4206,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 const minutes = startTime.getMinutes().toString().padStart(2, '0');
                                 const dateStr = getLocalDateStr(startTime);
                                 
-                                // 🔥 FORMATOVANIE DÁTUMU PRE ZOBRAZENIE
                                 const dateObj = getLocalDateFromStr(dateStr);
                                 const formattedDate = dateObj ? formatDateWithDay(dateObj) : dateStr;
                                 
@@ -4570,7 +4227,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 
                                 const isRelatedConflict = overlappingMatches.some(om => om.id === rm.id);
                                 
-                                // 🔥 ZISTÍME, ČI IDE O INÝ DEŇ (pre zvýraznenie)
                                 const selectedDateObj = getLocalDateFromStr(selectedDate);
                                 const selectedDateStr = selectedDateObj ? getLocalDateStr(selectedDateObj) : null;
                                 const isDifferentDay = dateStr !== selectedDateStr;
@@ -4581,7 +4237,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                         key: idx,
                                         className: `flex items-center gap-2 p-1 rounded border ${isRelatedConflict ? 'bg-red-50 border-red-300' : 'bg-white border-gray-100'} ${isDifferentDay ? 'border-l-4 border-l-purple-400' : ''}`
                                     },
-                                    // 🔥 ČAS + DÁTUM (zobrazené spolu)
                                     React.createElement(
                                         'span', 
                                         { 
@@ -4596,7 +4251,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
                                     React.createElement('span', { className: isRelatedConflict ? 'text-red-700 font-medium' : 'text-gray-700' }, rm.awayTeamIdentifier),
                                     React.createElement('span', { className: 'text-xs text-purple-500 ml-auto' }, hallName),
-                                    // 🔥 INDIKÁTOR INÉHO DŇA
                                     isDifferentDay && React.createElement(
                                         'span',
                                         { className: 'text-xs text-purple-400 ml-1' },
@@ -4613,7 +4267,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // Výber času s možnosťou použiť navrhovaný čas
                 React.createElement(
                     'div',
                     null,
@@ -4775,7 +4428,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // Zhrnutie
                 selectedHallId && selectedDate && selectedTime && !hasError && React.createElement(
                     'div',
                     { className: 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg' },
@@ -4813,7 +4465,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3 mt-6' },
@@ -4878,7 +4529,6 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -4895,7 +4545,6 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
                 )
             ),
 
-            // Obsah
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -4926,7 +4575,6 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
                 )
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -4954,7 +4602,6 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
-// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom + PRIDANÁ KONTROLA DUPLICÍT (ignoruje veľkosť písmen a medzery)
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -4962,11 +4609,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('');
     
-    // Nový stav pre carryOverPoints z nastavení kategórie
     const [carryOverPoints, setCarryOverPoints] = useState(false);
-    // Nový stav pre informáciu, či existuje nadstavbová skupina s carryOverPoints
     const [hasAdvancedGroupWithCarryOver, setHasAdvancedGroupWithCarryOver] = useState(false);
-    // NOVÝ STAV pre duplicitné názvy tímov
     const [hasDuplicateTeamNames, setHasDuplicateTeamNames] = useState(false);
 
     useEffect(() => {
@@ -4982,37 +4626,31 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
         }
     }, [isOpen]);
 
-    // Zoradenie kategórií podľa abecedy
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // 🔥 UPRAVENÁ FUNKCIA: Kontrola duplicitných názvov tímov v kategórii (ignoruje veľkosť písmen a medzery)
     const checkForDuplicateTeamNames = (categoryId) => {
         if (!categoryId || !window.__teamManagerData?.allTeams) return false;
         
         const category = categories.find(c => c.id === categoryId);
         if (!category) return false;
         
-        // Získame všetky tímy v tejto kategórii
         const teamsInCategory = window.__teamManagerData.allTeams.filter(t => 
             t.category === category.name
         );
         
-        // 🔥 NORMALIZÁCIA NÁZVU: odstránenie medzier a malé písmená
         const normalizeTeamName = (name) => {
             if (!name) return '';
             return name.replace(/\s+/g, '').toLowerCase();
         };
         
-        // Skontrolujeme duplicitné názvy tímov (ignorujeme medzery a veľkosť písmen)
         const normalizedTeamNames = teamsInCategory.map(t => normalizeTeamName(t.teamName));
         const uniqueNames = new Set(normalizedTeamNames);
         
         return normalizedTeamNames.length !== uniqueNames.size;
     };
 
-    // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => 
@@ -5022,7 +4660,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setSelectedGroup('');
             setSelectedGroupType('');
             
-            // Skontrolujeme, či existuje aspoň jedna nadstavbová skupina s carryOverPoints
             const category = categories.find(c => c.id === selectedCategory);
             const hasAdvanced = sortedGroups.some(group => group.type === 'nadstavbová skupina');
             const carryOver = category?.carryOverPoints ?? false;
@@ -5030,7 +4667,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setHasAdvancedGroupWithCarryOver(hasAdvanced && carryOver);
             setCarryOverPoints(carryOver);
             
-            // NOVÉ: Skontrolujeme duplicitné názvy tímov v tejto kategórii (ignorujeme medzery a veľkosť písmen)
             const hasDuplicates = checkForDuplicateTeamNames(selectedCategory);
             setHasDuplicateTeamNames(hasDuplicates);            
         } else {
@@ -5043,18 +4679,16 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
         }
     }, [selectedCategory, groupsByCategory, categories]);
 
-    // Zistenie typu vybranej skupiny a načítanie carryOverPoints z kategórie
     useEffect(() => {
         if (selectedGroup && availableGroups.length > 0) {
             const group = availableGroups.find(g => g.name === selectedGroup);
             if (group) {
                 if (group.type === 'základná skupina') {
                     setSelectedGroupType('Základná skupina');
-                    setCarryOverPoints(false); // Pre základnú skupinu je to irelevantné
+                    setCarryOverPoints(false);
                 } else if (group.type === 'nadstavbová skupina') {
                     setSelectedGroupType('Nadstavbová skupina');
                     
-                    // Načítame carryOverPoints z nastavení kategórie
                     const category = categories.find(c => c.id === selectedCategory);
                     if (category) {
                         const carryOver = category.carryOverPoints ?? false;
@@ -5072,14 +4706,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             }
         } else {
             setSelectedGroupType('');
-            // Ak nie je vybraná žiadna skupina, ale je vybraná kategória,
-            // zachováme hodnotu hasAdvancedGroupWithCarryOver (nastavenú v prvom useEffect)
         }
     }, [selectedGroup, availableGroups, selectedCategory, categories]);
 
     if (!isOpen) return null;
 
-    // Zistíme, či máme zobraziť info box (pre nadstavbovú skupinu alebo pre celú kategóriu s nadstavbovou skupinou)
     const showCarryOverInfo = (selectedGroup && selectedGroupType === 'Nadstavbová skupina') || 
                               (!selectedGroup && hasAdvancedGroupWithCarryOver);
 
@@ -5095,7 +4726,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -5110,7 +4740,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Výber kategórie
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -5135,7 +4764,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // 🔥 UPRAVENÁ ČASŤ: Kontrola duplicitných názvov tímov - ZOBRAZÍ SA PRED VŠETKÝM OSTATNÝM
             selectedCategory && hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg' },
@@ -5168,7 +4796,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Výber skupiny - ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
             selectedCategory && !hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -5188,7 +4815,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     )
                 ),
                 
-                // Zobrazenie typu skupiny (len ak je vybraná konkrétna skupina)
                 selectedGroup && selectedGroupType && React.createElement(
                     'div',
                     { className: 'mt-2 text-sm' },
@@ -5213,10 +4839,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // ZMENENÉ: Zobrazujeme INFO o stave prenosu zápasov pre:
-            // 1. Vybranú nadstavbovú skupinu
-            // 2. Celú kategóriu (žiadna skupina), ak existuje nadstavbová skupina a je zapnuté carryOverPoints
-            // ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
             selectedCategory && !hasDuplicateTeamNames && showCarryOverInfo && React.createElement(
                 'div', 
                 { 
@@ -5266,15 +4888,12 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Informácia o jedinečných dvojiciach (len ak nie je zaškrtnuté "s opakovaním")
-            // ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
             selectedCategory && !hasDuplicateTeamNames && !withRepetitions && React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mt-1 ml-6' },
                 'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz.'
             ),
 
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3 mt-2' },
@@ -5294,7 +4913,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                                 categoryId: selectedCategory,
                                 groupName: selectedGroup || null,
                                 withRepetitions,
-                                transferFromBasicGroup: carryOverPoints // Prenášame hodnotu z nastavení kategórie
+                                transferFromBasicGroup: carryOverPoints
                             });
                             onClose();
                         },
@@ -5313,8 +4932,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
 };
 
 const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime }) => {
-    const [breakPosition, setBreakPosition] = useState('after'); // 'before' alebo 'after'
-    const [breakDuration, setBreakDuration] = useState(5); // predvolene 5 minút
+    const [breakPosition, setBreakPosition] = useState('after');
+    const [breakDuration, setBreakDuration] = useState(5);
     const [newTime, setNewTime] = useState('');
     const [durationError, setDurationError] = useState('');
 
@@ -5340,7 +4959,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
             newMinutes = currentMinutes + breakDuration;
         }
         
-        // Kontrola, či čas nepresahuje 24:00
         if (newMinutes < 0) {
             setDurationError('Čas nemôže byť záporný');
             setNewTime('');
@@ -5358,20 +4976,17 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
     const handleDurationChange = (e) => {
         const value = parseInt(e.target.value);
         
-        // Ak je prázdny string, nastavíme na 0
         if (e.target.value === '') {
             setBreakDuration(0);
             setDurationError('Zadajte dĺžku medzery');
             return;
         }
         
-        // Kontrola, či je to číslo
         if (isNaN(value)) {
             setDurationError('Zadajte platné číslo');
             return;
         }
         
-        // Kontrola rozsahu (1-180 minút)
         if (value < 1) {
             setDurationError('Minimálna dĺžka je 1 minúta');
         } else if (value > 180) {
@@ -5408,7 +5023,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
             'div',
             { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
@@ -5423,7 +5037,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 )
             ),
 
-            // Informácie o zápase
             React.createElement(
                 'div',
                 { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
@@ -5436,7 +5049,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 )
             ),
 
-            // Výber pozície
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -5475,7 +5087,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 )
             ),
 
-            // Výber dĺžky medzery - ZMENENÉ NA INPUT
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -5504,38 +5115,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                     'Rozsah: 1 - 180 minút'
                 )
             ),
-
-            // Náhľad nového času
-//            React.createElement(
-//                'div',
-//                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
-//                React.createElement(
-//                    'div',
-//                    { className: 'flex items-center justify-between' },
-//                    React.createElement(
-//                        'div',
-//                        null,
-//                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Pôvodný čas:'),
-//                        React.createElement('p', { className: 'font-medium' }, currentTime)
-//                    ),
-//                    React.createElement('i', { className: 'fa-solid fa-arrow-right text-green-600' }),
-//                    React.createElement(
-//                        'div',
-//                        null,
-//                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Nový čas:'),
-//                        React.createElement('p', { className: `font-bold ${newTime ? 'text-green-700' : 'text-red-500'}` }, 
-//                            newTime || 'Neplatný čas'
-//                        )
-//                    )
-//                ),
-//                newTime && React.createElement(
-//                    'p',
-//                    { className: 'text-xs text-gray-500 mt-2 text-center' },
-//                    'Ostatné zápasy v tento deň sa automaticky posunú'
-//                )
-//            ),
-
-            // Tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -5587,7 +5166,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [showTeamId, setShowTeamId] = useState(false);
     const [usersWithMatches, setUsersWithMatches] = useState([]);
     
-    // Nové stavy pre postupné potvrdzovanie existujúcich zápasov
     const [isExistingMatchModalOpen, setIsExistingMatchModalOpen] = useState(false);
     const [currentExistingMatch, setCurrentExistingMatch] = useState(null);
     const [pendingMatches, setPendingMatches] = useState([]);
@@ -5650,14 +5228,11 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [heightsCalculated, setHeightsCalculated] = useState(false);
     const [hasCompletedMatch, setHasCompletedMatch] = useState(false);
 
-    // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
 
-    // Pre hasVisibleHalls budeme potrebovať funkciu, ktorá to vypočíta
     const [hasVisibleHalls, setHasVisibleHalls] = useState(false);
 
     const [isPinned, setIsPinned] = useState(() => {
-        // Načítame stav z localStorage pri inicializácii
         const saved = localStorage.getItem('filtersPanelPinned');
         return saved === 'true';
     });
@@ -5746,7 +5321,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             const newHeights = {};
             const heightsByDate = {};
         
-            // Najprv zmeriame všetky karty a uložíme ich výšky
             dayCards.forEach((card) => {
                 const height = card.offsetHeight;
                 const cardId = card.getAttribute('data-card-id');
@@ -5755,7 +5329,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 if (cardId && dateKey) {
                     newHeights[cardId] = height;
                     
-                    // Uložíme výšku pre konkrétny dátum
                     if (!heightsByDate[dateKey]) {
                         heightsByDate[dateKey] = [];
                     }
@@ -5763,7 +5336,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             });
             
-            // Pre každý dátum nájdeme maximálnu výšku
             const maxHeights = {};
             Object.keys(heightsByDate).forEach(dateKey => {
                 maxHeights[dateKey] = Math.max(...heightsByDate[dateKey]);
@@ -5775,7 +5347,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }, 150);
     };
 
-    // Funkcia na výmenu zápasov medzi dňami/halami
     const handleSwapMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, swapMatches, swapSchedules }) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -5790,7 +5361,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         try {
             let swappedCount = 0;
             
-            // 1. Nájdeme zápasy na výmenu (zdroj)
             const sourceMatches = matches.filter(match => {
                 if (!match.hallId || match.hallId !== sourceHallId) return false;
                 if (!isWholeHall && match.scheduledTime) {
@@ -5805,7 +5375,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return true;
             });
     
-            // 2. Nájdeme zápasy na výmenu (cieľ)
             const targetMatches = matches.filter(match => {
                 if (!match.hallId || match.hallId !== targetHallId) return false;
                 if (!isWholeHall && match.scheduledTime) {
@@ -5821,14 +5390,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             });
     
             if (swapMatches) {
-                // Uložíme si pôvodné údaje cieľových zápasov pre prípad, že by bolo treba
                 const targetMatchesData = targetMatches.map(m => ({
                     id: m.id,
                     hallId: m.hallId,
                     scheduledTime: m.scheduledTime
                 }));
     
-                // 3. Presunieme zdrojové zápasy do cieľovej haly/dňa
                 for (const match of sourceMatches) {
                     const matchRef = doc(window.db, 'matches', match.id);
                     const updateData = { hallId: targetHallId };
@@ -5845,7 +5412,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     swappedCount++;
                 }
     
-                // 4. Presunieme cieľové zápasy do zdrojovej haly/dňa
                 for (const match of targetMatches) {
                     const matchRef = doc(window.db, 'matches', match.id);
                     const updateData = { hallId: sourceHallId };
@@ -5863,7 +5429,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
     
-            // 5. Výmena nastavení (čas začiatku)
             if (swapSchedules) {
                 const sourceScheduleId = `${sourceHallId}_${!isWholeHall ? sourceDate : ''}`;
                 const targetScheduleId = `${targetHallId}_${!isWholeHall ? targetDate : ''}`;
@@ -5879,7 +5444,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const sourceScheduleData = sourceScheduleSnap.exists() ? sourceScheduleSnap.data() : null;
                 const targetScheduleData = targetScheduleSnap.exists() ? targetScheduleSnap.data() : null;
                 
-                // Uložíme zdrojové nastavenia do cieľa
                 if (sourceScheduleData) {
                     await setDoc(targetScheduleRef, {
                         ...sourceScheduleData,
@@ -5888,11 +5452,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                         updatedAt: Timestamp.now(),
                     }, { merge: true });
                 } else if (targetScheduleData && !isWholeHall) {
-                    // Ak zdroj nemá nastavenia, ale cieľ áno, odstránime cieľové
                     await deleteDoc(targetScheduleRef);
                 }
                 
-                // Uložíme cieľové nastavenia do zdroja
                 if (targetScheduleData) {
                     await setDoc(sourceScheduleRef, {
                         ...targetScheduleData,
@@ -5901,7 +5463,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         updatedAt: Timestamp.now(),
                     }, { merge: true });
                 } else if (sourceScheduleData && !isWholeHall) {
-                    // Ak cieľ nemá nastavenia, ale zdroj áno, odstránime zdrojové
                     await deleteDoc(sourceScheduleRef);
                 }
             }
@@ -5912,7 +5473,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             window.showGlobalNotification(message, 'success');
             
-            // Obnovíme dáta
             setTimeout(() => {
                 window.dispatchEvent(new CustomEvent('refreshMatches'));
             }, 500);
@@ -5931,11 +5491,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             teamIds.add(match.awayTeamIdentifier);
         });
         
-        // Konvertujeme na pole a zoradíme podľa abecedy
         return Array.from(teamIds).sort((a, b) => a.localeCompare(b));
     };
 
-    // Funkcia pre uloženie zápasu o umiestnenie
     const savePlacementMatch = async (matchData) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -5964,8 +5522,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 categoryName: matchData.categoryName,
                 groupName: matchData.groupName,
                 status: 'pending',
-                isPlacementMatch: true, // Označíme, že ide o zápas o umiestnenie
-                placementRank: matchData.placementRank, // Uložíme umiestnenie
+                isPlacementMatch: true,
+                placementRank: matchData.placementRank,
                 matchTitle: matchData.matchTitle,
                 createdAt: Timestamp.now(),
                 createdByUid: userProfileData?.uid || null
@@ -5980,32 +5538,26 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Upravená funkcia getFilteredMatches pre podporu viacnásobných kategórií
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
-            // Filter podľa kategórií - ak je vybraných viac kategórií, zápas musí patriť do jednej z nich
             if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) {
                 return false;
             }
             
-            // Filter podľa skupiny
             if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
                 return false;
             }
             
-            // Filter podľa ID tímu
             if (selectedTeamIdFilter) {
                 if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
                     return false;
                 }
             }
             
-            // Filter podľa haly - aplikujeme len ak nie je ignoreHallFilter = true
             if (!ignoreHallFilter && selectedHallFilter && match.hallId !== selectedHallFilter) {
                 return false;
             }
             
-            // Filter podľa dňa - aplikujeme len ak nie je ignoreDayFilter = true
             if (!ignoreDayFilter && selectedDayFilter) {
                 if (!match.scheduledTime) {
                     return false;
@@ -6065,7 +5617,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match) return;
     
-            // Výpočet dĺžky zápasu
             const category = categories.find(c => c.name === match.categoryName);
             let matchDuration = 0;
             if (category) {
@@ -6075,8 +5626,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
             }
     
-            // Získame všetky zápasy pre tú istú halu a deň
-            const dateStr = date; // date už je v tvare YYYY-MM-DD
+            const dateStr = date;
             const [year, month, day] = dateStr.split('-').map(Number);
             
             const hallDayMatches = matches
@@ -6094,30 +5644,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                 })
                 .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
     
-            // Nájdeme všetky zápasy, ktoré začínajú po tomto čase
             const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
             const breakTimeMinutes = breakHours * 60 + breakMinutes;
             
-            // Zápasy po tomto čase (vrátane tých, čo začínajú presne v tomto čase)
             const afterMatches = hallDayMatches.filter(m => {
                 const matchMinutes = m.scheduledTimeObj.getHours() * 60 + m.scheduledTimeObj.getMinutes();
                 return matchMinutes >= breakTimeMinutes;
             });
     
-            // Vytvoríme nový dátum pre zápas
             const matchDateTime = new Date(year, month - 1, day, breakHours, breakMinutes, 0);
     
-            // Aktualizujeme zápas
             const matchRef = doc(window.db, 'matches', matchId);
             await updateDoc(matchRef, {
                 hallId: hallId,
                 scheduledTime: Timestamp.fromDate(matchDateTime),
                 status: 'scheduled'
-            });
-    
-            // Ak sa zápas zmestí presne (matchDuration === breakDuration), nemusíme nič posúvať
-            // Ak je zápas kratší, vznikne nová medzera (nasledujúce zápasy zostávajú na svojich miestach)
-            // Teda v oboch prípadoch NEPOSÚVAME nasledujúce zápasy
+            });    
             
             let message = `Zápas bol priradený do voľného času o ${breakStartTime}`;
             
@@ -6151,17 +5693,14 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match || !match.scheduledTime) return;
     
-            // Získame dĺžku prestávky pre prvý zápas
             let firstMatchBreak = 5;
             const firstMatchCategory = categories.find(c => c.name === match.categoryName);
             if (firstMatchCategory) {
                 firstMatchBreak = firstMatchCategory.matchBreak || 5;
             }
     
-            // Celkový posun = dĺžka voľného času + prestávka pred prvým zápasom
             const totalShift = breakDuration + firstMatchBreak;
     
-            // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = match.scheduledTime.toDate();
             const dateStr = getLocalDateStr(matchDate);
             
@@ -6180,14 +5719,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 })
                 .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
     
-            // Nájdeme prvý zápas (ktorý sa posúva)
             const firstMatch = hallDayMatches[0];
             if (!firstMatch || firstMatch.id !== matchId) {
                 window.showGlobalNotification('Tento zápas nie je prvým zápasom dňa', 'error');
                 return;
             }
     
-            // Posunieme VŠETKY zápasy v tento deň o totalShift SKÔR
             for (const m of hallDayMatches) {
                 const mRef = doc(window.db, 'matches', m.id);
                 const mDateTime = new Date(m.scheduledTimeObj);
@@ -6226,17 +5763,14 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             if (!currentMatch || !nextMatch || !currentMatch.scheduledTime || !nextMatch.scheduledTime) return;
     
-            // Získame dĺžku prestávky pre aktuálny zápas
             let currentMatchBreak = 5;
             const currentMatchCategory = categories.find(c => c.name === currentMatch.categoryName);
             if (currentMatchCategory) {
                 currentMatchBreak = currentMatchCategory.matchBreak || 5;
             }
     
-            // Celkový posun = dĺžka voľného času + prestávka medzi zápasmi
             const totalShift = breakDuration + currentMatchBreak;
     
-            // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = currentMatch.scheduledTime.toDate();
             const dateStr = getLocalDateStr(matchDate);
             
@@ -6255,13 +5789,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 })
                 .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
     
-            // Nájdeme index aktuálneho zápasu
             const currentIndex = hallDayMatches.findIndex(m => m.id === matchId);
             
-            // Všetky zápasy PO aktuálnom (vrátane nasledujúceho)
             const afterMatches = hallDayMatches.slice(currentIndex + 1);
     
-            // Posunieme všetky nasledujúce zápasy o totalShift skôr
             for (const m of afterMatches) {
                 const mRef = doc(window.db, 'matches', m.id);
                 const mDateTime = new Date(m.scheduledTimeObj);
@@ -6298,7 +5829,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match || !match.scheduledTime) return;
     
-            // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = match.scheduledTime.toDate();
             const dateStr = getLocalDateStr(matchDate);
             
@@ -6317,15 +5847,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 })
                 .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
     
-            // Nájdeme index aktuálneho zápasu
             const currentIndex = hallDayMatches.findIndex(m => m.id === matchId);
             
-            // Rozdelíme na zápasy pred a po
             const beforeMatches = hallDayMatches.slice(0, currentIndex);
-            const afterMatches = hallDayMatches.slice(currentIndex + 1);
-    
-            // Pri medzere PRED zápasom: aktuálny čas sa posúva dopredu (neskôr)
-            // Pri medzere ZA zápasom: aktuálny čas zostáva, nasledujúce sa posúvajú dopredu
+            const afterMatches = hallDayMatches.slice(currentIndex + 1);    
             
             if (position === 'before') {                
                 const matchRef = doc(window.db, 'matches', matchId);
@@ -6336,7 +5861,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     scheduledTime: Timestamp.fromDate(newDateTime)
                 });
     
-                // 2. Posunieme všetky nasledujúce zápasy o duration dopredu
                 for (const m of afterMatches) {
                     const mRef = doc(window.db, 'matches', m.id);
                     const mDateTime = new Date(m.scheduledTimeObj);
@@ -6353,7 +5877,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 );
     
             } else {                
-                // Posunieme LEN nasledujúce zápasy (aktuálny zostáva na svojom mieste)
                 for (const m of afterMatches) {
                     const mRef = doc(window.db, 'matches', m.id);
                     const mDateTime = new Date(m.scheduledTimeObj);
@@ -6388,12 +5911,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     
         try {
-            // Nájdeme všetky zápasy pre túto halu (a prípadne deň)
             const matchesToUpdate = matches.filter(match => {
                 if (!match.hallId || match.hallId !== hallId) return false;
                 
                 if (!isWholeHall && date) {
-                    // Ak nie je celá hala, filtrujeme aj podľa dňa
                     if (!match.scheduledTime) return false;
                     try {
                         const matchDate = match.scheduledTime.toDate();
@@ -6412,7 +5933,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return;
             }
     
-            // Otvoríme modálne okno pre potvrdenie
             const hall = sportHalls.find(h => h.id === hallId);
             setPendingBulkUnassign({
                 hallId,
@@ -6434,14 +5954,12 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
     
-    // Samotné vykonanie hromadného odstránenia priradení
     const confirmBulkUnassign = async () => {
         if (!pendingBulkUnassign || !window.db) return;
     
         try {
             const { hallId, date, isWholeHall } = pendingBulkUnassign;
             
-            // Nájdeme všetky zápasy pre túto halu (a prípadne deň)
             const matchesToUpdate = matches.filter(match => {
                 if (!match.hallId || match.hallId !== hallId) return false;
                 
@@ -6459,7 +5977,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return true;
             });
     
-            // Postupne aktualizujeme všetky zápasy - odstránime priradenie
             for (const match of matchesToUpdate) {
                 const matchRef = doc(window.db, 'matches', match.id);
                 await updateDoc(matchRef, {
@@ -6486,14 +6003,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
     
-        // Načítame názvy z URL
         const categoryNames = params.getAll('category') || [];
         const groupName = params.get('group') || '';
         const teamId = params.get('teamId') || '';
         const hallName = params.get('hall') || '';
         const day = params.get('day') || '';    
     
-        // Nájdeme ID podľa názvu
         let categoryIds = [];
         if (categoryNames.length > 0 && categories.length > 0) {
             categoryNames.forEach(catName => {
@@ -6525,11 +6040,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
     
-    // Upravená funkcia updateURLWithFilters pre podporu viacnásobných kategórií
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
     
-        // Nájdeme názvy kategórií podľa ID
         if (filters.categories && filters.categories.length > 0) {
             filters.categories.forEach(catId => {
                 const category = categories.find(c => c.id === catId);
@@ -6539,17 +6052,14 @@ const AddMatchesApp = ({ userProfileData }) => {
             });
         }
     
-        // Skupinu ukladáme priamo (už je to názov)
         if (filters.group) {
             params.set('group', filters.group);
         }
         
-        // ID tímu ukladáme priamo
         if (filters.teamId) {
             params.set('teamId', filters.teamId);
         }
     
-        // Nájdeme názov haly podľa ID
         if (filters.hall) {
             const hall = sportHalls.find(h => h.id === filters.hall);
             if (hall) {
@@ -6557,7 +6067,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
     
-        // Deň ukladáme bez zmeny - je to string YYYY-MM-DD
         if (filters.day) {
             params.set('day', filters.day);
         }
@@ -6574,7 +6083,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
     }, [sportHalls]);
 
-    // A tiež pre filteredSportHalls (ak používate filter haly)
     const sortedFilteredSportHalls = React.useMemo(() => {
         return [...filteredSportHalls].sort((a, b) => a.name.localeCompare(b.name));
     }, [filteredSportHalls]);
@@ -6598,7 +6106,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
 
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
-        // Získame existujúci čas pre túto halu a deň
         const localDateStr = getLocalDateStr(date);
         const scheduleId = `${hall.id}_${localDateStr}`;
         const existingSchedule = hallSchedules[scheduleId];
@@ -6635,7 +6142,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 updatedAt: Timestamp.now(),
             }, { merge: true });
 
-            // Manuálne aktualizujeme lokálny state pre okamžité zobrazenie
             setHallSchedules(prev => ({
                 ...prev,
                 [scheduleId]: {
@@ -6659,10 +6165,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Načítanie režimu zobrazenia z URL pri inicializácii
     const getInitialDisplayMode = () => {
         if (window.location.hash) {
-            const hash = window.location.hash.substring(1); // odstránime #
+            const hash = window.location.hash.substring(1);
             if (hash === 'nazvy') {
                 return 'name';
             } else if (hash === 'id') {
@@ -6671,7 +6176,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return 'both';
             }
         }
-        return 'name'; // predvolená hodnota
+        return 'name';
     };
 
     const [displayMode, setDisplayMode] = useState('both');
@@ -6694,7 +6199,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 ...doc.data()
             }));
             
-            // 🔑 ULOŽENIE DO CACHE - toto je kľúčové!
             window.__allUsersCache = usersData;            
             
         }, (error) => {
@@ -6793,16 +6297,13 @@ const AddMatchesApp = ({ userProfileData }) => {
         localStorage.setItem('blockedBreaks', JSON.stringify(blockedBreaks));
     }, [blockedBreaks]);
 
-    // Aktualizácia dostupných skupín pre filter pri zmene kategórie
     useEffect(() => {
-        // Ak je vybraná práve jedna kategória, zobrazíme jej skupiny
         if (selectedCategoriesFilter.length === 1 && groupsByCategory[selectedCategoriesFilter[0]]) {
             const sortedGroups = [...groupsByCategory[selectedCategoriesFilter[0]]].sort((a, b) => 
                 a.name.localeCompare(b.name)
             );
             setAvailableGroupsForFilter(sortedGroups);
         } else if (selectedCategoriesFilter.length > 1) {
-            // Ak je vybraných viac kategórií, zobrazíme spoločné skupiny
             const allGroups = new Set();
             selectedCategoriesFilter.forEach(catId => {
                 if (groupsByCategory[catId]) {
@@ -6829,22 +6330,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [categories, sportHalls]);
     
-    // Generovanie dostupných dní pre filter
     useEffect(() => {
         if (tournamentStartDate && tournamentEndDate) {
             const days = [];
-            // Konvertujeme stringy z inputov na Date objekty v lokálnom timezone
             const startDate = new Date(tournamentStartDate);
             const endDate = new Date(tournamentEndDate);
             
-            // Nastavíme na začiatok dňa v lokálnom timezone
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(0, 0, 0, 0);
         
             const currentDate = new Date(startDate);
             
             while (currentDate <= endDate) {
-                // Použijeme getLocalDateStr namiesto toISOString
                 const dateStr = getLocalDateStr(currentDate);
                 const displayDate = currentDate.toLocaleDateString('sk-SK', {
                     day: '2-digit',
@@ -6864,7 +6361,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [tournamentStartDate, tournamentEndDate]);
 
-    // Upravený useEffect pre načítanie filtrov z URL
     useEffect(() => {
         if (categories.length > 0 && sportHalls.length > 0 && Object.keys(groupsByCategory).length > 0 && matches.length > 0 && !filtersInitialized) {     
             const filters = loadFiltersFromURL();            
@@ -6912,7 +6408,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [categories, sportHalls, groupsByCategory, matches, filtersInitialized]);
 
-    // Upravený useEffect pre aktualizáciu URL
     useEffect(() => {
         if (!filtersInitialized) return;
     
@@ -6929,7 +6424,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return () => clearTimeout(timeoutId);
     }, [selectedCategoriesFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, filtersInitialized]);
 
-    // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
         const handleHashChange = () => {
             if (window.location.hash) {
@@ -6953,67 +6447,48 @@ const AddMatchesApp = ({ userProfileData }) => {
             return;
         }
     
-        // 🔥 VYPIŠ DO KONZOLY NÁZVY TÍMOV
         const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-        console.log(`Kliknutie na nepriradený zápas:`);
-        console.log(`Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-        console.log(`Hosť:   ${awayTeamName} (${match.awayTeamIdentifier})`);
-        console.log(`Kategória: ${match.categoryName || 'nezadaná'}`);
         
-        // 🔥 NOVÉ: Vypíš názov a typ skupiny
         const groupName = match.groupName || 'nezadaná';
         let groupType = 'nezadaný';
         
-        // Získanie typu skupiny z groupsByCategory
         if (match.categoryId && groupsByCategory[match.categoryId]) {
             const foundGroup = groupsByCategory[match.categoryId].find(g => g.name === match.groupName);
             if (foundGroup) {
                 groupType = foundGroup.type || 'nezadaný';
             }
-        }
+        }        
         
-        console.log(`Skupina: ${groupName} (typ: ${groupType})`);
-        
-        // 🔥 NOVÉ: Extrahovanie posledného znaku z názvu tímu
         const extractLastChar = (teamName) => {
             if (!teamName) return null;
-            // Vezmeme posledný znak z názvu tímu (napr. z "U12 CH 4E" -> "E")
             const trimmed = teamName.trim();
             return trimmed.charAt(trimmed.length - 1).toUpperCase();
         };
         
-        // Získame posledné znaky z domáceho a hosťovského tímu
         const homeLastChar = extractLastChar(homeTeamName);
         const awayLastChar = extractLastChar(awayTeamName);
         
-        // Získame všetky unikátne písmená z domáceho a hosťovského tímu
         const targetLetters = new Set();
         if (homeLastChar && /[A-Z]/.test(homeLastChar)) targetLetters.add(homeLastChar);
         if (awayLastChar && /[A-Z]/.test(awayLastChar)) targetLetters.add(awayLastChar);
         
-        if (targetLetters.size > 0) {
-            console.log(`Hľadám zápasy v skupinách s písmenami: ${Array.from(targetLetters).join(', ')}`);
-            
-            // 🔥 Vytvoríme si množinu názvov skupín, ktoré hľadáme (tvar "skupina X")
+        if (targetLetters.size > 0) {            
             const targetGroupNames = new Set();
             targetLetters.forEach(letter => {
                 targetGroupNames.add(`skupina ${letter}`);
             });
             
-            // 🔥 Nájdeme VŠETKY zápasy v tej istej kategórii (bez ohľadu na deň)
             const categoryMatches = matches.filter(m => 
                 m.categoryId === match.categoryId && 
-                m.id !== match.id // Vylúčime aktuálny zápas
+                m.id !== match.id
             );
             
-            // Filtrujeme zápasy podľa názvu skupiny (porovnávame s targetGroupNames)
             const matchingMatches = categoryMatches.filter(m => {
                 return m.groupName && targetGroupNames.has(m.groupName);
             });
             
             if (matchingMatches.length > 0) {
-                // 🔥 Zoradíme zápasy podľa dátumu a času (ak majú scheduledTime)
                 const sortedMatches = [...matchingMatches].sort((a, b) => {
                     const getTime = (match) => {
                         if (!match.scheduledTime) return Infinity;
@@ -7027,14 +6502,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return getTime(a) - getTime(b);
                 });
                 
-                console.log(`Nájdených ${sortedMatches.length} zápasov v skupinách s rovnakými písmenami (všetky dni):`);
                 sortedMatches.forEach((m, index) => {
                     const mHome = getTeamNameByIdentifier(m.homeTeamIdentifier);
                     const mAway = getTeamNameByIdentifier(m.awayTeamIdentifier);
                     const mHomeLastChar = extractLastChar(mHome);
                     const mAwayLastChar = extractLastChar(mAway);
                     
-                    // 🔥 Formátovanie dátumu a času zápasu
                     let dateTimeStr = 'neurčené';
                     if (m.scheduledTime) {
                         try {
@@ -7052,25 +6525,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                         }
                     }
                     
-                    // Zistíme, či zápas obsahuje rovnaký tím ako pôvodný
                     const isHomeTeamSame = m.homeTeamIdentifier === match.homeTeamIdentifier || 
                                           m.homeTeamIdentifier === match.awayTeamIdentifier;
                     const isAwayTeamSame = m.awayTeamIdentifier === match.homeTeamIdentifier || 
                                           m.awayTeamIdentifier === match.awayTeamIdentifier;
                     const isSameTeam = isHomeTeamSame || isAwayTeamSame;
                     
-                    // Zobrazíme písmená oboch tímov, názov skupiny, dátum a čas
                     const letters = `[${mHomeLastChar || '?'}/${mAwayLastChar || '?'}]`;
-                    console.log(`  ${index + 1}. ${letters} ${mHome} vs ${mAway} (skupina: ${m.groupName}) [${dateTimeStr}]${isSameTeam ? ' ⚠️ OBSAHUJE ROVNAKÝ TÍM' : ''}`);
                 });
-            } else {
-                console.log(`Žiadne ďalšie zápasy v skupinách s písmenami: ${Array.from(targetLetters).join(', ')}`);
             }
-        } else {
-            console.log('Nepodarilo sa extrahovať písmeno z názvov tímov.');
-        }
-        
-        console.log('---');
+        }        
         
         setSelectedMatchForAssign(match);
         setIsAssignModalOpen(true);
@@ -7085,7 +6549,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', match.id);
             
-            // Odstránime len údaje o priradení, zápas zostáva
             await updateDoc(matchRef, {
                 hallId: null,
                 scheduledTime: null,
@@ -7114,11 +6577,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', assignment.matchId);
             
-            // SPRÁVNE vytvorenie dátumu - rozdelíme YYYY-MM-DD na časti
             const [year, month, day] = assignment.date.split('-').map(Number);
             const [hours, minutes] = assignment.time.split(':').map(Number);
             
-            // Vytvoríme Date objekt v lokálnom časovom pásme
             const matchDateTime = new Date(year, month - 1, day, hours, minutes, 0);
             
             await updateDoc(matchRef, {
@@ -7140,15 +6601,12 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (!timestamp) return 'neurčené';
     
         try {
-            // Ak je to Firebase Timestamp, konvertujeme na Date
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
         
-            // Skontrolujeme, či je dátum platný
             if (isNaN(date.getTime())) {
                 return 'neplatný dátum';
             }
         
-            // Formátujeme v lokálnom časovom pásme (Slovensko)
             const day = date.getDate().toString().padStart(2, '0');
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
             const year = date.getFullYear();
@@ -7173,7 +6631,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         setIsSwapModalOpen(true);
     };
 
-    // Samotné vykonanie zmazania
     const confirmDelete = async () => {
         if (!selectedMatchForAction) return;
         
@@ -7204,7 +6661,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
     
-    // Samotné vykonanie výmeny
     const confirmSwap = async () => {
         if (!selectedMatchForAction) return;
         
@@ -7226,7 +6682,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
             
-            // Vymeníme homeTeamIdentifier a awayTeamIdentifier
             await updateDoc(matchRef, {
                 homeTeamIdentifier: selectedMatchForAction.awayTeamIdentifier,
                 awayTeamIdentifier: selectedMatchForAction.homeTeamIdentifier
@@ -7240,62 +6695,48 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
         if (!team) return 'Neznámy tím';
         return team.teamName || 'Neznámy tím';
     };
 
-    // Funkcia na získanie ID tímu (ak existuje)
     const getTeamId = (team) => {
         if (!team) return null;
     
-        // Ak má tím priamo id, vrátime ho
         if (team.id) return team.id;
     
-        // Ak nemá id, skúsime vytvoriť z userId a teamName
         if (team.userId && team.teamName) {
             return `${team.userId}-${team.teamName}`;
         }
         
-        // Fallback
         return null;
     };
 
-    // Funkcia na získanie názvu tímu podľa ID (pre existujúce zápasy)
     const getTeamNameById = (teamId) => {
         if (!teamId) {
             return 'Neznámy tím';
         }
         
-        // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu)
         const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
         const categoryName = currentMatch?.categoryName;
         
-        // Zistenie, či je prvá pomlčka oddeľovačom
-        // Oddeľovač je, ak nemá okolo seba medzery (formát "userId-názov")
         const firstDashIndex = teamId.indexOf('-');
         let extractedName = teamId;
         let isFirstDashSeparator = false;
         
         if (firstDashIndex !== -1) {
-            // Skontrolujeme, či je okolo pomlčky medzera
             const beforeDash = teamId[firstDashIndex - 1];
             const afterDash = teamId[firstDashIndex + 1];
             
-            // Ak pred ani za nie je medzera, je to oddeľovač
             if (beforeDash && beforeDash !== ' ' && afterDash && afterDash !== ' ') {
                 isFirstDashSeparator = true;
                 extractedName = teamId.substring(firstDashIndex + 1);
             }
-            // Inak to nie je oddeľovač, berieme celý reťazec ako názov
         }
         
-        // Funkcia na postupné skracovanie názvu pri pomlčkách s medzerami
         const tryFindTeam = (nameToTry) => {
             if (!categoryName) return null;
             
-            // Najprv skúsime presný názov
             if (teamData.allTeams && teamData.allTeams.length > 0) {
                 const team = teamData.allTeams.find(t => 
                     t.category === categoryName && 
@@ -7315,28 +6756,23 @@ const AddMatchesApp = ({ userProfileData }) => {
             return null;
         };
         
-        // Najprv skúsime presný extrahovaný názov
         let foundTeam = null;
         if (categoryName) {
             foundTeam = tryFindTeam(extractedName);
         }
         
-        // Ak sa nenašiel, skúsime postupne odstraňovať časti za pomlčkami s medzerami
         if (!foundTeam && categoryName) {
             let workingName = extractedName;
             
-            // Hľadáme pomlčky s medzerami (formát " - ")
             const dashWithSpacesRegex = /\s+-\s+/g;
             let match;
             let lastIndex = workingName.length;
             
-            // Zbierame všetky pozície pomlčiek s medzerami
             const dashPositions = [];
             while ((match = dashWithSpacesRegex.exec(workingName)) !== null) {
                 dashPositions.push(match.index);
             }
             
-            // Skúšame postupne odstraňovať časti od konca
             for (let i = dashPositions.length - 1; i >= 0; i--) {
                 const pos = dashPositions[i];
                 const shorterName = workingName.substring(0, pos).trim();
@@ -7346,12 +6782,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
         
-        // Ak sme našli tím, vrátime jeho názov
         if (foundTeam) {
             return foundTeam.teamName;
         }
         
-        // Fallback - ak nemáme kategóriu, skúsime hľadať len podľa názvu v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
             const team = teamData.allTeams.find(t => t.teamName === extractedName);
             if (team) return team.teamName;
@@ -7365,7 +6799,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
         
-        // Ak nič nenašlo, vrátime extrahovaný názov
         console.warn(`Nenašiel sa tím s kategóriou "${categoryName}" a názvom "${extractedName}"`);
         return extractedName;
     };
@@ -7384,7 +6817,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     };
     
-    // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (identifier) => {
         if (!identifier) return '---';
         
@@ -7396,7 +6828,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             case 'id':
                 return identifier;
             case 'both':
-                // Pre režim "Oboje" vrátime objekt, nie string
                 return { name: teamName, id: identifier };
             default:
                 return teamName;
@@ -7410,10 +6841,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         const currentStartMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
         const currentDateStr = getLocalDateStr(currentTime);
         
-        // Získame kategóriu aktuálneho zápasu pre výpočet dĺžky
         const currentCategory = categories.find(c => c.name === currentMatch.categoryName);
         let currentMatchDuration = 0;
-        let standardBreak = 5; // štandardná prestávka medzi zápasmi
+        let standardBreak = 5; 
         
         if (currentCategory) {
             const periods = currentCategory.periods || 2;
@@ -7423,15 +6853,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             standardBreak = currentCategory.matchBreak || 5;
         }
         
-        // Koniec aktuálneho zápasu (vrátane prestávky)
         const currentEndWithBreak = currentStartMinutes + currentMatchDuration + standardBreak;
         
-        // Prejdeme všetky ostatné zápasy toho istého tímu
         for (const otherMatch of allMatches) {
             if (otherMatch.id === currentMatch.id) continue;
             if (!otherMatch.scheduledTime) continue;
             
-            // Kontrola, či ide o ten istý tím (domáci alebo hosť)
             const isSameTeam = (otherMatch.homeTeamIdentifier === teamIdentifier || 
                                 otherMatch.awayTeamIdentifier === teamIdentifier);
             
@@ -7440,14 +6867,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             const otherTime = otherMatch.scheduledTime.toDate();
             const otherDateStr = getLocalDateStr(otherTime);
             
-            // AK JE TO INÝ DEŇ - NIE JE KONFLIKT (PRESKOČÍME)
             if (currentDateStr !== otherDateStr) {
                 continue;
             }
             
             const otherStartMinutes = otherTime.getHours() * 60 + otherTime.getMinutes();
             
-            // Získame kategóriu druhého zápasu
             const otherCategory = categories.find(c => c.name === otherMatch.categoryName);
             let otherMatchDuration = 0;
             let otherStandardBreak = 5;
@@ -7460,64 +6885,48 @@ const AddMatchesApp = ({ userProfileData }) => {
                 otherStandardBreak = otherCategory.matchBreak || 5;
             }
             
-            // Koniec druhého zápasu (vrátane prestávky)
             const otherEndWithBreak = otherStartMinutes + otherMatchDuration + otherStandardBreak;
             
-            // RÔZNE HALY - kontrola prekrývania časov
             if (currentMatch.hallId !== otherMatch.hallId) {
-                // Ak sú časy prekrývajúce sa (zápasy v rovnakom čase na rôznych miestach)
                 if (currentStartMinutes < otherEndWithBreak && otherStartMinutes < currentEndWithBreak) {
-                    return true; // KONFLIKT - rovnaký čas v rôznych halách v TEN ISTÝ DEŇ
+                    return true;
                 }
                 
-                // Ak je medzi zápasmi menej ako štandardná prestávka
                 const gap = Math.abs(currentStartMinutes - otherStartMinutes);
                 if (gap < standardBreak && gap > 0) {
-                    return true; // KONFLIKT - príliš blízko seba v rôznych halách v TEN ISTÝ DEŇ
+                    return true; 
                 }
             }
             
-            // ROVNAKÁ HALA - kontrola, či nasleduje hneď po sebe s malou prestávkou
             if (currentMatch.hallId === otherMatch.hallId) {
-                // Zápasy v rovnaký deň v rovnakej hale
-                // Kontrola, či jeden začína hneď po skončení druhého (alebo sa prekrývajú)
                 if (currentStartMinutes < otherStartMinutes) {
-                    // Aktuálny je skôr, druhý neskôr
                     if (otherStartMinutes < currentEndWithBreak) {
-                        return true; // KONFLIKT - prekrývanie alebo žiadna pauza
+                        return true;
                     }
-                    // Pauza medzi zápasmi je menšia ako štandardná prestávka
                     const gap = otherStartMinutes - currentEndWithBreak;
                     if (gap < standardBreak && gap >= 0) {
-                        return true; // KONFLIKT - príliš krátka pauza
+                        return true; 
                     }
                 } else {
-                    // Aktuálny je neskôr, druhý skôr
                     if (currentStartMinutes < otherEndWithBreak) {
-                        return true; // KONFLIKT - prekrývanie
+                        return true; 
                     }
                     const gap = currentStartMinutes - otherEndWithBreak;
                     if (gap < standardBreak && gap >= 0) {
-                        return true; // KONFLIKT - príliš krátka pauza
+                        return true;
                     }
                 }
             }
         }
         
         return false;
-    };
+    };    
     
-    // ============================================================
-    // UPRAVENÁ ČASŤ: Výpočet voľného času medzi zápasmi
-    // ============================================================
-    
-    // Náhrada za existujúcu funkciu getMatchesForHallAndDay - PRIDANÉ NOVÉ POLE pre zobrazenie súčtu počtov
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
     
         const dateStr = getLocalDateStr(date);
     
-        // VŠETKY zápasy pre túto halu a deň (BEZ FILTRA) - použijeme na výpočet voľného času
         const allHallDayMatches = matches.filter(match => {
             if (!match.hallId || !match.scheduledTime) return false;
             if (match.hallId !== hallId) return false;
@@ -7539,7 +6948,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         });
     
-        // Filtrovanie zápasov podľa aktívnych filtrov (PRE ZOBRAZENIE)
         const filteredMatches = allHallDayMatches.filter(match => {
             if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) {
                 return false;
@@ -7556,12 +6964,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             return true;
         });
     
-        // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte, farby ubytovní A NOVÉ POLE totalMembersCount
         const filteredWithColors = filteredMatches.map(match => {
             const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
             const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
     
-            // Získanie farieb ubytovní pre tímy
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
             let homeTeamColor = '#f3f4f6';
             let awayTeamColor = '#f3f4f6';
@@ -7569,7 +6975,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
             const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
     
-            // Kontrola, či názov tímu obsahuje názov kategórie
             const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
             const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
     
@@ -7591,7 +6996,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamColor = '#ffff00';
             }
     
-            // Funkcia na získanie celkového počtu členov tímu
             const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
                 if (!teamIdentifier) return 0;
     
@@ -7649,16 +7053,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             };
         });
     
-        // Vrátime OBJEKT s dvoma poliami:
-        // - filtered: zobrazené zápasy (podľa filtra)
-        // - allMatches: všetky zápasy v dni (pre výpočet voľného času)
         return {
             filtered: filteredWithColors,
             allMatches: allHallDayMatches
         };
     };
     
-    // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
     const hasExistingMatches = (categoryId, groupName) => {
         return matches.some(match => 
             match.categoryId === categoryId && 
@@ -7666,20 +7066,17 @@ const AddMatchesApp = ({ userProfileData }) => {
         );
     };
 
-    // Funkcia na kontrolu existujúcich zápasov počas generovania - UPRAVENÁ
     const checkExistingMatchesDuringGeneration = (matchesToGenerate, withRepetitions = false) => {
         const existing = [];
         const newOnes = [];
 
         matchesToGenerate.forEach(match => {
-            // Najprv skúsime nájsť presnú zhodu (home = home, away = away)
             let exists = matches.some(existingMatch => 
                 existingMatch.homeTeamIdentifier === match.homeTeamIdentifier && 
                 existingMatch.awayTeamIdentifier === match.awayTeamIdentifier &&
                 existingMatch.categoryId === match.categoryId
             );
 
-            // Ak nie je zaškrtnuté "Kombinácie s opakovaním", skontrolujeme aj vymenené tímy
             if (!withRepetitions && !exists) {
                 exists = matches.some(existingMatch => 
                     existingMatch.homeTeamIdentifier === match.awayTeamIdentifier && 
@@ -7698,7 +7095,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return { existingMatches: existing, newMatches: newOnes };
     };
 
-    // Funkcia na spracovanie ďalšieho existujúceho zápasu
     const processNextExistingMatch = () => {
     
         if (currentMatchIndex < existingMatchesToProcess.length) {
@@ -7710,7 +7106,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Funkcia na dokončenie generovania
     const finishGeneration = async () => {
         const allMatchesToSave = [...newMatches, ...pendingMatches];
         
@@ -7731,7 +7126,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             window.showGlobalNotification('Žiadne nové zápasy neboli vygenerované', 'info');
         }
         
-        // Resetovanie stavov
         setExistingMatchesToProcess([]);
         setNewMatches([]);
         setPendingMatches([]);
@@ -7741,34 +7135,26 @@ const AddMatchesApp = ({ userProfileData }) => {
         setGenerationInProgress(false);
     };
 
-    // Handler pre potvrdenie existujúceho zápasu
     const handleConfirmExistingMatch = (match) => {
-        // Pridáme zápas do zoznamu na uloženie
         setPendingMatches(prev => [...prev, match]);
         
-        // Posunieme sa na ďalší zápas
         const nextIndex = currentMatchIndex + 1;
         setCurrentMatchIndex(nextIndex);
         
-        // Spracujeme ďalší existujúci zápas
         setTimeout(() => {
             processNextExistingMatch();
         }, 100);
     };
 
-    // Handler pre zamietnutie existujúceho zápasu
     const handleRejectExistingMatch = () => {
-        // Len sa posunieme na ďalší zápas bez pridania
         const nextIndex = currentMatchIndex + 1;
         setCurrentMatchIndex(nextIndex);
         
-        // Spracujeme ďalší existujúci zápas
         setTimeout(() => {
             processNextExistingMatch();
         }, 100);
     }; 
 
-    // Funkcia na načítanie zápasov z Firebase
     const loadMatches = () => {
         if (!window.db) return;
 
@@ -7782,13 +7168,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     ...doc.data()
                 });
             });
-            // Zoradenie podľa času vytvorenia (najnovšie prvé)
             loadedMatches.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-            setMatches(loadedMatches);
-            
-            // Po načítaní zápasov načítame používateľov
-//            loadUsersWithMatches();
-            
+            setMatches(loadedMatches);            
         }, (error) => {
             console.error('Chyba pri načítaní zápasov:', error);
         });
@@ -7799,7 +7180,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const loadAccommodationData = () => {
         if (!window.db) return;
     
-        // Načítame ubytovne z kolekcie 'places'
         const unsubscribePlaces = onSnapshot(
             collection(window.db, 'places'),
             (snapshot) => {
@@ -7820,7 +7200,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             (err) => console.error("Chyba pri načítaní ubytovní:", err)
         );
     
-        // Načítame priradenia tímov k ubytovniam z kolekcie 'users'
         const unsubscribeUsers = onSnapshot(
             collection(window.db, 'users'),
             (snapshot) => {
@@ -7848,8 +7227,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     
                                 const accommodationName = team.accommodation?.name;
                                 if (accommodationName) {
-                                    // Farba sa nastaví neskôr po načítaní ubytovní
-                                    // Pre jednoduchosť ukladáme len názov ubytovne a farbu nastavíme neskôr
                                     teamAccommodationMap.set(teamIdentifier, accommodationName);
                                 }
                             });
@@ -7869,12 +7246,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
     
-    // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
         let unsubscribe = null;
         
         if (window.teamManager) {
-            // Okamžite skúsime načítať existujúce dáta
             if (window.__teamManagerData) {
                 setTeamData(window.__teamManagerData);
             }
@@ -7883,13 +7258,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setTeamData(data);
             });
         } else {
-            // Ak teamManager nie je dostupný, skúsime načítať dáta priamo
             if (window.__teamManagerData) {
                 setTeamData(window.__teamManagerData);
             }
         }
         
-        // Čistiace funkcia - odhlásenie z odberu
         return () => {
             if (unsubscribe && typeof unsubscribe === 'function') {
                 unsubscribe();
@@ -7913,7 +7286,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [tournamentStartDate, tournamentEndDate]);
 
-    // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
         if (!category) return { playingTime: 0, breaksBetweenPeriods: 0, totalTimeWithMatchBreak: 0 };
         
@@ -7933,25 +7305,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
     
-    // Funkcia na získanie názvu tímu podľa identifikátora
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
-        // Rozdelíme podľa medzier - bude to mať 2 časti: [kategória, skupinaorder]
         const parts = identifier.split(' ');
         
         if (parts.length < 2) {
-            return identifier; // Fallback na identifikátor
+            return identifier; 
         }
         
-        // Posledná časť je skupina + order (napr. "A1")
         const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná)
         const category = parts.join(' ');
         
-        // Rozdelíme groupAndOrder na groupName a order
-        // Order je číselná časť na konci, groupName je zvyšok
         let groupName = '';
         let order = '';
         
@@ -7969,9 +7334,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             groupName = groupAndOrder;
         }
         
-        // Hľadáme v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
-            // Pripravíme si groupName s "skupina " pre vyhľadávanie
             const groupNameWithPrefix = `skupina ${groupName}`;
             
             const team = teamData.allTeams.find(t => 
@@ -7985,7 +7348,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
         
-        // Skúsime v __teamManagerData
         if (window.__teamManagerData?.allTeams) {
             const groupNameWithPrefix = `skupina ${groupName}`;
             
@@ -7996,27 +7358,23 @@ const AddMatchesApp = ({ userProfileData }) => {
             );
             
             if (team) {
-                setTeamData(window.__teamManagerData); // Aktualizujeme teamData
+                setTeamData(window.__teamManagerData);
                 return team.teamName;
             }
         }
         
-        // Fallback - vrátime identifikátor v čitateľnej forme
         return `${category} ${groupName}${order}`;
     };
 
-    // Funkcia na získanie všetkých skupín v kategórii
     const getAllGroupsInCategory = (categoryName) => {
         const groups = [];
         
-        // Prejdeme všetky tímy a extrahujeme unikátne skupiny
         const teamsToUse = teamData.allTeams || window.__teamManagerData?.allTeams || [];
         
         if (teamsToUse.length > 0) {
             const teamsInCategory = teamsToUse.filter(t => t.category === categoryName);
             const groupNames = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))];
             
-            // Zoradenie názvov skupín podľa abecedy
             const sortedGroupNames = groupNames.sort((a, b) => a.localeCompare(b));
             
             sortedGroupNames.forEach(groupName => {
@@ -8033,13 +7391,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         return groups;
     };
 
-    // Funkcia na uloženie zápasov do Firebase
     const saveMatchesToFirebase = async (matchesToSave) => {
         if (!window.db) {
             throw new Error('Databáza nie je inicializovaná');
         }
     
-        // Skontrolujeme, či je používateľ admin
         if (userProfileData?.role !== 'admin') {
             console.error('Používateľ nie je admin. Role:', userProfileData?.role);
             throw new Error('Na ukladanie zápasov potrebujete administrátorské práva. Vaša rola: ' + (userProfileData?.role || 'žiadna'));
@@ -8053,11 +7409,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         const matchesRef = collection(window.db, 'matches');
         const savedMatches = [];
     
-        // Pridáme index do cyklu
         for (let i = 0; i < matchesToSave.length; i++) {
             const match = matchesToSave[i];
             try {
-                // Pripravíme dáta pre uloženie
                 const matchData = {
                     homeTeamIdentifier: match.homeTeamIdentifier,
                     awayTeamIdentifier: match.awayTeamIdentifier,
@@ -8071,7 +7425,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     createdByUid: userProfileData?.uid || null
                 };
     
-                // Uložíme do Firebase a získame ID
                 const docRef = await addDoc(matchesRef, matchData);
                 savedMatches.push({
                     id: docRef.id,
@@ -8091,7 +7444,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return savedMatches;
     };
 
-    // Funkcia na generovanie zápasov - OPRAVENÁ
     const generateMatches = async ({ categoryId, groupName, withRepetitions, transferFromBasicGroup }) => {
         try {                
             if (userProfileData?.role !== 'admin') {
@@ -8099,14 +7451,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return;
             }       
             
-            // Získanie kategórie
             const category = categories.find(c => c.id === categoryId);
             if (!category) {
                 window.showGlobalNotification('Kategória nebola nájdená', 'error');
                 return;
             }
     
-            // Skontrolujeme, či máme teamManager dáta
             if (!window.teamManager) {
                 window.showGlobalNotification('TeamManager nie je inicializovaný', 'error');
                 return;
@@ -8116,7 +7466,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             let allGeneratedMatches = [];
     
             if (groupName) {
-                // Konkrétna skupina
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
     
                 if (teamsInGroup.length < 2) {
@@ -8125,25 +7474,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return;
                 }
             
-                // Zistíme typ skupiny (či je nadstavbová)
                 const groupInfo = groupsByCategory[category.id]?.find(g => g.name === groupName);
                 const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
     
-                // PRE NADSTAVBOVÚ SKUPINU NAČÍTAME HODNOTU carryOverPoints PRIAMO Z KATEGÓRIE
                 let shouldTransferFromBasicGroup = false;
                 
                 if (isAdvancedGroup) {
-                    // Načítame carryOverPoints z nastavení kategórie (ignorujeme parameter transferFromBasicGroup)
                     const categoryFromSettings = categories.find(c => c.id === category.id);
                     if (categoryFromSettings) {
                         shouldTransferFromBasicGroup = categoryFromSettings.carryOverPoints ?? false;
                     }
                 }
     
-                // Generovanie zápasov pre túto skupinu
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
                 
-                // Pridanie informácií o skupine ku každému zápasu
                 const matchesWithInfo = groupMatches.map((match, index) => ({
                     homeTeamIdentifier: match.homeTeamIdentifier,
                     awayTeamIdentifier: match.awayTeamIdentifier,
@@ -8158,7 +7502,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                 
             } else {
-                // Všetky skupiny v kategórii
                 const groups = getAllGroupsInCategory(category.name);
                 
                 if (groups.length === 0) {
@@ -8167,20 +7510,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return;
                 }
             
-                // OPRAVENÝ KÓD - načíta carryOverPoints z nastavení kategórie pre každú skupinu individuálne:
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                 
                     if (teamsInGroup.length >= 2) {                        
-                        // Zistíme typ skupiny
                         const groupInfo = groupsByCategory[category.id]?.find(g => g.name === group.name);
                         const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
         
-                        // PRE NADSTAVBOVÚ SKUPINU NAČÍTAME HODNOTU carryOverPoints PRIAMO Z KATEGÓRIE
                         let shouldTransferFromBasicGroup = false;
                         
                         if (isAdvancedGroup) {
-                            // Načítame carryOverPoints z nastavení kategórie
                             const categoryFromSettings = categories.find(c => c.id === category.id);
                             if (categoryFromSettings) {
                                 shouldTransferFromBasicGroup = categoryFromSettings.carryOverPoints ?? false;
@@ -8205,29 +7544,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
     
-            // Skontrolujeme existujúce zápasy
             const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches, withRepetitions);
             
             if (existingMatches.length > 0) {
-                // Uložíme informácie o generovaní
                 setCurrentCategoryInfo({
                     name: category.name,
                     groupName: groupName
                 });
                 
-                // NASTAVÍME STAVY - dôležité: najprv nastavíme newMatches a existingMatchesToProcess
                 setNewMatches(newOnes);
                 setExistingMatchesToProcess(existingMatches);
                 setCurrentMatchIndex(0);
                 setPendingMatches([]);                
                 
             } else {
-                // Žiadne existujúce zápasy, rovno uložíme všetky
                 if (allGeneratedMatches.length > 0) {                    
-                    // Zobrazíme loading notifikáciu
                     window.showGlobalNotification(`Ukladám ${allGeneratedMatches.length} zápasov...`, 'info');
                     
-                    // Uložíme do Firebase
                     const savedMatches = await saveMatchesToFirebase(allGeneratedMatches);                    
                     
                     window.showGlobalNotification(
@@ -8245,22 +7578,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Handler pre kliknutie na Generovať
     const handleGenerateClick = (params) => {
         const category = categories.find(c => c.id === params.categoryId);
         if (!category) return;
 
-        // Skontrolujeme, či už existujú zápasy pre túto kategóriu/skupinu
         if (hasExistingMatches(params.categoryId, params.groupName)) {
             setPendingGeneration(params);
             setIsConfirmModalOpen(true);
         } else {
-            // Ak neexistujú, rovno generujeme
             generateMatches(params);
         }
     };
 
-    // Handler pre potvrdenie opätovného generovania
     const handleConfirmRegenerate = () => {
         if (pendingGeneration) {
             generateMatches(pendingGeneration);
@@ -8272,7 +7601,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         const category = categories.find(c => c.id === params.categoryId);
         if (!category) return;
     
-        // Spočítame zápasy na zmazanie
         const matchesToDelete = matches.filter(match => 
             match.categoryId === params.categoryId && 
             (params.groupName ? match.groupName === params.groupName : true)
@@ -8291,7 +7619,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         setIsBulkDeleteConfirmModalOpen(true);
     };
     
-    // Samotné vykonanie hromadného mazania
     const confirmBulkDelete = async () => {
         if (!pendingBulkDelete) return;
     
@@ -8311,13 +7638,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     
         try {
-            // Nájdeme všetky zápasy na zmazanie
             const matchesToDelete = matches.filter(match => 
                 match.categoryId === pendingBulkDelete.categoryId && 
                 (pendingBulkDelete.groupName ? match.groupName === pendingBulkDelete.groupName : true)
             );
     
-            // Postupne mažeme všetky zápasy
             for (const match of matchesToDelete) {
                 const matchRef = doc(window.db, 'matches', match.id);
                 await deleteDoc(matchRef);
@@ -8335,7 +7660,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Načítanie športových hál a kategórií z Firebase
     useEffect(() => {
         if (!window.db) {
             console.error("Firestore databáza nie je inicializovaná");
@@ -8343,7 +7667,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             return;
         }
         
-        // Načítame zápasy
         const unsubscribeMatches = loadMatches();
         const unsubscribeSchedules = loadHallSchedules();
         const unsubscribeAccommodations = loadAccommodationData();
@@ -8358,14 +7681,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const data = settingsSnap.data();
             
                     if (data.tournamentStart) {
-                        // Firebase Timestamp
                         const startTimestamp = data.tournamentStart;
                         
-                        // Konvertujeme na Date (automaticky zohľadní UTC)
                         const startDate = startTimestamp.toDate();
                         
-                        // Uložíme pre input type="datetime-local" (formát YYYY-MM-DDTHH:MM)
-                        // Toto je v lokálnom časovom pásme
                         const year = startDate.getFullYear();
                         const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
                         const day = startDate.getDate().toString().padStart(2, '0');
@@ -8378,13 +7697,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                     }
                     
                     if (data.tournamentEnd) {
-                        // Firebase Timestamp
                         const endTimestamp = data.tournamentEnd;
                         
-                        // Konvertujeme na Date (automaticky zohľadní UTC)
                         const endDate = endTimestamp.toDate();
                         
-                        // Uložíme pre input type="datetime-local" (formát YYYY-MM-DDTHH:MM)
                         const year = endDate.getFullYear();
                         const month = (endDate.getMonth() + 1).toString().padStart(2, '0');
                         const day = endDate.getDate().toString().padStart(2, '0');
@@ -8404,7 +7720,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         };
         
-        // Načítame nastavenia kategórií
         const loadCategorySettings = async () => {
             try {
                 const catRef = doc(window.db, 'settings', 'categories');
@@ -8433,7 +7748,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         
                         categoriesList.push(category);
                         
-                        // Výpočet času pre túto kategóriu
                         const matchTime = calculateTotalMatchTime(category);
                     });
                     
@@ -8447,7 +7761,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         loadTournamentDates();
         loadCategorySettings();
 
-        // Načítanie skupín
         const loadGroups = async () => {
             try {
                 const groupsRef = doc(window.db, 'settings', 'groups');
@@ -8480,7 +7793,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     });
                 });
                 
-                // Filtrujeme len športové haly
                 const filteredHalls = loadedPlaces.filter(place => place.type === 'sportova_hala');
                 setSportHalls(filteredHalls);
                 setLoading(false);
@@ -8517,7 +7829,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         right: { textAlign: 'right' }
     };
 
-    // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         React.Fragment,
         null,
@@ -8677,16 +7988,15 @@ const AddMatchesApp = ({ userProfileData }) => {
             date: selectedMatchForBreak?.scheduledTime ? formatDateForDisplay(selectedMatchForBreak.scheduledTime) : '',
             currentTime: selectedMatchCurrentTime
         }),
-        // Pridajte k ostatným modálnym oknám v render časti (približne riadok 4400)
         React.createElement(GenerationTypeModal, {
             isOpen: isGenerationTypeModalOpen,
             onClose: () => setIsGenerationTypeModalOpen(false),
             onSelectType: (type) => {
                 setIsGenerationTypeModalOpen(false);
                 if (type === 'regular') {
-                    setIsModalOpen(true); // Otvorí pôvodné modálne okno pre generovanie
+                    setIsModalOpen(true);
                 } else if (type === 'placement') {
-                    setIsPlacementMatchModalOpen(true); // Otvorí modálne okno pre zápas o umiestnenie
+                    setIsPlacementMatchModalOpen(true);
                 }
             }
         }),
@@ -8695,7 +8005,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             onClose: () => setIsPlacementMatchModalOpen(false),
             onConfirm: (matchData) => {
                 
-                // Zavoláme funkciu na uloženie zápasu (podobne ako v generateMatches)
                 savePlacementMatch(matchData);
                 
                 setIsPlacementMatchModalOpen(false);
@@ -8704,7 +8013,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             groupsByCategory: groupsByCategory,
             teams: teamData
         }),
-        // Pridajte k ostatným modálnym oknám
         React.createElement(SwapMatchesModal, {
             isOpen: isSwapMatchesModalOpen,
             onClose: () => {
@@ -8719,50 +8027,42 @@ const AddMatchesApp = ({ userProfileData }) => {
             availableDays: availableDays
         }),
 
-        // Upravený kód pre panel filtrov (nahraďte existujúci panel filtrov týmto)
         React.createElement(
             'div',
             { 
                 className: 'fixed top-12 left-0 right-0 z-50 flex justify-center pt-2',
-                style: { pointerEvents: 'none' } // Umožní preklikávanie cez priesvitné miesta
+                style: { pointerEvents: 'none' }
             },
             React.createElement(
                 'div', 
                 { 
-                    // Pridáme triedu 'always-visible' ak je isPinned true
                     className: `group ${(isPinned || (isFilterActive && !hasVisibleHalls)) ? 'always-visible' : ''}`,
-                    style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
+                    style: { pointerEvents: 'auto' },
                     onMouseLeave: (e) => {
-                        // Ak je zapnutý pin, neskrývame panel
                         if (isPinned) return;
                         
                         const target = e.currentTarget;
                         if (target.classList.contains('always-visible')) return;
                         
                         setTimeout(() => {
-                            // Skontrolujeme, či je nejaký selectbox rozbalený (dropdown otvorený)
                             const selects = target.querySelectorAll('select');
                             let isAnyDropdownOpen = false;
                             
                             selects.forEach(select => {
-                                // Ak má select size > 1, je to multiselect a je vždy "otvorený"
                                 if (select.size > 1) {
                                     isAnyDropdownOpen = true;
                                 } else {
-                                    // Pre jednoduché selecty - ak je select vo focus, predpokladáme, že je otvorený dropdown
                                     if (select.matches(':focus')) {
                                         isAnyDropdownOpen = true;
                                     }
                                 }
                             });
                             
-                            // Ak je nejaký dropdown otvorený, pridáme triedu, ktorá zabráni skrytiu
                             if (isAnyDropdownOpen) {
                                 target.classList.add('dropdown-open');
                             } else {
                                 target.classList.remove('dropdown-open');
                                 
-                                // Ak nie je žiadny dropdown otvorený a myš nie je v kontajneri, skryjeme panel
                                 if (!target.matches(':hover')) {
                                     target.classList.remove('group');
                                     setTimeout(() => {
@@ -8773,38 +8073,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                         }, 750);
                     },
                     
-                    // Sledujeme kliknutia na selecty
                     onClick: (e) => {
                         const target = e.currentTarget;
                         if (e.target.tagName === 'SELECT') {
-                            // Pri kliknutí na select vždy pridáme triedu dropdown-open
                             target.classList.add('dropdown-open');
                         }
                     },
                     
-                    // Sledujeme zmeny hodnoty selectu - to znamená, že používateľ vybral možnosť
                     onChange: (e) => {
                         const target = e.currentTarget;
                         if (e.target.tagName === 'SELECT') {
-                            // Po výbere možnosti sa dropdown zatvorí, odstránime triedu
                             target.classList.remove('dropdown-open');
                             
-                            // Odstránime focus z tohto selectboxu
                             e.target.blur();
                         }
                     }
                 },
-                // Tenký pásik pre hover
                 React.createElement(
                     'div',
                     { className: 'w-full h-2 bg-transparent' }
                 ),
                 
-                // Panel filtrov - upravené podmienky zobrazenia
                 React.createElement(
                     'div',
                     { 
-                        // Ak je isPinned true, zobrazíme vždy, inak len pri hover alebo otvorenom dropdown
                         className: `flex flex-col gap-2 transition-opacity duration-300 ease-in-out ${
                             isPinned 
                                 ? 'opacity-100' 
@@ -8818,12 +8110,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                         }
                     },
                     
-                    // Filtre a prepínač v jednom riadku
                     React.createElement(
                         'div',
                         { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
                         
-                        // Tlačidlo špendlíka - NOVÉ
                         React.createElement(
                             'button',
                             {
@@ -8841,7 +8131,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             })
                         ),
                         
-                        // V paneli filtrov nahraďte existujúci select pre Kategória týmto kódom:
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -8856,7 +8145,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             })
                         ),
                         
-                        // Filter Skupina (zablokovaný ak nie je vybratá kategória alebo ak je vybraných viac kategórií)
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -8879,7 +8167,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
         
-                        // Filter ID tímu (nový)
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -8896,7 +8183,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky tímy'),
                                 getAllUniqueTeamIds().map(teamId => {
-                                    // Získame názov tímu pre lepšiu identifikáciu (ak je k dispozícii)
                                     const teamName = getTeamNameByIdentifier(teamId);
                                     const displayText = teamName !== teamId ? `${teamId} - ${teamName}` : teamId;
             
@@ -8908,7 +8194,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Filter Hala
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -8919,7 +8204,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     value: selectedHallFilter,
                                     onChange: (e) => {
                                         setSelectedHallFilter(e.target.value);
-                                        e.target.blur(); // Odstránime focus po výbere
+                                        e.target.blur(); 
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
                                 },
@@ -8930,7 +8215,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Filter Deň
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -8941,13 +8225,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     value: selectedDayFilter,
                                     onChange: (e) => {
                                         setSelectedDayFilter(e.target.value);
-                                        e.target.blur(); // Odstránime focus po výbere
+                                        e.target.blur(); 
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky dni'),
                                 availableDays.map(day => {
-                                    // Vytvoríme Date objekt z hodnoty dňa pre získanie názvu dňa
                                     const [year, month, dayNum] = day.value.split('-').map(Number);
                                     const dateObj = new Date(year, month - 1, dayNum);
                                     const dayName = getDayName(dateObj);
@@ -8960,7 +8243,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Upravené tlačidlo Reset
                         React.createElement(
                             'button',
                             {
@@ -8975,13 +8257,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                             },
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
-                        ),
-        
+                        ),        
                         React.createElement(
                             'button',
                             {
                                 onClick: () => {
-                                    // Nastavíme view=spider do URL a znovu načítame stránku
                                     const url = new URL(window.location.href);
                                     url.searchParams.set('view', 'spider');
                                     window.location.href = url.toString();
@@ -8990,68 +8270,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 title: 'Prejsť do zobrazenia pavúka (semifinále, finále, o 3. miesto)'
                             },
                             'Pavúk'
-                        ),
-        
-//                        React.createElement(
-//                            'div',
-//                            { className: 'flex items-center gap-1 ml-2' },
-//                            React.createElement('input', {
-//                                type: 'checkbox',
-//                                id: 'color-highlight',
-//                                checked: colorHighlight,
-//                                onChange: (e) => setColorHighlight(e.target.checked),
-//                                className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
-//                            }),
-//                            React.createElement('label', { 
-//                                htmlFor: 'color-highlight',
-//                                className: 'text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer' 
-//                            }, 'Podfarbenie')
-//                        ),
-                        
-                        // Oddeľovač
-//                        React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
-//                        
-//                        // Prepínač zobrazenia
-//                        React.createElement(
-//                            'div',
-//                            { className: 'flex items-center gap-1 bg-white/95 p-1 rounded-lg border border-gray-200' },
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'name' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('name')
-//                                },
-//                                'Názvy'
-//                            ),
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'id' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('id')
-//                                },
-//                                'ID'
-//                            ),
-//                            React.createElement(
-//                                'button',
-//                                { 
-//                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-//                                        displayMode === 'both' 
-//                                            ? 'bg-blue-600 text-white shadow-sm' 
-//                                            : 'text-gray-600 hover:bg-gray-200'
-//                                    }`,
-//                                    onClick: () => handleDisplayModeChange('both')
-//                                },
-//                                'Oboje'
-//                            )
-//                        )
+                        )
                     ),
                     
                     generationInProgress && React.createElement(
@@ -9064,7 +8283,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             )
         ),
 
-        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - TEXT V POLOVICIACH
         React.createElement(
             'div',
             { 
@@ -9075,7 +8293,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     height: '64px'
                 }
             },
-            // Zelená polovica (horná ľavá)
             React.createElement(
                 'div',
                 {
@@ -9124,7 +8341,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            // Červená polovica (dolná pravá)
             React.createElement(
                 'div',
                 {
@@ -9173,7 +8389,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            // Diagonálne čiary - zelená a červená
             hasCompletedMatch && React.createElement(
                 'div',
                 {
@@ -9187,7 +8402,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         zIndex: 80
                     }
                 },
-                // Zelená čiara 
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
@@ -9201,7 +8415,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         borderRadius: '4px'
                     }
                 }),
-                // Červená čiara 
                 React.createElement('div', {
                     style: {
                         position: 'absolute',
@@ -9220,30 +8433,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
         React.createElement(
             'div',
-// { className: 'flex-grow flex justify-center items-start w-full' },
             { className: 'flex-grow flex justify-center items-start w-full' },
             React.createElement(
                 'div',
-// { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 { className: 'bg-white p-8', 
                     style: { 
-                        width: '100%',        // Zmeniť z fit-content na 100%
-                        maxWidth: '100%'       // Ponechať
-                        // margin: '0 auto'    // Odstrániť
+                        width: '100%',
+                        maxWidth: '100%'
                     }
                 },
                 
-                // Dva stĺpce - ľavý pre zápasy, pravý pre haly
                 React.createElement(
                     'div',
                     { className: 'flex flex-col lg:flex-row gap-6 mt-4 min-h-[700px]' },
                     
-                    // ĽAVÝ STĹPEC - Zoznam nepriradených zápasov
                     filteredUnassignedMatches.length > 0 && React.createElement(
                         'div',
                         { className: 'w-[550px] bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full flex-shrink-0' },
                         
-                        // Hlavička s nadpisom a tlačidlami
                         React.createElement(
                             'div',
                             { className: 'flex-shrink-0' },
@@ -9263,7 +8470,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Zoznam nepriradených zápasov - filtrujeme len zápasy bez hallId
                         filteredUnassignedMatches.length === 0 ?
                             React.createElement(
                                 'div',
@@ -9279,58 +8485,46 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
                                 filteredUnassignedMatches.map(match => {
-                                    // Získame zobrazenie pre tímy podľa prepínača
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                 
-                                    // Zistenie, či je skupina nadstavbová
                                     const isAdvancedGroup = match.groupName && groupsByCategory[match.categoryId]?.some(
                                         group => group.name === match.groupName && group.type === 'nadstavbová skupina'
                                     );
                                     
-                                    // Extrahujeme čisté ID bez kategórie (napr. z "U10 A1" extrahujeme "A1")
                                     const extractPureId = (identifier) => {
                                         if (!identifier) return '';
                                         
-                                        // Rozdelíme podľa medzier
                                         const parts = identifier.split(' ');
                                         
-                                        // Ak máme aspoň 2 časti, posledná časť je skupina+order (napr. "A1")
                                         if (parts.length >= 2) {
                                             return parts[parts.length - 1];
                                         }
                                         
-                                        // Fallback - vrátime pôvodný identifikátor
                                         return identifier;
                                     };
                                     
                                     const homePureId = extractPureId(match.homeTeamIdentifier);
                                     const awayPureId = extractPureId(match.awayTeamIdentifier);
                                     
-                                    // Premenné pre zobrazenie
                                     let homeName = '';
                                     let awayName = '';
                                     let homeId = '';
                                     let awayId = '';
                                 
-                                    // Spracujeme podľa režimu zobrazenia
                                     if (displayMode === 'both' && typeof homeTeamDisplay === 'object') {
-                                        // Režim "Oboje" - máme objekt s name a id
                                         homeName = homeTeamDisplay.name;
                                         awayName = awayTeamDisplay.name;
                                         homeId = homeTeamDisplay.id;
                                         awayId = awayTeamDisplay.id;
                                     } else if (displayMode === 'name') {
-                                        // Režim "Názvy" - zobrazíme len názvy
                                         homeName = homeTeamDisplay;
                                         awayName = awayTeamDisplay;
                                     } else {
-                                        // Režim "ID" - zobrazíme len ID
                                         homeId = match.homeTeamIdentifier;
                                         awayId = match.awayTeamIdentifier;
                                     }
                                 
-                                    // Funkcia na odstránenie názvu kategórie z názvu tímu
                                     const removeCategoryFromName = (teamName, categoryName) => {
                                         if (!teamName || !categoryName) return teamName;
                                         return teamName.replace(categoryName, '').replace(/^skupina\s+/i, '').trim();
@@ -9339,10 +8533,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const homeNameWithoutCategory = removeCategoryFromName(homeName, match.categoryName);
                                     const awayNameWithoutCategory = removeCategoryFromName(awayName, match.categoryName);
                                     
-                                    // Zistíme, či má zápas kategóriu
                                     const hasCategory = match.categoryName && match.categoryName !== 'Neznáma kategória';
                                     
-                                    // Získanie farieb ubytovní pre tímy (rovnako ako v spriradených zápasoch)
                                     const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                     let homeTeamColor = '#f3f4f6';
                                     let awayTeamColor = '#f3f4f6';
@@ -9350,7 +8542,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                     const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                     
-                                    // Kontrola, či názov tímu obsahuje názov kategórie
                                     const homeTeamNameForColor = getTeamNameByIdentifier(match.homeTeamIdentifier);
                                     const awayTeamNameForColor = getTeamNameByIdentifier(match.awayTeamIdentifier);
                                 
@@ -9372,7 +8563,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         awayTeamColor = '#ffff00';
                                     }
                                     
-                                    // Kategória farba pre písmeno
                                     let categoryColor = '#f3f4f6';
                                     if (match.categoryName) {
                                         const foundCategory = categories.find(c => c.name === match.categoryName);
@@ -9381,7 +8571,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         }
                                     }
                                     
-                                    // Zistenie, či ide o špeciálny zápas
                                     const isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
                                     
                                     let specialMatchText = '';
@@ -9396,7 +8585,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         specialMatchText = matchTypeText;
                                     }
                                     
-                                    // Extrahovanie písmena a čísla pre identifikátory
                                     const extractLetterAndNumber = (identifier) => {
                                         if (!identifier) return { letter: '', number: '' };
                                         
@@ -9432,11 +8620,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                     const letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                     
-                                    // *** HLAVNÁ ZMENA: Používame správne premenné pre počet členov ***
                                     const getTotalMembersCountForMatch = (teamIdentifier, matchCategoryName) => {
                                         if (!teamIdentifier) return 0;
                                 
-                                        // KROK 1: Získame názov tímu
                                         let teamDisplayName = null;
                                         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                                             try {
@@ -9448,7 +8634,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     
                                         const actualTeamName = teamDisplayName || teamIdentifier;
                                 
-                                        // KROK 2: Vyhľadáme v cache
                                         if (!window.__allUsersCache) {
                                             console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
                                             return 0;
@@ -9494,7 +8679,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             onClick: () => handleMatchCardClick(match),
                                             title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu'
                                         },
-                                        // Rovnaká štruktúra ako spriradený zápas, BEZ stĺpca pre čas (prvý stĺpec je vynechaný)
                                         React.createElement(
                                             'div', 
                                             { 
@@ -9504,7 +8688,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     width: '100%'
                                                 }
                                             },
-                                            // Domáci tím (prvý stĺpec namiesto času)
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -9521,7 +8704,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     homeName
                                                 )
                                             ),
-                                            // Stĺpec pre farbu domáceho tímu - **POUŽÍVA homeMemberCount**
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -9539,7 +8721,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('span', null, homeMemberCount || 0)
                                             ),
-                                            // Hosťovský tím
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -9556,7 +8737,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     awayName
                                                 )
                                             ),
-                                            // Stĺpec pre farbu hosťovského tímu - **POUŽÍVA awayMemberCount**
                                             React.createElement(
                                                 'div', 
                                                 { 
@@ -9574,7 +8754,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('span', null, awayMemberCount || 0)
                                             ),
-                                            // Kombinované čísla (homeNumber-awayNumber)
                                             !isSpecialMatch && React.createElement(
                                                 React.Fragment,
                                                 null,
@@ -9592,7 +8771,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         combinedNumbers
                                                     )
                                                 ),
-                                                // Písmeno (ak je rovnaké pre oba tímy)
                                                 React.createElement(
                                                     'div', 
                                                     { 
@@ -9609,7 +8787,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                             ),
-                                            // Špeciálny zápas (o umiestnenie alebo pavúk) - zaberá 2 stĺpce
                                             isSpecialMatch && React.createElement(
                                                 'div', 
                                                 { 
@@ -9638,7 +8815,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
-                                        // Tlačidlá pre admina (iba ak NEEXISTUJE ukončený zápas)
                                         !hasCompletedMatch && userProfileData?.role === 'admin' && React.createElement(
                                             'div',
                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
@@ -9672,23 +8848,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                     
-                       // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - vždy zobrazí všetky dni)
                        React.createElement(
                            'div',
                            { className: 'flex-1 flex flex-col' },
                            (() => {
-                               // Zistíme, či je aktívny filter
                                const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
                         
-                               // Zistíme, či existujú nejaké haly na zobrazenie
                                const hasVisibleHalls = !loading && sportHalls.length > 0 &&
                                (() => {
-                                   // Prejdeme všetky haly a zistíme, či aspoň jedna má viditeľné karty dní
                                    for (const hall of sportHalls) {
-                                       // Ak je filter podľa haly aktívny, berieme len vybranú halu
                                        if (selectedHallFilter && hall.id !== selectedHallFilter) continue;
                                        
-                                       // Prejdeme všetky dni turnaja
                                        if (tournamentStartDate && tournamentEndDate) {
                                            const startDate = new Date(tournamentStartDate);
                                            const endDate = new Date(tournamentEndDate);
@@ -9700,24 +8870,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                            while (currentDate <= endDate) {
                                                const dateStr = getLocalDateStr(currentDate);
                                                
-                                               // Kontrola filtra dňa
                                                if (selectedDayFilter && selectedDayFilter !== dateStr) {
                                                    currentDate.setDate(currentDate.getDate() + 1);
                                                    continue;
                                                }
                                                
-                                               // Získame zápasy pre túto halu a deň
                                                const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                                const filteredMatches = hallMatchesForDay.filtered || [];
                                                const matchesCount = hallMatchesForDay.length;
                                                
-                                               // Ak je filter aktívny, hľadáme aspoň jeden zápas
                                                if (isFilterActiveLocal) {
                                                    if (matchesCount > 0) {
                                                        return true;
                                                    }
                                                } else {
-                                                   // Ak filter nie je aktívny, hala je vždy viditeľná
                                                    return true;
                                                }
                                                
@@ -9728,9 +8894,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                    return false;
                                })();
                            
-                               // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
                                if (isFilterActiveLocal && !hasVisibleHalls) {
-                                   // Skontrolujeme, či naozaj neexistujú žiadne zápasy pre tieto filtre
                                    const hasAnyMatch = filteredAllMatches.length > 0;
                                    if (!hasAnyMatch) {
                                        return React.createElement(
@@ -9742,7 +8906,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                    }
                                }
                                
-                               // Inak zobrazíme štandardný nadpis
                                return React.createElement(
                                    'h3',
                                    { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
@@ -9754,14 +8917,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                );
                            })(),
                            
-                           // Indikátor načítavania
                            loading && React.createElement(
                                'div',
                                { className: 'flex-1 flex justify-center items-center py-12' },
                                React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
                            ),
                            
-                           // Žiadne haly
                            !loading && sportHalls.length === 0 && React.createElement(
                                'div',
                                { className: 'flex-1 flex items-center justify-center text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
@@ -9774,9 +8935,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                )
                            ),
                            
-                           // Grid zoznam športových hál
                            !loading && sportHalls.length > 0 && (() => {
-                               // Získame zoznam hál, ktoré sa skutočne zobrazia
                                const visibleHalls = [];
                                
                                for (const hall of sortedFilteredSportHalls) {
@@ -9784,7 +8943,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                    const hasAnyMatch = matches.some(match => match.hallId === hall.id);
                                    const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
                                    
-                                   // Generovanie zoznamu dní pre kontrolu, či sa hala zobrazí
                                    let hasVisibleDays = false;
                                    
                                    if (tournamentStartDate && tournamentEndDate) {
@@ -9817,7 +8975,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                        }
                                    }
                                    
-                                   // Ak hala má viditeľné dni, pridáme ju do zoznamu
                                    if (hasVisibleDays || (!isFilterActiveLocal && !tournamentStartDate)) {
                                        visibleHalls.push(hall);
                                    }
@@ -9840,7 +8997,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                        const hasAnyMatch = matches.some(match => match.hallId === hall.id);
                                        const isFilterActiveLocal = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
                                        
-                                       // ZÍSKAME KOMPLETNÝ ZOZNAM DNÍ TURNAJA (nie len tie s matchmi)
                                        const tournamentDays = [];
                                        const dayCards = [];
                                        
@@ -9856,12 +9012,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
                                                
                                                if (matchesDayFilter) {
-                                                   // VŽDY PRIDÁME VŠETKY DNI do zoznamu dayCards
                                                    const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                                    const filteredMatches = hallMatchesForDay.filtered || [];
                                                    const matchesCount = filteredMatches.length;
                                                    
-                                                   // Vytvorenie matchesWithColors - nájdite túto časť v kóde (približne okolo riadku 4300-4400)
                                                    const matchesWithColors = filteredMatches.map(match => {
                                                        const accommodationsMap = window.__teamAccommodationsMap || new Map();
                                                        let homeTeamColor = '#f3f4f6';
@@ -9870,11 +9024,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
                                                        const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
                                                        
-                                                       // Kontrola, či názov tímu obsahuje názov kategórie
                                                        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
                                                        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
                                                        
-                                                       // Ak názov tímu obsahuje názov kategórie, farba ostáva biela (pôvodná #f3f4f6)
                                                        if (homeAccommodationName && !homeTeamName.includes(match.categoryName)) {
                                                            const accommodation = accommodations.find(a => a.name === homeAccommodationName);
                                                            if (accommodation) {
@@ -9902,7 +9054,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        };
                                                    });
                                                    
-                                                   // VŽDY PRIDÁME KARTU DŇA (aj keď je prázdna)
                                                    dayCards.push({
                                                        date: new Date(currentDate),
                                                        dateStr: dateStr,
@@ -9915,8 +9066,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                            }
                                        }
                                        
-                                       // ** NOVÁ PODMIENKA: Ak je filter aktívny a hala nemá žiadne karty dní, nevracame nič **
-                                       // Teraz už vždy budeme mať dayCards (všetky dni), takže kontrolujeme, či aspoň jedna karta nie je prázdna
                                        if (isFilterActiveLocal && dayCards.every(card => card.isEmpty)) {
                                            return null;
                                        }
@@ -9933,7 +9082,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    minWidth: '695px'
                                                }
                                            },
-                                           // HLAVIČKA HALY (nezmenená)
                                            React.createElement(
                                                'div',
                                                { className: 'p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200' },
@@ -9973,7 +9121,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                }
                                                            }, 'Športová hala'),
                                                            
-                                                           // Tlačidlá pre admina
                                                            userProfileData?.role === 'admin' && hasAnyMatch && !hasCompletedMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
@@ -10012,7 +9159,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                )
                                            ),
                                            
-                                           // Boxy dní - TERAZ VŽDY ZOBRAZÍME VŠETKY DNI (aj prázdne)
                                            dayCards.length > 0 && React.createElement(
                                                'div',
                                                {
@@ -10021,7 +9167,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                        width: '100%'
                                                    }
                                                },
-                                               // Toto je kompletná náhrada za časť od "dayCards.map((dayCard, index) => {" až po koniec karty dňa
 
                                                dayCards.map((dayCard, index) => {
                                                    const date = dayCard.date;
@@ -10034,10 +9179,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    const matchesCount = hallMatches.length;
                                                    const isEmpty = matchesCount === 0;                                                   
                                                    
-                                                   // ** NOVÉ: Zistíme, či existujú nepriradené zápasy **
                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                    
-                                                   // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
                                                    const showEmptyMessage = isEmpty && isFilterActiveLocal;
                                                    
                                                    const isFilterActiveForDay = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedTeamIdFilter;
@@ -10090,7 +9233,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey,
                                                        },
-                                                       // Hlavička dňa
                                                        React.createElement(
                                                            'div',
                                                            {
@@ -10127,7 +9269,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
                                                                })()
                                                            ),
-                                                           // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
                                                            !isEmpty && userProfileData?.role === 'admin' && !hasCompletedMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
@@ -10188,9 +9329,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            )
                                                        ),
                                                        
-                                                       // ** HLAVNÁ ČASŤ - ZOBRAZENIE OBSAHU DŇA **
                                                        !isEmpty ? (
-                                                           // Normálne zobrazenie zápasov
                                                            React.createElement(
                                                                'div',
                                                                {
@@ -10198,7 +9337,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    style: { width: '100%' }
                                                                },
                                                                (function() {
-                                                                   // 1. Zoraďte filtrované zápasy pre ZOBRAZENIE
                                                                    const sortedMatches = hallMatches.sort((a, b) => {
                                                                        if (!a.scheduledTime) return 1;
                                                                        if (!b.scheduledTime) return -1;
@@ -10211,7 +9349,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    });
                                                                    
-                                                                   // 2. Zoraďte VŠETKY zápasy pre VÝPOČET VOĽNÉHO ČASU
                                                                    const allSortedMatches = allMatchesForDay.sort((a, b) => {
                                                                        if (!a.scheduledTime) return 1;
                                                                        if (!b.scheduledTime) return -1;
@@ -10226,14 +9363,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    
                                                                    const allElements = [];
                                                                    
-                                                                   // Pomocná funkcia na formátovanie času z minút
                                                                    const formatTimeFromMinutes = (minutes) => {
                                                                        const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
                                                                        const mins = (minutes % 60).toString().padStart(2, '0');
                                                                        return `${hours}:${mins}`;
                                                                    };
                                                                    
-                                                                   // Funkcia na získanie maximálneho trvania zápasu v tomto dni (vrátane prestávky)
                                                                    const getMaxMatchDurationInDay = (matchesList) => {
                                                                        let maxDuration = 0;
                                                                        for (const match of matchesList) {
@@ -10254,7 +9389,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return maxDuration > 0 ? maxDuration : 45;
                                                                    };
                                                                    
-                                                                   // Funkcia na rozdelenie medzery na bloky - OPRAVENÁ VERZIA (odpočítava matchBreak z remainingMinutes)
                                                                    const splitGapIntoBlocks = (gapMinutes, maxBlockDuration, hallId, dateStr, gapStartTimeFormatted, gapEndTimeFormatted, isGapBlocked, onToggleBlock, onAssignMatch, onDeleteGap, hasCompletedMatch, userRole, filteredUnassignedMatches, setSelectedBreakForAssign, setIsAssignToBreakModalOpen, handleDeleteBreak, nextMatchStartTime = null, matchBreak = 5, blockedBreaksParam = {}) => {
                                                                        const blocks = [];
                                                                        let remainingMinutes = gapMinutes;
@@ -10263,14 +9397,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return hours * 60 + minutes;
                                                                        })() : 0;
                                                                        
-                                                                       // Pomocná funkcia na formátovanie času z minút
                                                                        const formatTimeFromMinutes = (minutes) => {
                                                                            const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
                                                                            const mins = (minutes % 60).toString().padStart(2, '0');
                                                                            return `${hours}:${mins}`;
                                                                        };
                                                                        
-                                                                       // Minimálna dĺžka bloku, ktorý sa má zobraziť
                                                                        const MIN_BLOCK_DURATION = 5;
                                                                        
                                                                        if (gapMinutes <= 0) return [];
@@ -10318,10 +9450,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        return blocks;
                                                                    };
                                                                                                                                                                                                          
-                                                                   // Kontrola, či existuje aspoň jeden nepriradený zápas
                                                                    const hasUnassignedMatches = filteredUnassignedMatches.length > 0;
                                                                    
-                                                                   // PRE MEDZERU PRED PRVÝM ZÁPASOM
                                                                    if (allSortedMatches.length > 0) {
                                                                        const firstMatch = allSortedMatches[0];
                                                                        if (firstMatch.scheduledTime) {
@@ -10337,20 +9467,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    const [hallStartHours, hallStartMinutes] = hallStartTimeStr.split(':').map(Number);
                                                                                    const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
                                                                                    
-                                                                                   // ZÍSKAME DĹŽKU PRESTÁVKY PRE PRVÝ ZÁPAS
                                                                                    let firstMatchBreak = 5;
                                                                                    const firstMatchCategory = categories.find(c => c.name === firstMatch.categoryName);
                                                                                    if (firstMatchCategory) {
                                                                                        firstMatchBreak = firstMatchCategory.matchBreak || 5;
                                                                                    }
                                                                                    
-                                                                                   // ZAČIATOK VOĽNÉHO ČASU = začiatok haly
                                                                                    const freeTimeStartMinutes = hallStartMinutesTotal;
                                                                                    
-                                                                                   // KONIEC VOĽNÉHO ČASU = začiatok prvého zápasu - prestávka pred prvým zápasom
                                                                                    const freeTimeEndMinutes = firstMatchStartMinutes - firstMatchBreak;
                                                                                    
-                                                                                   // DĹŽKA VOĽNÉHO ČASU
                                                                                    let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                    
                                                                                    const isFilterActiveForGaps = selectedCategoriesFilter || selectedGroupFilter || selectedTeamIdFilter;
@@ -10369,7 +9495,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                            null, firstMatchBreak, blockedBreaks
                                                                                        );
                                                                                        
-                                                                                       // Pre každý blok vytvoríme samostatný riadok s vlastným tlačidlom koša
                                                                                        blocks.forEach(block => {
                                                                                            allElements.push(
                                                                                                React.createElement(
@@ -10466,7 +9591,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            },
                                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                                        ),
-                                                                                                       // KAŽDÝ BLOK MÁ VLASTNÉ TLAČIDLO KOŠA (už nie len prvý)
                                                                                                        React.createElement(
                                                                                                            'button',
                                                                                                            {
@@ -10494,8 +9618,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    }
                                                                    
-                                                                   // PRE ZÁPASY A MEDZERY MEDZI NIMI
-                                                                   // Používame sortedMatches (FILTROVANÉ zápasy) na zobrazenie
                                                                    sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                        let matchTime = '--:--';
                                                                        let endTime = '--:--';
@@ -10811,22 +9933,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    )
                                                                                ) : null
                                                                            )
-                                                                       );
+                                                                       );                                                                       
                                                                        
-                                                                       // ============================================================
-                                                                       // PRIDANIE MEDZERY MEDZI ZÁPASMI - POUŽÍVAME allSortedMatches (VŠETKY zápasy)
-                                                                       // ============================================================
-                                                                       
-                                                                       // Nájdeme aktuálny zápas v allSortedMatches (VŠETKY zápasy)
                                                                        const currentMatchAll = allSortedMatches.find(function(m) { return m.id === match.id; });
                                                                        const currentIdxAll = allSortedMatches.indexOf(currentMatchAll);
                                                                        
-                                                                       // Nájdeme nasledujúci zápas v allSortedMatches (VŠETKY zápasy)
                                                                        const nextMatchAll = (currentIdxAll !== -1 && currentIdxAll < allSortedMatches.length - 1) 
                                                                            ? allSortedMatches[currentIdxAll + 1] 
                                                                            : null;
                                                                        
-                                                                       // Ak existuje nasledujúci zápas vo VŠETKÝCH zápasoch, vypočítame medzeru
                                                                        if (nextMatchAll && currentMatchAll.scheduledTime && nextMatchAll.scheduledTime) {
                                                                            try {
                                                                                const currentMatchDate = currentMatchAll.scheduledTime.toDate();
@@ -10842,39 +9957,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    currentMatchBreak = currentMatchCategory.matchBreak || 5;
                                                                                }
                                                                                
-                                                                               // Koniec aktuálneho zápasu (čistý čas, bez prestávky)
                                                                                const currentMatchEndTime = new Date(currentMatchDate.getTime() + currentMatchDuration * 60000);
                                                                                const currentEndMinutes = currentMatchEndTime.getHours() * 60 + currentMatchEndTime.getMinutes();
                                                                                
-                                                                               // ZAČIATOK VOĽNÉHO ČASU = koniec zápasu + prestávka medzi zápasmi
                                                                                const freeTimeStartMinutes = currentEndMinutes + currentMatchBreak;
                                                                                
-                                                                               // Začiatok nasledujúceho zápasu
                                                                                const nextMatchDate = nextMatchAll.scheduledTime.toDate();
                                                                                const nextStartMinutes = nextMatchDate.getHours() * 60 + nextMatchDate.getMinutes();
                                                                                
-                                                                               // ZÍSKAME DĹŽKU PRESTÁVKY PRE NASLEDUJÚCI ZÁPAS
                                                                                let nextMatchBreak = 5;
                                                                                const nextMatchCategory = categories.find(function(c) { return c.name === nextMatchAll.categoryName; });
                                                                                if (nextMatchCategory) {
                                                                                    nextMatchBreak = nextMatchCategory.matchBreak || 5;
                                                                                }
                                                                                
-                                                                               // KONIEC VOĽNÉHO ČASU = začiatok nasledujúceho zápasu - prestávka pred nasledujúcim zápasom
                                                                                const freeTimeEndMinutes = nextStartMinutes - nextMatchBreak;
                                                                                
-                                                                               // DĹŽKA VOĽNÉHO ČASU (len priestor, kde môže byť zápas)
                                                                                let displayGapMinutes = freeTimeEndMinutes - freeTimeStartMinutes;
                                                                                
                                                                                const dateStr = getLocalDateStr(currentMatchDate);
                                                                                const hallId = currentMatchAll.hallId;
                                                                                
-                                                                               // Začiatok zobrazovanej medzery = koniec zápasu + prestávka
                                                                                const gapStartTime = formatTimeFromMinutes(freeTimeStartMinutes);
-                                                                               // Koniec zobrazovanej medzery = začiatok nasledujúceho zápasu - prestávka
                                                                                const gapEndTime = formatTimeFromMinutes(freeTimeEndMinutes);
                                                                                
-                                                                               // Zobrazíme medzeru len ak je displayGapMinutes väčšie ako 0
                                                                                if (displayGapMinutes > 0) {
                                                                                    const maxBlockDuration = getMaxMatchDurationInDay(allSortedMatches);
                                                                                    const blocks = splitGapIntoBlocks(
@@ -11007,9 +10113,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                        }
                                                                    });
                                                        
-                                                                   // ZELENÝ RIADOK ZA POSLEDNÝM ZÁPASOM - POUŽÍVA VŠETKY ZÁPASY (NIE LEN VYFILTROVANÉ)
                                                                    if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
-                                                                       // Získame VŠETKY zápasy pre túto halu a deň (bez filtra)
                                                                        const allMatchesForHallAndDay = matches.filter(m => 
                                                                            m.hallId === hall.id && 
                                                                            m.scheduledTime
@@ -11023,7 +10127,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            return timeA - timeB;
                                                                        });
                                                                        
-                                                                       // Ak existuje aspoň jeden zápas v tomto dni (aj mimo filtra)
                                                                        if (allMatchesForHallAndDay.length > 0) {
                                                                            const lastMatch = allMatchesForHallAndDay[allMatchesForHallAndDay.length - 1];
                                                                            if (lastMatch && lastMatch.scheduledTime) {
@@ -11148,15 +10251,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                })()
                                                            )
                                                        ) : (
-                                                       // ** PRÁZDNY DEŇ - ZOBRAZÍME ROVNAKÝ ZELENÝ RIADOK AKO ZA POSLEDNÝM ZÁPASOM (ak existujú nepriradené zápasy) **
                                                        (() => {
-                                                           // Získame čas začiatku haly pre tento deň
                                                            const scheduleId = `${hall.id}_${dateStr}`;
                                                            const savedSchedule = hallSchedules[scheduleId];
-                                                           const hallStartTime = savedSchedule?.startTime || '08:00'; // Predvolený čas 08:00
+                                                           const hallStartTime = savedSchedule?.startTime || '08:00';
                                                            
-                                                           // PRE PRÁZDNY DEŇ - ZISTÍME, ČI EXISTUJE ASPOŇ JEDEN ZÁPAS V TEJTO HALE A DNI (AJ MIMO FILTRA)
-                                                           // Ak áno, použijeme čas po poslednom zápase. Ak nie, použijeme čas začiatku haly.
                                                            const allMatchesForHallAndDay = matches.filter(m => 
                                                                m.hallId === hall.id && 
                                                                m.scheduledTime
@@ -11170,10 +10269,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                return timeA - timeB;
                                                            });
                                                            
-                                                           // Určíme čas, od ktorého sa zobrazí "PRIDAŤ ZÁPAS"
                                                            let displayStartTime = hallStartTime;
                                                            
-                                                           // Ak existujú zápasy v tomto dni (aj mimo filtra), použijeme čas po poslednom
                                                            if (allMatchesForHallAndDay.length > 0) {
                                                                const lastMatch = allMatchesForHallAndDay[allMatchesForHallAndDay.length - 1];
                                                                if (lastMatch && lastMatch.scheduledTime) {
@@ -11203,7 +10300,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                }
                                                            }
                                                            
-                                                           // Ak existujú nepriradené zápasy, zobrazíme rovnaký riadok ako za posledným zápasom
                                                            if (hasUnassignedMatches && userProfileData?.role === 'admin' && !hasCompletedMatch) {
                                                                return React.createElement(
                                                                    'div',
@@ -11226,7 +10322,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            onClick: function(e) {
                                                                                e.stopPropagation();
                                                                                
-                                                                               // POUŽIJEME hall.id namiesto hallId
                                                                                window.__pendingAssignFilters = {
                                                                                    hallId: hall.id,
                                                                                    day: dateStr,
@@ -11276,7 +10371,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            )
                                                                        )
                                                                    ),
-                                                                   // Tlačidlo "+" vpravo
                                                                    React.createElement(
                                                                        'div',
                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/add:opacity-100 transition-opacity' },
@@ -11287,7 +10381,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                onClick: function(e) {
                                                                                    e.stopPropagation();
                                                                                    
-                                                                                   // POUŽIJEME hall.id namiesto hallId
                                                                                    window.__pendingAssignFilters = {
                                                                                        hallId: hall.id,
                                                                                        day: dateStr,
@@ -11312,7 +10405,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                );
                                                            }
                                                            
-                                                           // Inak zobrazíme pôvodný text (žiadne zápasy)
                                                            return React.createElement(
                                                                'div',
                                                                {
@@ -11332,7 +10424,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                })
                                            ),
                                            
-                                           // Ak nie sú nastavené dátumy turnaja
                                            !tournamentDatesLoaded || (!tournamentStartDate && !tournamentEndDate) ? React.createElement(
                                                'div',
                                                { className: 'p-4 bg-yellow-50 border-t border-yellow-200' },
@@ -11354,19 +10445,13 @@ const AddMatchesApp = ({ userProfileData }) => {
     );
 };
 
-// Premenná na sledovanie, či bol poslucháč už nastavený
 let isEmailSyncListenerSetup = false;
 
-/**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu AddMatchesApp.
- */
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        // Synchronizácia e-mailu (ponechané pre funkcionalitu)
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             
             onAuthStateChanged(window.auth, async (user) => {
@@ -11407,7 +10492,6 @@ const handleDataUpdateAndRender = (event) => {
             root.render(React.createElement(AddMatchesApp, { userProfileData }));
         }
     } else {
-        // Loader keď nie sú dáta
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -11421,10 +10505,8 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Registrácia poslucháča
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Kontrola existujúcich dát
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
