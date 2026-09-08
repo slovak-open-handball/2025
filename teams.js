@@ -286,8 +286,9 @@ const TeamsOverviewApp = (props) => {
         console.log('[Stats Effect] rosterTeamName:', rosterTeamName);
         console.log('[Stats Effect] rosterCategoryName:', rosterCategoryName);
         
+        // Ak nemáme členov alebo db, vymažeme štatistiky a zrušíme listener
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
-            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db');
+            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db - vymazávam štatistiky');
             setMembersStats({});
             return;
         }
@@ -300,7 +301,7 @@ const TeamsOverviewApp = (props) => {
         console.log('[Stats Effect] currentCategoryName:', currentCategoryName);
     
         if (!currentTeamName || !currentCategoryName) {
-            console.log('[Stats Effect] Podmienka TRUE: chýba teamName alebo categoryName');
+            console.log('[Stats Effect] Podmienka TRUE: chýba teamName alebo categoryName - vymazávam štatistiky');
             setMembersStats({});
             return;
         }
