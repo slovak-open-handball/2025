@@ -3045,7 +3045,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 month: '2-digit',
                 year: 'numeric'
             });
-            conflictMessages.push(`⛔ Nadstavbová skupina - súvisiaci zápas v skoršom dni (${formattedDate}) musí byť odohraný PRED týmto zápasom`);
+            conflictMessages.push(`Nadstavbová skupina - súvisiaci zápas v skoršom dni (${formattedDate}) musí byť odohraný PRED týmto zápasom`);
         }
         
         // Kontrola: existuje súvisiaci zápas v NESKORŠOM DNI?
@@ -3062,7 +3062,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 month: '2-digit',
                 year: 'numeric'
             });
-            conflictMessages.push(`⛔ Nadstavbová skupina - súvisiaci zápas v neskoršom dni (${formattedDate}) - tento zápas musí byť PRED ním`);
+            conflictMessages.push(`Nadstavbová skupina - súvisiaci zápas v neskoršom dni (${formattedDate}) - tento zápas musí byť PRED ním`);
         }
         
         if (conflictMessages.length > 0) {
@@ -3671,14 +3671,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             // KONTROLA 1: Vybraný deň je skorší ako najskorší súvisiaci zápas
             if (selectedDateObj < earliestDate) {
                 const earliestFormatted = formatDateForMessage(earliestDate);
-                setTimeError(`⛔ Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${earliestFormatted}. Vyberte neskorší deň.`);
+                setTimeError(`Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${earliestFormatted}. Vyberte neskorší deň.`);
                 return;
             }
             
             // KONTROLA 2: Vybraný deň je neskorší ako najneskorší súvisiaci zápas
             if (selectedDateObj > latestDate) {
                 const latestFormatted = formatDateForMessage(latestDate);
-                setTimeError(`ℹ️ Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých súvisiacich zápasoch (posledný: ${latestFormatted}). Je to v poriadku.`);
+                setTimeError(`Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých súvisiacich zápasoch (posledný: ${latestFormatted}). Je to v poriadku.`);
                 return;
             }
             
@@ -4053,7 +4053,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             });
                             allConflicts.push({
                                 type: 'special_match_earlier_than_related',
-                                _displayName: `⛔ Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${formattedDate}.`
+                                _displayName: `Tento zápas (pavúk/umiestnenie) musí byť odohraný PO súvisiacich zápasoch. Najskorší súvisiaci zápas je ${formattedDate}.`
                             });
                         }
                     }
@@ -4092,7 +4092,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     if (earlierDayMatches.length > 0) {
                         allConflicts.push({
                             type: 'advanced_group_earlier_day',
-                            _displayName: `⛔ Nadstavbová skupina - súvisiaci zápas v skoršom dni (${earlierDayMatches[0].scheduledTime.toDate().toLocaleDateString('sk-SK')}) musí byť odohraný PRED týmto zápasom`
+                            _displayName: `Nadstavbová skupina - súvisiaci zápas v skoršom dni (${earlierDayMatches[0].scheduledTime.toDate().toLocaleDateString('sk-SK')}) musí byť odohraný PRED týmto zápasom`
                         });
                     }
                     
@@ -4107,7 +4107,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     if (laterDayMatches.length > 0) {
                         allConflicts.push({
                             type: 'advanced_group_later_day',
-                            _displayName: `⛔ Nadstavbová skupina - súvisiaci zápas v neskoršom dni (${laterDayMatches[0].scheduledTime.toDate().toLocaleDateString('sk-SK')}) - tento zápas musí byť PRED ním`
+                            _displayName: `Nadstavbová skupina - súvisiaci zápas v neskoršom dni (${laterDayMatches[0].scheduledTime.toDate().toLocaleDateString('sk-SK')}) - tento zápas musí byť PRED ním`
                         });
                     }
                     
@@ -4136,7 +4136,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         
                         allConflicts.push({
                             type: 'advanced_group_same_day_later',
-                            _displayName: `⛔ Nadstavbová skupina - súvisiaci zápas o ${formattedTime} v rovnaký deň - tento zápas musí byť PRED ním (potrebná prestávka)`
+                            _displayName: `Nadstavbová skupina - súvisiaci zápas o ${formattedTime} v rovnaký deň - tento zápas musí byť PRED ním (potrebná prestávka)`
                         });
                     }
                     
@@ -4160,7 +4160,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             const formattedTime = `${latestDate.getHours().toString().padStart(2, '0')}:${latestDate.getMinutes().toString().padStart(2, '0')}`;
                             allConflicts.push({
                                 type: 'advanced_group_same_day_earlier_no_break',
-                                _displayName: `⛔ Nadstavbová skupina - potrebná prestávka po zápase o ${formattedTime} v rovnaký deň`
+                                _displayName: `Nadstavbová skupina - potrebná prestávka po zápase o ${formattedTime} v rovnaký deň`
                             });
                         }
                     }
