@@ -426,12 +426,36 @@ const TeamsOverviewApp = (props) => {
     const [statsUnsubscribe, setStatsUnsubscribe] = useState(null);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
+    // --- SEM PRIDAJ TOTO: ---
+    const tableContainerRef = useRef(null);
+    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
+
+    // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
+    const [isRostersVisible, setIsRostersVisible] = useState(...);
+
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
         window.pagesVisibility['rosters'].visible === true
     );
+
+    const tableContainerRef = useRef(null);
+    const [maxTableHeight, setMaxTableHeight] = useState('70vh');
+
+    useEffect(() => {
+        const updateHeight = () => {
+            if (tableContainerRef.current) {
+                const rect = tableContainerRef.current.getBoundingClientRect();
+                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
+                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 300)}px`);
+            }
+        };
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, [allMembers]);
 
     // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
     useEffect(() => {
@@ -790,7 +814,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Render tabuľky všetkých členov
     const renderAllMembersTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
@@ -803,7 +826,7 @@ const TeamsOverviewApp = (props) => {
                 )
             );
         }
-
+    
         if (isLoading || isLoadingStats) {
             return React.createElement(
                 'div',
@@ -853,11 +876,12 @@ const TeamsOverviewApp = (props) => {
             return stats;
         };
         
+        // ===== UPRAVENÁ ČASŤ S REF A STYLE =====
         return React.createElement(
             'div',
             { 
                 className: 'bg-white rounded-xl shadow-xl p-6 overflow-hidden',
-                ref: tableContainerRef
+                ref: tableContainerRef  // <--- PRIDAJ TOTO
             },
             React.createElement(
                 'div',
@@ -876,99 +900,22 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'overflow-x-auto overflow-y-auto',
-                    style: { maxHeight: maxTableHeight }
+                    className: 'overflow-x-auto overflow-y-auto',  // <--- PRIDAJ overflow-y-auto
+                    style: { maxHeight: maxTableHeight }  // <--- PRIDAJ TOTO
                 },
                 React.createElement(
                     'table',
                     { className: 'w-full border-collapse text-sm' },
+                    // ... zvyšok tabuľky (hlavička a telo) zostáva rovnaký ...
                     React.createElement(
                         'thead',
                         { className: 'bg-gray-100 sticky top-0 z-10' },
-                        React.createElement(
-                            'tr',
-                            { className: 'border-b border-gray-200' },
-                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { width: '35px' } }, ''),
-                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { width: '50px' } }, 'Č.'),
-                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '150px' } }, 'Meno a priezvisko'),
-                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '120px' } }, 'Kategória'),
-                            React.createElement('th', { className: 'px-3 py-2 text-left text-xs font-medium text-gray-500', style: { minWidth: '150px' } }, 'Tím'),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'G')
-                                )
-                            ),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '60px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, '7m')
-                                )
-                            ),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-square text-yellow-500 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ŽK')
-                                )
-                            ),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-square text-red-600 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'ČK')
-                                )
-                            ),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '50px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-square text-blue-500 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'MK')
-                                )
-                            ),
-                            React.createElement('th', { className: 'px-3 py-2 text-center text-xs font-medium text-gray-500', style: { width: '60px' } }, 
-                                React.createElement('div', { className: 'flex flex-col items-center' },
-                                    React.createElement('i', { className: 'fa-solid fa-clock text-orange-500 text-sm' }),
-                                    React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vyl.')
-                                )
-                            )
-                        )
+                        // ... hlavička ...
                     ),
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
-                        allMembers.map((member, index) => {
-                            const fullName = member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
-                            const stats = getMemberStats(member);
-                            const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
-                            const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
-                            
-                            const memberIcon = member.type === 'Hráč' 
-                                ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
-                                : (member.type === 'Člen RT (muž)' 
-                                    ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 text-sm' })
-                                    : (member.type === 'Člen RT (žena)'
-                                        ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-sm' })
-                                        : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-sm' })));
-                            
-                            const rowClass = index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100';
-                            
-                            return React.createElement(
-                                'tr',
-                                { 
-                                    key: `${member.type}_${member.originalIndex}_${member.userId}_${index}`,
-                                    className: `${rowClass} transition-colors cursor-default`
-                                },
-                                React.createElement('td', { className: 'px-3 py-2 text-center' }, memberIcon),
-                                React.createElement('td', { className: 'px-3 py-2 font-mono font-medium text-gray-700 text-center' }, member.jerseyNumber || ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-gray-800 whitespace-nowrap' }, fullName),
-                                React.createElement('td', { className: 'px-3 py-2 text-gray-600 text-sm' }, member.categoryName || ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-gray-600 text-sm' }, member.teamName || ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-green-600' }, stats.goals > 0 ? stats.goals : ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-medium text-teal-600' }, penaltiesDisplay),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-yellow-600' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-red-600' }, stats.redCards > 0 ? stats.redCards : ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-blue-600' }, stats.blueCards > 0 ? stats.blueCards : ''),
-                                React.createElement('td', { className: 'px-3 py-2 text-center font-bold text-orange-600' }, stats.exclusions > 0 ? stats.exclusions : '')
-                            );
-                        })
+                        // ... riadky ...
                     )
                 )
             ),
