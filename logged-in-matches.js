@@ -3758,7 +3758,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     React.createElement(
                         'div',
                         { className: 'flex-1' },
-                        displayMode === 'both' && typeof getTeamDisplayText(match.homeTeamIdentifier) === 'object'
+                        match && match.homeTeamIdentifier && displayMode === 'both' && typeof getTeamDisplayText(match.homeTeamIdentifier) === 'object'
                             ? React.createElement(
                                 'div',
                                 { className: 'flex flex-col items-start' },
