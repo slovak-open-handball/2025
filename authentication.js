@@ -222,6 +222,7 @@ const loadPageVisibilitySettings = async () => {
         const visibilitySettings = {};
         let matchesVisible = true; // predvolene viditeľné
         let teamsInGroupsVisible = true; // predvolene viditeľné
+        let rostersVisible = true; // predvolene viditeľné
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
@@ -233,6 +234,9 @@ const loadPageVisibilitySettings = async () => {
                 if (doc.id === 'teams-in-groups') {
                     teamsInGroupsVisible = false;
                 }
+                if (doc.id === 'rosters') {
+                    rostersVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
@@ -240,6 +244,9 @@ const loadPageVisibilitySettings = async () => {
                 }
                 if (doc.id === 'teams-in-groups') {
                     teamsInGroupsVisible = true;
+                }
+                if (doc.id === 'rosters') {
+                    rostersVisible = true;
                 }
             }
         });
@@ -250,8 +257,8 @@ const loadPageVisibilitySettings = async () => {
         // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
         visibilitySettings['teams'] = teamsInGroupsVisible;
         
-        // Nastavíme statistics na rovnakú viditeľnosť ako matches
-        visibilitySettings['statistics'] = matchesVisible;
+        // Nastavíme statistics na rovnakú viditeľnosť ako rosters
+        visibilitySettings['statistics'] = rostersVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = now;
@@ -280,6 +287,7 @@ const setupPageVisibilityListener = () => {
         const visibilitySettings = {};
         let matchesVisible = true;
         let teamsInGroupsVisible = true;
+        let rostersVisible = true;
         
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -291,6 +299,9 @@ const setupPageVisibilityListener = () => {
                 if (doc.id === 'teams-in-groups') {
                     teamsInGroupsVisible = false;
                 }
+                if (doc.id === 'rosters') {
+                    rostersVisible = false;
+                }
             } else if (data.visible === true) {
                 visibilitySettings[doc.id] = true;
                 if (doc.id === 'matches') {
@@ -298,6 +309,9 @@ const setupPageVisibilityListener = () => {
                 }
                 if (doc.id === 'teams-in-groups') {
                     teamsInGroupsVisible = true;
+                }
+                if (doc.id === 'rosters') {
+                    rostersVisible = true;
                 }
             }
         });
@@ -308,8 +322,8 @@ const setupPageVisibilityListener = () => {
         // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
         visibilitySettings['teams'] = teamsInGroupsVisible;
         
-        // Nastavíme statistics na rovnakú viditeľnosť ako matches
-        visibilitySettings['statistics'] = matchesVisible;
+        // Nastavíme statistics na rovnakú viditeľnosť ako rosters
+        visibilitySettings['statistics'] = rostersVisible;
         
         pageVisibilityCache = visibilitySettings;
         pageVisibilityCacheTime = Date.now();
@@ -364,9 +378,9 @@ const checkCurrentPageVisibility = async () => {
     else if (pageId === 'teams') {
         isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
-    // Pre statistics použijeme viditeľnosť z matches
+    // Pre statistics použijeme viditeľnosť z rosters
     else if (pageId === 'statistics') {
-        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
+        isVisible = settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
     else {
         if (settings[pageId] === undefined) {
@@ -398,9 +412,9 @@ const isPageVisibleInSettings = async (pageId) => {
         return settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
     
-    // Ak sa pýtame na statistics, vrátime hodnotu pre matches
+    // Ak sa pýtame na statistics, vrátime hodnotu pre rosters
     if (pageId === 'statistics') {
-        return settings['matches'] !== undefined ? settings['matches'] : true;
+        return settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
     
     if (settings[pageId] === undefined) {
@@ -433,9 +447,9 @@ const checkPageVisibilityForUser = async (pageName, userProfileData) => {
     else if (pageId === 'teams') {
         isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
-    // Pre statistics použijeme viditeľnosť z matches
+    // Pre statistics použijeme viditeľnosť z rosters
     else if (pageId === 'statistics') {
-        isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
+        isVisible = settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
     else {
         if (settings[pageId] === undefined) {
