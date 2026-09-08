@@ -3136,6 +3136,42 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     useEffect(() => {
         if (isOpen && match) {
             console.log('--- useEffect: Načítavam súvisiace zápasy ---');
+            console.log('💡 currentMatch.groupName:', match.groupName);
+            console.log('💡 currentMatch.categoryId:', match.categoryId);
+            console.log('💡 groupsByCategory:', Object.keys(groupsByCategory));
+            
+            // 🔥 KONTROLA: Ak match.groupName neexistuje, ale match.categoryId existuje, skúsime ho nájsť
+            if (!match.groupName && match.categoryId && groupsByCategory[match.categoryId]) {
+                // Skúsime nájsť groupName podľa homeTeamIdentifier alebo awayTeamIdentifier
+                // Identifikátor je v tvare "U12 CH E1" -> skupina "E"
+                const extractGroupNameFromIdentifier = (identifier) => {
+                    if (!identifier) return null;
+                    const parts = identifier.split(' ');
+                    if (parts.length < 2) return null;
+                    const groupAndOrder = parts[parts.length - 1];
+                    
+                    const match = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
+                    if (match) {
+                        return `skupina ${match[1]}`;
+                    }
+                    return null;
+                };
+                
+                const homeGroupName = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
+                const awayGroupName = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
+                
+                console.log('💡 Extrahované skupiny z identifikátorov:', homeGroupName, 'a', awayGroupName);
+                
+                // Ak sme našli skupinu, nastavíme ju do match objektu
+                if (homeGroupName) {
+                    match.groupName = homeGroupName;
+                    console.log('✅ Nastavený match.groupName na:', match.groupName);
+                } else if (awayGroupName) {
+                    match.groupName = awayGroupName;
+                    console.log('✅ Nastavený match.groupName na:', match.groupName);
+                }
+            }
+            
             const related = getRelatedMatchesForAdvancedGroup(match);
             setRelatedMatches(related);
             
