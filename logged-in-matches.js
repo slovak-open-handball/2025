@@ -3131,7 +3131,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
-    // V AssignMatchModal - opravený useEffect pre relatedMatches
+    // V AssignMatchModal - PRIDAJTE TÚTO KONTROLU NA ZAČIATOK useEffect pre relatedMatches
     useEffect(() => {
         if (isOpen && match) {
             console.log('--- useEffect: Načítavam súvisiace zápasy ---');
@@ -3195,7 +3195,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('📊 [useEffect] relatedMatches po načítaní:', related.length);
             console.log('📊 [useEffect] isAdvancedGroup:', currentGroup?.type === 'nadstavbová skupina');
         }
-    }, [isOpen, match, groupsByCategory, allMatches, categories]); // 🔥 PRIDANÉ všetky závislosti
+    }, [isOpen, match, groupsByCategory, allMatches, categories]);
 
     useEffect(() => {
         if (isOpen && match && !initialized) {            
