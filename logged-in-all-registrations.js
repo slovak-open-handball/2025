@@ -5794,7 +5794,7 @@ function AllRegistrationsApp() {
             React.createElement(
                 'p',
                 { className: 'text-red-600 text-sm mt-2' },
-                'Duplicitné názvy tímov sú v tabuľke zvýraznené červenou farbou.'
+                'Duplicitné názvy sú v tabuľke tímov zvýraznené červenou farbou.'
             )
         );
     };
