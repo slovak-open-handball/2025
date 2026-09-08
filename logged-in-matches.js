@@ -39,7 +39,7 @@ const getLocalDateStr = (date) => {
 const extractGroupLetterFromTeamName = (teamName) => {
     if (!teamName) return '';
     
-    const parts = teamIdentifier.split(' ');
+    const parts = teamName.split(' ');
     if (parts.length < 2) return '';
     
     const groupAndOrder = parts[parts.length - 1];
