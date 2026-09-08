@@ -180,6 +180,68 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     return unsubscribe;
 };
 
+// ============================================================
+// FUNKCIA NA NAČÍTANIE VŠETKÝCH DOKUMENTOV Z matchEvents
+// ============================================================
+const loadAllMatchEvents = async () => {
+    if (!window.db) {
+        console.log('❌ window.db nie je dostupné');
+        return;
+    }
+
+    try {
+        console.log('🔄 Načítavam všetky dokumenty z kolekcie matchEvents...');
+        const eventsRef = collection(window.db, 'matchEvents');
+        const querySnapshot = await getDocs(eventsRef);
+        
+        console.log(`📊 Celkový počet dokumentov v matchEvents: ${querySnapshot.size}`);
+        
+        if (querySnapshot.size === 0) {
+            console.log('ℹ️ Kolekcia matchEvents je prázdna');
+            return;
+        }
+
+        console.log('📋 Zoznam všetkých dokumentov:');
+        console.log('─────────────────────────────────────────────');
+        
+        querySnapshot.forEach((doc, index) => {
+            console.log(`📄 Dokument #${index + 1}`);
+            console.log(`   ID: ${doc.id}`);
+            console.log(`   Dáta:`, doc.data());
+            console.log('─────────────────────────────────────────────');
+        });
+
+        // Vypíšeme aj prehľad o typoch udalostí
+        const eventTypes = {};
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const type = data.eventType || 'unknown';
+            eventTypes[type] = (eventTypes[type] || 0) + 1;
+        });
+        
+        console.log('📊 Štatistika typov udalostí:');
+        Object.entries(eventTypes).forEach(([type, count]) => {
+            console.log(`   ${type}: ${count}`);
+        });
+        
+        console.log('✅ Načítanie dokončené');
+        
+    } catch (error) {
+        console.error('❌ Chyba pri načítaní matchEvents:', error);
+        console.error('   Detail chyby:', error.message);
+    }
+};
+
+// Spustíme načítanie ihneď po načítaní modulu
+// Použijeme setTimeout, aby sme dali šancu Firebase sa inicializovať
+setTimeout(() => {
+    loadAllMatchEvents();
+}, 2000);
+
+// Pridáme aj funkciu do window objektu, aby sa dala zavolať manuálne z konzoly
+window.loadAllMatchEvents = loadAllMatchEvents;
+// ============================================================
+
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
