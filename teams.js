@@ -451,7 +451,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails]);
     
-    // Funkcia na načítanie súpisky tímu pomocou loadTeamMembers
+    // Upravená loadTeamRoster funkcia
     const loadTeamRoster = (teamName, categoryName) => {
         // Zrušíme predchádzajúci listener
         if (rosterUnsubscribe) {
@@ -473,10 +473,12 @@ const TeamsOverviewApp = (props) => {
         }        
         
         setIsLoadingRoster(true);
-        setTeamRoster([]);
+        // NEMAŽEME teamRoster hneď - počkáme na načítanie nových členov
+        // setTeamRoster([]);  // <-- ODSTRÁNENÉ
         setRosterTeamName(teamName);
         setRosterCategoryName(categoryName);
-        setMembersStats({});
+        // NEMAŽEME štatistiky hneď - počkáme na nové dáta
+        // setMembersStats({});  // <-- ODSTRÁNENÉ
         
         const handleMembersUpdate = (members) => {
             setTeamRoster(members);
@@ -492,6 +494,7 @@ const TeamsOverviewApp = (props) => {
             setRosterUnsubscribe(() => unsubscribe);
         } catch (error) {
             setIsLoadingRoster(false);
+            setTeamRoster([]);
         }
         
         // Timeout pre prípad, že sa načítanie zasekne
