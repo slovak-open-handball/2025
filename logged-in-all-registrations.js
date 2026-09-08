@@ -1944,7 +1944,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
 
         const isEditingVolunteer = title.toLowerCase().includes('upraviť používateľa') && data?.role === 'volunteer';
 
-        const isNewTeamModal = title.includes('Pridať nový tím') && isNewEntry;
+        const isNewTeamModal = title === 'Pridať nový tím' || (title.includes('Pridať nový tím') && isNewEntry);
 
         // Inicializácia polí pre dobrovoľníka
         if (isEditingVolunteer) {
@@ -2018,6 +2018,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 setSelectedAccommodationType('');
                 setSelectedPackageName('');
                 setTeamTshirts([]);
+                setDisplayDialCode('');
+                setDisplayPhoneNumber('');
                 
                 // Nastavíme čisté dáta
                 const emptyTeamData = {
