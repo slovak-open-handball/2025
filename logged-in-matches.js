@@ -3359,20 +3359,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         return null;
     };
-
-    // Funkcia na extrahovanie písmena z názvu tímu
-    const extractLetterFromTeamName = (teamName) => {
-        if (!teamName) return null;
-        const trimmed = teamName.trim();
-        // Hľadáme posledný znak, ktorý je písmeno
-        for (let i = trimmed.length - 1; i >= 0; i--) {
-            const char = trimmed[i];
-            if (char >= 'A' && char <= 'Z') {
-                return char;
-            }
-        }
-        return null;
-    };
     
     // Funkcia na extrahovanie názvu skupiny z identifikátora
     const extractGroupNameFromIdentifier = (identifier) => {
