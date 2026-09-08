@@ -4200,7 +4200,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             selectedCategory && !hasDuplicateTeamNames && !withRepetitions && React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mt-1 ml-6' },
-                'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz'
+                'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz.'
             ),
 
             // Tlačidlá
