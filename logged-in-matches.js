@@ -3261,7 +3261,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     }, [selectedHallId, selectedDate, hallStartTime, match, matchDuration, allMatches, categories, groupsByCategory, blockedBreaks, existingMatches]);
 
     useEffect(() => {
-        if (isOpen && match) {    
+        if (isOpen && match) {
             // Kontrola, či ide o pavúkový zápas (matchType existuje)
             const isSpiderMatch = match.matchType && !match.isPlacementMatch;
             const isPlacementMatch = match.isPlacementMatch === true;
@@ -3271,234 +3271,346 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
                 const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
                 
-                // Extrahujeme identifikátory z názvov tímov (WQF01, WSF01, LSF01, atď.)
-                const extractMatchRef = (teamName) => {
-                    if (!teamName) return null;
-                    // Hľadáme vzory: WQF, WSF, LSF, W8F, W16F nasledované číslom
-                    const patterns = [
-                        { regex: /WQF(\d{2})/, type: 'štvrťfinále' },
-                        { regex: /WSF(\d{2})/, type: 'semifinále' },
-                        { regex: /LSF(\d{2})/, type: 'semifinále' },
-                        { regex: /W8F(\d{2})/, type: 'osemfinále' },
-                        { regex: /W16F(\d{2})/, type: 'šestnásťfinále' }
-                    ];
-                    
-                    for (const pattern of patterns) {
-                        const match = teamName.match(pattern.regex);
+                // ===== ZÁPASY O UMIESTNENIE (OKREM O 3. MIESTO) =====
+                // Používame nadstavbové skupiny z názvov tímov
+                if (isPlacementMatch && match.placementRank && match.placementRank !== 3) {
+                    // Extrahujeme skupiny z názvov tímov (formát: "Kategória 1A" -> skupina "A")
+                    const extractGroupFromTeamName = (teamName) => {
+                        if (!teamName) return null;
+                        // Hľadáme posledné písmeno (skupinu) na konci názvu tímu
+                        const match = teamName.match(/\s(\d+)([A-Z])$/);
                         if (match) {
-                            return {
-                                prefix: pattern.type,
-                                number: parseInt(match[1], 10),
-                                fullMatch: match[0]
-                            };
+                            return `skupina ${match[2]}`;
                         }
-                    }
-                    return null;
-                };
-                
-                const homeRef = extractMatchRef(homeTeamName);
-                const awayRef = extractMatchRef(awayTeamName);
-                
-                // Ak máme aspoň jeden odkaz na iný zápas
-                if (homeRef || awayRef) {
-                    // Získame všetky pavúkové zápasy v tej istej kategórii okrem aktuálneho
-                    const spiderMatches = allMatches.filter(m => 
-                        m.categoryId === match.categoryId && 
-                        m.id !== match.id &&
-                        m.matchType && 
-                        !m.isPlacementMatch
-                    );
+                        return null;
+                    };
                     
-                    // Filtrujeme len tie, ktoré súvisia s týmto zápasom
-                    // Pre každý odkaz nájdeme príslušné zápasy
+                    const homeGroup = extractGroupFromTeamName(homeTeamName);
+                    const awayGroup = extractGroupFromTeamName(awayTeamName);
+                    
+                    const targetGroups = new Set();
+                    if (homeGroup) targetGroups.add(homeGroup);
+                    if (awayGroup) targetGroups.add(awayGroup);
+                    
+                    if (targetGroups.size > 0) {
+                        // Získame všetky zápasy v rovnakej kategórii, ktoré patria do týchto skupín
+                        const related = allMatches.filter(m => 
+                            m.categoryId === match.categoryId && 
+                            m.id !== match.id &&
+                            m.groupName && 
+                            targetGroups.has(m.groupName) &&
+                            // Zahrnieme len zápasy, ktoré majú priradený čas (scheduledTime)
+                            m.scheduledTime
+                        );
+                        
+                        // Zoradíme podľa času
+                        related.sort((a, b) => {
+                            const timeA = a.scheduledTime.toDate().getTime();
+                            const timeB = b.scheduledTime.toDate().getTime();
+                            return timeA - timeB;
+                        });
+                        
+                        setRelatedMatches(related);
+                        setIsAdvancedGroup(true);
+                    } else {
+                        setRelatedMatches([]);
+                        setIsAdvancedGroup(false);
+                    }
+                    return;
+                }
+                
+                // ===== ZÁPAS O 3. MIESTO =====
+                // Používame pôvodnú logiku s WSF a LSF identifikátormi
+                if (isPlacementMatch && match.placementRank === 3) {
+                    // Extrahujeme identifikátory z názvov tímov (WSF01, LSF01, atď.)
+                    const extractMatchRef = (teamName) => {
+                        if (!teamName) return null;
+                        const patterns = [
+                            { regex: /WSF(\d{2})/, type: 'semifinále' },
+                            { regex: /LSF(\d{2})/, type: 'semifinále' }
+                        ];
+                        
+                        for (const pattern of patterns) {
+                            const match = teamName.match(pattern.regex);
+                            if (match) {
+                                return {
+                                    prefix: pattern.type,
+                                    number: parseInt(match[1], 10),
+                                    fullMatch: match[0]
+                                };
+                            }
+                        }
+                        return null;
+                    };
+                    
+                    const homeRef = extractMatchRef(homeTeamName);
+                    const awayRef = extractMatchRef(awayTeamName);
+                    
                     const related = [];
                     const processedIds = new Set();
                     
-                    // Funkcia na nájdenie zápasu podľa matchType
-                    const findMatchByType = (matchType) => {
-                        return spiderMatches.find(m => m.matchType === matchType);
-                    };
-                    
-                    // Funkcia na rekurzívne pridanie všetkých podradených zápasov
-                    const addRelatedMatches = (matchType, direction = 'down') => {
-                        if (!matchType) return;
-                        
-                        // Mapovanie matchType na podradené matchType
-                        const childMap = {
-                            'finále': ['semifinále 1', 'semifinále 2'],
-                            'semifinále 1': ['štvrťfinále 1', 'štvrťfinále 2'],
-                            'semifinále 2': ['štvrťfinále 3', 'štvrťfinále 4'],
-                            'štvrťfinále 1': ['osemfinále 1', 'osemfinále 2'],
-                            'štvrťfinále 2': ['osemfinále 3', 'osemfinále 4'],
-                            'štvrťfinále 3': ['osemfinále 5', 'osemfinále 6'],
-                            'štvrťfinále 4': ['osemfinále 7', 'osemfinále 8'],
-                            'osemfinále 1': ['šestnásťfinále 1', 'šestnásťfinále 2'],
-                            'osemfinále 2': ['šestnásťfinále 3', 'šestnásťfinále 4'],
-                            'osemfinále 3': ['šestnásťfinále 5', 'šestnásťfinále 6'],
-                            'osemfinále 4': ['šestnásťfinále 7', 'šestnásťfinále 8'],
-                            'osemfinále 5': ['šestnásťfinále 9', 'šestnásťfinále 10'],
-                            'osemfinále 6': ['šestnásťfinále 11', 'šestnásťfinále 12'],
-                            'osemfinále 7': ['šestnásťfinále 13', 'šestnásťfinále 14'],
-                            'osemfinále 8': ['šestnásťfinále 15', 'šestnásťfinále 16']
-                        };
-                        
-                        // Mapovanie matchType na nadradený matchType
-                        const parentMap = {
-                            'semifinále 1': 'finále',
-                            'semifinále 2': 'finále',
-                            'štvrťfinále 1': 'semifinále 1',
-                            'štvrťfinále 2': 'semifinále 1',
-                            'štvrťfinále 3': 'semifinále 2',
-                            'štvrťfinále 4': 'semifinále 2',
-                            'osemfinále 1': 'štvrťfinále 1',
-                            'osemfinále 2': 'štvrťfinále 1',
-                            'osemfinále 3': 'štvrťfinále 2',
-                            'osemfinále 4': 'štvrťfinále 2',
-                            'osemfinále 5': 'štvrťfinále 3',
-                            'osemfinále 6': 'štvrťfinále 3',
-                            'osemfinále 7': 'štvrťfinále 4',
-                            'osemfinále 8': 'štvrťfinále 4',
-                            'šestnásťfinále 1': 'osemfinále 1',
-                            'šestnásťfinále 2': 'osemfinále 1',
-                            'šestnásťfinále 3': 'osemfinále 2',
-                            'šestnásťfinále 4': 'osemfinále 2',
-                            'šestnásťfinále 5': 'osemfinále 3',
-                            'šestnásťfinále 6': 'osemfinále 3',
-                            'šestnásťfinále 7': 'osemfinále 4',
-                            'šestnásťfinále 8': 'osemfinále 4',
-                            'šestnásťfinále 9': 'osemfinále 5',
-                            'šestnásťfinále 10': 'osemfinále 5',
-                            'šestnásťfinále 11': 'osemfinále 6',
-                            'šestnásťfinále 12': 'osemfinále 6',
-                            'šestnásťfinále 13': 'osemfinále 7',
-                            'šestnásťfinále 14': 'osemfinále 7',
-                            'šestnásťfinále 15': 'osemfinále 8',
-                            'šestnásťfinále 16': 'osemfinále 8'
-                        };
-                        
-                        // Pridanie podradených zápasov (smerom nadol)
-                        if (direction === 'down' || direction === 'both') {
-                            const children = childMap[matchType] || [];
-                            for (const childType of children) {
-                                const childMatch = findMatchByType(childType);
-                                if (childMatch && !processedIds.has(childMatch.id)) {
-                                    related.push(childMatch);
-                                    processedIds.add(childMatch.id);
-                                    // Rekurzívne pridanie ďalších podradených
-                                    addRelatedMatches(childType, 'down');
-                                }
-                            }
-                        }
-                        
-                        // Pridanie nadradených zápasov (smerom nahor)
-                        if (direction === 'up' || direction === 'both') {
-                            const parentType = parentMap[matchType];
-                            if (parentType) {
-                                const parentMatch = findMatchByType(parentType);
-                                if (parentMatch && !processedIds.has(parentMatch.id)) {
-                                    related.push(parentMatch);
-                                    processedIds.add(parentMatch.id);
-                                    // Rekurzívne pridanie ďalších nadradených
-                                    addRelatedMatches(parentType, 'up');
-                                }
-                            }
-                        }
-                    };
-                    
-                    // Zistíme matchType aktuálneho zápasu
-                    const currentMatchType = match.matchType;
-                    
-                    // Ak máme matchType, pridáme všetky súvisiace zápasy (nahor aj nadol)
-                    if (currentMatchType) {
-                        // Pridáme podradené zápasy
-                        addRelatedMatches(currentMatchType, 'down');
-                        // Pridáme nadradené zápasy
-                        addRelatedMatches(currentMatchType, 'up');
-                    }
-                    
-                    // Ak máme špecifické odkazy na zápasy (WQF01, atď.), pridáme ich
-                    const matchRefs = [];
-                    if (homeRef) matchRefs.push(homeRef);
-                    if (awayRef) matchRefs.push(awayRef);
-                    
-                    for (const ref of matchRefs) {
-                        // Nájdeme matchType podľa prefixu a čísla
-                        let targetMatchType = null;
-                        if (ref.prefix === 'štvrťfinále') {
-                            targetMatchType = `štvrťfinále ${ref.number}`;
-                        } else if (ref.prefix === 'semifinále') {
-                            targetMatchType = `semifinále ${ref.number}`;
-                        } else if (ref.prefix === 'osemfinále') {
-                            targetMatchType = `osemfinále ${ref.number}`;
-                        } else if (ref.prefix === 'šestnásťfinále') {
-                            targetMatchType = `šestnásťfinále ${ref.number}`;
-                        }
-                        
-                        if (targetMatchType) {
-                            const targetMatch = findMatchByType(targetMatchType);
-                            if (targetMatch && !processedIds.has(targetMatch.id)) {
-                                related.push(targetMatch);
-                                processedIds.add(targetMatch.id);
-                                // Pridáme aj podradené a nadradené
-                                addRelatedMatches(targetMatchType, 'both');
-                            }
+                    if (homeRef) {
+                        const matchType = `semifinále ${homeRef.number}`;
+                        const foundMatch = allMatches.find(m => 
+                            m.categoryId === match.categoryId && 
+                            m.matchType === matchType
+                        );
+                        if (foundMatch && !processedIds.has(foundMatch.id)) {
+                            related.push(foundMatch);
+                            processedIds.add(foundMatch.id);
                         }
                     }
                     
-                    // Zoradíme zápasy podľa chronológie pavúka:
-                    // 1. najprv podradené (šestnásťfinále -> osemfinále -> štvrťfinále -> semifinále -> finále)
-                    // 2. potom aktuálny zápas
-                    // 3. potom nadradené (finále -> semifinále -> štvrťfinále -> osemfinále -> šestnásťfinále)
-                    const levelOrder = {
-                        'šestnásťfinále': 1,
-                        'osemfinále': 2,
-                        'štvrťfinále': 3,
-                        'semifinále': 4,
-                        'finále': 5,
-                        'o 3. miesto': 6
-                    };
-                    
-                    const getMatchLevel = (m) => {
-                        if (!m.matchType) return 0;
-                        for (const [key, value] of Object.entries(levelOrder)) {
-                            if (m.matchType.startsWith(key)) {
-                                return value;
-                            }
+                    if (awayRef) {
+                        const matchType = `semifinále ${awayRef.number}`;
+                        const foundMatch = allMatches.find(m => 
+                            m.categoryId === match.categoryId && 
+                            m.matchType === matchType
+                        );
+                        if (foundMatch && !processedIds.has(foundMatch.id)) {
+                            related.push(foundMatch);
+                            processedIds.add(foundMatch.id);
                         }
-                        return 0;
-                    };
+                    }
                     
-                    // Zoradenie: podľa úrovne (nižšia = skoršie kolo)
-                    related.sort((a, b) => {
-                        const levelA = getMatchLevel(a);
-                        const levelB = getMatchLevel(b);
-                        
-                        // Ak je aktuálny zápas v strede, podradené idú pred ním, nadradené po ňom
-                        const currentLevel = getMatchLevel(match);
-                        
-                        // Ak je levelA menší ako currentLevel, je to podradený (ide pred)
-                        if (levelA < currentLevel && levelB >= currentLevel) return -1;
-                        if (levelA >= currentLevel && levelB < currentLevel) return 1;
-                        
-                        // Inak podľa čísla v rámci rovnakej úrovne
-                        return levelA - levelB || a.matchType.localeCompare(b.matchType);
-                    });
-                    
-                    // Odstránime duplicity
-                    const uniqueRelated = related.filter((m, index, self) => 
-                        index === self.findIndex(t => t.id === m.id)
-                    );
-                    
-                    setRelatedMatches(uniqueRelated);
-                    setIsAdvancedGroup(true);
-                } else {
-                    setRelatedMatches([]);
-                    setIsAdvancedGroup(false);
+                    setRelatedMatches(related);
+                    setIsAdvancedGroup(related.length > 0);
+                    return;
                 }
+                
+                // ===== PAVÚKOVÉ ZÁPASY (matchType) =====
+                // Extrahujeme identifikátory z názvov tímov (WQF01, WSF01, LSF01, atď.)
+                if (isSpiderMatch) {
+                    const extractMatchRef = (teamName) => {
+                        if (!teamName) return null;
+                        // Hľadáme vzory: WQF, WSF, LSF, W8F, W16F nasledované číslom
+                        const patterns = [
+                            { regex: /WQF(\d{2})/, type: 'štvrťfinále' },
+                            { regex: /WSF(\d{2})/, type: 'semifinále' },
+                            { regex: /LSF(\d{2})/, type: 'semifinále' },
+                            { regex: /W8F(\d{2})/, type: 'osemfinále' },
+                            { regex: /W16F(\d{2})/, type: 'šestnásťfinále' }
+                        ];
+                        
+                        for (const pattern of patterns) {
+                            const match = teamName.match(pattern.regex);
+                            if (match) {
+                                return {
+                                    prefix: pattern.type,
+                                    number: parseInt(match[1], 10),
+                                    fullMatch: match[0]
+                                };
+                            }
+                        }
+                        return null;
+                    };
+                    
+                    const homeRef = extractMatchRef(homeTeamName);
+                    const awayRef = extractMatchRef(awayTeamName);
+                    
+                    // Ak máme aspoň jeden odkaz na iný zápas
+                    if (homeRef || awayRef) {
+                        // Získame všetky pavúkové zápasy v tej istej kategórii okrem aktuálneho
+                        const spiderMatches = allMatches.filter(m => 
+                            m.categoryId === match.categoryId && 
+                            m.id !== match.id &&
+                            m.matchType && 
+                            !m.isPlacementMatch
+                        );
+                        
+                        // Filtrujeme len tie, ktoré súvisia s týmto zápasom
+                        // Pre každý odkaz nájdeme príslušné zápasy
+                        const related = [];
+                        const processedIds = new Set();
+                        
+                        // Funkcia na nájdenie zápasu podľa matchType
+                        const findMatchByType = (matchType) => {
+                            return spiderMatches.find(m => m.matchType === matchType);
+                        };
+                        
+                        // Funkcia na rekurzívne pridanie všetkých podradených zápasov
+                        const addRelatedMatches = (matchType, direction = 'down') => {
+                            if (!matchType) return;
+                            
+                            // Mapovanie matchType na podradené matchType
+                            const childMap = {
+                                'finále': ['semifinále 1', 'semifinále 2'],
+                                'semifinále 1': ['štvrťfinále 1', 'štvrťfinále 2'],
+                                'semifinále 2': ['štvrťfinále 3', 'štvrťfinále 4'],
+                                'štvrťfinále 1': ['osemfinále 1', 'osemfinále 2'],
+                                'štvrťfinále 2': ['osemfinále 3', 'osemfinále 4'],
+                                'štvrťfinále 3': ['osemfinále 5', 'osemfinále 6'],
+                                'štvrťfinále 4': ['osemfinále 7', 'osemfinále 8'],
+                                'osemfinále 1': ['šestnásťfinále 1', 'šestnásťfinále 2'],
+                                'osemfinále 2': ['šestnásťfinále 3', 'šestnásťfinále 4'],
+                                'osemfinále 3': ['šestnásťfinále 5', 'šestnásťfinále 6'],
+                                'osemfinále 4': ['šestnásťfinále 7', 'šestnásťfinále 8'],
+                                'osemfinále 5': ['šestnásťfinále 9', 'šestnásťfinále 10'],
+                                'osemfinále 6': ['šestnásťfinále 11', 'šestnásťfinále 12'],
+                                'osemfinále 7': ['šestnásťfinále 13', 'šestnásťfinále 14'],
+                                'osemfinále 8': ['šestnásťfinále 15', 'šestnásťfinále 16']
+                            };
+                            
+                            // Mapovanie matchType na nadradený matchType
+                            const parentMap = {
+                                'semifinále 1': 'finále',
+                                'semifinále 2': 'finále',
+                                'štvrťfinále 1': 'semifinále 1',
+                                'štvrťfinále 2': 'semifinále 1',
+                                'štvrťfinále 3': 'semifinále 2',
+                                'štvrťfinále 4': 'semifinále 2',
+                                'osemfinále 1': 'štvrťfinále 1',
+                                'osemfinále 2': 'štvrťfinále 1',
+                                'osemfinále 3': 'štvrťfinále 2',
+                                'osemfinále 4': 'štvrťfinále 2',
+                                'osemfinále 5': 'štvrťfinále 3',
+                                'osemfinále 6': 'štvrťfinále 3',
+                                'osemfinále 7': 'štvrťfinále 4',
+                                'osemfinále 8': 'štvrťfinále 4',
+                                'šestnásťfinále 1': 'osemfinále 1',
+                                'šestnásťfinále 2': 'osemfinále 1',
+                                'šestnásťfinále 3': 'osemfinále 2',
+                                'šestnásťfinále 4': 'osemfinále 2',
+                                'šestnásťfinále 5': 'osemfinále 3',
+                                'šestnásťfinále 6': 'osemfinále 3',
+                                'šestnásťfinále 7': 'osemfinále 4',
+                                'šestnásťfinále 8': 'osemfinále 4',
+                                'šestnásťfinále 9': 'osemfinále 5',
+                                'šestnásťfinále 10': 'osemfinále 5',
+                                'šestnásťfinále 11': 'osemfinále 6',
+                                'šestnásťfinále 12': 'osemfinále 6',
+                                'šestnásťfinále 13': 'osemfinále 7',
+                                'šestnásťfinále 14': 'osemfinále 7',
+                                'šestnásťfinále 15': 'osemfinále 8',
+                                'šestnásťfinále 16': 'osemfinále 8'
+                            };
+                            
+                            // Pridanie podradených zápasov (smerom nadol)
+                            if (direction === 'down' || direction === 'both') {
+                                const children = childMap[matchType] || [];
+                                for (const childType of children) {
+                                    const childMatch = findMatchByType(childType);
+                                    if (childMatch && !processedIds.has(childMatch.id)) {
+                                        related.push(childMatch);
+                                        processedIds.add(childMatch.id);
+                                        // Rekurzívne pridanie ďalších podradených
+                                        addRelatedMatches(childType, 'down');
+                                    }
+                                }
+                            }
+                            
+                            // Pridanie nadradených zápasov (smerom nahor)
+                            if (direction === 'up' || direction === 'both') {
+                                const parentType = parentMap[matchType];
+                                if (parentType) {
+                                    const parentMatch = findMatchByType(parentType);
+                                    if (parentMatch && !processedIds.has(parentMatch.id)) {
+                                        related.push(parentMatch);
+                                        processedIds.add(parentMatch.id);
+                                        // Rekurzívne pridanie ďalších nadradených
+                                        addRelatedMatches(parentType, 'up');
+                                    }
+                                }
+                            }
+                        };
+                        
+                        // Zistíme matchType aktuálneho zápasu
+                        const currentMatchType = match.matchType;
+                        
+                        // Ak máme matchType, pridáme všetky súvisiace zápasy (nahor aj nadol)
+                        if (currentMatchType) {
+                            // Pridáme podradené zápasy
+                            addRelatedMatches(currentMatchType, 'down');
+                            // Pridáme nadradené zápasy
+                            addRelatedMatches(currentMatchType, 'up');
+                        }
+                        
+                        // Ak máme špecifické odkazy na zápasy (WQF01, atď.), pridáme ich
+                        const matchRefs = [];
+                        if (homeRef) matchRefs.push(homeRef);
+                        if (awayRef) matchRefs.push(awayRef);
+                        
+                        for (const ref of matchRefs) {
+                            // Nájdeme matchType podľa prefixu a čísla
+                            let targetMatchType = null;
+                            if (ref.prefix === 'štvrťfinále') {
+                                targetMatchType = `štvrťfinále ${ref.number}`;
+                            } else if (ref.prefix === 'semifinále') {
+                                targetMatchType = `semifinále ${ref.number}`;
+                            } else if (ref.prefix === 'osemfinále') {
+                                targetMatchType = `osemfinále ${ref.number}`;
+                            } else if (ref.prefix === 'šestnásťfinále') {
+                                targetMatchType = `šestnásťfinále ${ref.number}`;
+                            }
+                            
+                            if (targetMatchType) {
+                                const targetMatch = findMatchByType(targetMatchType);
+                                if (targetMatch && !processedIds.has(targetMatch.id)) {
+                                    related.push(targetMatch);
+                                    processedIds.add(targetMatch.id);
+                                    // Pridáme aj podradené a nadradené
+                                    addRelatedMatches(targetMatchType, 'both');
+                                }
+                            }
+                        }
+                        
+                        // Zoradíme zápasy podľa chronológie pavúka
+                        const levelOrder = {
+                            'šestnásťfinále': 1,
+                            'osemfinále': 2,
+                            'štvrťfinále': 3,
+                            'semifinále': 4,
+                            'finále': 5,
+                            'o 3. miesto': 6
+                        };
+                        
+                        const getMatchLevel = (m) => {
+                            if (!m.matchType) return 0;
+                            for (const [key, value] of Object.entries(levelOrder)) {
+                                if (m.matchType.startsWith(key)) {
+                                    return value;
+                                }
+                            }
+                            return 0;
+                        };
+                        
+                        // Zoradenie: podľa úrovne (nižšia = skoršie kolo)
+                        related.sort((a, b) => {
+                            const levelA = getMatchLevel(a);
+                            const levelB = getMatchLevel(b);
+                            
+                            // Ak je aktuálny zápas v strede, podradené idú pred ním, nadradené po ňom
+                            const currentLevel = getMatchLevel(match);
+                            
+                            // Ak je levelA menší ako currentLevel, je to podradený (ide pred)
+                            if (levelA < currentLevel && levelB >= currentLevel) return -1;
+                            if (levelA >= currentLevel && levelB < currentLevel) return 1;
+                            
+                            // Inak podľa čísla v rámci rovnakej úrovne
+                            return levelA - levelB || a.matchType.localeCompare(b.matchType);
+                        });
+                        
+                        // Odstránime duplicity
+                        const uniqueRelated = related.filter((m, index, self) => 
+                            index === self.findIndex(t => t.id === m.id)
+                        );
+                        
+                        setRelatedMatches(uniqueRelated);
+                        setIsAdvancedGroup(true);
+                    } else {
+                        setRelatedMatches([]);
+                        setIsAdvancedGroup(false);
+                    }
+                    return;
+                }
+                
+                // ===== PRÍPAD, KEĎ NIE JE PAVÚKOVÝ ZÁPAS ANI PLACEMENT MATCH =====
+                setRelatedMatches([]);
+                setIsAdvancedGroup(false);
                 return;
             }
             
-            // Pôvodná logika pre nadstavbové skupiny (zostáva zachovaná)
+            // ===== PÔVODNÁ LOGIKA PRE NADSTAVBOVÉ SKUPINY =====
             if (!groupsByCategory) {
                 setRelatedMatches([]);
                 setIsAdvancedGroup(false);
