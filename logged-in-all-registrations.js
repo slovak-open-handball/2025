@@ -3468,52 +3468,53 @@ const openEditModal = (data, title, targetDocRef = null, originalDataPath = '', 
     setCurrentTeamForNewMember(null);
   }, [currentTeamForNewMember, db, openEditModal, setUserNotificationMessage]);
 
-  const allTeamsFlattened = React.useMemo(() => {
-      if (!showUsers && showTeams) {
-          let teams = [];
-          filteredUsers.forEach(u => {
-              if (u.teams && Object.keys(u.teams).length > 0) {
-                  Object.entries(u.teams).forEach(([category, teamListRaw]) => {
-                      const teamList = Array.isArray(teamListRaw) ? teamListRaw : [];
-                      teamList.forEach((team, teamIndex) => {
-                          let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
-                          let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
-                          let menDriversCount = team.driverDetailsMale?.length || 0; 
-                          let womenDriversCount = team.driverDetailsFemale?.length || 0; 
-                          let playersCount = team.playerDetails?.length || 0;
+    const allTeamsFlattened = React.useMemo(() => {
+        let teams = [];
+        // V režime both a teams-only zbierame tímy
+        if ((showUsers && showTeams) || (!showUsers && showTeams)) {
+            filteredUsers.forEach(u => {
+                if (u.teams && Object.keys(u.teams).length > 0) {
+                    Object.entries(u.teams).forEach(([category, teamListRaw]) => {
+                        const teamList = Array.isArray(teamListRaw) ? teamListRaw : [];
+                        teamList.forEach((team, teamIndex) => {
+                            let menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                            let womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                            let menDriversCount = team.driverDetailsMale?.length || 0; 
+                            let womenDriversCount = team.driverDetailsFemale?.length || 0; 
+                            let playersCount = team.playerDetails?.length || 0;
     
-                          const teamTshirtsMap = new Map(
-                            (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
-                          );
+                            const teamTshirtsMap = new Map(
+                                (team.tshirts || []).map(t => [String(t.size).trim(), t.quantity || 0])
+                            );
     
-                          teams.push({
-                              ...team,
-                              _userId: u.id,
-                              _category: category,
-                              _teamIndex: teamIndex,
-                              _registeredBy: `${u.firstName} ${u.lastName}`,
-                              _menTeamMembersCount: menTeamMembersCount,
-                              _womenTeamMembersCount: womenTeamMembersCount,
-                              _menDriversCount: menDriversCount, 
-                              _womenDriversCount: womenDriversCount, 
-                              _players: playersCount,
-                              _teamTshirtsMap: teamTshirtsMap,
-                              _privateData: u._privateData
-                          });
-                      });
-                  });
-              }
-          });
-          return teams.sort((a, b) => {
-              if (a._category !== b._category) {
-                  return a._category.localeCompare(b._category);
-              }
-              const nameA = (a.teamName || '').toLowerCase();
-              const nameB = (b.teamName || '').toLowerCase();
-              return nameA.localeCompare(nameB);
-          });
-      }
-      return [];
+                            teams.push({
+                                ...team,
+                                _userId: u.id,
+                                _category: category,
+                                _teamIndex: teamIndex,
+                                _registeredBy: `${u.firstName} ${u.lastName}`,
+                                _menTeamMembersCount: menTeamMembersCount,
+                                _womenTeamMembersCount: womenTeamMembersCount,
+                                _menDriversCount: menDriversCount, 
+                                _womenDriversCount: womenDriversCount, 
+                                _players: playersCount,
+                                _teamTshirtsMap: teamTshirtsMap,
+                                _privateData: u._privateData
+                            });
+                        });
+                    });
+                }
+            });
+            return teams.sort((a, b) => {
+                if (a._category !== b._category) {
+                    return a._category.localeCompare(b._category);
+                }
+                const nameA = (a.teamName || '').toLowerCase();
+                const nameB = (b.teamName || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+        }
+        return [];
     }, [filteredUsers, showUsers, showTeams]);
 
     const duplicateTeamIds = React.useMemo(() => {
