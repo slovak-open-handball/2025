@@ -3139,6 +3139,19 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('💡 currentMatch.categoryId:', match.categoryId);
             console.log('💡 groupsByCategory (props):', groupsByCategory);
             console.log('💡 groupsByCategory keys:', Object.keys(groupsByCategory || {}));
+
+            if (!match.groupName) {
+                const homeGroup = extractGroupNameFromIdentifier(match.homeTeamIdentifier);
+                const awayGroup = extractGroupNameFromIdentifier(match.awayTeamIdentifier);
+            
+                if (homeGroup) {
+                    match.groupName = homeGroup;
+                    console.log('✅ Extrahovaný groupName z domáceho tímu:', homeGroup);
+                } else if (awayGroup) {
+                    match.groupName = awayGroup;
+                    console.log('✅ Extrahovaný groupName z hosťovského tímu:', awayGroup);
+                }
+            }
             
             // 🔥 BEZPEČNOSTNÁ KONTROLA pre groupsByCategory
             if (!groupsByCategory) {
@@ -3157,6 +3170,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     if (parts.length < 2) return null;
                     const groupAndOrder = parts[parts.length - 1];
                     
+                    // Extrahujeme písmená z groupAndOrder (napr. z "A1" extrahujeme "A")
                     const matchResult = groupAndOrder.match(/^([A-Za-z]+)(\d+)$/);
                     if (matchResult) {
                         return `skupina ${matchResult[1]}`;
