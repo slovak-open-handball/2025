@@ -6754,8 +6754,8 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // PRIDANÉ: Pre každý zápas zistíme, ktoré tímy sú v konflikte, farby ubytovní A NOVÉ POLE totalMembersCount
         const filteredWithColors = filteredMatches.map(match => {
-            const homeInConflict = checkTeamConflicts(match.homeTeamIdentifier, match, matches, categories);
-            const awayInConflict = checkTeamConflicts(match.awayTeamIdentifier, match, matches, categories);
+            const homeInConflict = checkTeamConflicts(homeTeamName, match, matches, categories);
+            const awayInConflict = checkTeamConflicts(awayTeamName, match, matches, categories);
     
             // Získanie farieb ubytovní pre tímy
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
