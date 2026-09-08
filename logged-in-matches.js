@@ -37,7 +37,7 @@ const getLocalDateStr = (date) => {
 // Funkcia na extrakciu posledného písmena z identifikátora tímu
 // Napr. z "U10 A1" vráti "A", z "U12 B3" vráti "B"
 const extractGroupLetterFromTeamName = (teamName) => {
-    if (!teamIdentifier) return '';
+    if (!teamName) return '';
     
     const parts = teamIdentifier.split(' ');
     if (parts.length < 2) return '';
