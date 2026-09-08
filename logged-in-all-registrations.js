@@ -5671,6 +5671,24 @@ const clearFilter = (column) => {
 
     const formatTableCellValue = (value, columnId, userObject) => {
         if (value === null || value === undefined || value === "") return '-';
+
+        if (columnId === 'teamName' && allTeams && value) {
+            const normalizedTeamName = value.trim().replace(/\s+/g, ' ').toLowerCase();
+            let duplicateCount = 0;
+            allTeams.forEach(team => {
+                const teamName = team.teamName || '';
+                if (teamName) {
+                    const normName = teamName.trim().replace(/\s+/g, ' ').toLowerCase();
+                    if (normName === normalizedTeamName) {
+                        duplicateCount++;
+                    }
+                }
+            });
+            if (duplicateCount > 1) {
+                return React.createElement('span', { className: 'text-red-600 font-bold' }, value);
+            }
+            return value;
+        }
       
         if (columnId === 'role') {
           switch (value) {
