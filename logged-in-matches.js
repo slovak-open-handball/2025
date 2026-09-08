@@ -3880,7 +3880,7 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
-// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom
+// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom + PRIDANÁ KONTROLA DUPLICÍT
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
@@ -3892,6 +3892,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     const [carryOverPoints, setCarryOverPoints] = useState(false);
     // Nový stav pre informáciu, či existuje nadstavbová skupina s carryOverPoints
     const [hasAdvancedGroupWithCarryOver, setHasAdvancedGroupWithCarryOver] = useState(false);
+    // NOVÝ STAV pre duplicitné názvy tímov
+    const [hasDuplicateTeamNames, setHasDuplicateTeamNames] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
@@ -3902,6 +3904,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setSelectedGroupType('');
             setCarryOverPoints(false);
             setHasAdvancedGroupWithCarryOver(false);
+            setHasDuplicateTeamNames(false);
         }
     }, [isOpen]);
 
@@ -3909,6 +3912,25 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
+
+    // Funkcia na kontrolu duplicitných názvov tímov v kategórii
+    const checkForDuplicateTeamNames = (categoryId) => {
+        if (!categoryId || !window.__teamManagerData?.allTeams) return false;
+        
+        const category = categories.find(c => c.id === categoryId);
+        if (!category) return false;
+        
+        // Získame všetky tímy v tejto kategórii
+        const teamsInCategory = window.__teamManagerData.allTeams.filter(t => 
+            t.category === category.name
+        );
+        
+        // Skontrolujeme duplicitné názvy tímov
+        const teamNames = teamsInCategory.map(t => t.teamName);
+        const uniqueNames = new Set(teamNames);
+        
+        return teamNames.length !== uniqueNames.size;
+    };
 
     // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
@@ -3928,13 +3950,18 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setHasAdvancedGroupWithCarryOver(hasAdvanced && carryOver);
             setCarryOverPoints(carryOver);
             
-            console.log(`Kategória ${category?.name} - nadstavbová skupina existuje: ${hasAdvanced}, carryOverPoints: ${carryOver}`);
+            // NOVÉ: Skontrolujeme duplicitné názvy tímov v tejto kategórii
+            const hasDuplicates = checkForDuplicateTeamNames(selectedCategory);
+            setHasDuplicateTeamNames(hasDuplicates);
+            
+            console.log(`Kategória ${category?.name} - nadstavbová skupina existuje: ${hasAdvanced}, carryOverPoints: ${carryOver}, duplicitné názvy: ${hasDuplicates}`);
         } else {
             setAvailableGroups([]);
             setSelectedGroup('');
             setSelectedGroupType('');
             setHasAdvancedGroupWithCarryOver(false);
             setCarryOverPoints(false);
+            setHasDuplicateTeamNames(false);
         }
     }, [selectedCategory, groupsByCategory, categories]);
 
@@ -4017,7 +4044,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     'select',
                     {
                         value: selectedCategory,
-                        onChange: (e) => setSelectedCategory(e.target.value),
+                        onChange: (e) => {
+                            setSelectedCategory(e.target.value);
+                            setSelectedGroup('');
+                            setSelectedGroupType('');
+                        },
                         className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     },
                     React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
@@ -4027,8 +4058,41 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Výber skupiny
-            selectedCategory && React.createElement(
+            // NOVÁ ČASŤ: Kontrola duplicitných názvov tímov - ZOBRAZÍ SA PRED VŠETKÝM OSTATNÝM
+            selectedCategory && hasDuplicateTeamNames && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-lg' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-3' },
+                    React.createElement(
+                        'i',
+                        { className: 'fa-solid fa-triangle-exclamation text-red-600 text-xl mt-0.5 flex-shrink-0' }
+                    ),
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement(
+                            'h4',
+                            { className: 'font-bold text-red-700 text-base' },
+                            'Duplicitné názvy tímov'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-sm text-red-600 mt-1' },
+                            'Vo vybranej kategórii sa nachádzajú tímy s duplicitným názvom. Zápasy nie je možné vygenerovať, kým nebudú názvy tímov unikátne.'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-red-500 mt-2' },
+                            'Prosím, opravte duplicitné názvy tímov v správe tímov a skúste to znova.'
+                        )
+                    )
+                )
+            ),
+
+            // Výber skupiny - ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
+            selectedCategory && !hasDuplicateTeamNames && React.createElement(
                 'div',
                 { className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
@@ -4075,7 +4139,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             // ZMENENÉ: Zobrazujeme INFO o stave prenosu zápasov pre:
             // 1. Vybranú nadstavbovú skupinu
             // 2. Celú kategóriu (žiadna skupina), ak existuje nadstavbová skupina a je zapnuté carryOverPoints
-            showCarryOverInfo && React.createElement(
+            // ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
+            selectedCategory && !hasDuplicateTeamNames && showCarryOverInfo && React.createElement(
                 'div', 
                 { 
                     className: `mb-6 p-3 rounded-lg border ${
@@ -4125,7 +4190,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             ),
 
             // Informácia o jedinečných dvojiciach (len ak nie je zaškrtnuté "s opakovaním")
-            !withRepetitions && React.createElement(
+            // ZOBRAZÍ SA LEN AK NIE SÚ DUPLICITNÉ NÁZVY
+            selectedCategory && !hasDuplicateTeamNames && !withRepetitions && React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mt-1 ml-6' },
                 'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz'
@@ -4155,9 +4221,9 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             });
                             onClose();
                         },
-                        disabled: !selectedCategory,
+                        disabled: !selectedCategory || hasDuplicateTeamNames,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
-                            selectedCategory 
+                            selectedCategory && !hasDuplicateTeamNames
                                 ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
                                 : 'bg-white border-2 border-green-600 text-green-600 cursor-not-allowed'
                         }`
