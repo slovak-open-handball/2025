@@ -180,7 +180,7 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     return unsubscribe;
 };
 
-// Pridajte túto funkciu do kódu (napríklad pred TeamsOverviewApp)
+// Všeobecná debugovacia funkcia pre zápasy
 const debugMatches = async () => {
     if (!window.db) {
         console.log('❌ window.db nie je dostupné');
@@ -254,45 +254,16 @@ const debugMatches = async () => {
             console.log('─────────────────────────────────────────────────────────────');
         });
         
-        // Skontrolujeme, či existuje zápas s tímom Tatran Prešov A (po konverzii)
-        console.log('🔍 Hľadám zápasy s tímom "Tatran Prešov A" (po konverzii)...');
+        // Hľadáme zápasy pre konkrétny tím (príklad - možno upraviť podľa potreby)
+        console.log('🔍 Hľadám zápasy s tímom...');
         let found = false;
-        querySnapshot.forEach((doc) => {
-            const match = doc.data();
-            let homeConverted = match.homeTeamIdentifier;
-            let awayConverted = match.awayTeamIdentifier;
-            
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                try {
-                    if (match.homeTeamIdentifier) {
-                        const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                        if (converted) homeConverted = converted;
-                    }
-                } catch (e) {}
-                try {
-                    if (match.awayTeamIdentifier) {
-                        const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                        if (converted) awayConverted = converted;
-                    }
-                } catch (e) {}
-            }
-            
-            if (homeConverted === 'Tatran Prešov A' || awayConverted === 'Tatran Prešov A') {
-                console.log(`✅ Nájdený zápas: ${homeConverted} vs ${awayConverted}`);
-                found = true;
-            }
-        });
+        const searchTeamName = window.debugSearchTeamName || '';
         
-        if (!found) {
-            console.log('❌ Žiadny zápas s tímom "Tatran Prešov A" nebol nájdený.');
-            console.log('💡 Skúste hľadať pod iným názvom (napr. "Tatran Prešov" bez sufixu)');
-            
-            // Skúsime nájsť podobné názvy (po konverzii)
-            console.log('🔍 Hľadám podobné názvy (po konverzii)...');
+        if (searchTeamName) {
             querySnapshot.forEach((doc) => {
                 const match = doc.data();
-                let homeConverted = match.homeTeamIdentifier || '';
-                let awayConverted = match.awayTeamIdentifier || '';
+                let homeConverted = match.homeTeamIdentifier;
+                let awayConverted = match.awayTeamIdentifier;
                 
                 if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                     try {
@@ -309,10 +280,45 @@ const debugMatches = async () => {
                     } catch (e) {}
                 }
                 
-                if (homeConverted.includes('Tatran') || awayConverted.includes('Tatran')) {
-                    console.log(`   Nájdený podobný zápas: ${homeConverted} vs ${awayConverted}`);
+                if (homeConverted === searchTeamName || awayConverted === searchTeamName) {
+                    console.log(`✅ Nájdený zápas: ${homeConverted} vs ${awayConverted}`);
+                    found = true;
                 }
             });
+            
+            if (!found) {
+                console.log(`❌ Žiadny zápas s tímom "${searchTeamName}" nebol nájdený.`);
+                console.log('💡 Skúste hľadať pod iným názvom (napr. bez sufixu)');
+                
+                // Skúsime nájsť podobné názvy (po konverzii)
+                console.log('🔍 Hľadám podobné názvy (po konverzii)...');
+                querySnapshot.forEach((doc) => {
+                    const match = doc.data();
+                    let homeConverted = match.homeTeamIdentifier || '';
+                    let awayConverted = match.awayTeamIdentifier || '';
+                    
+                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        try {
+                            if (match.homeTeamIdentifier) {
+                                const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                                if (converted) homeConverted = converted;
+                            }
+                        } catch (e) {}
+                        try {
+                            if (match.awayTeamIdentifier) {
+                                const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+                                if (converted) awayConverted = converted;
+                            }
+                        } catch (e) {}
+                    }
+                    
+                    if (homeConverted.includes(searchTeamName) || awayConverted.includes(searchTeamName)) {
+                        console.log(`   Nájdený podobný zápas: ${homeConverted} vs ${awayConverted}`);
+                    }
+                });
+            }
+        } else {
+            console.log('ℹ️ Nastavte window.debugSearchTeamName pre vyhľadávanie konkrétneho tímu');
         }
         
         console.log('✅ DEBUG dokončený');
@@ -330,7 +336,7 @@ setTimeout(() => {
 // Pridáme funkciu do window objektu
 window.debugMatches = debugMatches;
 
-// Pridajte túto funkciu do kódu (napríklad pred TeamsOverviewApp)
+// Všeobecná debugovacia funkcia pre udalosti
 const debugMatchEvents = async () => {
     if (!window.db) {
         console.log('❌ window.db nie je dostupné');
@@ -545,7 +551,7 @@ const TeamsOverviewApp = (props) => {
         return identifier;
     };
 
-    // Načítame štatistiky - použitá logika z logged-in-matches-hall.js s logovaním a konverziou názvov
+    // Načítame štatistiky - všeobecná logika
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
