@@ -2961,6 +2961,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const occupiedIntervals = [];
         
+        // 🔥 PRIDAJTE: Získame VŠETKY zápasy pre túto halu a deň (BEZ FILTRA)
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
@@ -2977,13 +2978,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             return timeA - timeB;
         });
         
-        allMatchesForHallAndDay.forEach(match => {
-            if (!match.scheduledTime) return;
+        // PRIDÁME VŠETKY ZÁPASY (BEZ OHLADU NA SKUPINU)
+        allMatchesForHallAndDay.forEach(matchItem => {
+            if (!matchItem.scheduledTime) return;
             
-            const matchStart = match.scheduledTime.toDate();
+            const matchStart = matchItem.scheduledTime.toDate();
             const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
             
-            const matchCategory = categories.find(c => c.name === match.categoryName);
+            const matchCategory = categories.find(c => c.name === matchItem.categoryName);
             let matchDuration = 0;
             let matchBreak = 5;
             
@@ -3001,10 +3003,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 start: matchStartMinutes,
                 end: matchEndWithBreakMinutes,
                 type: 'match',
-                id: match.id
+                id: matchItem.id
             });
         });
         
+        // PRIDÁME ZABLOKOVANÉ ČASY
         if (blockedBreaks) {
             Object.keys(blockedBreaks).forEach(key => {
                 if (key.startsWith(`${hallId}_${date}_`)) {
@@ -3026,42 +3029,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             });
         }
-    
-        if (isAdvancedGroup && relatedMatches.length > 0) {
-            const relatedMatchesForDay = relatedMatches.filter(m => {
-                if (!m.scheduledTime) return false;
-                const matchDate = m.scheduledTime.toDate();
-                const matchDateStr = getLocalDateStr(matchDate);
-                return matchDateStr === date;
-            });
-    
-            relatedMatchesForDay.forEach(m => {
-                const matchStart = m.scheduledTime.toDate();
-                const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
-                
-                const matchCategory = categories.find(c => c.name === m.categoryName);
-                let matchDuration = 0;
-                let matchBreak = 5;
-                
-                if (matchCategory) {
-                    const periods = matchCategory.periods || 2;
-                    const periodDuration = matchCategory.periodDuration || 20;
-                    const breakDuration = matchCategory.breakDuration || 2;
-                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                    matchBreak = matchCategory.matchBreak || 5;
-                }
-                
-                const matchEndWithBreakMinutes = matchStartMinutes + matchDuration + matchBreak;
-                
-                occupiedIntervals.push({
-                    start: matchStartMinutes,
-                    end: matchEndWithBreakMinutes,
-                    type: 'related_match',
-                    id: m.id,
-                    hallId: m.hallId
-                });
-            });
-        }
+        
+        // 🔥 ODSTRÁNENÁ KONTROLA relatedMatches - už ich nepotrebujeme, pretože používame VŠETKY zápasy
         
         occupiedIntervals.sort((a, b) => a.start - b.start);
         
@@ -3084,7 +3053,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             let candidateTime = startFromMinutes;
             let found = false;
             let attempts = 0;
-            const maxAttempts = 100;
+            const maxAttempts = 200;
             
             while (!found && attempts < maxAttempts) {
                 attempts++;
@@ -3352,7 +3321,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
-    // 🔥 UPRAVENÝ useEffect pre loadHallStartTime - berie do úvahy súvisiace zápasy
     useEffect(() => {
         const loadHallStartTime = async () => {
             if (selectedHallId && selectedDate && window.db) {
@@ -3393,6 +3361,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
                     }
                     
+                    // 🔥 VÝPOČET NAVRHOVANÉHO ČASU - používa VŠETKY zápasy, nie len relatedMatches
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTime(
                             selectedHallId,
@@ -3401,11 +3370,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             startTime,
                             matchDuration,
                             blockedBreaks,
-                            allMatches
+                            allMatches  // ← ODOVZDÁME VŠETKY ZÁPASY
                         );
                         
                         if (firstAvailable) {
                             setSuggestedTime(firstAvailable);
+                        } else {
+                            // Ak nie je žiadny voľný čas, nastavíme chybu
+                            setTimeError('V tento deň nie je žiadny voľný čas pre tento zápas. Skúste iný deň alebo halu.');
+                            setSuggestedTime(null);
                         }
                     }
                     
@@ -4069,6 +4042,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
                         timeError
+                    ),
+
+                    !selectedTime && !suggestedTime && hallStartTime && matchDuration > 0 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-orange-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-clock' }),
+                        'V tento deň nie je voľný čas pre tento zápas. Vyberte iný deň alebo halu.'
                     ),
                     
                     overlappingMatches.length > 0 && React.createElement(
