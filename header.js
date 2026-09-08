@@ -4,7 +4,6 @@ import { countryDialCodes } from "./countryDialCodes.js";
 
 
 /*
-
 // ---------------------------------------------------------------------------------------------------------------- ZAČIATOK približenie stranky
 
 // true = zapnutá kontrola, overlay sa zobrazuje, vyžaduje sa zmenšenie priblíženia na 80% alebo menej
@@ -431,8 +430,6 @@ window.isMobileDevice = isMobileDevice;
 
 
 
-
-
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null;
 let unsubscribeFromUserSettings = null;
@@ -813,10 +810,10 @@ const updateNavigationLinks = () => {
             isVisible = teamsInGroupsConfig && teamsInGroupsConfig.visible === true;
         }
         
-        // ŠPECIÁLNE PRAVIDLO: Štatistiky majú rovnakú viditeľnosť ako Zápasy
+        // ŠPECIÁLNE PRAVIDLO: Štatistiky majú rovnakú viditeľnosť ako Súpisky (rosters)
         if (pageId === 'statistics') {
-            const matchesConfig = pagesVisibility['matches'];
-            isVisible = matchesConfig && matchesConfig.visible === true;
+            const rostersConfig = pagesVisibility['rosters'];
+            isVisible = rostersConfig && rostersConfig.visible === true;
         }
         
         if (isVisible) {
@@ -879,7 +876,23 @@ const checkCurrentPageAccess = () => {
         return true;
     }
     
-    const pageConfig = pagesVisibility[currentPage];
+    // ŠPECIÁLNE PRAVIDLO: Pre stránku statistics používame viditeľnosť rosters
+    let pageId = currentPage;
+    if (currentPage === 'statistics') {
+        // Získame viditeľnosť z rosters
+        const rostersConfig = pagesVisibility['rosters'];
+        if (rostersConfig) {
+            if (rostersConfig.visible === false) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            return true;
+        }
+        // Ak rosters nie je v databáze, predpokladáme že je viditeľný
+        return true;
+    }
+    
+    const pageConfig = pagesVisibility[pageId];
     
     // Ak stránka nie je v databáze, predpokladáme že je viditeľná
     if (!pageConfig) {
