@@ -3111,7 +3111,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return null;
     };
 
-    // 🔥 NOVÝ useEffect: Načítanie súvisiacich zápasov pri otvorení modálu
+    // 🔥 NOVÝ useEffect: Načítanie súvisiacich zápasov pri otvorení modálu A PRI ZMENE VYBRANÉHO DÁTUMU
     useEffect(() => {
         if (isOpen && match) {
             const related = getRelatedMatchesForAdvancedGroup(match);
@@ -3128,8 +3128,137 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     console.log(`  ${mHome} vs ${mAway} (hala: ${hallName}, čas: ${dateStr})`);
                 });
             }
+            
+            // 🔥 PRIDANÉ: Po načítaní súvisiacich zápasov spustíme kontrolu konfliktov
+            // To zabezpečí, že pri zmene dátumu sa okamžite zobrazia konflikty
+            if (selectedTime && matchDuration > 0) {
+                // Manuálne spustíme kontrolu konfliktov
+                const [newHours, newMinutes] = selectedTime.split(':').map(Number);
+                const newStartMinutes = newHours * 60 + newMinutes;
+                
+                const newCategory = categories.find(c => c.name === match?.categoryName);
+                const newMatchBreak = newCategory?.matchBreak || 5;
+                const newEndMinutes = newStartMinutes + matchDuration + newMatchBreak;
+                
+                // Kontrola konfliktov s existujúcimi zápasmi v rovnakej hale
+                const overlapping = existingMatches.filter(existingMatch => {
+                    if (!existingMatch.scheduledTime) return false;
+                    
+                    const existingDate = existingMatch.scheduledTime.toDate();
+                    const existingHours = existingDate.getHours();
+                    const existingMinutes = existingDate.getMinutes();
+                    const existingStartMinutes = existingHours * 60 + existingMinutes;
+                    
+                    const existingCategory = categories.find(c => c.name === existingMatch.categoryName);
+                    let existingDuration = 0;
+                    let existingMatchBreak = 5;
+                    
+                    if (existingCategory) {
+                        const periods = existingCategory.periods || 2;
+                        const periodDuration = existingCategory.periodDuration || 20;
+                        const breakDuration = existingCategory.breakDuration || 2;
+                        existingDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                        existingMatchBreak = existingCategory.matchBreak || 5;
+                    }
+                    
+                    const existingEndMinutes = existingStartMinutes + existingDuration + existingMatchBreak;
+                    
+                    return (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes);
+                });
+                
+                // Kontrola konfliktov so súvisiacimi zápasmi
+                let relatedConflicts = [];
+                if (isAdvancedGroup && related.length > 0) {
+                    const selectedDateObj = getLocalDateFromStr(selectedDate);
+                    const selectedDateStr = selectedDateObj ? getLocalDateStr(selectedDateObj) : null;
+                    
+                    // 1. Časové prekrývanie v rovnaký deň
+                    const overlappingRelated = related.filter(relatedMatch => {
+                        if (!relatedMatch.scheduledTime) return false;
+                        
+                        const relatedDate = relatedMatch.scheduledTime.toDate();
+                        const relatedDateStr = getLocalDateStr(relatedDate);
+                        
+                        if (selectedDateStr !== relatedDateStr) return false;
+                        
+                        const relatedHours = relatedDate.getHours();
+                        const relatedMinutes = relatedDate.getMinutes();
+                        const relatedStartMinutes = relatedHours * 60 + relatedMinutes;
+                        
+                        const relatedCategory = categories.find(c => c.name === relatedMatch.categoryName);
+                        let relatedDuration = 0;
+                        let relatedMatchBreak = 5;
+                        
+                        if (relatedCategory) {
+                            const periods = relatedCategory.periods || 2;
+                            const periodDuration = relatedCategory.periodDuration || 20;
+                            const breakDuration = relatedCategory.breakDuration || 2;
+                            relatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                            relatedMatchBreak = relatedCategory.matchBreak || 5;
+                        }
+                        
+                        const relatedEndMinutes = relatedStartMinutes + relatedDuration + relatedMatchBreak;
+                        
+                        return (newStartMinutes < relatedEndMinutes && newEndMinutes > relatedStartMinutes);
+                    });
+                    
+                    // 2. Logická kontrola - zápasy v neskorších dňoch
+                    const laterMatches = related.filter(relatedMatch => {
+                        if (!relatedMatch.scheduledTime) return false;
+                        
+                        const relatedDate = relatedMatch.scheduledTime.toDate();
+                        const relatedDateStr = getLocalDateStr(relatedDate);
+                        
+                        if (selectedDateStr && relatedDateStr > selectedDateStr) {
+                            return true;
+                        }
+                        return false;
+                    });
+                    
+                    if (laterMatches.length > 0) {
+                        const targetLetters = new Set();
+                        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                        const homeLetter = extractLetterFromTeamName(homeTeamName);
+                        const awayLetter = extractLetterFromTeamName(awayTeamName);
+                        if (homeLetter) targetLetters.add(homeLetter);
+                        if (awayLetter) targetLetters.add(awayLetter);
+                        const groupLetters = Array.from(targetLetters).join(', ');
+                        
+                        const latestDate = laterMatches.reduce((latest, m) => {
+                            const d = m.scheduledTime.toDate();
+                            return d > latest ? d : latest;
+                        }, new Date(0));
+                        const latestDateStr = formatDateWithDay(latestDate);
+                        
+                        const dummyConflict = {
+                            id: 'group-last-match-logical',
+                            type: 'related_match',
+                            scheduledTime: {
+                                toDate: () => {
+                                    const date = new Date(latestDate);
+                                    date.setHours(23, 59, 0);
+                                    return date;
+                                }
+                            },
+                            homeTeamIdentifier: 'POSLEDNÝ ZÁPAS SKUPINY',
+                            awayTeamIdentifier: `SKUPINA ${groupLetters} (${latestDateStr})`,
+                            categoryName: match.categoryName,
+                            hallId: null
+                        };
+                        
+                        relatedConflicts.push(dummyConflict);
+                        setTimeError(`Tím zo skupiny ${groupLetters} nemôže hrať v nadstavbovej skupine pred ${latestDateStr}, pretože skupina ešte má zápasy v tento deň.`);
+                    }
+                    
+                    relatedConflicts = [...relatedConflicts, ...overlappingRelated];
+                }
+                
+                const allConflicts = [...overlapping, ...relatedConflicts];
+                setOverlappingMatches(allConflicts);
+            }
         }
-    }, [isOpen, match]);
+    }, [isOpen, match, selectedDate, selectedTime, matchDuration, existingMatches, categories]); // 🔥 PRIDANÉ: Všetky potrebné závislosti
 
     useEffect(() => {
         if (isOpen && match && !initialized) {            
