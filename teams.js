@@ -279,17 +279,25 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // Načítame štatistiky priamo z matchEvents - ROVNAKÝ SPÔSOB AKO V TeamMembersList
+    // Načítame štatistiky priamo z matchEvents - UPRAVENÝ useEffect
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamRoster length:', teamRoster?.length || 0);
         console.log('[Stats Effect] rosterTeamName:', rosterTeamName);
         console.log('[Stats Effect] rosterCategoryName:', rosterCategoryName);
         
-        // Ak nemáme členov alebo db, vymažeme štatistiky a zrušíme listener
-        if (!teamRoster || teamRoster.length === 0 || !window.db) {
-            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia alebo db - vymazávam štatistiky');
+        // Ak nemáme členov ALEBO nemáme db, vymažeme štatistiky
+        if (!window.db) {
+            console.log('[Stats Effect] Podmienka TRUE: db nie je inicializovaná - vymazávam štatistiky');
             setMembersStats({});
+            return;
+        }
+        
+        // Ak nemáme členov, ale máme nastavený rosterTeamName, znamená to, že sa práve načítavajú
+        // Necháme staré štatistiky, kým sa nenačítajú nové
+        if (!teamRoster || teamRoster.length === 0) {
+            console.log('[Stats Effect] Podmienka TRUE: žiadni členovia - zachovávam staré štatistiky');
+            // NEMAŽEME štatistiky - necháme staré
             return;
         }
     
@@ -451,10 +459,13 @@ const TeamsOverviewApp = (props) => {
         };
     }, [teamRoster, rosterTeamName, rosterCategoryName, selectedTeamDetails]);
     
-    // Upravená loadTeamRoster funkcia
+    // Funkcia na načítanie súpisky tímu pomocou loadTeamMembers - UPRAVENÁ
     const loadTeamRoster = (teamName, categoryName) => {
+        console.log('[loadTeamRoster] Volaná s teamName:', teamName, 'categoryName:', categoryName);
+        
         // Zrušíme predchádzajúci listener
         if (rosterUnsubscribe) {
+            console.log('[loadTeamRoster] Ruším predchádzajúci listener');
             try {
                 rosterUnsubscribe();
             } catch (e) {
@@ -464,6 +475,7 @@ const TeamsOverviewApp = (props) => {
         }
         
         if (!teamName || !categoryName) {
+            console.log('[loadTeamRoster] Chýba teamName alebo categoryName - vymazávam');
             setTeamRoster([]);
             setIsLoadingRoster(false);
             setRosterTeamName('');
@@ -472,20 +484,24 @@ const TeamsOverviewApp = (props) => {
             return;
         }        
         
+        console.log('[loadTeamRoster] Nastavujem loading, teamName:', teamName, 'categoryName:', categoryName);
         setIsLoadingRoster(true);
-        // NEMAŽEME teamRoster hneď - počkáme na načítanie nových členov
-        // setTeamRoster([]);  // <-- ODSTRÁNENÉ
+        
+        // NASTAVÍME NOVÝ NÁZOV TÍMU - toto spustí useEffect, ale teamRoster ešte nie je prázdny
         setRosterTeamName(teamName);
         setRosterCategoryName(categoryName);
-        // NEMAŽEME štatistiky hneď - počkáme na nové dáta
-        // setMembersStats({});  // <-- ODSTRÁNENÉ
+        
+        // NEMAŽEME teamRoster a membersStats hneď - počkáme na načítanie nových členov
+        // Staré dáta zostanú, kým sa nenačítajú nové
         
         const handleMembersUpdate = (members) => {
+            console.log('[loadTeamRoster] handleMembersUpdate - načítaných', members.length, 'členov');
             setTeamRoster(members);
             setIsLoadingRoster(false);
         };
         
         const handleMappedName = (mappedName) => {
+            console.log('[loadTeamRoster] handleMappedName:', mappedName);
             // Môžeme použiť na aktualizáciu zobrazeného názvu
         };
         
@@ -493,12 +509,15 @@ const TeamsOverviewApp = (props) => {
             const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
             setRosterUnsubscribe(() => unsubscribe);
         } catch (error) {
+            console.error('[loadTeamRoster] Chyba pri načítaní:', error);
             setIsLoadingRoster(false);
             setTeamRoster([]);
+            setMembersStats({});
         }
         
         // Timeout pre prípad, že sa načítanie zasekne
         const timeoutId = setTimeout(() => {
+            console.log('[loadTeamRoster] Timeout - ukončujem loading');
             setIsLoadingRoster(false);
         }, 10000);
         
