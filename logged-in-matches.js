@@ -2964,13 +2964,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const occupiedIntervals = [];
         
-        // 1. ZÁPASY V ROVNAKEJ HALE A DNI
+        // 1. ZÁPASY V ROVNAKEJ HALE A DNI - PRIDANÁ KONTROLA m.scheduledTime
         const allMatchesForHallAndDay = allMatches.filter(m => 
             m.hallId === hallId && 
-            m.scheduledTime &&
+            m.scheduledTime &&  // ← PRIDANÁ KONTROLA
             m.id !== currentMatch?.id
         ).filter(m => {
-            if (!m.scheduledTime) return false;
+            if (!m.scheduledTime) return false;  // ← PRIDANÁ KONTROLA
             const matchDate = m.scheduledTime.toDate();
             const matchDateStr = getLocalDateStr(matchDate);
             return matchDateStr === date;
@@ -3025,11 +3025,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 const groupLetter = currentMatch.groupName.replace('skupina ', '');
                 
                 // Nájdeme VŠETKY zápasy v tej istej kategórii a skupine (súvisiace zápasy)
+                // PRIDANÁ KONTROLA m.scheduledTime
                 const relatedMatches = allMatches.filter(m => 
                     m.categoryId === currentMatch.categoryId &&
                     m.groupName === currentMatch.groupName &&
                     m.id !== currentMatch.id &&
-                    m.scheduledTime
+                    m.scheduledTime  // ← PRIDANÁ KONTROLA
                 );
                 
                 // Zoradíme súvisiace zápasy podľa dátumu a času
@@ -3040,8 +3041,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 });
                 
                 // 🔥 KĽÚČOVÉ: Kontrola, či existuje súvisiaci zápas, ktorý by MAL byť pred aktuálnym
-                // (t.j. zápas v skoršom dni alebo skoršom čase v tom istom dni)
                 for (const relatedMatch of sortedRelated) {
+                    if (!relatedMatch.scheduledTime) continue;  // ← PRIDANÁ KONTROLA
+                    
                     const relatedDate = relatedMatch.scheduledTime.toDate();
                     const relatedDateStr = getLocalDateStr(relatedDate);
                     const relatedStartMinutes = relatedDate.getHours() * 60 + relatedDate.getMinutes();
@@ -3060,8 +3062,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     
                     // Ak je súvisiaci zápas v SKORŠOM DNI, musí byť pred aktuálnym
                     if (relatedDateStr < currentDateStr) {
-                        // Toto je KONFLIKT - nadstavbový zápas nemôže byť pred skorším dňom
-                        // Zablokujeme CELÝ DEŇ
                         occupiedIntervals.push({
                             start: 0,
                             end: 24 * 60,
@@ -3073,13 +3073,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     }
                     // Ak je súvisiaci zápas v ROVNAKOM DNI, musí byť v SKORŠOM ČASE
                     else if (relatedDateStr === currentDateStr) {
-                        // Ak súvisiaci zápas začína NESKÔR ako aktuálny, je to konflikt
-                        // (nadstavbový zápas nemôže byť pred zápasom, ktorý by mal byť pred ním)
-                        // Tu je logika: ak relatedMatch začína neskôr, zablokujeme čas od začiatku aktuálneho
-                        // až do konca relatedMatch + prestávka
+                        if (!currentMatch.scheduledTime) continue;  // ← PRIDANÁ KONTROLA
+                        
                         if (relatedStartMinutes > currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes()) {
-                            // Toto je konflikt - aktuálny zápas by bol pred súvisiacim, ale mal by byť po ňom
-                            // Zablokujeme čas od začiatku aktuálneho do konca súvisiaceho + prestávka
                             occupiedIntervals.push({
                                 start: 0,
                                 end: relatedEndMinutes,
@@ -3091,43 +3087,37 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     }
                 }
                 
-                // 🔥 KONTROLA: Ak existuje súvisiaci zápas v NESKORŠOM DNI,
-                // aktuálny zápas musí byť PRED ním (t.j. nesmie byť neskôr)
-                // Toto je už ošetrené vyššie - ak je relatedMatch v neskoršom dni, je to OK
-                // (aktuálny zápas môže byť pred ním)
-                
-                // 🔥 KONTROLA: Ak existuje súvisiaci zápas v ROVNAKOM DNI, ktorý je SKÔR,
-                // aktuálny zápas musí byť PO ňom + prestávka
-                const earlierSameDayMatches = sortedRelated.filter(m => {
-                    const mDate = m.scheduledTime.toDate();
-                    const mDateStr = getLocalDateStr(mDate);
-                    const mStartMinutes = mDate.getHours() * 60 + mDate.getMinutes();
-                    const currentStart = currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes();
-                    return mDateStr === currentDateStr && mStartMinutes < currentStart;
-                });
-                
-                // Ak existuje skorší zápas v rovnakom dni, musíme mať dostatočnú prestávku
-                if (earlierSameDayMatches.length > 0) {
-                    // Nájdeme najneskorší skorší zápas
-                    const latestEarlier = earlierSameDayMatches.reduce((latest, m) => {
+                // 🔥 KONTROLA: Ak existuje súvisiaci zápas v ROVNAKOM DNI, ktorý je SKÔR
+                if (currentMatch.scheduledTime) {  // ← PRIDANÁ KONTROLA
+                    const earlierSameDayMatches = sortedRelated.filter(m => {
+                        if (!m.scheduledTime) return false;
                         const mDate = m.scheduledTime.toDate();
-                        return mDate > latest.scheduledTime.toDate() ? m : latest;
-                    }, earlierSameDayMatches[0]);
+                        const mDateStr = getLocalDateStr(mDate);
+                        const mStartMinutes = mDate.getHours() * 60 + mDate.getMinutes();
+                        const currentStart = currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes();
+                        return mDateStr === currentDateStr && mStartMinutes < currentStart;
+                    });
                     
-                    const latestDate = latestEarlier.scheduledTime.toDate();
-                    const latestEndMinutes = latestDate.getHours() * 60 + latestDate.getMinutes() + matchDur + 5;
-                    
-                    // Zablokujeme čas od začiatku aktuálneho do konca najneskoršieho skoršieho + prestávka
-                    // To znamená, že aktuálny zápas musí začať až po skončení skoršieho + prestávka
-                    const currentStart = currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes();
-                    if (currentStart < latestEndMinutes) {
-                        occupiedIntervals.push({
-                            start: currentStart,
-                            end: latestEndMinutes,
-                            type: 'related_match_earlier_same_day',
-                            id: latestEarlier.id,
-                            _message: `Súvisiaci zápas v rovnaký deň o ${latestDate.getHours()}:${String(latestDate.getMinutes()).padStart(2, '0')} (potrebná prestávka)`
-                        });
+                    // Ak existuje skorší zápas v rovnakom dni, musíme mať dostatočnú prestávku
+                    if (earlierSameDayMatches.length > 0) {
+                        const latestEarlier = earlierSameDayMatches.reduce((latest, m) => {
+                            const mDate = m.scheduledTime.toDate();
+                            return mDate > latest.scheduledTime.toDate() ? m : latest;
+                        }, earlierSameDayMatches[0]);
+                        
+                        const latestDate = latestEarlier.scheduledTime.toDate();
+                        const latestEndMinutes = latestDate.getHours() * 60 + latestDate.getMinutes() + matchDur + 5;
+                        
+                        const currentStart = currentMatch.scheduledTime.toDate().getHours() * 60 + currentMatch.scheduledTime.toDate().getMinutes();
+                        if (currentStart < latestEndMinutes) {
+                            occupiedIntervals.push({
+                                start: currentStart,
+                                end: latestEndMinutes,
+                                type: 'related_match_earlier_same_day',
+                                id: latestEarlier.id,
+                                _message: `Súvisiaci zápas v rovnaký deň o ${latestDate.getHours()}:${String(latestDate.getMinutes()).padStart(2, '0')} (potrebná prestávka)`
+                            });
+                        }
                     }
                 }
             }
