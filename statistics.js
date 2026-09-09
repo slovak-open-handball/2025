@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -722,8 +722,8 @@ const RostersTable = ({ isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // Načítanie členov všetkých tímov
-    useEffect(() => {
+    // Načítanie členov všetkých tímov (POMOCOU useCallback - VŽDY NOVÉ DÁTA)
+    const loadAllMembers = useCallback(() => {
         if (!window.db || allTeams.length === 0) return;
     
         // Zrušíme predchádzajúce listenery
@@ -748,16 +748,15 @@ const RostersTable = ({ isRostersVisible }) => {
             return;
         }
     
-        // Reset stavov
+        // Reset stavov - VŽDY NOVÉ
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setAllMembersData([]);
     
-        // Použijeme Map pre unikátne členov
+        // Použijeme NOVÚ Mapu a NOVÉ sety
         const membersMap = new Map();
-        // Sledujeme, ktoré tímy už boli načítané
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -769,16 +768,6 @@ const RostersTable = ({ isRostersVisible }) => {
             const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
-                // VYMAŽEME VŠETKÝCH ČLENOV PRE TENTO TÍM Z MAPY
-                // a potom ich znova pridáme
-                const keysToRemove = [];
-                for (const [key, value] of membersMap) {
-                    if (value.teamNameDisplay === teamName && value.categoryNameDisplay === categoryName) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(key => membersMap.delete(key));
-                
                 // Pridávame členov do Mapy s DEDUPLIKÁCIOU
                 members.forEach(m => {
                     // Vytvoríme unikátny kľúč pre hráča
@@ -830,6 +819,12 @@ const RostersTable = ({ isRostersVisible }) => {
             });
         };
     }, [allTeams]);
+
+    // Spustíme načítanie pri zmene allTeams
+    useEffect(() => {
+        const cleanup = loadAllMembers();
+        return cleanup;
+    }, [loadAllMembers]);
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
@@ -945,8 +940,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
         const displayMembers = sorted;
 
-        // Najprv zistíme, koľko členov má góly
-        const membersWithGoals = displayMembers.filter(m => {
+        // Najprv zistíme, koľko členov má góly        const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${m.type}_${m.originalIndex}`;
