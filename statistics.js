@@ -86,8 +86,8 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                 if (foundTeam) {
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
                         foundTeam.playerDetails.forEach((player, idx) => {
-                            // Vytvoríme kľúč: Meno + Priezvisko + Číslo dresu (alebo registračné číslo alebo index)
-                            const uniqueKey = `Hrac_${player.firstName || ''}_${player.lastName || ''}_${player.jerseyNumber || player.registrationNumber || idx}`;
+                            // Kľúč: Tím + Kategória + Typ + Meno + Priezvisko + Číslo dresu (alebo index)
+                            const uniqueKey = `${actualTeamName}_${categoryName}_Hrac_${player.firstName || ''}_${player.lastName || ''}_${player.jerseyNumber || idx}`;
                             if (!membersMap.has(uniqueKey)) {
                                 membersMap.set(uniqueKey, {
                                     type: 'Hráč',
@@ -107,7 +107,7 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                     
                     if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
                         foundTeam.menTeamMemberDetails.forEach((member, idx) => {
-                            const uniqueKey = `RT_M_${member.firstName || ''}_${member.lastName || ''}_${member.registrationNumber || member.jerseyNumber || idx}`;
+                            const uniqueKey = `${actualTeamName}_${categoryName}_RT_M_${member.firstName || ''}_${member.lastName || ''}_${member.jerseyNumber || idx}`;
                             if (!membersMap.has(uniqueKey)) {
                                 membersMap.set(uniqueKey, {
                                     type: 'Člen RT (muž)',
@@ -127,7 +127,7 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                     
                     if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
                         foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
-                            const uniqueKey = `RT_Z_${member.firstName || ''}_${member.lastName || ''}_${member.registrationNumber || member.jerseyNumber || idx}`;
+                            const uniqueKey = `${actualTeamName}_${categoryName}_RT_Z_${member.firstName || ''}_${member.lastName || ''}_${member.jerseyNumber || idx}`;
                             if (!membersMap.has(uniqueKey)) {
                                 membersMap.set(uniqueKey, {
                                     type: 'Člen RT (žena)',
