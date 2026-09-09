@@ -1,4 +1,4 @@
-// teams.js - opravená verzia (používa celé názvy vrátane sufixu v hlavičke aj pri porovnávaní)
+// teams.js - finálna verzia (používa výhradne celé názvy vrátane sufixu, žiadne odstraňovanie)
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -52,24 +52,6 @@ const slovakCollator = new Intl.Collator('sk', {
     ignorePunctuation: true,
     numeric: false
 });
-
-// Funkcia na odstránenie sufixu - používa sa LEN pre zoskupovanie tímov, NIE pre zobrazenie v hlavičke
-const removeSuffix = (teamName) => {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
-    const lettersLower = letters.toLowerCase();
-    const allLetters = letters + lettersLower;
-    
-    if (teamName.length >= 2) {
-        const lastChar = teamName[teamName.length - 1];
-        const secondLastChar = teamName[teamName.length - 2];
-        
-        if (secondLastChar === ' ' && allLetters.includes(lastChar)) {
-            return teamName.slice(0, -2).trim();
-        }
-    }
-    
-    return teamName;
-};
 
 // Funkcia na načítanie členov tímu
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
@@ -937,18 +919,17 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Získanie všetkých unikátnych tímov - zoskupujeme podľa názvu BEZ sufixu, aby sme nemali duplicity
+    // Získanie všetkých unikátnych tímov - POUŽÍVAME CELÉ NÁZVY VRÁTANE SUFIXU
     const getAllUniqueTeams = () => {
         const teamsMap = new Map();
         
         allTeams.forEach(team => {
-            const cleanName = removeSuffix(team.teamName);
-            const key = `${cleanName}_${team.category}`;
+            // Používame CELÝ názov vrátane sufixu ako kľúč
+            const key = `${team.teamName}_${team.category}`;
             
             if (!teamsMap.has(key)) {
                 teamsMap.set(key, {
-                    teamName: team.teamName,  // UCHOVÁVAME CELÝ NÁZOV VRÁTANE SUFIXU
-                    cleanName: cleanName,
+                    teamName: team.teamName,  // CELÝ NÁZOV VRÁTANE SUFIXU
                     category: team.category,
                     occurrences: []
                 });
