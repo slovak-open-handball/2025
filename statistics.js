@@ -722,7 +722,7 @@ const RostersTable = ({ isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // NAČÍTANIE ČLENOV - SPUSTÍ SA PRI ZMENE TEAMOV AJ PRI ZMENE ŠTATISTÍK
+    // NAČÍTANIE ČLENOV - SPUSTÍ SA IBA PRI ZMENE TEAMOV
     useEffect(() => {
         if (!window.db || allTeams.length === 0) return;
     
@@ -748,7 +748,7 @@ const RostersTable = ({ isRostersVisible }) => {
             return;
         }
     
-        // Reset stavov - VŽDY NOVÉ
+        // Reset stavov - VŽDY NOVÉ (ale iba pri zmene tímov)
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
@@ -818,7 +818,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams, allStatsData]); // <-- PRIDANÉ allStatsData!
+    }, [allTeams]); // <-- IBA allTeams, NIE allStatsData!
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
