@@ -886,7 +886,7 @@ const RostersTable = ({ isRostersVisible }) => {
     // Porovnáme, či sa zmenilo poradie podľa gólov
     const getStableDisplayMembers = useCallback(() => {
         if (displayMembers.length === 0) return [];
-    
+        
         // Ak ešte nemáme predchádzajúce poradie, uložíme ho
         if (previousDisplayMembersRef.current.length === 0) {
             previousDisplayMembersRef.current = displayMembers;
@@ -899,7 +899,7 @@ const RostersTable = ({ isRostersVisible }) => {
             previousGoalsRef.current = goalsMap;
             return displayMembers;
         }
-    
+        
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
         const prevGoals = previousGoalsRef.current;
         const currentGoals = new Map();
@@ -907,29 +907,28 @@ const RostersTable = ({ isRostersVisible }) => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
             currentGoals.set(key, m.goals || 0);
         });
-    
+        
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
         let goalsChanged = false;
-        let anyGoalsGreaterThanZero = false;
+        let anyGoalsChanged = false;
         for (const [key, goals] of currentGoals) {
-            const prevGoalsCount = prevGoals.get(key) || 0;
-            if (prevGoalsCount !== goals) {
+            if (prevGoals.get(key) !== goals) {
                 goalsChanged = true;
                 if (goals > 0) {
-                    anyGoalsGreaterThanZero = true;
+                    anyGoalsChanged = true;
                 }
                 break;
             }
         }
-    
+        
         // Ak sa zmenili góly, vždy aktualizujeme poradie
         if (goalsChanged) {
             previousDisplayMembersRef.current = displayMembers;
             previousGoalsRef.current = currentGoals;
             return displayMembers;
         }
-    
-        // Ak sa nezmenili góly, vraciame predchádzajúce poradie
+        
+        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
         return previousDisplayMembersRef.current;
     }, [displayMembers]);
 
@@ -968,62 +967,12 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // Zoradenie členov podľa gólov, priezviska, mena, a ďalších kritérií
-        const membersWithGoals = useMemo(() => {
-            if (!isStatsReady || allMembersData.length === 0) return [];
-        
-            // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
-            const membersWithStats = allMembersData.map(member => {
-                const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
-                const teamStats = allStatsData[key] || {};
-                const memberKey = `${member.type}_${member.originalIndex}`;
-                const stats = teamStats[memberKey] || { goals: 0 };
-                return {
-                    ...member,
-                    goals: Number(stats.goals || 0)
-                };
-            });
-        
-            // Rozdelíme na strelcov a neskórujúcich
-            const goalsScorers = membersWithStats.filter(m => m.goals > 0);
-            const nonScorers = membersWithStats.filter(m => m.goals === 0);
-        
-            // Zoradíme strelcov podľa gólov (zostupne)
-            goalsScorers.sort((a, b) => {
-                if (b.goals !== a.goals) return b.goals - a.goals;
-        
-                // Porovnávanie podľa priezviska
-                const lastNameCompare = slovakCollator.compare(a.lastName || '', b.lastName || '');
-                if (lastNameCompare !== 0) return lastNameCompare;
-        
-                // Porovnávanie podľa mena
-                const firstNameCompare = slovakCollator.compare(a.firstName || '', b.firstName || '');
-                if (firstNameCompare !== 0) return firstNameCompare;
-        
-                // Alternatívne porovnanie podľa jerseyNumber
-                const aNum = parseInt(a.jerseyNumber) || 999;
-                const bNum = parseInt(b.jerseyNumber) || 999;
-                return aNum - bNum;
-            });
-        
-            // Zoradíme ostatných podľa abecedy (najskôr priezvisko, potom meno)
-            nonScorers.sort((a, b) => {
-                // Porovnanie priezviska
-                const lastNameCompare = slovakCollator.compare(a.lastName || '', b.lastName || '');
-                if (lastNameCompare !== 0) return lastNameCompare;
-        
-                // Porovnanie mena
-                const firstNameCompare = slovakCollator.compare(a.firstName || '', b.firstName || '');
-                if (firstNameCompare !== 0) return firstNameCompare;
-        
-                // Alternatívne porovnanie podľa jerseyNumber
-                const aNum = parseInt(a.jerseyNumber) || 999;
-                const bNum = parseInt(b.jerseyNumber) || 999;
-                return aNum - bNum;
-            });
-        
-            return [...goalsScorers, ...nonScorers];
-        }, [allMembersData, allStatsData, isStatsReady]);
+        const membersWithGoals = stableDisplayMembers.filter(m => {
+            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${m.type}_${m.originalIndex}`;
+            return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
+        });
 
         return React.createElement(
             'div',
@@ -1133,7 +1082,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         return React.createElement(
                             'tr',
                             { 
-                                key: `${member.id || member.originalIndex}_${member.teamNameDisplay}_${member.categoryNameDisplay}`,
+                                key: `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex || idx}`,
                                 className: `${rowClass} transition-colors duration-150`
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, rank),
