@@ -628,19 +628,42 @@ const RostersTable = ({ isRostersVisible }) => {
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
-    // Nastavenie výšky tabuľky
-    useEffect(() => {
+    useLayoutEffect(() => {
         const updateHeight = () => {
             if (tableContainerRef.current) {
                 const rect = tableContainerRef.current.getBoundingClientRect();
+                // Ak je rect.top = 0, znamená to, že kontajner ešte nie je vykreslený
+                if (rect.top === 0 && rect.height === 0) {
+                    // Skúsime to neskôr
+                    requestAnimationFrame(() => updateHeight());
+                    return;
+                }
                 const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
                 setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
             }
         };
-
-        updateHeight();
+    
+        // Spustíme s oneskorením, aby sa DOM stihol vykresliť
+        const timeoutId = setTimeout(() => {
+            updateHeight();
+        }, 50);
+    
         window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
+        
+        // ResizeObserver pre spoľahlivejšie sledovanie
+        const resizeObserver = new ResizeObserver(() => {
+            updateHeight();
+        });
+        
+        if (tableContainerRef.current) {
+            resizeObserver.observe(tableContainerRef.current);
+        }
+        
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('resize', updateHeight);
+            resizeObserver.disconnect();
+        };
     }, [allMembersData]);
 
     // Načítanie tímov
