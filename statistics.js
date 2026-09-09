@@ -609,6 +609,41 @@ const RostersTable = ({ isRostersVisible }) => {
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
+    // FUNKCIA NA AKTUÁLNE NASTAVENIE VÝŠKY
+    const updateTableHeight = useCallback(() => {
+        if (tableContainerRef.current) {
+            const rect = tableContainerRef.current.getBoundingClientRect();
+            const topOffset = rect.top || 0;
+            const calculatedMaxHeight = window.innerHeight - topOffset - 80;
+            const newHeight = Math.max(calculatedMaxHeight, 200);
+            setMaxTableHeight(`${newHeight}px`);
+        }
+    }, []);
+
+    // Sledovanie zmien veľkosti okna
+    useEffect(() => {
+        const handleResize = () => {
+            // Použijeme requestAnimationFrame pre plynulejšie prekreslenie
+            requestAnimationFrame(() => {
+                updateTableHeight();
+            });
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [updateTableHeight]);
+
+    // NASTAVENIE VÝŠKY PO KAŽDEJ ZMENE DÁT, KTORÉ OVPLYVŇUJÚ VEĽKOSŤ TABUĽKY
+    useEffect(() => {
+        // Počkáme na ďalší frame, aby sa tabuľka stihla vykresliť
+        const timer = setTimeout(() => {
+            updateTableHeight();
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [allMembersData, isStatsReady, stableDisplayMembers, updateTableHeight]);
+  
+
     // Získanie unikátnych kategórií
     const getUniqueCategories = useCallback(() => {
         const categories = new Set();
