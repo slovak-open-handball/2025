@@ -968,12 +968,58 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        const membersWithGoals = stableDisplayMembers.filter(m => {
-            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${m.type}_${m.originalIndex}`;
-            return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
-        });
+        // Zoradenie členov podľa gólov, priezviska, mena, a ďalších kritérií
+        // Ak sa zmení počet gólov, poradie sa aktualizuje automaticky
+        const membersWithGoals = useMemo(() => {
+            if (!isStatsReady || allMembersData.length === 0) return [];
+        
+            // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
+            const membersWithStats = allMembersData.map(member => {
+                const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+                const teamStats = allStatsData[key] || {};
+                const memberKey = `${member.type}_${member.originalIndex}`;
+                const stats = teamStats[memberKey] || { goals: 0 };
+                return {
+                    ...member,
+                    goals: Number(stats.goals || 0)
+                };
+            });
+        
+            // Rozdelíme na strelcov a neskórujúcich
+            const goalsScorers = membersWithStats.filter(m => m.goals > 0);
+            const nonScorers = membersWithStats.filter(m => m.goals === 0);
+        
+            // Zoradíme strelcov podľa gólov (zostupne)
+            goalsScorers.sort((a, b) => {
+                if (b.goals !== a.goals) return b.goals - a.goals;
+        
+                // Porovnávanie podľa priezviska
+                const lastNameCompare = slovakCollator.compare(a.lastName || '', b.lastName || '');
+                if (lastNameCompare !== 0) return lastNameCompare;
+        
+                // Porovnávanie podľa mena
+                const firstNameCompare = slovakCollator.compare(a.firstName || '', b.firstName || '');
+                if (firstNameCompare !== 0) return firstNameCompare;
+        
+                // Alternatívne porovnanie podľa jerseyNumber
+                const aNum = parseInt(a.jerseyNumber) || 999;
+                const bNum = parseInt(b.jerseyNumber) || 999;
+                return aNum - bNum;
+            });
+        
+            // Zoradíme ostatných podľa abecedy (najskôr priezvisko, potom meno)
+            nonScorers.sort((a, b) => {
+                const lastNameCompare = slovakCollator.compare(a.lastName || '', b.lastName || '');
+                if (lastNameCompare !== 0) return lastNameCompare;
+                const firstNameCompare = slovakCollator.compare(a.firstName || '', b.firstName || '');
+                if (firstNameCompare !== 0) return firstNameCompare;
+                const aNum = parseInt(a.jerseyNumber) || 999;
+                const bNum = parseInt(b.jerseyNumber) || 999;
+                return aNum - bNum;
+            });
+        
+            return [...goalsScorers, ...nonScorers];
+        }, [allMembersData, allStatsData, isStatsReady]);
 
         return React.createElement(
             'div',
