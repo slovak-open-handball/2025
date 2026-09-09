@@ -748,7 +748,7 @@ const RostersTable = ({ isRostersVisible }) => {
             return;
         }
     
-        // Reset stavov
+        // Reset stavov - TOTO JE KĽÚČOVÉ!
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
@@ -757,7 +757,7 @@ const RostersTable = ({ isRostersVisible }) => {
     
         // Použijeme Map pre unikátne členov
         const membersMap = new Map();
-        // Sledujeme, ktoré tímy už boli načítané
+        // Resetujeme aj počítadlá a sety
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -769,15 +769,16 @@ const RostersTable = ({ isRostersVisible }) => {
             const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
-                // VYMAŽEME VŠETKÝCH ČLENOV PRE TENTO TÍM Z MAPY
-                // a potom ich znova pridáme
-                const keysToRemove = [];
-                for (const [key, value] of membersMap) {
-                    if (value.teamNameDisplay === teamName && value.categoryNameDisplay === categoryName) {
-                        keysToRemove.push(key);
+                // Ak tím ešte nebol načítaný, vymažeme staré dáta pre tento tím
+                if (!loadedTeamsSet.has(teamKey)) {
+                    const keysToRemove = [];
+                    for (const [key, value] of membersMap) {
+                        if (value.teamNameDisplay === teamName && value.categoryNameDisplay === categoryName) {
+                            keysToRemove.push(key);
+                        }
                     }
+                    keysToRemove.forEach(key => membersMap.delete(key));
                 }
-                keysToRemove.forEach(key => membersMap.delete(key));
                 
                 // Pridávame členov do Mapy s DEDUPLIKÁCIOU
                 members.forEach(m => {
