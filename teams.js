@@ -567,7 +567,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
 };
 
 // ============================================================
-// OPRAVENÝ KOMPONENT TeamMatchesList - automatická aktualizácia
+// OPRAVENÝ KOMPONENT TeamMatchesList - jednoduchá a spoľahlivá verzia
 // ============================================================
 
 const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
@@ -581,6 +581,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
     const [categoriesData, setCategoriesData] = useState({});
     const [allMatchesList, setAllMatchesList] = useState([]);
+    const [processedMatches, setProcessedMatches] = useState([]);
 
     // Načítanie groupsData
     useEffect(() => {
@@ -664,7 +665,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             }
         });
         
-        setMatches(filtered);
+        return filtered;
     };
 
     // Hlavná funkcia na spracovanie zápasov - načítava všetky zápasy
@@ -731,14 +732,18 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return names; // Vrátime konvertované názvy
     };
 
-    // Hlavná funkcia na aktualizáciu zápasov - volá sa pri každej zmene
-    const updateMatches = (allMatches, currentNames) => {
-        // Ak nemáme aktuálne názvy, použijeme existujúce
-        const names = currentNames || teamNames;
-        
-        // Filtrujeme zápasy pre aktuálny tím
-        filterMatchesForTeam(allMatches, names);
-    };
+    // EFEKT: Keď sa zmení allMatchesList alebo teamNames, prefiltrujeme zápasy
+    useEffect(() => {
+        if (allMatchesList.length > 0 && Object.keys(teamNames).length > 0) {
+            const filtered = filterMatchesForTeam(allMatchesList, teamNames);
+            setMatches(filtered);
+        }
+    }, [allMatchesList, teamNames, teamName, categoryName]);
+
+    // EFEKT: Keď sa zmenia matches, uložíme ich do processedMatches
+    useEffect(() => {
+        setProcessedMatches(matches);
+    }, [matches]);
 
     // Výpočet gólov z udalostí
     const calculateGoalsFromEvents = (events) => {
@@ -787,7 +792,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                     } catch (e) { return 0; }
                 });
 
-                setAllMatchesList(allMatches);
                 setMatchStatuses(statuses);
                 setMatchScoresFromDb(scores);
                 await loadHallNames(allMatches);
@@ -795,8 +799,8 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 // Spracujeme všetky zápasy cez matchTracker a získame konvertované názvy
                 const convertedNames = await processMatchesWithTeamNames(allMatches);
                 
-                // Filtrujeme zápasy pre aktuálny tím s použitím konvertovaných názvov
-                filterMatchesForTeam(allMatches, convertedNames);
+                // Nastavíme allMatchesList - to spustí useEffect ktorý prefiltruje zápasy
+                setAllMatchesList(allMatches);
                 setLoading(false);
 
                 // Real-time listener na všetky zmeny v zápasoch
@@ -873,20 +877,9 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                             }
                         }
                         
-                        // Po aktualizácii názvov prefiltrujeme zápasy
-                        // Použijeme setTimeout aby sme mali istotu, že allMatchesList je aktualizovaný
-                        setTimeout(() => {
-                            // Získame aktuálny zoznam zápasov zo stavu
-                            setAllMatchesList(currentAllMatches => {
-                                if (namesUpdated) {
-                                    setTeamNames(currentNames);
-                                    filterMatchesForTeam(currentAllMatches, currentNames);
-                                } else {
-                                    filterMatchesForTeam(currentAllMatches, currentNames);
-                                }
-                                return currentAllMatches;
-                            });
-                        }, 50);
+                        if (namesUpdated) {
+                            setTeamNames(currentNames);
+                        }
                     }
                 });
 
@@ -939,7 +932,10 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         );
     }
 
-    if (matches.length === 0) {
+    // Použijeme processedMatches pre zobrazenie
+    const displayMatches = processedMatches.length > 0 ? processedMatches : matches;
+
+    if (displayMatches.length === 0) {
         return React.createElement(
             'div',
             { className: 'mt-4 bg-white rounded-xl shadow-xl p-6' },
@@ -974,7 +970,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return Object.values(groups).sort((a, b) => a.date - b.date);
     };
 
-    const displayDays = getMatchesByDay(matches);
+    const displayDays = getMatchesByDay(displayMatches);
 
     return React.createElement(
         'div',
@@ -1194,7 +1190,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         React.createElement(
             'div',
             { className: 'mt-3 pt-2 border-t border-gray-200 text-xs text-gray-400' },
-            `Počet zápasov: ${matches.length}`
+            `Počet zápasov: ${displayMatches.length}`
         )
     );
 };
