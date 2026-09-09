@@ -188,6 +188,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [membersStats, setMembersStats] = useState({});
     const [firstGoalLoaded, setFirstGoalLoaded] = useState(false);
     const firstGoalProcessedRef = useRef(false);
+    const initialCheckDoneRef = useRef(false);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -396,17 +397,30 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         break;
                 }
             });
-        
-            // --- KONTROLA PRVÉHO GÓLU A OBNOVENIE STRÁNKY ---
-            // Ak sme našli gól a ešte sme nespracovali prvý gól, obnovíme stránku
-            if (foundAnyGoal && !firstGoalProcessedRef.current) {
-                firstGoalProcessedRef.current = true;
+
+            // --- KONTROLA, ČI IDE O PRVÝ GÓL (POUZE AK SME EŠTE NEROBILI KONTROLU) ---
+            // Ak sme našli gól, ešte sme nespracovali prvú kontrolu a ešte sme neobnovili stránku
+            if (foundAnyGoal && !initialCheckDoneRef.current && !firstGoalProcessedRef.current) {
+                // Označíme, že sme už vykonali prvú kontrolu
+                initialCheckDoneRef.current = true;
                 
-                // Použijeme setTimeout, aby sme umožnili dokončenie aktuálneho render cyklu
-                setTimeout(() => {
-                    // Vynútime obnovenie stránky (F5)
-                    window.location.reload();
-                }, 100);
+                // Teraz potrebujeme zistiť, či už v databáze nejaké góly boli
+                // Urobíme to tak, že skontrolujeme, či je to prvý snapshot
+                // a či je to prvýkrát, čo vidíme gól
+                
+                // Ak sme našli gól pri prvom načítaní (isFirstLoad), 
+                // znamená to, že v databáze už nejaké góly boli
+                if (isFirstLoad) {
+                    // Góly už v databáze boli, neobnovujeme stránku
+                    firstGoalProcessedRef.current = true; // Zablokujeme ďalšie obnovenia
+                } else {
+                    // Toto je nový gól pridaný po načítaní stránky - obnovíme
+                    firstGoalProcessedRef.current = true;
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+                }
             }
         
             return stats;
