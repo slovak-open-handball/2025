@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -832,91 +832,108 @@ const RostersTable = ({ isRostersVisible }) => {
         });
     };
 
-    // ZORADENIE - vždy sa počíta nanovo podľa AKTUÁLNYCH štatistík
+    // ZORADENIE - používame displayMembers s memoizáciou
     const displayMembers = useMemo(() => {
         if (!isStatsReady || allMembersData.length === 0) return [];
-    
+        
+        // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
         const membersWithStats = allMembersData.map(member => {
             const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${member.type}_${member.originalIndex}`;
-    
-            const stats = teamStats[memberKey] || {
-                goals: 0
-            };
-    
+            const stats = teamStats[memberKey] || { goals: 0 };
             return {
                 ...member,
                 goals: Number(stats.goals || 0)
             };
         });
-    
-        // Najprv všetci, ktorí majú aspoň 1 gól
-        const goalsScorers = membersWithStats
-            .filter(member => member.goals > 0)
-            .sort((a, b) => {
-                // 1. počet gólov - zostupne
-                if (b.goals !== a.goals) {
-                    return b.goals - a.goals;
-                }
-    
-                // 2. pri rovnakom počte gólov tím
-                const teamCompare = slovakCollator.compare(
-                    a.teamNameDisplay || '',
-                    b.teamNameDisplay || ''
-                );
-    
-                if (teamCompare !== 0) {
-                    return teamCompare;
-                }
-    
-                // 3. pri rovnakom tíme meno
-                return slovakCollator.compare(
-                    `${a.firstName || ''} ${a.lastName || ''}`,
-                    `${b.firstName || ''} ${b.lastName || ''}`
-                );
-            });
-    
-        // Potom všetci, ktorí nemajú žiadny gól
-        const nonScorers = membersWithStats
-            .filter(member => member.goals === 0)
-            .sort((a, b) => {
-                // 1. tím
-                const teamCompare = slovakCollator.compare(
-                    a.teamNameDisplay || '',
-                    b.teamNameDisplay || ''
-                );
-    
-                if (teamCompare !== 0) {
-                    return teamCompare;
-                }
-    
-                // 2. meno
-                const nameCompare = slovakCollator.compare(
-                    `${a.firstName || ''} ${a.lastName || ''}`,
-                    `${b.firstName || ''} ${b.lastName || ''}`
-                );
-    
-                if (nameCompare !== 0) {
-                    return nameCompare;
-                }
-    
-                // 3. číslo dresu
-                const aNum = parseInt(a.jerseyNumber, 10) || 999;
-                const bNum = parseInt(b.jerseyNumber, 10) || 999;
-    
-                return aNum - bNum;
-            });
-    
-        // DÔLEŽITÉ:
-        // Vždy najprv strelci a až potom hráči bez gólu.
-        // Pri každej zmene allStatsData sa toto poradie
-        // kompletne prepočíta.
+
+        // Rozdelíme na strelcov a neskórujúcich
+        const goalsScorers = membersWithStats.filter(m => m.goals > 0);
+        const nonScorers = membersWithStats.filter(m => m.goals === 0);
+
+        // Zoradíme strelcov podľa gólov (zostupne)
+        goalsScorers.sort((a, b) => {
+            if (b.goals !== a.goals) return b.goals - a.goals;
+            
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+        });
+
+        // Zoradíme ostatných podľa abecedy
+        nonScorers.sort((a, b) => {
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+            if (nameCompare !== 0) return nameCompare;
+            
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+
         return [...goalsScorers, ...nonScorers];
-    
     }, [allMembersData, allStatsData, isStatsReady]);
-    
-    const stableDisplayMembers = displayMembers;
+
+    // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
+    const previousDisplayMembersRef = useRef([]);
+    // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
+    const previousGoalsRef = useRef(new Map());
+
+    // Porovnáme, či sa zmenilo poradie podľa gólov
+    const getStableDisplayMembers = useCallback(() => {
+        if (displayMembers.length === 0) return [];
+        
+        // Ak ešte nemáme predchádzajúce poradie, uložíme ho
+        if (previousDisplayMembersRef.current.length === 0) {
+            previousDisplayMembersRef.current = displayMembers;
+            // Uložíme aj góly
+            const goalsMap = new Map();
+            displayMembers.forEach(m => {
+                const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
+                goalsMap.set(key, m.goals || 0);
+            });
+            previousGoalsRef.current = goalsMap;
+            return displayMembers;
+        }
+        
+        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
+        const prevGoals = previousGoalsRef.current;
+        const currentGoals = new Map();
+        displayMembers.forEach(m => {
+            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
+            currentGoals.set(key, m.goals || 0);
+        });
+        
+        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
+        let goalsChanged = false;
+        let anyGoalsChanged = false;
+        for (const [key, goals] of currentGoals) {
+            if (prevGoals.get(key) !== goals) {
+                goalsChanged = true;
+                if (goals > 0) {
+                    anyGoalsChanged = true;
+                }
+                break;
+            }
+        }
+        
+        // Ak sa zmenili góly, vždy aktualizujeme poradie
+        if (goalsChanged) {
+            previousDisplayMembersRef.current = displayMembers;
+            previousGoalsRef.current = currentGoals;
+            return displayMembers;
+        }
+        
+        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
+        return previousDisplayMembersRef.current;
+    }, [displayMembers]);
+
+    // Získame stabilné poradie
+    const stableDisplayMembers = getStableDisplayMembers();
 
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
