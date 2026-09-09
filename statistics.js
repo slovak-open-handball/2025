@@ -842,8 +842,6 @@ const RostersTable = ({ isRostersVisible }) => {
     };
 
     // ZORADENIE - používame displayMembers s memoizáciou
-    // ZORADENIE - používame displayMembers s memoizáciou
-    // PRIDÁVAME statsUpdateTrigger DO ZÁVISLOSTÍ PRE VYNÚTENIE PREPOČTU
     const displayMembers = useMemo(() => {
         console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
         
@@ -906,79 +904,39 @@ const RostersTable = ({ isRostersVisible }) => {
         }
         
         return result;
-    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]); // PRIDANÝ statsUpdateTrigger
+    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]);
 
-    // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
-    const previousDisplayMembersRef = useRef([]);
-    // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
-    const previousGoalsRef = useRef(new Map());
+    // Použijeme ref na uchovanie posledného platného poradia
+    const stableDisplayMembersRef = useRef([]);
+    // Ref na sledovanie posledného triggera
+    const lastTriggerRef = useRef(0);
 
-    // Porovnáme, či sa zmenilo poradie podľa gólov
+    // Získame stabilné poradie - TERAZ VŽDY VRÁTIME displayMembers, KEĎ SA ZMENIL TRIGGER
     const getStableDisplayMembers = useCallback(() => {
-        if (displayMembers.length === 0) return [];
-        
+        // Ak nemáme dáta, vrátime prázdne pole
+        if (displayMembers.length === 0) {
+            return [];
+        }
+
         // AK SA ZMENIL TRIGGER, VŽDY AKTUALIZUJEME PORADIE
-        // To znamená, že pri každej zmene štatistík sa poradie prepočíta
-        const currentGoalsMap = new Map();
-        displayMembers.forEach(m => {
-            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-            currentGoalsMap.set(key, m.goals || 0);
-        });
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        const prevGoals = previousGoalsRef.current;
-        let goalsChanged = false;
-        let anyGoalsChanged = false;
-        
-        for (const [key, goals] of currentGoalsMap) {
-            if (prevGoals.get(key) !== goals) {
-                goalsChanged = true;
-                if (goals > 0 || (prevGoals.get(key) || 0) > 0) {
-                    anyGoalsChanged = true;
-                }
-                break;
-            }
-        }
-        
-        // AK sa zmenili góly, VŽDY AKTUALIZUJEME poradie
-        if (goalsChanged) {
-            console.log('[RostersTable] Zmena v góloch - aktualizujem poradie');
-            // AKTUALIZUJEME OBA REFY
-            previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoalsMap;
+        if (statsUpdateTrigger !== lastTriggerRef.current) {
+            console.log('[RostersTable] Trigger sa zmenil - aktualizujem poradie (trigger:', statsUpdateTrigger, ')');
+            lastTriggerRef.current = statsUpdateTrigger;
+            stableDisplayMembersRef.current = displayMembers;
             return displayMembers;
         }
-        
-        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
-        // ALE AJ TAK VRÁTIME displayMembers, AK JE TO PRVÉ NAČÍTANIE
-        if (previousDisplayMembersRef.current.length === 0) {
+
+        // Ak sa trigger nezmenil, vrátime predchádzajúce poradie
+        // (ale ak je prázdne, nastavíme ho)
+        if (stableDisplayMembersRef.current.length === 0) {
             console.log('[RostersTable] Prvé načítanie - nastavujem poradie');
-            previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoalsMap;
+            stableDisplayMembersRef.current = displayMembers;
+            lastTriggerRef.current = statsUpdateTrigger;
             return displayMembers;
         }
-        
-        // POROVNÁME, ČI SA NEZMENILO PORADIE HRÁČOV (napr. pribudol nový hráč)
-        // Ak áno, musíme aktualizovať poradie
-        const currentKeys = new Set(displayMembers.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`
-        ));
-        const prevKeys = new Set(previousDisplayMembersRef.current.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`
-        ));
-        
-        // Ak sa zmenil počet hráčov alebo sa zmenilo zloženie, aktualizujeme
-        if (currentKeys.size !== prevKeys.size || 
-            ![...currentKeys].every(key => prevKeys.has(key))) {
-            console.log('[RostersTable] Zmena v zložení hráčov - aktualizujem poradie');
-            previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoalsMap;
-            return displayMembers;
-        }
-        
-        // Ak sa nezmenili góly a nezmenilo sa zloženie, vrátime predchádzajúce poradie
-        return previousDisplayMembersRef.current;
-    }, [displayMembers]);
+
+        return stableDisplayMembersRef.current;
+    }, [displayMembers, statsUpdateTrigger]);
 
     // Získame stabilné poradie
     const stableDisplayMembers = getStableDisplayMembers();
