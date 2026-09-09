@@ -603,10 +603,22 @@ const RostersTable = ({ isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
+    const [selectedCategory, setSelectedCategory] = useState(null); // NOVÝ STATE PRE FILTER
 
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
+
+    // Získanie unikátnych kategórií
+    const getUniqueCategories = useCallback(() => {
+        const categories = new Set();
+        allMembersData.forEach(member => {
+            if (member.categoryNameDisplay) {
+                categories.add(member.categoryNameDisplay);
+            }
+        });
+        return Array.from(categories).sort((a, b) => slovakCollator.compare(a, b));
+    }, [allMembersData]);
 
     useEffect(() => {
         const updateHeight = () => {
@@ -810,7 +822,16 @@ const RostersTable = ({ isRostersVisible }) => {
             return [];
         }
 
-        const membersWithStats = allMembersData.map(member => {
+        let filteredMembers = allMembersData;
+
+        // FILTER PODĽA VYBRANEJ KATEGÓRIE
+        if (selectedCategory) {
+            filteredMembers = allMembersData.filter(member => 
+                member.categoryNameDisplay === selectedCategory
+            );
+        }
+
+        const membersWithStats = filteredMembers.map(member => {
             const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${member.type}_${member.originalIndex}`;
@@ -846,10 +867,15 @@ const RostersTable = ({ isRostersVisible }) => {
         const result = [...goalsScorers, ...nonScorers];
 
         return result;
-    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]);
+    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory]);
 
     // VŽDY používame displayMembers – žiadne staré poradie
     const stableDisplayMembers = displayMembers;
+
+    // FUNKCIA PRE RESET FILTRA
+    const handleCategoryFilter = (category) => {
+        setSelectedCategory(prev => prev === category ? null : category);
+    };
 
     // Zobrazenie tabuľky
     const renderTable = () => {
@@ -878,7 +904,7 @@ const RostersTable = ({ isRostersVisible }) => {
             return React.createElement(
                 'div',
                 { className: 'text-center py-8 text-gray-500' },
-                'Žiadni členovia tímu'
+                selectedCategory ? `Žiadni členovia v kategórii: ${selectedCategory}` : 'Žiadni členovia tímu'
             );
         }
 
@@ -1012,7 +1038,9 @@ const RostersTable = ({ isRostersVisible }) => {
                         'tr',
                         null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
-                            `Celkový počet členov: ${stableDisplayMembers.length}`
+                            selectedCategory 
+                                ? `Počet členov v kategórii "${selectedCategory}": ${stableDisplayMembers.length}` 
+                                : `Celkový počet členov: ${stableDisplayMembers.length}`
                         )
                     )
                 )
@@ -1020,10 +1048,55 @@ const RostersTable = ({ isRostersVisible }) => {
         );
     };
 
+    // RENDER FILTROVACÍCH TLAČIDIEL
+    const renderCategoryFilters = () => {
+        const categories = getUniqueCategories();
+        if (categories.length === 0) return null;
+
+        return React.createElement(
+            'div',
+            { className: 'mb-4 flex flex-wrap gap-2 items-center' },
+            React.createElement(
+                'span',
+                { className: 'text-sm font-medium text-gray-700 mr-2' },
+                'Filtrovať podľa kategórie:'
+            ),
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setSelectedCategory(null),
+                    className: `px-3 py-1.5 text-sm rounded-full transition-all duration-200 ${
+                        selectedCategory === null 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`
+                },
+                'Všetky'
+            ),
+            categories.map(category => {
+                const isActive = selectedCategory === category;
+                return React.createElement(
+                    'button',
+                    {
+                        key: category,
+                        onClick: () => handleCategoryFilter(category),
+                        className: `px-3 py-1.5 text-sm rounded-full transition-all duration-200 ${
+                            isActive 
+                                ? 'bg-blue-600 text-white shadow-md' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`
+                    },
+                    category
+                );
+            })
+        );
+    };
+
     return React.createElement(
         React.Fragment,
         null,
         renderStatsCollectors(),
+        renderCategoryFilters(),
         renderTable()
     );
 };
