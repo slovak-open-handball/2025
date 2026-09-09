@@ -1,4 +1,4 @@
-// teams.js - finálna verzia (používa výhradne celé názvy vrátane sufixu, žiadne odstraňovanie)
+// teams.js - finálna verzia s pridanými stĺpcami pre názov tímu a kategóriu
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -308,7 +308,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                     dbIndex: member.originalIndex,
                     name: `${member.firstName} ${member.lastName}`.trim(),
                     jerseyNumber: member.jerseyNumber || '',
-                    memberType: member.type
+                    memberType: member.type,
+                    teamName: member.teamName,
+                    categoryName: member.categoryName
                 };
             });
         
@@ -425,7 +427,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                         dbIndex: member.originalIndex,
                         name: `${member.firstName} ${member.lastName}`.trim(),
                         jerseyNumber: member.jerseyNumber || '',
-                        memberType: member.type
+                        memberType: member.type,
+                        teamName: member.teamName,
+                        categoryName: member.categoryName
                     };
                 });
                 setMembersStats(emptyStats);
@@ -466,7 +470,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                                 dbIndex: stat.dbIndex,
                                 name: stat.name,
                                 jerseyNumber: stat.jerseyNumber,
-                                memberType: stat.memberType
+                                memberType: stat.memberType,
+                                teamName: stat.teamName,
+                                categoryName: stat.categoryName
                             };
                         }
                         combinedStats[memberKey].goals += stat.goals;
@@ -495,7 +501,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                                 dbIndex: stat.dbIndex,
                                 name: stat.name,
                                 jerseyNumber: stat.jerseyNumber,
-                                memberType: stat.memberType
+                                memberType: stat.memberType,
+                                teamName: stat.teamName,
+                                categoryName: stat.categoryName
                             };
                         });
                         setMembersStats(finalStats);
@@ -514,7 +522,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                                 dbIndex: combinedStats[key].dbIndex,
                                 name: combinedStats[key].name,
                                 jerseyNumber: combinedStats[key].jerseyNumber,
-                                memberType: combinedStats[key].memberType
+                                memberType: combinedStats[key].memberType,
+                                teamName: combinedStats[key].teamName,
+                                categoryName: combinedStats[key].categoryName
                             };
                         });
                     }
@@ -652,13 +662,15 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                 yellowCards: 0,
                 redCards: 0,
                 blueCards: 0,
-                exclusions: 0
+                exclusions: 0,
+                teamName: member.teamName || teamName,
+                categoryName: member.categoryName || categoryName
             };
         }
         return stats;
     };
     
-    // Renderovanie súpisky so štatistikami
+    // Renderovanie súpisky so štatistikami - PRIDANÉ STĹPCE PRE NÁZOV TÍMU A KATEGÓRIU
     const renderRosterTable = () => {
         if (isLoading) {
             return React.createElement(
@@ -700,6 +712,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                         React.createElement('th', { className: 'px-2 py-1.5 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
                         React.createElement('th', { className: 'px-2 py-1.5 text-left text-xs font-medium text-gray-500', style: { width: '35px' } }, 'Č.'),
                         React.createElement('th', { className: 'px-2 py-1.5 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
+                        // PRIDANÉ STĹPCE
+                        React.createElement('th', { className: 'px-2 py-1.5 text-left text-xs font-medium text-gray-500' }, 'Tím'),
+                        React.createElement('th', { className: 'px-2 py-1.5 text-left text-xs font-medium text-gray-500' }, 'Kategória'),
                         React.createElement('th', { className: 'px-2 py-1.5 text-center text-xs font-medium text-gray-500', style: { width: '40px' } }, 
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
@@ -747,6 +762,10 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                         const totalPenalties = stats.convertedPenalties + stats.missedPenalties;
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties}/${totalPenalties}` : '';
                         
+                        // Získame názov tímu a kategórie pre tento riadok
+                        const rowTeamName = stats.teamName || member.teamName || teamName;
+                        const rowCategoryName = stats.categoryName || member.categoryName || categoryName;
+                        
                         const memberIcon = member.type === 'Hráč' 
                             ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-xs' })
                             : (member.type === 'Člen RT (muž)' 
@@ -764,6 +783,9 @@ const TeamRosterItem = ({ teamName, categoryName }) => {
                             React.createElement('td', { className: 'px-2 py-1.5 text-center' }, memberIcon),
                             React.createElement('td', { className: 'px-2 py-1.5 font-mono font-medium text-gray-700 text-center text-xs' }, member.jerseyNumber || ''),
                             React.createElement('td', { className: 'px-2 py-1.5 text-gray-800 text-sm' }, fullName),
+                            // PRIDANÉ STĹPCE S ÚDAJMI
+                            React.createElement('td', { className: 'px-2 py-1.5 text-gray-600 text-xs' }, rowTeamName),
+                            React.createElement('td', { className: 'px-2 py-1.5 text-gray-600 text-xs' }, rowCategoryName),
                             React.createElement('td', { className: 'px-2 py-1.5 text-center font-bold text-green-600 text-sm' }, stats.goals > 0 ? stats.goals : ''),
                             React.createElement('td', { className: 'px-2 py-1.5 text-center font-medium text-teal-600 text-sm' }, penaltiesDisplay),
                             React.createElement('td', { className: 'px-2 py-1.5 text-center font-bold text-yellow-600 text-sm' }, stats.yellowCards > 0 ? stats.yellowCards : ''),
