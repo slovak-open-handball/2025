@@ -603,6 +603,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [unsubscribes, setUnsubscribes] = useState([]);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [sortTrigger, setSortTrigger] = useState(0); // Nový stav pre spúšťanie zoraďovania
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -741,6 +742,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             if (allMembersData.length > 0) {
                 const sortedMembers = sortMembersByGoals(allMembersData, newStats);
                 setAllMembersData(sortedMembers);
+                setSortTrigger(prev => prev + 1); // Spustíme ďalšie zoraďovanie
             }
             
             return newStats;
@@ -809,7 +811,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     // Zoradenie členov podľa gólov (zatiaľ bez štatistík)
                     setAllMembersData(allMembers);
                     setIsLoadingAll(false);
-                    setIsInitialLoad(false);
+                    setIsInitialLoad(true); // Nastavíme na true, aby sa spustilo zoraďovanie pri prvých štatistikách
                 }
             };
             
@@ -822,7 +824,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 if (loadedCount === totalTeams) {
                     setAllMembersData(allMembers);
                     setIsLoadingAll(false);
-                    setIsInitialLoad(false);
+                    setIsInitialLoad(true);
                 }
             }
         });
@@ -835,6 +837,22 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             });
         };
     }, [allTeams, selectedTeamNameFilter, getUniqueTeams]);
+
+    // EFEKT PRE AUTOMATICKÉ ZORAĎOVANIE PRI KAŽDEJ ZMENE ŠTATISTÍK
+    useEffect(() => {
+        if (allMembersData.length === 0 || Object.keys(allStatsData).length === 0) return;
+        
+        // Zoradenie členov pri každej zmene štatistík
+        const sortedMembers = sortMembersByGoals(allMembersData, allStatsData);
+        
+        // Porovnáme, či sa zoznam zmenil, aby sme sa vyhli nekonečnému cyklu
+        const currentIds = allMembersData.map(m => m.uniqueKey).join(',');
+        const sortedIds = sortedMembers.map(m => m.uniqueKey).join(',');
+        
+        if (currentIds !== sortedIds) {
+            setAllMembersData(sortedMembers);
+        }
+    }, [allStatsData, sortMembersByGoals, allMembersData]);
 
     // Renderovanie kolektorov pre každý tím
     const renderStatsCollectors = useCallback(() => {
