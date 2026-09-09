@@ -883,55 +883,10 @@ const RostersTable = ({ isRostersVisible }) => {
     // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
     const previousGoalsRef = useRef(new Map());
 
-    // Porovnáme, či sa zmenilo poradie podľa gólov - DEFINOVANÉ PRED useEffect
-    const getStableDisplayMembers = useCallback(() => {
-        if (displayMembers.length === 0) return [];
-        
-        // Ak ešte nemáme predchádzajúce poradie, uložíme ho
-        if (previousDisplayMembersRef.current.length === 0) {
-            previousDisplayMembersRef.current = displayMembers;
-            // Uložíme aj góly
-            const goalsMap = new Map();
-            displayMembers.forEach(m => {
-                const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-                goalsMap.set(key, m.goals || 0);
-            });
-            previousGoalsRef.current = goalsMap;
-            return displayMembers;
-        }
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        const prevGoals = previousGoalsRef.current;
-        const currentGoals = new Map();
-        displayMembers.forEach(m => {
-            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-            currentGoals.set(key, m.goals || 0);
-        });
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        let goalsChanged = false;
-        for (const [key, goals] of currentGoals) {
-            if (prevGoals.get(key) !== goals) {
-                goalsChanged = true;
-                break;
-            }
-        }
-        
-        // Ak sa zmenili góly, vždy aktualizujeme poradie
-        if (goalsChanged) {
-            previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoals;
-            return displayMembers;
-        }
-        
-        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
-        return previousDisplayMembersRef.current;
-    }, [displayMembers]);
-
     // Získame stabilné poradie - použijeme useState na vynútenie prekreslenia
     const [stableDisplayMembers, setStableDisplayMembers] = useState([]);
 
-    // Efekt na aktualizáciu stableDisplayMembers pri zmene
+    // Efekt na aktualizáciu stableDisplayMembers pri zmene - TOTO JE HLAVNÁ ZMENA
     useEffect(() => {
         if (displayMembers.length === 0) {
             if (stableDisplayMembers.length !== 0) {
@@ -940,19 +895,56 @@ const RostersTable = ({ isRostersVisible }) => {
             return;
         }
         
-        const newStable = getStableDisplayMembers();
-        // Porovnáme s aktuálnym stavom, aby sme predišli nekonečnému cyklu
-        const currentKey = stableDisplayMembers.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
-        ).join('|');
-        const newKey = newStable.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
-        ).join('|');
+        // Vytvoríme mapu aktuálnych gólov
+        const currentGoalsMap = new Map();
+        displayMembers.forEach(m => {
+            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
+            currentGoalsMap.set(key, m.goals || 0);
+        });
         
-        if (currentKey !== newKey) {
-            setStableDisplayMembers(newStable);
+        // Skontrolujeme, či sa zmenili góly oproti predchádzajúcemu stavu
+        const prevGoals = previousGoalsRef.current;
+        let goalsChanged = false;
+        let anyGoalAdded = false;
+        
+        for (const [key, goals] of currentGoalsMap) {
+            const prevGoal = prevGoals.get(key) || 0;
+            if (prevGoal !== goals) {
+                goalsChanged = true;
+                if (goals > 0 && prevGoal === 0) {
+                    anyGoalAdded = true;
+                }
+                break;
+            }
         }
-    }, [displayMembers, getStableDisplayMembers, stableDisplayMembers]);
+        
+        // Ak sa zmenili góly, aktualizujeme refy a nastavíme nové poradie
+        if (goalsChanged) {
+            // Aktualizujeme refy
+            previousGoalsRef.current = currentGoalsMap;
+            previousDisplayMembersRef.current = displayMembers;
+            
+            // Nastavíme nové poradie
+            setStableDisplayMembers(displayMembers);
+            return;
+        }
+        
+        // Ak sa nezmenili góly, ale nemáme žiadne stableDisplayMembers, nastavíme ich
+        if (stableDisplayMembers.length === 0) {
+            previousGoalsRef.current = currentGoalsMap;
+            previousDisplayMembersRef.current = displayMembers;
+            setStableDisplayMembers(displayMembers);
+            return;
+        }
+        
+        // Inak použijeme predchádzajúce poradie (zabráni blikaniu)
+        // Ale ak sa zmenilo poradie (napr. nový hráč), aktualizujeme
+        if (displayMembers.length !== stableDisplayMembers.length) {
+            previousGoalsRef.current = currentGoalsMap;
+            previousDisplayMembersRef.current = displayMembers;
+            setStableDisplayMembers(displayMembers);
+        }
+    }, [displayMembers, stableDisplayMembers]);
 
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
