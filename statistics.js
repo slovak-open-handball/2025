@@ -1096,7 +1096,7 @@ const RostersTable = ({ isRostersVisible }) => {
         }
 
         // Ak nemáme žiadnych členov na zobrazenie
-        if (stableDisplayMembers.length === 0) {
+        if (displayMembers.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'text-center py-8 text-gray-500' },
@@ -1243,7 +1243,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         'tr',
                         null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
-                            `Celkový počet členov: ${stableDisplayMembers.length}`
+                            `Celkový počet členov: ${displayMembers.length}`
                         )
                     )
                 )
