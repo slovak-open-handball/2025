@@ -186,6 +186,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
+    const [firstGoalLoaded, setFirstGoalLoaded] = useState(false);
+    const firstGoalProcessedRef = useRef(false);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -259,7 +261,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let isFirstLoad = true;
         let matchTeamMap = {};
     
-        const calculateStatsFromEvents = (eventsSnapshot) => {            
+        const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
             rosterData.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -280,6 +282,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     categoryName: member.categoryName
                 };
             });
+        
+            // Premenná na sledovanie, či bol nájdený nejaký gól
+            let foundAnyGoal = false;
         
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
@@ -364,9 +369,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 const stat = stats[foundMemberKey];
                 
+                // AKTUALIZÁCIA ŠTATISTÍK
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
+                        // Ak ide o gól, označíme, že sme našli aspoň jeden gól
+                        foundAnyGoal = true;
                         if (eventData.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
                         }
@@ -388,6 +396,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         break;
                 }
             });
+        
+            // --- KONTROLA PRVÉHO GÓLU A OBNOVENIE STRÁNKY ---
+            // Ak sme našli gól a ešte sme nespracovali prvý gól, obnovíme stránku
+            if (foundAnyGoal && !firstGoalProcessedRef.current) {
+                firstGoalProcessedRef.current = true;
+                
+                // Použijeme setTimeout, aby sme umožnili dokončenie aktuálneho render cyklu
+                setTimeout(() => {
+                    // Vynútime obnovenie stránky (F5)
+                    window.location.reload();
+                }, 100);
+            }
         
             return stats;
         };
