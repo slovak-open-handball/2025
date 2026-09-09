@@ -883,35 +883,7 @@ const RostersTable = ({ isRostersVisible }) => {
     // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
     const previousGoalsRef = useRef(new Map());
 
-    // Získame stabilné poradie - použijeme useState na vynútenie prekreslenia
-    const [stableDisplayMembers, setStableDisplayMembers] = useState([]);
-
-    // Efekt na aktualizáciu stableDisplayMembers pri zmene
-    useEffect(() => {
-        const newStable = getStableDisplayMembers();
-        // Porovnáme s aktuálnym stavom, aby sme predišli nekonečnému cyklu
-        if (JSON.stringify(newStable.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
-        )) !== JSON.stringify(stableDisplayMembers.map(m => 
-            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
-        ))) {
-            setStableDisplayMembers(newStable);
-        }
-    }, [displayMembers, getStableDisplayMembers, stableDisplayMembers]);
-
-    // Ak ešte nemáme žiadne stableDisplayMembers a máme displayMembers, nastavíme ich
-    if (stableDisplayMembers.length === 0 && displayMembers.length > 0) {
-        // Inicializácia
-        const initial = getStableDisplayMembers();
-        if (initial.length > 0) {
-            // Použijeme setTimeout, aby sme predišli render cyklu
-            setTimeout(() => {
-                setStableDisplayMembers(initial);
-            }, 0);
-        }
-    }
-
-    // Porovnáme, či sa zmenilo poradie podľa gólov
+    // Porovnáme, či sa zmenilo poradie podľa gólov - DEFINOVANÉ PRED useEffect
     const getStableDisplayMembers = useCallback(() => {
         if (displayMembers.length === 0) return [];
         
@@ -938,13 +910,9 @@ const RostersTable = ({ isRostersVisible }) => {
         
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
         let goalsChanged = false;
-        let anyGoalsChanged = false;
         for (const [key, goals] of currentGoals) {
             if (prevGoals.get(key) !== goals) {
                 goalsChanged = true;
-                if (goals > 0) {
-                    anyGoalsChanged = true;
-                }
                 break;
             }
         }
@@ -959,6 +927,32 @@ const RostersTable = ({ isRostersVisible }) => {
         // Ak sa nezmenili góly, vrátime predchádzajúce poradie
         return previousDisplayMembersRef.current;
     }, [displayMembers]);
+
+    // Získame stabilné poradie - použijeme useState na vynútenie prekreslenia
+    const [stableDisplayMembers, setStableDisplayMembers] = useState([]);
+
+    // Efekt na aktualizáciu stableDisplayMembers pri zmene
+    useEffect(() => {
+        if (displayMembers.length === 0) {
+            if (stableDisplayMembers.length !== 0) {
+                setStableDisplayMembers([]);
+            }
+            return;
+        }
+        
+        const newStable = getStableDisplayMembers();
+        // Porovnáme s aktuálnym stavom, aby sme predišli nekonečnému cyklu
+        const currentKey = stableDisplayMembers.map(m => 
+            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
+        ).join('|');
+        const newKey = newStable.map(m => 
+            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}_${m.goals}`
+        ).join('|');
+        
+        if (currentKey !== newKey) {
+            setStableDisplayMembers(newStable);
+        }
+    }, [displayMembers, getStableDisplayMembers, stableDisplayMembers]);
 
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
