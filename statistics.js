@@ -606,22 +606,88 @@ const RostersTable = ({ isRostersVisible }) => {
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     
     const tableContainerRef = useRef(null);
-    const [maxTableHeight, setMaxTableHeight] = useState('60vh');
-
+    const [maxTableHeight, setMaxTableHeight] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return `${Math.max(window.innerHeight * 0.6, 200)}px`;
+        }
+  
+        return '60vh';
+    });
+    const heightInitializedRef = useRef(false);
+    
     // Nastavenie výšky tabuľky
     useEffect(() => {
+        let resizeObserver = null;
+        let resizeTimer = null;
+    
         const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
+            const element = tableContainerRef.current;
+    
+            if (!element) return;
+    
+            const rect = element.getBoundingClientRect();
+    
+            // Ak ešte DOM nemá správnu pozíciu, skúsime znova
+            if (rect.top <= 0) {
+                requestAnimationFrame(updateHeight);
+                return;
+            }
+    
+            const calculatedMaxHeight =
+                window.innerHeight - rect.top - 50;
+    
+            const newHeight = `${Math.max(calculatedMaxHeight, 200)}px`;
+    
+            setMaxTableHeight(prev => {
+                if (prev === newHeight) {
+                    return prev;
+                }
+    
+                return newHeight;
+            });
+    
+            heightInitializedRef.current = true;
+        };
+    
+        // Počkáme, kým React dokončí render
+        const frame1 = requestAnimationFrame(() => {
+            const frame2 = requestAnimationFrame(() => {
+                updateHeight();
+    
+                // Sledujeme zmenu veľkosti samotného kontajnera
+                if (tableContainerRef.current && window.ResizeObserver) {
+                    resizeObserver = new ResizeObserver(() => {
+                        updateHeight();
+                    });
+    
+                    resizeObserver.observe(tableContainerRef.current);
+                }
+            });
+    
+            // cleanup druhého frame
+            return () => cancelAnimationFrame(frame2);
+        });
+    
+        const handleWindowResize = () => {
+            clearTimeout(resizeTimer);
+    
+            resizeTimer = setTimeout(() => {
+                updateHeight();
+            }, 50);
+        };
+    
+        window.addEventListener('resize', handleWindowResize);
+    
+        return () => {
+            cancelAnimationFrame(frame1);
+            clearTimeout(resizeTimer);
+            window.removeEventListener('resize', handleWindowResize);
+    
+            if (resizeObserver) {
+                resizeObserver.disconnect();
             }
         };
-
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, [allMembersData]);
+    }, []);
 
     // Načítanie tímov
     useEffect(() => {
