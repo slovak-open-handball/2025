@@ -751,9 +751,12 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setSortedMembers([]);
+        setAllMembersData([]);
     
-        // Použijeme Map pre unikátne členov podľa kombinácie kľúčov
+        // Použijeme Map pre unikátne členov
         const membersMap = new Map();
+        // Sledujeme, ktoré tímy už boli načítané (aby sme nepridávali duplicity pri opakovaných volaniach)
+        const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
         const newUnsubscribes = [];
@@ -761,11 +764,19 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         sortedTeams.forEach((teamGroup) => {
             const teamName = teamGroup.teamName;
             const categoryName = teamGroup.category;
+            const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
-                // Pridávame členov do Mapy s unikátnym kľúčom
+                // Ak už bol tím načítaný, preskočíme (aby sme nepridávali duplicity)
+                if (loadedTeamsSet.has(teamKey)) {
+                    return;
+                }
+                
+                // Označíme tím ako načítaný
+                loadedTeamsSet.add(teamKey);
+                
+                // Pridávame členov do Mapy
                 members.forEach(m => {
-                    // Unikátny kľúč: tím + kategória + typ + originalIndex + userId
                     const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.originalIndex}_${m.userId}`;
                     
                     if (!membersMap.has(uniqueKey)) {
@@ -773,8 +784,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                             ...m,
                             teamNameDisplay: teamName,
                             categoryNameDisplay: categoryName,
-                            uniqueTeamKey: `${teamName}_${categoryName}`,
-                            _uniqueKey: uniqueKey // Uložíme pre debug
+                            uniqueTeamKey: teamKey
                         });
                     }
                 });
@@ -782,7 +792,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 loadedCount++;
                 
                 if (loadedCount === totalTeams) {
-                    // Konvertujeme Map na pole
                     const allMembers = Array.from(membersMap.values());
                     setAllMembersData(allMembers);
                 }
