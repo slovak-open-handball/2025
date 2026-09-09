@@ -884,36 +884,46 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // JEDEN SORT, KTORÝ VŽDY UPREDNOSTNÍ STRELCOV!
-        const sorted = [...allMembersData].sort((a, b) => {
+        // ROZDELÍME HRÁČOV NA STRELCOV A OSTATNÝCH (RUČNE, BEZ SORT)
+        const goalsScorers = [];
+        const nonScorers = [];
+
+        allMembersData.forEach(member => {
+            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${member.type}_${member.originalIndex}`;
+            const goals = Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0);
+            
+            if (goals > 0) {
+                goalsScorers.push(member);
+            } else {
+                nonScorers.push(member);
+            }
+        });
+
+        // Zoradíme strelcov podľa gólov (zostupne)
+        goalsScorers.sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
             const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
             const teamStatsA = allStatsData[keyA] || {};
             const teamStatsB = allStatsData[keyB] || {};
             const memberKeyA = `${a.type}_${a.originalIndex}`;
             const memberKeyB = `${b.type}_${b.originalIndex}`;
-            
-            // PREVEDieme "" NA 0!
             const goalsA = Number((teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0);
             const goalsB = Number((teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0);
             
-            // 1. STRELCI VŽDY PRED OSTATNÝMI
-            if (goalsA > 0 && goalsB === 0) return -1;
-            if (goalsA === 0 && goalsB > 0) return 1;
+            if (goalsB !== goalsA) return goalsB - goalsA;
             
-            // 2. MEDZI STRELCAMI - podľa počtu gólov (zostupne)
-            if (goalsA > 0 && goalsB > 0) {
-                if (goalsB !== goalsA) return goalsB - goalsA;
-                
-                // Ak majú rovnaké góly, podľa tímu
-                const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                if (teamCompare !== 0) return teamCompare;
-                
-                // Potom podľa mena
-                return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-            }
+            // Ak majú rovnaké góly, zoradíme podľa tímu
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
             
-            // 3. MEDZI OSTATNÝMI - podľa tímu, mena, čísla dresu
+            // Potom podľa mena
+            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+        });
+
+        // Zoradíme ostatných podľa abecedy (tím, meno, číslo dresu)
+        nonScorers.sort((a, b) => {
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
             
@@ -925,9 +935,10 @@ const RostersTable = ({ isRostersVisible }) => {
             return aNum - bNum;
         });
 
-        const displayMembers = sorted;
+        // SPOJÍME - STRELCI VŽDY PRED OSTATNÝMI!
+        const displayMembers = [...goalsScorers, ...nonScorers];
 
-        // Najprv zistíme, koľko členov má góly
+        // Najprv zistíme, koľko členov má góly (iba strelci)
         const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
