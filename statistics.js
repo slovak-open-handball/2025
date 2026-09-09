@@ -1,4 +1,4 @@
-// statistics.js
+// teams.js - opravená verzia so samostatnou komponentou pre tabuľku
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -177,7 +177,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [isStatsLoaded, setIsStatsLoaded] = useState(false);
-    const [hasProcessedInitial, setHasProcessedInitial] = useState(false);
+    const [hasNotifiedLoaded, setHasNotifiedLoaded] = useState(false);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -186,7 +186,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
         
         const loadRoster = () => {
             setIsLoading(true);
-            setHasProcessedInitial(false);
             
             const handleMembersUpdate = (members) => {
                 setRosterData(members);
@@ -243,9 +242,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
         if (!rosterData || rosterData.length === 0 || !window.db) {
             setMembersStats({});
             if (onStatsUpdate) onStatsUpdate(teamName, {});
-            if (onStatsLoaded && !hasProcessedInitial) {
+            if (onStatsLoaded && !hasNotifiedLoaded) {
                 onStatsLoaded(teamName, true);
-                setHasProcessedInitial(true);
+                setHasNotifiedLoaded(true);
             }
             return;
         }
@@ -256,9 +255,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
         if (!currentTeamName || !currentCategoryName) {
             setMembersStats({});
             if (onStatsUpdate) onStatsUpdate(teamName, {});
-            if (onStatsLoaded && !hasProcessedInitial) {
+            if (onStatsLoaded && !hasNotifiedLoaded) {
                 onStatsLoaded(teamName, true);
-                setHasProcessedInitial(true);
+                setHasNotifiedLoaded(true);
             }
             return;
         }
@@ -269,8 +268,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
-        let processedEventsCount = 0;
-        let totalEventChunks = 0;
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
@@ -401,9 +398,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
                 });
                 setMembersStats(emptyStats);
                 if (onStatsUpdate) onStatsUpdate(teamName, emptyStats);
-                if (onStatsLoaded && !hasProcessedInitial) {
+                if (onStatsLoaded && !hasNotifiedLoaded) {
                     onStatsLoaded(teamName, true);
-                    setHasProcessedInitial(true);
+                    setHasNotifiedLoaded(true);
                 }
                 return;
             }
@@ -417,8 +414,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
             const listeners = [];
             let processedChunks = 0;
             const combinedStats = {};
-            totalEventChunks = chunks.length;
-            processedEventsCount = 0;
     
             chunks.forEach((chunk, index) => {
                 const eventsRef = collection(window.db, 'matchEvents');
@@ -459,7 +454,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
                     });
     
                     processedChunks++;
-                    processedEventsCount++;
     
                     if (processedChunks === chunks.length) {
                         const finalStats = {};
@@ -484,14 +478,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
                         setMembersStats(finalStats);
                         if (onStatsUpdate) onStatsUpdate(teamName, finalStats);
                         
-                        // Oznámiť, že štatistiky sú načítané
-                        if (onStatsLoaded && !hasProcessedInitial) {
+                        if (onStatsLoaded && !hasNotifiedLoaded) {
                             onStatsLoaded(teamName, true);
-                            setHasProcessedInitial(true);
+                            setHasNotifiedLoaded(true);
                         }
                         
                         processedChunks = 0;
-                        processedEventsCount = 0;
                         
                         Object.keys(combinedStats).forEach(key => {
                             combinedStats[key] = {
@@ -515,15 +507,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
                 }, (error) => {
                     console.error(`[Stats Effect] ❌ Chyba pri načítaní udalostí pre chunk ${index + 1}:`, error);
                     processedChunks++;
-                    processedEventsCount++;
                     if (processedChunks === chunks.length) {
-                        // Aj pri chybe oznámime načítanie, aby sa tabuľka zobrazila
-                        if (onStatsLoaded && !hasProcessedInitial) {
+                        if (onStatsLoaded && !hasNotifiedLoaded) {
                             onStatsLoaded(teamName, true);
-                            setHasProcessedInitial(true);
+                            setHasNotifiedLoaded(true);
                         }
                         processedChunks = 0;
-                        processedEventsCount = 0;
                     }
                 });
     
@@ -585,10 +574,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
             processMatches(matchesSnapshot);
         }, (error) => {
             console.error('[Stats Effect] ❌ Chyba pri načítaní zápasov:', error);
-            // Pri chybe oznámime načítanie
-            if (onStatsLoaded && !hasProcessedInitial) {
+            if (onStatsLoaded && !hasNotifiedLoaded) {
                 onStatsLoaded(teamName, true);
-                setHasProcessedInitial(true);
+                setHasNotifiedLoaded(true);
             }
         });
     
@@ -641,6 +629,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [loadedTeamsCount, setLoadedTeamsCount] = useState(0);
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [isDataReady, setIsDataReady] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -716,10 +705,12 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
     // Reset stavu pri zmene filtra
     useEffect(() => {
-        setIsDataReady(false);
-        setLoadedTeamsCount(0);
-        setAllMembersData([]);
-        setAllStatsData({});
+        if (!isInitialLoad) {
+            setIsDataReady(false);
+            setLoadedTeamsCount(0);
+            setAllMembersData([]);
+            setAllStatsData({});
+        }
     }, [selectedTeamNameFilter]);
 
     // Načítanie členov všetkých tímov
@@ -751,6 +742,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             setAllMembersData([]);
             setIsLoadingAll(false);
             setIsDataReady(true);
+            setTotalTeamsCount(0);
+            setLoadedTeamsCount(0);
             return;
         }
 
@@ -764,12 +757,15 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         const totalTeams = sortedTeams.length;
         const newUnsubscribes = [];
         const teamLoadedStatus = {};
+        let statsLoadedCount = 0;
 
         // Funkcia na kontrolu, či sú všetky dáta načítané
         const checkAllDataLoaded = () => {
-            const allLoaded = Object.values(teamLoadedStatus).every(status => status === true);
-            if (allLoaded && Object.keys(teamLoadedStatus).length === totalTeams) {
-                // Zoradenie členov podľa GÓLOV (zostupne - najviac gólov navrchu)
+            const allStatsLoaded = Object.values(teamLoadedStatus).every(status => status === true);
+            const allRostersLoaded = loadedCount === totalTeams;
+            
+            if (allStatsLoaded && allRostersLoaded && totalTeams > 0) {
+                // Zoradenie členov podľa GÓLOV
                 allMembers.sort((a, b) => {
                     const teamStatsA = allStatsData[a.teamNameDisplay] || {};
                     const teamStatsB = allStatsData[b.teamNameDisplay] || {};
@@ -793,6 +789,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 setAllMembersData(allMembers);
                 setIsLoadingAll(false);
                 setIsDataReady(true);
+                setIsInitialLoad(false);
             }
         };
 
@@ -810,44 +807,17 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 }));
                 allMembers = [...allMembers, ...membersWithTeamInfo];
                 loadedCount++;
-                
-                if (loadedCount === totalTeams) {
-                    // Zoradenie členov podľa GÓLOV (zostupne - najviac gólov navrchu)
-                    allMembers.sort((a, b) => {
-                        const teamStatsA = allStatsData[a.teamNameDisplay] || {};
-                        const teamStatsB = allStatsData[b.teamNameDisplay] || {};
-                        const keyA = `${a.type}_${a.originalIndex}`;
-                        const keyB = `${b.type}_${b.originalIndex}`;
-                        const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                        const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
-                        
-                        if (goalsB !== goalsA) {
-                            return goalsB - goalsA;
-                        }
-                        
-                        const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                        if (teamCompare !== 0) return teamCompare;
-                        
-                        const aNum = parseInt(a.jerseyNumber) || 999;
-                        const bNum = parseInt(b.jerseyNumber) || 999;
-                        return aNum - bNum;
-                    });
-                    
-                    setAllMembersData(allMembers);
-                    setIsLoadingAll(false);
-                    
-                    // Skontrolujeme, či už sú načítané aj štatistiky
-                    const allStatsLoaded = Object.keys(teamLoadedStatus).every(key => teamLoadedStatus[key] === true);
-                    if (allStatsLoaded && Object.keys(teamLoadedStatus).length === totalTeams) {
-                        setIsDataReady(true);
-                    }
-                }
+                setLoadedTeamsCount(loadedCount);
+                checkAllDataLoaded();
             };
             
             const handleStatsLoaded = (teamName, loaded) => {
                 const key = `${teamName}_${categoryName}`;
-                teamLoadedStatus[key] = loaded;
-                setLoadedTeamsCount(prev => prev + 1);
+                if (!teamLoadedStatus[key]) {
+                    teamLoadedStatus[key] = true;
+                    statsLoadedCount++;
+                    setLoadedTeamsCount(prev => Math.max(prev, statsLoadedCount));
+                }
                 checkAllDataLoaded();
             };
             
@@ -857,14 +827,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             } catch (error) {
                 console.error(`[loadTeamMembers] Chyba pre ${teamName}:`, error);
                 loadedCount++;
-                if (loadedCount === totalTeams) {
-                    setAllMembersData(allMembers);
-                    setIsLoadingAll(false);
-                    const allStatsLoaded = Object.values(teamLoadedStatus).every(status => status === true);
-                    if (allStatsLoaded && Object.keys(teamLoadedStatus).length === totalTeams) {
-                        setIsDataReady(true);
-                    }
-                }
+                setLoadedTeamsCount(loadedCount);
+                checkAllDataLoaded();
             }
         });
 
@@ -886,7 +850,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             };
             
             // Po aktualizácii štatistík preusporiadame členov podľa gólov
-            if (allMembersData.length > 0) {
+            if (allMembersData.length > 0 && isDataReady) {
                 const sortedMembers = [...allMembersData];
                 sortedMembers.sort((a, b) => {
                     const teamStatsA = newStats[a.teamNameDisplay] || {};
