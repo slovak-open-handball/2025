@@ -883,38 +883,6 @@ const RostersTable = ({ isRostersVisible }) => {
     // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
     const previousGoalsRef = useRef(new Map());
 
-    // Porovnáme, či sa zmenilo poradie podľa gólov
-    const getStableDisplayMembers = useCallback(() => {
-        if (displayMembers.length === 0) return [];
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        const prevGoals = previousGoalsRef.current;
-        const currentGoals = new Map();
-        displayMembers.forEach(m => {
-            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-            currentGoals.set(key, m.goals || 0);
-        });
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        let goalsChanged = false;
-        for (const [key, goals] of currentGoals) {
-            if (prevGoals.get(key) !== goals) {
-                goalsChanged = true;
-                break;
-            }
-        }
-        
-        // Ak sa zmenili góly, vždy aktualizujeme poradie
-        if (goalsChanged) {
-            previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoals;
-            return displayMembers;
-        }
-        
-        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
-        return previousDisplayMembersRef.current;
-    }, [displayMembers]);
-
     // Získame stabilné poradie - použijeme useState na vynútenie prekreslenia
     const [stableDisplayMembers, setStableDisplayMembers] = useState([]);
 
@@ -942,11 +910,6 @@ const RostersTable = ({ isRostersVisible }) => {
             }, 0);
         }
     }
-
-    // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
-    const previousDisplayMembersRef = useRef([]);
-    // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
-    const previousGoalsRef = useRef(new Map());
 
     // Porovnáme, či sa zmenilo poradie podľa gólov
     const getStableDisplayMembers = useCallback(() => {
