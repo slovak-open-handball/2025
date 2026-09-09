@@ -24,6 +24,27 @@ const loadLeftMenu = async (userProfileData) => {
     }
 };
 
+// Nová funkcia na kontrolu viditeľnosti stránky
+const checkPageVisibility = async (db, pageId) => {
+    try {
+        const pageRef = doc(db, 'pages', pageId);
+        const pageDoc = await getDocs(collection(db, 'pages'));
+        let isVisible = false;
+        
+        pageDoc.forEach(doc => {
+            if (doc.id === pageId) {
+                const data = doc.data();
+                isVisible = data.visible === true;
+            }
+        });
+        
+        return isVisible;
+    } catch (error) {
+        console.error(`Chyba pri kontrole viditeľnosti stránky ${pageId}:`, error);
+        return false;
+    }
+};
+
 const setupMenuListeners = async (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
@@ -210,9 +231,44 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         }
     };
 
-    const showRoleBasedLinks = () => {
+    // NOVÁ funkcia na kontrolu viditeľnosti stránky a zobrazenie linku
+    const checkAndShowPageLink = async (linkElement, pageId) => {
+        if (!linkElement) return false;
+        
+        try {
+            const isVisible = await checkPageVisibility(db, pageId);
+            if (isVisible) {
+                linkElement.classList.remove('hidden');
+                return true;
+            } else {
+                linkElement.classList.add('hidden');
+                return false;
+            }
+        } catch (error) {
+            console.error(`Chyba pri kontrole viditeľnosti ${pageId}:`, error);
+            linkElement.classList.add('hidden');
+            return false;
+        }
+    };
+
+    const showRoleBasedLinks = async () => {
+        // Najprv skryjeme všetky linky okrem "Moje údaje"
+        addCategoriesLink?.classList.add('hidden');
+        addGroupsLink?.classList.add('hidden');
+        tournamentSettingsLink?.classList.add('hidden');
+        allRegistrationsLink?.classList.add('hidden');
+        allUsersLink?.classList.add('hidden');
+        notificationsLink?.classList.add('hidden');
+        teamRostersLink?.classList.add('hidden');
+        teamsInGroupsLink?.classList.add('hidden');
+        mapLink?.classList.add('hidden');
+        teamsAccommodationLink?.classList.add('hidden');
+        matchesLink?.classList.add('hidden');
+        matchesHallLink?.classList.add('hidden');
+        cateringLink?.classList.add('hidden');
+
+        // Zobrazíme linky podľa role
         if (userProfileData.role === 'admin') {
-            addCategoriesLink?.classList.remove('hidden');
             addGroupsLink?.classList.remove('hidden');
             tournamentSettingsLink?.classList.remove('hidden');
             allRegistrationsLink?.classList.remove('hidden');
@@ -225,47 +281,33 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             matchesLink?.classList.remove('hidden');
             matchesHallLink?.classList.add('hidden');
             cateringLink?.classList.remove('hidden');
+            
+            // Pre admina kontrolujeme viditeľnosť "Vytvorenie kategórií"
+            await checkAndShowPageLink(addCategoriesLink, 'category-creation');
         } else if (userProfileData.role === 'club') {
-            addCategoriesLink?.classList.add('hidden');
-            addGroupsLink?.classList.add('hidden');
-            tournamentSettingsLink?.classList.add('hidden');
-            allRegistrationsLink?.classList.add('hidden');
-            allUsersLink?.classList.add('hidden');
-            notificationsLink?.classList.add('hidden');
+            // Pre club - zobrazíme len linky, ktoré majú byť viditeľné podľa nastavení
+            const isCategoryVisible = await checkPageVisibility(db, 'category-creation');
+            if (isCategoryVisible) {
+                addCategoriesLink?.classList.remove('hidden');
+            }
+            
+            // Ostatné linky pre club
             teamRostersLink?.classList.remove('hidden');
-            teamsInGroupsLink?.classList.add('hidden');
-            mapLink?.classList.add('hidden');
-            teamsAccommodationLink?.classList.add('hidden');
-            matchesLink?.classList.add('hidden');
-            matchesHallLink?.classList.add('hidden');
-            cateringLink?.classList.add('hidden');
         } else if (userProfileData.role === 'hall') {
-            addCategoriesLink?.classList.add('hidden');
-            addGroupsLink?.classList.add('hidden');
-            tournamentSettingsLink?.classList.add('hidden');
-            allRegistrationsLink?.classList.add('hidden');
-            allUsersLink?.classList.add('hidden');
-            notificationsLink?.classList.add('hidden');
-            teamRostersLink?.classList.add('hidden');
-            teamsInGroupsLink?.classList.add('hidden');
-            mapLink?.classList.add('hidden');
-            teamsAccommodationLink?.classList.add('hidden');
-            matchesLink?.classList.add('hidden');
             matchesHallLink?.classList.remove('hidden');
-            cateringLink?.classList.add('hidden');
-        } else {
-            addCategoriesLink?.classList.add('hidden');
+        }
+        
+        // Pre všetky role okrem admina skryjeme admin linky
+        if (userProfileData.role !== 'admin') {
             addGroupsLink?.classList.add('hidden');
             tournamentSettingsLink?.classList.add('hidden');
             allRegistrationsLink?.classList.add('hidden');
             allUsersLink?.classList.add('hidden');
             notificationsLink?.classList.add('hidden');
-            teamRostersLink?.classList.add('hidden');
             teamsInGroupsLink?.classList.add('hidden');
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
             matchesLink?.classList.add('hidden');
-            matchesHallLink?.classList.add('hidden');
             cateringLink?.classList.add('hidden');
         }
     };
@@ -282,7 +324,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
 
     applyMenuState();
     updateMenuText();
-    showRoleBasedLinks();
+    await showRoleBasedLinks();
     setTimeout(highlightActiveMenuLinkGray, 100);
 
     menuToggleButton.addEventListener('click', () => {
