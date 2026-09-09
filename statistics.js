@@ -1048,15 +1048,25 @@ const RostersTable = ({ isRostersVisible }) => {
                 return categoryCompare;
             }
     
-            // 5. Potom podľa mena a priezviska
-            const nameCompare = slovakCollator.compare(
-                `${a.firstName || ''} ${a.lastName || ''}`,
-                `${b.firstName || ''} ${b.lastName || ''}`
+            // 5. Potom abecedne podľa priezviska a následne mena
+            const lastNameCompare = slovakCollator.compare(
+                a.lastName || '',
+                b.lastName || ''
             );
-    
-            if (nameCompare !== 0) {
-                return nameCompare;
+            
+            if (lastNameCompare !== 0) {
+                return lastNameCompare;
             }
+            
+            const firstNameCompare = slovakCollator.compare(
+                a.firstName || '',
+                b.firstName || ''
+            );
+            
+            if (firstNameCompare !== 0) {
+                return firstNameCompare;
+            }
+
     
             // 6. Nakoniec číslo dresu
             const aNum = parseInt(a.jerseyNumber, 10);
