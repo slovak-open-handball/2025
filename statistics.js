@@ -969,7 +969,6 @@ const RostersTable = ({ isRostersVisible }) => {
         }
 
         // Zoradenie členov podľa gólov, priezviska, mena, a ďalších kritérií
-        // Ak sa zmení počet gólov, poradie sa aktualizuje automaticky
         const membersWithGoals = useMemo(() => {
             if (!isStatsReady || allMembersData.length === 0) return [];
         
@@ -1009,10 +1008,15 @@ const RostersTable = ({ isRostersVisible }) => {
         
             // Zoradíme ostatných podľa abecedy (najskôr priezvisko, potom meno)
             nonScorers.sort((a, b) => {
+                // Porovnanie priezviska
                 const lastNameCompare = slovakCollator.compare(a.lastName || '', b.lastName || '');
                 if (lastNameCompare !== 0) return lastNameCompare;
+        
+                // Porovnanie mena
                 const firstNameCompare = slovakCollator.compare(a.firstName || '', b.firstName || '');
                 if (firstNameCompare !== 0) return firstNameCompare;
+        
+                // Alternatívne porovnanie podľa jerseyNumber
                 const aNum = parseInt(a.jerseyNumber) || 999;
                 const bNum = parseInt(b.jerseyNumber) || 999;
                 return aNum - bNum;
