@@ -265,7 +265,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     jerseyNumber: member.jerseyNumber || '',
                     memberType: member.type,
                     teamName: member.teamName,
-                    categoryName: member.categoryName // Pridané
+                    categoryName: member.categoryName
                 };
             });
         
@@ -626,7 +626,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
 };
 
 // --- KOMPONENTA PRE TABUĽKU SÚPISIEK ---
-const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
+const RostersTable = ({ isRostersVisible }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allMembersData, setAllMembersData] = useState([]);
     const [allStatsData, setAllStatsData] = useState({});
@@ -635,7 +635,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [sortedMembers, setSortedMembers] = useState([]);
-    // Pridané: sledujeme, ktoré tímy už poslali štatistiky
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     
     const tableContainerRef = useRef(null);
@@ -722,16 +721,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     
         const uniqueTeams = getUniqueTeams();
         
-        // Filtrovanie tímov
-        let filteredTeams = uniqueTeams;
-        if (selectedTeamNameFilter) {
-            filteredTeams = uniqueTeams.filter(team => 
-                team.teamName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
-            );
-        }
-    
         // Zoradenie tímov
-        const sortedTeams = filteredTeams.sort((a, b) => {
+        const sortedTeams = uniqueTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
     
@@ -755,7 +746,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     
         // Použijeme Map pre unikátne členov
         const membersMap = new Map();
-        // Sledujeme, ktoré tímy už boli načítané (aby sme nepridávali duplicity pri opakovaných volaniach)
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -767,15 +757,12 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
-                // Ak už bol tím načítaný, preskočíme (aby sme nepridávali duplicity)
                 if (loadedTeamsSet.has(teamKey)) {
                     return;
                 }
                 
-                // Označíme tím ako načítaný
                 loadedTeamsSet.add(teamKey);
                 
-                // Pridávame členov do Mapy
                 members.forEach(m => {
                     const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.originalIndex}_${m.userId}`;
                     
@@ -816,7 +803,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams, selectedTeamNameFilter]);
+    }, [allTeams]);
 
     // --- Zoraďovanie podľa gólov ---
     useEffect(() => {
@@ -899,14 +886,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         if (!isRostersVisible || allTeams.length === 0) return null;
 
         const uniqueTeams = getUniqueTeams();
-        let filteredTeams = uniqueTeams;
-        if (selectedTeamNameFilter) {
-            filteredTeams = uniqueTeams.filter(team => 
-                team.teamName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
-            );
-        }
-
-        const sortedTeams = filteredTeams.sort((a, b) => {
+        
+        const sortedTeams = uniqueTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
 
@@ -947,12 +928,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         // Použijeme už zoradených členov zo stavu
         const displayMembers = sortedMembers.length > 0 ? sortedMembers : allMembersData;
 
-        // --- ZORAĎOVANIE PRE ZOBRAZENIE PORADIA (rank) ---
-        // Pre každého člena zistíme, či má gól a ak áno, aké má poradie medzi střelcami
-        let currentRank = 0;
-        let lastGoals = -1;
-        let rankCounter = 0;
-        
         // Najprv zistíme, koľko členov má góly
         const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
@@ -974,7 +949,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     className: 'w-full border-collapse bg-white text-sm',
                     style: { minWidth: '900px' }
                 },
-                // HLAVIČKA TABUĽKY (rovnaká ako predtým)
+                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-100 sticky top-0 z-20' },
@@ -1114,7 +1089,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 // --- HLAVNÁ KOMPONENTA ---
 const TeamsOverviewApp = (props) => {
     const [uiNotification, setUiNotification] = useState(null);
-    const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
