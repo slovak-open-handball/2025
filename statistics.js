@@ -960,9 +960,6 @@ const RostersTable = ({ isRostersVisible }) => {
         return previousDisplayMembersRef.current;
     }, [displayMembers]);
 
-    // Získame stabilné poradie
-    const stableDisplayMembers = getStableDisplayMembers();
-
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
         if (!isRostersVisible) {
