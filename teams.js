@@ -1249,18 +1249,7 @@ const TeamsOverviewApp = (props) => {
     const [rosterCategoryName, setRosterCategoryName] = useState('');
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const [updateTrigger, setUpdateTrigger] = useState(0); // Trigger pre aktualizáciu UI
-
-
-
-    const [selectedCategoryId, setSelectedCategoryId] = useState('');
-
-
-
-
-
-
-  
+    const [updateTrigger, setUpdateTrigger] = useState(0);   
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
