@@ -798,7 +798,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         if (allMembersData.length === 0 || !isStatsReady) {
             return;
         }
-
+    
         // Zoraďujeme pri každej zmene štatistík
         const sorted = [...allMembersData].sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
@@ -810,18 +810,33 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
             const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
             
-            if (goalsB !== goalsA) {
-                return goalsB - goalsA;
+            // --- PRVÉ PRAVIDLO: Členovia S GÓLMI sú PRED členmi BEZ GÓLOV ---
+            const hasGoalsA = goalsA > 0;
+            const hasGoalsB = goalsB > 0;
+            
+            // Ak má jeden gól a druhý nie, ten s gólom ide prvý
+            if (hasGoalsA !== hasGoalsB) {
+                return hasGoalsA ? -1 : 1;
             }
             
+            // --- DRUHÉ PRAVIDLO: Ak obaja majú góly (alebo obaja nemajú) ---
+            // Ak obaja majú góly, zoraď podľa počtu gólov (zostupne)
+            if (hasGoalsA && hasGoalsB) {
+                if (goalsB !== goalsA) {
+                    return goalsB - goalsA;
+                }
+            }
+            
+            // --- TRETIE PRAVIDLO: Podľa názvu tímu (pre všetkých) ---
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
             
+            // --- ŠTVRTÉ PRAVIDLO: Podľa čísla dresu (pre všetkých) ---
             const aNum = parseInt(a.jerseyNumber) || 999;
             const bNum = parseInt(b.jerseyNumber) || 999;
             return aNum - bNum;
         });
-
+    
         setSortedMembers(sorted);
     }, [allMembersData, allStatsData, isStatsReady]);
 
