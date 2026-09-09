@@ -700,8 +700,6 @@ const RostersTable = ({ isRostersVisible }) => {
             setStatsReceivedCount(0);
             setIsStatsReady(false);
             setReceivedTeams(new Set());
-            setIsInitialized(false);
-            setStableDisplayMembers([]);
             return;
         }
     
@@ -711,8 +709,6 @@ const RostersTable = ({ isRostersVisible }) => {
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setAllMembersData([]);
-        setIsInitialized(false);
-        setStableDisplayMembers([]);
     
         // Použijeme NOVÚ Mapu a NOVÉ sety
         const membersMap = new Map();
