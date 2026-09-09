@@ -648,7 +648,6 @@ const RostersTable = ({ isRostersVisible }) => {
     const [isStatsReady, setIsStatsReady] = useState(false);
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
-    const [sortedMembers, setSortedMembers] = useState([]);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     
     const tableContainerRef = useRef(null);
@@ -742,7 +741,6 @@ const RostersTable = ({ isRostersVisible }) => {
     
         if (sortedTeams.length === 0) {
             setAllMembersData([]);
-            setSortedMembers([]);
             setTotalTeamsCount(0);
             setStatsReceivedCount(0);
             setIsStatsReady(false);
@@ -755,7 +753,6 @@ const RostersTable = ({ isRostersVisible }) => {
         setStatsReceivedCount(0);
         setIsStatsReady(false);
         setReceivedTeams(new Set());
-        setSortedMembers([]);
         setAllMembersData([]);
     
         // Použijeme Map pre unikátne členov
@@ -831,57 +828,6 @@ const RostersTable = ({ isRostersVisible }) => {
             });
         };
     }, [allTeams]);
-
-    // --- Zoraďovanie podľa gólov (OPRAVENÉ) ---
-    useEffect(() => {
-        if (allMembersData.length === 0 || !isStatsReady) {
-            return;
-        }
-
-        // 1. Odstránenie duplicít na základe unikátneho kľúča
-        const uniqueMembersMap = new Map();
-        allMembersData.forEach(member => {
-            const memberKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}_${member.userId}`;
-            if (!uniqueMembersMap.has(memberKey)) {
-                uniqueMembersMap.set(memberKey, member);
-            }
-        });
-        const uniqueMembers = Array.from(uniqueMembersMap.values());
-
-        // 2. Zoradenie
-        const sorted = [...uniqueMembers].sort((a, b) => {
-            const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
-            const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
-            const teamStatsA = allStatsData[keyA] || {};
-            const teamStatsB = allStatsData[keyB] || {};
-            const memberKeyA = `${a.type}_${a.originalIndex}`;
-            const memberKeyB = `${b.type}_${b.originalIndex}`;
-            const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
-            const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
-            
-            // Najprv tí, ktorí majú góly (goalsA > 0), potom ostatní
-            if (goalsA > 0 && goalsB === 0) return -1;
-            if (goalsA === 0 && goalsB > 0) return 1;
-            
-            // Medzi strelcami zoradíme podľa gólov (zostupne)
-            if (goalsA > 0 && goalsB > 0) {
-                if (goalsB !== goalsA) {
-                    return goalsB - goalsA;
-                }
-            }
-            
-            // Potom podľa tímu
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            
-            // Potom podľa čísla dresu
-            const aNum = parseInt(a.jerseyNumber) || 999;
-            const bNum = parseInt(b.jerseyNumber) || 999;
-            return aNum - bNum;
-        });
-
-        setSortedMembers(sorted);
-    }, [allMembersData, allStatsData, isStatsReady]);
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
@@ -963,8 +909,49 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // POUŽIJEME VŽDY sortedMembers (ak existujú), NIE allMembersData
-        const displayMembers = sortedMembers.length > 0 ? sortedMembers : allMembersData;
+        // 1. ODSTRÁNIME DUPLICITY a VYTVORÍME ZORADENÝ ZOZNAM PRIAMO TU
+        const uniqueMembersMap = new Map();
+        allMembersData.forEach(member => {
+            const memberKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}_${member.userId}`;
+            if (!uniqueMembersMap.has(memberKey)) {
+                uniqueMembersMap.set(memberKey, member);
+            }
+        });
+        const uniqueMembers = Array.from(uniqueMembersMap.values());
+
+        // 2. ZORADÍME PODĽA GÓLOV (strelec prví, potom podľa počtu gólov)
+        const sorted = [...uniqueMembers].sort((a, b) => {
+            const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
+            const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
+            const teamStatsA = allStatsData[keyA] || {};
+            const teamStatsB = allStatsData[keyB] || {};
+            const memberKeyA = `${a.type}_${a.originalIndex}`;
+            const memberKeyB = `${b.type}_${b.originalIndex}`;
+            const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
+            const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
+            
+            // Najprv tí, ktorí majú góly (goalsA > 0), potom ostatní
+            if (goalsA > 0 && goalsB === 0) return -1;
+            if (goalsA === 0 && goalsB > 0) return 1;
+            
+            // Medzi strelcami zoradíme podľa gólov (zostupne)
+            if (goalsA > 0 && goalsB > 0) {
+                if (goalsB !== goalsA) {
+                    return goalsB - goalsA;
+                }
+            }
+            
+            // Potom podľa tímu
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            // Potom podľa čísla dresu
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+
+        const displayMembers = sorted;
 
         // Najprv zistíme, koľko členov má góly
         const membersWithGoals = displayMembers.filter(m => {
