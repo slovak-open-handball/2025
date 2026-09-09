@@ -2631,6 +2631,14 @@ const TeamsOverviewApp = (props) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
 
+        // Získame categoryId pre vybranú kategóriu
+        let categoryId = null;
+        const currentCategoryName = selectedTeamDetails.category || categoryFromUrl;
+        if (currentCategoryName) {
+            const foundId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === currentCategoryName);
+            if (foundId) categoryId = foundId;
+        }
+
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -2659,6 +2667,7 @@ const TeamsOverviewApp = (props) => {
                     )
                 )
             ),
+            // --- BOX S KATEGÓRIAMI ---
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-xl p-6' },
@@ -2703,6 +2712,13 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
+            // --- NOVÝ KOMPONENT: ZÁPASY TÍMU ---
+            React.createElement(TeamMatchesList, {
+                teamName: selectedTeamDetails.teamName,
+                categoryName: selectedTeamDetails.category || categoryFromUrl || '',
+                categoryId: categoryId
+            }),
+            // --- SÚPISKA TÍMU ---
             renderTeamRoster()
         );
     };
