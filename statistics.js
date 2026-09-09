@@ -746,6 +746,7 @@ const RostersTable = ({ isRostersVisible }) => {
     
         // Použijeme Map pre unikátne členov
         const membersMap = new Map();
+        // Sledujeme, ktoré tímy už boli načítané
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -757,12 +758,17 @@ const RostersTable = ({ isRostersVisible }) => {
             const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
-                if (loadedTeamsSet.has(teamKey)) {
-                    return;
+                // VYMAŽEME VŠETKÝCH ČLENOV PRE TENTO TÍM Z MAPY
+                // a potom ich znova pridáme
+                const keysToRemove = [];
+                for (const [key, value] of membersMap) {
+                    if (value.teamNameDisplay === teamName && value.categoryNameDisplay === categoryName) {
+                        keysToRemove.push(key);
+                    }
                 }
+                keysToRemove.forEach(key => membersMap.delete(key));
                 
-                loadedTeamsSet.add(teamKey);
-                
+                // Pridávame členov do Mapy
                 members.forEach(m => {
                     const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.originalIndex}_${m.userId}`;
                     
@@ -776,7 +782,11 @@ const RostersTable = ({ isRostersVisible }) => {
                     }
                 });
                 
-                loadedCount++;
+                // Ak už bol tím načítaný, nepočítame ho znova
+                if (!loadedTeamsSet.has(teamKey)) {
+                    loadedTeamsSet.add(teamKey);
+                    loadedCount++;
+                }
                 
                 if (loadedCount === totalTeams) {
                     const allMembers = Array.from(membersMap.values());
@@ -788,7 +798,10 @@ const RostersTable = ({ isRostersVisible }) => {
                 const unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 newUnsubscribes.push(unsub);
             } catch (error) {
-                loadedCount++;
+                if (!loadedTeamsSet.has(teamKey)) {
+                    loadedTeamsSet.add(teamKey);
+                    loadedCount++;
+                }
                 if (loadedCount === totalTeams) {
                     const allMembers = Array.from(membersMap.values());
                     setAllMembersData(allMembers);
