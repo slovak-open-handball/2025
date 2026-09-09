@@ -886,7 +886,7 @@ const RostersTable = ({ isRostersVisible }) => {
     // Porovnáme, či sa zmenilo poradie podľa gólov
     const getStableDisplayMembers = useCallback(() => {
         if (displayMembers.length === 0) return [];
-        
+    
         // Ak ešte nemáme predchádzajúce poradie, uložíme ho
         if (previousDisplayMembersRef.current.length === 0) {
             previousDisplayMembersRef.current = displayMembers;
@@ -899,7 +899,7 @@ const RostersTable = ({ isRostersVisible }) => {
             previousGoalsRef.current = goalsMap;
             return displayMembers;
         }
-        
+    
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
         const prevGoals = previousGoalsRef.current;
         const currentGoals = new Map();
@@ -907,28 +907,29 @@ const RostersTable = ({ isRostersVisible }) => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
             currentGoals.set(key, m.goals || 0);
         });
-        
+    
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
         let goalsChanged = false;
-        let anyGoalsChanged = false;
+        let anyGoalsGreaterThanZero = false;
         for (const [key, goals] of currentGoals) {
-            if (prevGoals.get(key) !== goals) {
+            const prevGoalsCount = prevGoals.get(key) || 0;
+            if (prevGoalsCount !== goals) {
                 goalsChanged = true;
                 if (goals > 0) {
-                    anyGoalsChanged = true;
+                    anyGoalsGreaterThanZero = true;
                 }
                 break;
             }
         }
-        
+    
         // Ak sa zmenili góly, vždy aktualizujeme poradie
         if (goalsChanged) {
             previousDisplayMembersRef.current = displayMembers;
             previousGoalsRef.current = currentGoals;
             return displayMembers;
         }
-        
-        // Ak sa nezmenili góly, vrátime predchádzajúce poradie
+    
+        // Ak sa nezmenili góly, vraciame predchádzajúce poradie
         return previousDisplayMembersRef.current;
     }, [displayMembers]);
 
