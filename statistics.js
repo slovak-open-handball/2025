@@ -842,10 +842,13 @@ const RostersTable = ({ isRostersVisible }) => {
     };
 
     // ZORADENIE - používame displayMembers s memoizáciou
+    // ZORADENIE - používame displayMembers s memoizáciou
     // PRIDÁVAME statsUpdateTrigger DO ZÁVISLOSTÍ PRE VYNÚTENIE PREPOČTU
     const displayMembers = useMemo(() => {
+        console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
         
         if (!isStatsReady || allMembersData.length === 0) {
+            console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
             return [];
         }
         
@@ -863,6 +866,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
         // LOG: Počet členov a počet tých s gólmi
         const scorers = membersWithStats.filter(m => m.goals > 0);
+        console.log(`[RostersTable] Celkovo ${membersWithStats.length} členov, ${scorers.length} s gólmi`);
 
         // Rozdelíme na strelcov a neskórujúcich
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
@@ -892,6 +896,14 @@ const RostersTable = ({ isRostersVisible }) => {
         });
 
         const result = [...goalsScorers, ...nonScorers];
+        
+        // LOG: Prvých 5 členov po zoradení
+        if (result.length > 0) {
+            console.log('[RostersTable] Prvých 5 po zoradení:');
+            result.slice(0, 5).forEach((m, i) => {
+                console.log(`  ${i+1}. ${m.firstName} ${m.lastName} - ${m.goals} gólov (${m.teamNameDisplay})`);
+            });
+        }
         
         return result;
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]); // PRIDANÝ statsUpdateTrigger
@@ -930,12 +942,41 @@ const RostersTable = ({ isRostersVisible }) => {
         
         // AK sa zmenili góly, VŽDY AKTUALIZUJEME poradie
         if (goalsChanged) {
+            console.log('[RostersTable] Zmena v góloch - aktualizujem poradie');
+            // AKTUALIZUJEME OBA REFY
             previousDisplayMembersRef.current = displayMembers;
             previousGoalsRef.current = currentGoalsMap;
             return displayMembers;
         }
         
         // Ak sa nezmenili góly, vrátime predchádzajúce poradie
+        // ALE AJ TAK VRÁTIME displayMembers, AK JE TO PRVÉ NAČÍTANIE
+        if (previousDisplayMembersRef.current.length === 0) {
+            console.log('[RostersTable] Prvé načítanie - nastavujem poradie');
+            previousDisplayMembersRef.current = displayMembers;
+            previousGoalsRef.current = currentGoalsMap;
+            return displayMembers;
+        }
+        
+        // POROVNÁME, ČI SA NEZMENILO PORADIE HRÁČOV (napr. pribudol nový hráč)
+        // Ak áno, musíme aktualizovať poradie
+        const currentKeys = new Set(displayMembers.map(m => 
+            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`
+        ));
+        const prevKeys = new Set(previousDisplayMembersRef.current.map(m => 
+            `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`
+        ));
+        
+        // Ak sa zmenil počet hráčov alebo sa zmenilo zloženie, aktualizujeme
+        if (currentKeys.size !== prevKeys.size || 
+            ![...currentKeys].every(key => prevKeys.has(key))) {
+            console.log('[RostersTable] Zmena v zložení hráčov - aktualizujem poradie');
+            previousDisplayMembersRef.current = displayMembers;
+            previousGoalsRef.current = currentGoalsMap;
+            return displayMembers;
+        }
+        
+        // Ak sa nezmenili góly a nezmenilo sa zloženie, vrátime predchádzajúce poradie
         return previousDisplayMembersRef.current;
     }, [displayMembers]);
 
