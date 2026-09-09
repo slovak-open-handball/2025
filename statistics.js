@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -831,6 +831,60 @@ const RostersTable = ({ isRostersVisible }) => {
             });
         });
     };
+
+    const displayMembers = useMemo(() => {
+        if (!isStatsReady || allMembersData.length === 0) return [];
+        
+        const goalsScorers = [];
+        const nonScorers = [];
+    
+        allMembersData.forEach(member => {
+            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${member.type}_${member.originalIndex}`;
+            const goals = Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0);
+            
+            if (goals > 0) {
+                goalsScorers.push(member);
+            } else {
+                nonScorers.push(member);
+            }
+        });
+    
+        // Zoradíme strelcov podľa gólov (zostupne)
+        goalsScorers.sort((a, b) => {
+            const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
+            const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
+            const teamStatsA = allStatsData[keyA] || {};
+            const teamStatsB = allStatsData[keyB] || {};
+            const memberKeyA = `${a.type}_${a.originalIndex}`;
+            const memberKeyB = `${b.type}_${b.originalIndex}`;
+            const goalsA = Number((teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0);
+            const goalsB = Number((teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0);
+            
+            if (goalsB !== goalsA) return goalsB - goalsA;
+            
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+        });
+    
+        // Zoradíme ostatných podľa abecedy
+        nonScorers.sort((a, b) => {
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+            if (nameCompare !== 0) return nameCompare;
+            
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+    
+        return [...goalsScorers, ...nonScorers];
+    }, [allMembersData, allStatsData, isStatsReady]);
 
     // Zobrazenie tabuľky
     const renderTable = () => {
