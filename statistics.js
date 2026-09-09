@@ -713,13 +713,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     // Načítanie členov všetkých tímov
     useEffect(() => {
         if (!window.db || allTeams.length === 0) return;
-
+    
         // Zrušíme predchádzajúce listenery
         unsubscribes.forEach(unsub => {
             try { unsub(); } catch (e) {}
         });
         setUnsubscribes([]);
-
+    
         const uniqueTeams = getUniqueTeams();
         
         // Filtrovanie tímov
@@ -729,12 +729,12 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 team.teamName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
             );
         }
-
+    
         // Zoradenie tímov
         const sortedTeams = filteredTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
-
+    
         if (sortedTeams.length === 0) {
             setAllMembersData([]);
             setSortedMembers([]);
@@ -744,34 +744,46 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             setReceivedTeams(new Set());
             return;
         }
-
+    
         // Reset stavov
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setSortedMembers([]);
-
-        let allMembers = [];
+    
+        // Použijeme Map pre unikátne členov podľa kombinácie kľúčov
+        const membersMap = new Map();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
         const newUnsubscribes = [];
-
+    
         sortedTeams.forEach((teamGroup) => {
             const teamName = teamGroup.teamName;
             const categoryName = teamGroup.category;
             
             const handleMembersUpdate = (members) => {
-                const membersWithTeamInfo = members.map(m => ({
-                    ...m,
-                    teamNameDisplay: teamName,
-                    categoryNameDisplay: categoryName,
-                    uniqueTeamKey: `${teamName}_${categoryName}`
-                }));
-                allMembers = [...allMembers, ...membersWithTeamInfo];
+                // Pridávame členov do Mapy s unikátnym kľúčom
+                members.forEach(m => {
+                    // Unikátny kľúč: tím + kategória + typ + originalIndex + userId
+                    const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.originalIndex}_${m.userId}`;
+                    
+                    if (!membersMap.has(uniqueKey)) {
+                        membersMap.set(uniqueKey, {
+                            ...m,
+                            teamNameDisplay: teamName,
+                            categoryNameDisplay: categoryName,
+                            uniqueTeamKey: `${teamName}_${categoryName}`,
+                            _uniqueKey: uniqueKey // Uložíme pre debug
+                        });
+                    }
+                });
+                
                 loadedCount++;
                 
                 if (loadedCount === totalTeams) {
+                    // Konvertujeme Map na pole
+                    const allMembers = Array.from(membersMap.values());
                     setAllMembersData(allMembers);
                 }
             };
@@ -782,13 +794,14 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             } catch (error) {
                 loadedCount++;
                 if (loadedCount === totalTeams) {
+                    const allMembers = Array.from(membersMap.values());
                     setAllMembersData(allMembers);
                 }
             }
         });
-
+    
         setUnsubscribes(newUnsubscribes);
-
+    
         return () => {
             newUnsubscribes.forEach(unsub => {
                 try { unsub(); } catch (e) {}
