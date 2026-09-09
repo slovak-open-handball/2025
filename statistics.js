@@ -853,7 +853,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 'div',
                 { className: 'text-center py-8' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
-                React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 'Načítavam súpisky...')
+                React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 'Načítavam...')
             );
         }
 
