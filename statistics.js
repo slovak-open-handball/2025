@@ -634,7 +634,9 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [isStatsReady, setIsStatsReady] = useState(false);
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
-    const [sortedMembers, setSortedMembers] = useState([]); // PRIDANÉ: ukladáme zoradených členov
+    const [sortedMembers, setSortedMembers] = useState([]);
+    // Pridané: sledujeme, ktoré tímy už poslali štatistiky
+    const [receivedTeams, setReceivedTeams] = useState(new Set());
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -739,6 +741,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             setTotalTeamsCount(0);
             setStatsReceivedCount(0);
             setIsStatsReady(false);
+            setReceivedTeams(new Set());
             return;
         }
 
@@ -746,6 +749,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
+        setReceivedTeams(new Set());
         setSortedMembers([]);
 
         let allMembers = [];
@@ -792,14 +796,12 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         };
     }, [allTeams, selectedTeamNameFilter]);
 
-    // --- PRIDANÉ: Sledovanie zmien v štatistikách a aktualizácia zoradenia ---
+    // --- Zoraďovanie podľa gólov ---
     useEffect(() => {
-        // Ak nemáme členov alebo ešte nie sú štatistiky hotové, nerobíme nič
         if (allMembersData.length === 0 || !isStatsReady) {
             return;
         }
-    
-        // Zoraďujeme pri každej zmene štatistík
+
         const sorted = [...allMembersData].sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
             const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
@@ -810,33 +812,27 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
             const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
             
-            // --- PRVÉ PRAVIDLO: Členovia S GÓLMI sú PRED členmi BEZ GÓLOV ---
             const hasGoalsA = goalsA > 0;
             const hasGoalsB = goalsB > 0;
             
-            // Ak má jeden gól a druhý nie, ten s gólom ide prvý
             if (hasGoalsA !== hasGoalsB) {
                 return hasGoalsA ? -1 : 1;
             }
             
-            // --- DRUHÉ PRAVIDLO: Ak obaja majú góly (alebo obaja nemajú) ---
-            // Ak obaja majú góly, zoraď podľa počtu gólov (zostupne)
             if (hasGoalsA && hasGoalsB) {
                 if (goalsB !== goalsA) {
                     return goalsB - goalsA;
                 }
             }
             
-            // --- TRETIE PRAVIDLO: Podľa názvu tímu (pre všetkých) ---
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
             
-            // --- ŠTVRTÉ PRAVIDLO: Podľa čísla dresu (pre všetkých) ---
             const aNum = parseInt(a.jerseyNumber) || 999;
             const bNum = parseInt(b.jerseyNumber) || 999;
             return aNum - bNum;
         });
-    
+
         setSortedMembers(sorted);
     }, [allMembersData, allStatsData, isStatsReady]);
 
@@ -852,13 +848,27 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             return newStats;
         });
         
-        // Počítame prijaté štatistiky
-        setStatsReceivedCount(prev => {
-            const newCount = prev + 1;
-            if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
-                setIsStatsReady(true);
+        // Kontrola, či už sme dostali štatistiky pre tento tím
+        setReceivedTeams(prev => {
+            const newSet = new Set(prev);
+            const teamKey = `${teamName}_${categoryName}`;
+            
+            // Ak ešte nemáme štatistiky pre tento tím, pridáme ho
+            if (!newSet.has(teamKey)) {
+                newSet.add(teamKey);
+                
+                // Aktualizujeme počet prijatých
+                setStatsReceivedCount(prevCount => {
+                    const newCount = prevCount + 1;
+                    // Ak sme dostali všetky štatistiky, nastavíme ready stav
+                    if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
+                        setIsStatsReady(true);
+                    }
+                    return newCount;
+                });
             }
-            return newCount;
+            
+            return newSet;
         });
     };
 
@@ -915,6 +925,20 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         // Použijeme už zoradených členov zo stavu
         const displayMembers = sortedMembers.length > 0 ? sortedMembers : allMembersData;
 
+        // --- ZORAĎOVANIE PRE ZOBRAZENIE PORADIA (rank) ---
+        // Pre každého člena zistíme, či má gól a ak áno, aké má poradie medzi střelcami
+        let currentRank = 0;
+        let lastGoals = -1;
+        let rankCounter = 0;
+        
+        // Najprv zistíme, koľko členov má góly
+        const membersWithGoals = displayMembers.filter(m => {
+            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${m.type}_${m.originalIndex}`;
+            return (teamStats[memberKey] && teamStats[memberKey].goals > 0);
+        });
+
         return React.createElement(
             'div',
             { 
@@ -928,7 +952,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     className: 'w-full border-collapse bg-white text-sm',
                     style: { minWidth: '900px' }
                 },
-                // HLAVIČKA TABUĽKY
+                // HLAVIČKA TABUĽKY (rovnaká ako predtým)
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-100 sticky top-0 z-20' },
@@ -978,7 +1002,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         )
                     )
                 ),
-                // TELO TABUĽKY - používame displayMembers
+                // TELO TABUĽKY
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
@@ -1006,7 +1030,21 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
                         
-                        const rank = idx + 1;
+                        // Správne poradie - len pre tých, čo majú góly
+                        let rank = '';
+                        if (hasGoals) {
+                            // Nájdeme poradie medzi strelcami
+                            const goalRank = membersWithGoals.findIndex(m => {
+                                const mKey = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
+                                const mStats = allStatsData[mKey] || {};
+                                const mMemberKey = `${m.type}_${m.originalIndex}`;
+                                return m.teamNameDisplay === member.teamNameDisplay && 
+                                       m.categoryNameDisplay === member.categoryNameDisplay &&
+                                       m.type === member.type &&
+                                       m.originalIndex === member.originalIndex;
+                            });
+                            rank = goalRank + 1;
+                        }
                         
                         return React.createElement(
                             'tr',
@@ -1014,7 +1052,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                                 key: `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex || idx}`,
                                 className: `${rowClass} transition-colors duration-150`
                             },
-                            React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, hasGoals ? rank : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, rank),
                             React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center text-xs' }, member.jerseyNumber || ''),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-800 text-sm' }, fullName),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-xs' }, member.teamNameDisplay),
