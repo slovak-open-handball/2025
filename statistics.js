@@ -722,8 +722,8 @@ const RostersTable = ({ isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // Načítanie členov všetkých tímov (POMOCOU useCallback - VŽDY NOVÉ DÁTA)
-    const loadAllMembers = useCallback(() => {
+    // NAČÍTANIE ČLENOV - SPUSTÍ SA PRI ZMENE TEAMOV AJ PRI ZMENE ŠTATISTÍK
+    useEffect(() => {
         if (!window.db || allTeams.length === 0) return;
     
         // Zrušíme predchádzajúce listenery
@@ -818,13 +818,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams]);
-
-    // Spustíme načítanie pri zmene allTeams
-    useEffect(() => {
-        const cleanup = loadAllMembers();
-        return cleanup;
-    }, [loadAllMembers]);
+    }, [allTeams, allStatsData]); // <-- PRIDANÉ allStatsData!
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
@@ -940,8 +934,8 @@ const RostersTable = ({ isRostersVisible }) => {
 
         const displayMembers = sorted;
 
-        // Najprv zistíme, koľko členov má góly        
-      const membersWithGoals = displayMembers.filter(m => {
+        // Najprv zistíme, koľko členov má góly
+        const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${m.type}_${m.originalIndex}`;
