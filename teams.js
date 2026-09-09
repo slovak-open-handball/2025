@@ -1036,27 +1036,12 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                     }, match.groupName)
                                 );
                             }
-
-                            // Stavový badge
-                            const statusBadge = (() => {
-                                const colors = {
-                                    'in-progress': 'bg-green-100 text-green-800',
-                                    'paused': 'bg-yellow-100 text-yellow-800',
-                                    'completed': 'bg-blue-100 text-blue-800',
-                                    'scheduled': 'bg-gray-100 text-gray-600'
-                                };
-                                const labels = {
-                                    'in-progress': 'Prebieha',
-                                    'paused': 'Pozastavený',
-                                    'completed': 'Ukončený',
-                                    'scheduled': 'Naplánovaný'
-                                };
-                                return React.createElement(
-                                    'span',
-                                    { className: `inline-block px-2 py-0.5 rounded-full text-xs font-medium ${colors[matchStatus] || colors.scheduled}` },
-                                    labels[matchStatus] || labels.scheduled
-                                );
-                            })();
+                                                      
+                            const createMatchHash = (homeTeamId, awayTeamId) => {
+                                const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
+                                const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
+                                return `#match/${encodedHome}/${encodedAway}`;
+                            };
 
                             rows.push(
                                 React.createElement(
@@ -1108,7 +1093,15 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                     React.createElement(
                                         'td',
                                         { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                        statusBadge
+                                        React.createElement(
+                                            'a',
+                                            {
+                                                href: createMatchHash(match.homeTeamIdentifier, match.awayTeamIdentifier),
+                                                className: 'bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-full transition-colors inline-block',
+                                                style: { fontWeight: '500', textDecoration: 'none' }
+                                            },
+                                            'Detail'
+                                        )
                                     )
                                 )
                             );
