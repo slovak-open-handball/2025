@@ -613,7 +613,6 @@ const RostersTable = ({ isRostersVisible }) => {
   
         return '60vh';
     });
-    const heightInitializedRef = useRef(false);
     
     // Dynamická výška tabuľky podľa aktuálnej výšky viewportu
     useEffect(() => {
