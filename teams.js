@@ -1097,7 +1097,13 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                             'a',
                                             {
                                                 href: createMatchHash(match.homeTeamIdentifier, match.awayTeamIdentifier),
-                                                className: 'bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-full transition-colors inline-block',
+                                                className: (() => {
+                                                    const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
+                                                    const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
+                                                    return isActive 
+                                                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors inline-block'
+                                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors inline-block';
+                                                })(),
                                                 style: { fontWeight: '500', textDecoration: 'none' }
                                             },
                                             'Detail'
