@@ -614,7 +614,7 @@ const RostersTable = ({ isRostersVisible }) => {
         return '60vh';
     });
     
-    useEffect(() => {
+    useLayoutEffect(() => {
         let resizeObserver = null;
         let rafId = null;
         let rafId2 = null;
