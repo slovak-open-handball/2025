@@ -12,11 +12,11 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
 
   // Definícia všetkých dostupných stránok
   const PAGE_DEFINITIONS = [
-    { id: 'category-creation', label: 'Vytvorenie kategórií', defaultVisible: false }, // NOVÁ STRÁNKA - PRED MAPOU
+    { id: 'category-creation', label: 'Vytvorenie kategórií', defaultVisible: true }, 
     { id: 'map', label: 'Mapa', defaultVisible: false },
     { id: 'teams-in-groups', label: 'Rozlosovanie tímov do skupín', defaultVisible: false },
     { id: 'matches', label: 'Zápasy', defaultVisible: false },
-    { id: 'rosters', label: 'Súpisky', defaultVisible: false }, // Pridaná stránka Súpisky
+    { id: 'rosters', label: 'Súpisky', defaultVisible: false },
   ];
 
   // Pomocná funkcia na zoradenie stránok podľa PAGE_DEFINITIONS
