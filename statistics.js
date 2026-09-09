@@ -808,6 +808,7 @@ const RostersTable = ({ isRostersVisible }) => {
     const handleStatsUpdate = (teamName, stats, categoryName) => {
         const uniqueKey = `${teamName}_${categoryName}`;
         
+        // NAHRADÍME štatistiky, NIE PRIDÁVAME!
         setAllStatsData(prev => {
             const newStats = {
                 ...prev,
