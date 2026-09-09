@@ -779,10 +779,12 @@ const RostersTable = ({ isRostersVisible }) => {
                 }
                 keysToRemove.forEach(key => membersMap.delete(key));
                 
-                // Pridávame členov do Mapy
+                // Pridávame členov do Mapy s DEDUPLIKÁCIOU
                 members.forEach(m => {
-                    const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.originalIndex}_${m.userId}`;
+                    // Vytvoríme unikátny kľúč pre hráča
+                    const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.firstName || ''}_${m.lastName || ''}_${m.jerseyNumber || m.originalIndex}`;
                     
+                    // Ak hráč ešte nie je v mape, pridáme ho
                     if (!membersMap.has(uniqueKey)) {
                         membersMap.set(uniqueKey, {
                             ...m,
@@ -909,18 +911,8 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // 1. ODSTRÁNIME DUPLICITY a VYTVORÍME ZORADENÝ ZOZNAM PRIAMO TU
-        const uniqueMembersMap = new Map();
-        allMembersData.forEach(member => {
-            const memberKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}_${member.userId}`;
-            if (!uniqueMembersMap.has(memberKey)) {
-                uniqueMembersMap.set(memberKey, member);
-            }
-        });
-        const uniqueMembers = Array.from(uniqueMembersMap.values());
-
-        // 2. ZORADÍME PODĽA GÓLOV (strelec prví, potom podľa počtu gólov)
-        const sorted = [...uniqueMembers].sort((a, b) => {
+        // ZORADÍME PODĽA GÓLOV (strelec prví, potom podľa počtu gólov)
+        const sorted = [...allMembersData].sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
             const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
             const teamStatsA = allStatsData[keyA] || {};
