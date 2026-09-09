@@ -841,15 +841,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                     }, match.matchType)
                                 );
                             }
-                            if (match.isPlacementMatch || match.matchType === 'o 3. miesto') {
-                                infoTags.push(
-                                    React.createElement('span', {
-                                        key: 'placement',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
-                                    }, match.isPlacementMatch ? `o ${match.placementRank}. miesto` : 'o 3. miesto')
-                                );
-                            }
                             if (match.groupName && !match.isPlacementMatch && match.matchType !== 'o 3. miesto') {
                                 const groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
                                 infoTags.push(
