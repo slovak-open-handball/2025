@@ -187,8 +187,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const firstGoalProcessedRef = useRef(false);
-    const initialCheckDoneRef = useRef(false);
-    const hadGoalsOnLoadRef = useRef(false); // Pridané: sledovanie, či už boli góly pri načítaní
+    const hadGoalsOnLoadRef = useRef(false);
+    const initialLoadDoneRef = useRef(false); // Pridané: či už bolo dokončené prvé načítanie
     
     // Načítanie súpisky
     useEffect(() => {
@@ -261,7 +261,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
-        let isFirstEventsLoad = true; // Pridané: sledovanie prvého načítania udalostí
+        let isFirstEventsProcessed = false; // Pridané: či už boli spracované prvé udalosti
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
@@ -402,26 +402,34 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // --- KONTROLA PRVÉHO GÓLU ---
             // Ak sme našli gól a ešte sme neobnovili stránku
             if (foundAnyGoal && !firstGoalProcessedRef.current) {
-                // Ak je to prvýkrát, čo načítavame udalosti
-                if (isFirstEventsLoad) {
-                    // Toto je prvé načítanie - góly už v DB boli
-                    hadGoalsOnLoadRef.current = true; // Zapamätáme si, že pri načítaní už boli góly
-                    firstGoalProcessedRef.current = true; // Zablokujeme obnovenie
-                    isFirstEventsLoad = false;
+                // Ak ešte neboli spracované prvé udalosti
+                if (!isFirstEventsProcessed) {
+                    // Toto je prvé načítanie - zapamätáme si, že pri načítaní už boli góly
+                    hadGoalsOnLoadRef.current = true;
+                    firstGoalProcessedRef.current = true;
+                    isFirstEventsProcessed = true;
+                    // NEobnovujeme stránku - góly už v DB boli
                 } else {
-                    // Toto nie je prvé načítanie - ide o nový gól
-                    // Skontrolujeme, či pri načítaní už nejaké góly boli
+                    // Toto nie je prvé načítanie
+                    // Ak pri načítaní neboli žiadne góly, tak toto je prvý nový gól
                     if (!hadGoalsOnLoadRef.current) {
-                        // Pri načítaní neboli žiadne góly, takže toto je prvý gól vôbec
+                        // Prvý gól pridaný po načítaní - OBNOVÍME
                         firstGoalProcessedRef.current = true;
                         setTimeout(() => {
                             window.location.reload();
                         }, 100);
                     } else {
-                        // Pri načítaní už boli góly, takže toto je ďalší gól - neobnovujeme
+                        // Ďalší gól - neobnovujeme
                         firstGoalProcessedRef.current = true;
                     }
                 }
+            }
+
+            // Ak sme nenašli žiadny gól a ešte neboli spracované prvé udalosti
+            if (!foundAnyGoal && !isFirstEventsProcessed) {
+                // Prvé načítanie bez gólov
+                isFirstEventsProcessed = true;
+                hadGoalsOnLoadRef.current = false; // Explicitne nastavíme na false
             }
         
             return stats;
@@ -460,6 +468,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 });
                 setMembersStats(emptyStats);
                 if (onStatsUpdate) onStatsUpdate(teamName, emptyStats);
+                // Označíme, že prvé udalosti boli spracované (aj keď prázdne)
+                isFirstEventsProcessed = true;
+                hadGoalsOnLoadRef.current = false;
                 return;
             }
     
@@ -601,8 +612,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
-                // Resetujeme príznak prvého načítania udalostí, keď sa menia zápasy
-                isFirstEventsLoad = true;
+                // Resetujeme príznak prvého načítania udalostí
+                isFirstEventsProcessed = false;
                 setupEventsListener(newMatchIdsArray);
             }
         };
