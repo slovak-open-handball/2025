@@ -70,7 +70,8 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     const usersRef = collection(window.db, 'users');
     
     const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
-        const members = [];
+        // Použijeme Mapu na deduplikáciu
+        const membersMap = new Map();
         
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
@@ -85,52 +86,61 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                 if (foundTeam) {
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
                         foundTeam.playerDetails.forEach((player, idx) => {
-                            members.push({
-                                type: 'Hráč',
-                                firstName: player.firstName || '',
-                                lastName: player.lastName || '',
-                                jerseyNumber: player.jerseyNumber || '',
-                                registrationNumber: player.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'playerDetails',
-                                teamName: actualTeamName,
-                                categoryName: categoryName
-                            });
+                            const uniqueKey = `${player.firstName || ''}_${player.lastName || ''}_${player.registrationNumber || ''}`;
+                            if (!membersMap.has(uniqueKey)) {
+                                membersMap.set(uniqueKey, {
+                                    type: 'Hráč',
+                                    firstName: player.firstName || '',
+                                    lastName: player.lastName || '',
+                                    jerseyNumber: player.jerseyNumber || '',
+                                    registrationNumber: player.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'playerDetails',
+                                    teamName: actualTeamName,
+                                    categoryName: categoryName
+                                });
+                            }
                         });
                     }
                     
                     if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
                         foundTeam.menTeamMemberDetails.forEach((member, idx) => {
-                            members.push({
-                                type: 'Člen RT (muž)',
-                                firstName: member.firstName || '',
-                                lastName: member.lastName || '',
-                                jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'menTeamMemberDetails',
-                                teamName: actualTeamName,
-                                categoryName: categoryName
-                            });
+                            const uniqueKey = `RT_M_${member.firstName || ''}_${member.lastName || ''}_${member.registrationNumber || ''}`;
+                            if (!membersMap.has(uniqueKey)) {
+                                membersMap.set(uniqueKey, {
+                                    type: 'Člen RT (muž)',
+                                    firstName: member.firstName || '',
+                                    lastName: member.lastName || '',
+                                    jerseyNumber: '',
+                                    registrationNumber: member.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'menTeamMemberDetails',
+                                    teamName: actualTeamName,
+                                    categoryName: categoryName
+                                });
+                            }
                         });
                     }
                     
                     if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
                         foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
-                            members.push({
-                                type: 'Člen RT (žena)',
-                                firstName: member.firstName || '',
-                                lastName: member.lastName || '',
-                                jerseyNumber: '',
-                                registrationNumber: member.registrationNumber || '',
-                                userId: userId,
-                                originalIndex: idx,
-                                dbArrayName: 'womenTeamMemberDetails',
-                                teamName: actualTeamName,
-                                categoryName: categoryName
-                            });
+                            const uniqueKey = `RT_Z_${member.firstName || ''}_${member.lastName || ''}_${member.registrationNumber || ''}`;
+                            if (!membersMap.has(uniqueKey)) {
+                                membersMap.set(uniqueKey, {
+                                    type: 'Člen RT (žena)',
+                                    firstName: member.firstName || '',
+                                    lastName: member.lastName || '',
+                                    jerseyNumber: '',
+                                    registrationNumber: member.registrationNumber || '',
+                                    userId: userId,
+                                    originalIndex: idx,
+                                    dbArrayName: 'womenTeamMemberDetails',
+                                    teamName: actualTeamName,
+                                    categoryName: categoryName
+                                });
+                            }
                         });
                     }
                     
@@ -138,6 +148,9 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                 }
             }
         }
+        
+        // Prevedieme Mapu späť na pole
+        const members = Array.from(membersMap.values());
         
         const rtMembers = members.filter(m => m.type !== 'Hráč');
         const players = members.filter(m => m.type === 'Hráč');
