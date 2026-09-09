@@ -745,17 +745,17 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             return;
         }
     
-        // Reset stavov - vymažeme všetky dáta
-        setAllMembersData([]);
-        setSortedMembers([]);
+        // Reset stavov
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
         setReceivedTeams(new Set());
+        setSortedMembers([]);
+        setAllMembersData([]);
     
         // Použijeme Map pre unikátne členov
         const membersMap = new Map();
-        // Sledujeme, ktoré tímy už boli načítané
+        // Sledujeme, ktoré tímy už boli načítané (aby sme nepridávali duplicity pri opakovaných volaniach)
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -816,7 +816,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams, selectedTeamNameFilter, allStatsData]); // PRIDANÉ: allStatsData ako dependencia
+    }, [allTeams, selectedTeamNameFilter]);
 
     // --- Zoraďovanie podľa gólov ---
     useEffect(() => {
