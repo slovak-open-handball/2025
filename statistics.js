@@ -280,12 +280,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     categoryName: member.categoryName
                 };
             });
-        
+    
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
                 const matchId = eventData.matchId;
                 
-                // KONTROLA KATEGÓRIE
+                // KONTROLA KATEGÓRIE - udalosť musí mať rovnakú kategóriu ako tím
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     return;
                 }
@@ -300,12 +300,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const homeTeam = matchInfo.homeTeam || '';
                 const awayTeam = matchInfo.awayTeam || '';
                 
+                // Kontrola, či udalosť patrí nášmu tímu a KATEGÓRII
                 if (eventData.team === 'home') {
-                    if (homeTeam === fullTeamName) {
+                    // Porovnávame aj kategóriu domáceho tímu
+                    if (homeTeam === fullTeamName && matchInfo.homeCategory === currentCategoryName) {
                         isOurTeam = true;
                     }
                 } else if (eventData.team === 'away') {
-                    if (awayTeam === fullTeamName) {
+                    // Porovnávame aj kategóriu hosťujúceho tímu
+                    if (awayTeam === fullTeamName && matchInfo.awayCategory === currentCategoryName) {
                         isOurTeam = true;
                     }
                 }
@@ -325,9 +328,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
                 
                 for (const [memberKey, stat] of Object.entries(stats)) {
-                    // Porovnávame podľa dbArrayName a originalIndex
-                    // dbArrayName môže byť: 'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails'
-                    // memberTypeKey v udalosti môže byť: 'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails'
                     if (stat.dbArrayName === eventMemberTypeKey && stat.dbIndex === eventMemberIndex) {
                         foundMemberKey = memberKey;
                         break;
@@ -336,7 +336,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 // Ak sme nenašli podľa presnej zhody, skúsime alternatívne mapovanie
                 if (!foundMemberKey) {
-                    // Mapovanie medzi rôznymi názvami polí
                     const typeMapping = {
                         'players': 'playerDetails',
                         'playerDetails': 'players',
@@ -384,7 +383,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         break;
                 }
             });
-        
+    
             return stats;
         };
     
@@ -552,26 +551,33 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
+                // ULOŽÍME AJ KATEGÓRIE TÍMOV ZO ZÁPASU
+                const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
+                const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';
+                
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
-                    awayTeam: convertedAway
+                    awayTeam: convertedAway,
+                    homeCategory: homeCategory,
+                    awayCategory: awayCategory
                 };
                 
-                const isHomeMatch = convertedHome === fullTeamName;
-                const isAwayMatch = convertedAway === fullTeamName;
+                // Porovnávame aj kategóriu - tím musí mať rovnaký názov AJ kategóriu
+                const isHomeMatch = convertedHome === fullTeamName && homeCategory === currentCategoryName;
+                const isAwayMatch = convertedAway === fullTeamName && awayCategory === currentCategoryName;
                 
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
             });
-        
+    
             matchTeamMap = newMatchTeamMap;
-        
+    
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-        
+    
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
