@@ -180,6 +180,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
     const [hasNotifiedLoaded, setHasNotifiedLoaded] = useState(false);
     const statsLoadedRef = useRef(false);
     const teamKeyRef = useRef(`${teamName}_${categoryName}`);
+    const isMountedRef = useRef(true);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -190,6 +191,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
             setIsLoading(true);
             
             const handleMembersUpdate = (members) => {
+                if (!isMountedRef.current) return;
                 setRosterData(members);
                 setIsLoading(false);
             };
@@ -199,18 +201,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onStatsLoad
                 setUnsubscribe(() => unsub);
             } catch (error) {
                 console.error(`[TeamStatsCollector] Chyba pri načítaní súpisky pre ${teamName}:`, error);
-                setIsLoading(false);
-                setRosterData([]);
+                if (isMountedRef.current) {
+                    setIsLoading(false);
+                    setRosterData([]);
+                }
             }
             
             timeoutId = setTimeout(() => {
-                setIsLoading(false);
+                if (isMountedRef.current) {
+                    setIsLoading(false);
+                }
             }, 10000);
         };
         
         loadRoster();
         
         return () => {
+            isMountedRef.current = false;
             if (unsub) {
                 try {
                     unsub();
@@ -638,7 +645,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [isDataReady, setIsDataReady] = useState(false);
     
-    // Ref na sledovanie prvého načítania
+    // Ref na sledovanie stavu načítania
     const isFirstLoadComplete = useRef(false);
     const tempMembersRef = useRef([]);
     const tempStatsRef = useRef({});
@@ -646,6 +653,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const statsLoadedRef = useRef(new Set());
     const expectedTeamsCountRef = useRef(0);
     const updateTimeoutRef = useRef(null);
+    const isMountedRef = useRef(true);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -670,6 +678,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         if (!window.db) return;
 
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
+            if (!isMountedRef.current) return;
             let userTeamsList = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
@@ -697,6 +706,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         });
 
         return () => {
+            isMountedRef.current = false;
             if (unsubscribeUsers) unsubscribeUsers();
         };
     }, []);
@@ -719,7 +729,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // Funkcia na aktualizáciu a zoradenie tabuľky
+    // Funkcia na aktualizáciu a zoradenie tabuľky - iba ak sú všetky dáta načítané
     const updateAndSortTable = () => {
         // Zrušíme predchádzajúci timeout
         if (updateTimeoutRef.current) {
@@ -729,6 +739,16 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         
         const members = tempMembersRef.current;
         const stats = tempStatsRef.current;
+        const expectedCount = expectedTeamsCountRef.current;
+        
+        // Skontrolujeme, či sú načítané všetky dáta
+        const allRostersLoaded = teamsLoadedRef.current.size === expectedCount;
+        const allStatsLoaded = statsLoadedRef.current.size === expectedCount;
+        
+        // Ak nie sú načítané všetky dáta, neaktualizujeme tabuľku
+        if (!allRostersLoaded || !allStatsLoaded || expectedCount === 0) {
+            return;
+        }
         
         if (members.length === 0) {
             setAllMembersData([]);
@@ -773,21 +793,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         const allRostersLoaded = teamsLoadedRef.current.size === expectedTeamsCountRef.current;
         const allStatsLoaded = statsLoadedRef.current.size === expectedTeamsCountRef.current;
         
+        // Aktualizujeme počet načítaných tímov
+        const totalLoaded = teamsLoadedRef.current.size + statsLoadedRef.current.size;
+        setLoadedTeamsCount(Math.min(totalLoaded, expectedTeamsCountRef.current * 2));
+        
         if (allRostersLoaded && allStatsLoaded && expectedTeamsCountRef.current > 0) {
             // Všetky dáta sú načítané - aktualizujeme a zoradíme tabuľku
             updateAndSortTable();
-        } else if (allRostersLoaded && expectedTeamsCountRef.current > 0) {
-            // Súpisky sú načítané, ale ešte nie všetky štatistiky
-            // Zobrazíme zatiaľ neúplné dáta, aby sa nezobrazoval loading
-            if (tempMembersRef.current.length > 0 && !isFirstLoadComplete.current) {
-                // Prvé načítanie - zobrazíme dáta hneď ako máme aspoň nejaké
-                updateAndSortTable();
-            }
-        } else if (allStatsLoaded && expectedTeamsCountRef.current > 0) {
-            // Štatistiky sú načítané, ale ešte nie všetky súpisky
-            if (tempMembersRef.current.length > 0 && !isFirstLoadComplete.current) {
-                updateAndSortTable();
-            }
         }
     };
 
@@ -853,6 +865,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const teamKey = `${teamName}_${categoryName}`;
             
             const handleMembersUpdate = (members) => {
+                if (!isMountedRef.current) return;
+                
                 const membersWithTeamInfo = members.map(m => ({
                     ...m,
                     teamNameDisplay: teamName,
@@ -903,24 +917,23 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             };
             
             const handleStatsUpdate = (teamName, stats) => {
+                if (!isMountedRef.current) return;
+                
                 tempStatsRef.current = {
                     ...tempStatsRef.current,
                     [teamName]: stats
                 };
                 
-                // Ak už sú dáta zobrazené, aktualizujeme ich
-                if (isDataReady && allMembersData.length > 0) {
-                    updateAndSortTable();
-                }
+                // Kontrola, či už môžeme aktualizovať tabuľku
+                checkAllDataLoaded();
             };
             
             const handleStatsLoaded = (teamName, categoryName, loaded) => {
+                if (!isMountedRef.current) return;
+                
                 const key = `${teamName}_${categoryName}`;
                 if (!statsLoadedRef.current.has(key)) {
                     statsLoadedRef.current.add(key);
-                    // Aktualizujeme počet načítaných tímov
-                    const currentLoaded = statsLoadedRef.current.size + teamsLoadedRef.current.size;
-                    setLoadedTeamsCount(Math.max(loadedCount, currentLoaded));
                 }
                 checkAllDataLoaded();
             };
@@ -954,44 +967,21 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats) => {
-        // Aktualizujeme stav
+        // Aktualizujeme dočasný stav
+        tempStatsRef.current = {
+            ...tempStatsRef.current,
+            [teamName]: stats
+        };
+        
+        // Kontrola, či už môžeme aktualizovať tabuľku
+        checkAllDataLoaded();
+        
+        // Aktualizujeme aj stav pre zobrazenie
         setAllStatsData(prev => {
             const newStats = {
                 ...prev,
                 [teamName]: stats
             };
-            
-            // Aktualizujeme aj dočasný stav
-            tempStatsRef.current = {
-                ...tempStatsRef.current,
-                [teamName]: stats
-            };
-            
-            // Ak už sú dáta pripravené, aktualizujeme poradie
-            if (allMembersData.length > 0 && isDataReady) {
-                const sortedMembers = [...allMembersData];
-                sortedMembers.sort((a, b) => {
-                    const teamStatsA = newStats[a.teamNameDisplay] || {};
-                    const teamStatsB = newStats[b.teamNameDisplay] || {};
-                    const keyA = `${a.type}_${a.originalIndex}`;
-                    const keyB = `${b.type}_${b.originalIndex}`;
-                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
-                    
-                    if (goalsB !== goalsA) {
-                        return goalsB - goalsA;
-                    }
-                    
-                    const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                    if (teamCompare !== 0) return teamCompare;
-                    
-                    const aNum = parseInt(a.jerseyNumber) || 999;
-                    const bNum = parseInt(b.jerseyNumber) || 999;
-                    return aNum - bNum;
-                });
-                setAllMembersData(sortedMembers);
-            }
-            
             return newStats;
         });
     };
@@ -1044,6 +1034,10 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
         // Prvé načítanie - zobrazíme loading
         if (!isFirstLoadComplete.current && isLoadingAll) {
+            const totalExpected = expectedTeamsCountRef.current;
+            const loaded = teamsLoadedRef.current.size + statsLoadedRef.current.size;
+            const displayCount = Math.min(loaded, totalExpected * 2);
+            
             return React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center py-16' },
@@ -1055,10 +1049,10 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     { className: 'text-gray-600 text-base' },
                     'Načítavam súpisky a štatistiky...'
                 ),
-                expectedTeamsCountRef.current > 0 && React.createElement(
+                totalExpected > 0 && React.createElement(
                     'p',
                     { className: 'text-gray-400 text-sm mt-2' },
-                    `Načítaných ${loadedTeamsCount} z ${expectedTeamsCountRef.current} tímov`
+                    `Načítaných ${Math.floor(displayCount / 2)} z ${totalExpected} tímov`
                 )
             );
         }
