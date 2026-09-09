@@ -615,73 +615,71 @@ const RostersTable = ({ isRostersVisible }) => {
     });
     const heightInitializedRef = useRef(false);
     
-    // Nastavenie výšky tabuľky
+    // Dynamická výška tabuľky podľa aktuálnej výšky viewportu
     useEffect(() => {
         let resizeObserver = null;
-        let resizeTimer = null;
+        let animationFrame = null;
     
-        const updateHeight = () => {
+        const updateTableHeight = () => {
             const element = tableContainerRef.current;
     
             if (!element) return;
     
             const rect = element.getBoundingClientRect();
     
-            // Ak ešte DOM nemá správnu pozíciu, skúsime znova
+            // Pri prvom renderi ešte nemusí byť pozícia správna
             if (rect.top <= 0) {
-                requestAnimationFrame(updateHeight);
+                animationFrame = requestAnimationFrame(updateTableHeight);
                 return;
             }
     
-            const calculatedMaxHeight =
-                window.innerHeight - rect.top - 50;
+            // Výška, ktorá zostáva od vrchu tabuľky po spodok okna
+            const availableHeight = window.innerHeight - rect.top - 50;
     
-            const newHeight = `${Math.max(calculatedMaxHeight, 200)}px`;
+            // Minimálna výška 200px
+            const newHeight = `${Math.max(availableHeight, 200)}px`;
     
             setMaxTableHeight(prev => {
-                if (prev === newHeight) {
-                    return prev;
-                }
-    
-                return newHeight;
+                return prev === newHeight ? prev : newHeight;
             });
-    
-            heightInitializedRef.current = true;
         };
     
-        // Počkáme, kým React dokončí render
-        const frame1 = requestAnimationFrame(() => {
-            const frame2 = requestAnimationFrame(() => {
-                updateHeight();
-    
-                // Sledujeme zmenu veľkosti samotného kontajnera
-                if (tableContainerRef.current && window.ResizeObserver) {
-                    resizeObserver = new ResizeObserver(() => {
-                        updateHeight();
-                    });
-    
-                    resizeObserver.observe(tableContainerRef.current);
-                }
-            });
-    
-            // cleanup druhého frame
-            return () => cancelAnimationFrame(frame2);
+        // Prvý výpočet po vykreslení
+        animationFrame = requestAnimationFrame(() => {
+            requestAnimationFrame(updateTableHeight);
         });
     
-        const handleWindowResize = () => {
-            clearTimeout(resizeTimer);
-    
-            resizeTimer = setTimeout(() => {
-                updateHeight();
-            }, 50);
+        // Zmena veľkosti okna
+        const handleResize = () => {
+            updateTableHeight();
         };
     
-        window.addEventListener('resize', handleWindowResize);
+        window.addEventListener('resize', handleResize);
+    
+        // Sledujeme aj zmenu veľkosti/pozície layoutu
+        if (window.ResizeObserver) {
+            resizeObserver = new ResizeObserver(() => {
+                updateTableHeight();
+            });
+    
+            if (tableContainerRef.current) {
+                resizeObserver.observe(tableContainerRef.current);
+            }
+    
+            // Sledujeme aj rodičovský element
+            const parent = tableContainerRef.current?.parentElement;
+    
+            if (parent) {
+                resizeObserver.observe(parent);
+            }
+        }
     
         return () => {
-            cancelAnimationFrame(frame1);
-            clearTimeout(resizeTimer);
-            window.removeEventListener('resize', handleWindowResize);
+            window.removeEventListener('resize', handleResize);
+    
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
     
             if (resizeObserver) {
                 resizeObserver.disconnect();
@@ -1089,10 +1087,13 @@ const RostersTable = ({ isRostersVisible }) => {
 
         return React.createElement(
             'div',
-            { 
+            {
                 className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
                 ref: tableContainerRef,
-                style: { maxHeight: maxTableHeight }
+                style: {
+                    height: maxTableHeight,
+                    maxHeight: maxTableHeight
+                }
             },
             React.createElement(
                 'table',
