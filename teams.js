@@ -390,7 +390,8 @@ const getMatchColors = (match) => {
     if (match.isPlacementMatch) return { backgroundColor: '#F3E8FF', textColor: '#6B21A5' };
     if (match.matchType === 'Playoff' || match.matchType === 'Semifinále' || 
         match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
-        (match.matchType && match.matchType.includes('finále'))) {
+        (match.matchType && match.matchType.includes('finále')) ||
+        match.matchType === 'o 3. miesto') {
         return { backgroundColor: '#F3E8FF', textColor: '#6B21A5' };
     }
     return { backgroundColor: '#DCFCE7', textColor: '#166534' };
@@ -840,16 +841,16 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                     }, match.matchType)
                                 );
                             }
-                            if (match.isPlacementMatch) {
+                            if (match.isPlacementMatch || match.matchType === 'o 3. miesto') {
                                 infoTags.push(
                                     React.createElement('span', {
                                         key: 'placement',
                                         className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                         style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
-                                    }, `o ${match.placementRank}. miesto`)
+                                    }, match.isPlacementMatch ? `o ${match.placementRank}. miesto` : 'o 3. miesto')
                                 );
                             }
-                            if (match.groupName && !match.isPlacementMatch) {
+                            if (match.groupName && !match.isPlacementMatch && match.matchType !== 'o 3. miesto') {
                                 const groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
                                 infoTags.push(
                                     React.createElement('span', {
