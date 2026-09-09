@@ -806,10 +806,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
     // ZORADENIE - presne podľa konzoly
     const displayMembers = useMemo(() => {
-        console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
-
         if (!isStatsReady || allMembersData.length === 0) {
-            console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
             return [];
         }
 
@@ -825,7 +822,6 @@ const RostersTable = ({ isRostersVisible }) => {
         });
 
         const scorers = membersWithStats.filter(m => m.goals > 0);
-        console.log(`[RostersTable] Celkovo ${membersWithStats.length} členov, ${scorers.length} s gólmi`);
 
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
         const nonScorers = membersWithStats.filter(m => m.goals === 0);
@@ -848,13 +844,6 @@ const RostersTable = ({ isRostersVisible }) => {
         });
 
         const result = [...goalsScorers, ...nonScorers];
-
-        if (result.length > 0) {
-            console.log('[RostersTable] Prvých 5 po zoradení:');
-            result.slice(0, 5).forEach((m, i) => {
-                console.log(`  ${i+1}. ${m.firstName} ${m.lastName} - ${m.goals} gólov (${m.teamNameDisplay})`);
-            });
-        }
 
         return result;
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]);
