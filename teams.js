@@ -422,6 +422,16 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [matchScoresFromDb, setMatchScoresFromDb] = useState({});
     const [categoriesData, setCategoriesData] = useState({});
     const [allMatchesList, setAllMatchesList] = useState([]);
+    
+    // Sledovanie zmien v teamName a categoryName pre resetovanie loading stavu
+    useEffect(() => {
+        // Reset loading stavu pri zmene tímu alebo kategórie
+        setLoading(true);
+        setMatches([]);
+        setAllMatchesList([]);
+        setMatchScoresFromEvents({});
+        setMatchScoresFromDb({});
+    }, [teamName, categoryName]);
 
     useEffect(() => {
         const loadGroups = async () => {
@@ -651,7 +661,9 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             
             const filtered = filterMatches(allMatches, convertedNames);
             setMatches(filtered);
+            setLoading(false);
         }, (error) => {
+            setLoading(false);
         });
 
         return () => {
