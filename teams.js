@@ -6,7 +6,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef } = React;
 const listeners = new Set();
 
-// Stabilná notifikácia cez portál
 const NotificationPortal = () => {
   const [notification, setNotification] = React.useState(null);
   useEffect(() => {
@@ -53,7 +52,6 @@ const slovakCollator = new Intl.Collator('sk', {
     numeric: false
 });
 
-// Funkcia na odstránenie sufixu - používame pre zobrazenie v tabuľke a pre načítanie z URL
 const removeSuffix = (teamName) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
     const lettersLower = letters.toLowerCase();
@@ -71,7 +69,6 @@ const removeSuffix = (teamName) => {
     return teamName;
 };
 
-// Funkcia na načítanie členov tímu s reálnym sledovaním - POUŽÍVA CELÝ NÁZOV VRÁTANE SUFIXU
 const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         if (onUpdate) onUpdate([]);
@@ -79,7 +76,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
         return () => {};
     }
     
-    // Používame celý názov tímu vrátane sufixu
     const actualTeamName = teamName;    
     
     if (onMappedName) {
@@ -102,13 +98,11 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                 if (categoryKey !== categoryName) continue;                
                 
-                // Vyhľadávame PRESNE podľa celého názvu tímu vrátane sufixu
                 const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName);
                 
                 if (foundTeam) {
                     foundAnyTeam = true;
                     
-                    // Hráči
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
                         foundTeam.playerDetails.forEach((player, idx) => {
                             members.push({
@@ -126,7 +120,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                         });
                     }
                     
-                    // Členovia RT (muži)
                     if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
                         foundTeam.menTeamMemberDetails.forEach((member, idx) => {
                             members.push({
@@ -144,7 +137,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                         });
                     }
                     
-                    // Členovia RT (ženy)
                     if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
                         foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
                             members.push({
@@ -167,7 +159,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
             }
         }
         
-        // Zoradenie: najprv RT členovia, potom hráči
         const rtMembers = members.filter(m => m.type !== 'Hráč');
         const players = members.filter(m => m.type === 'Hráč');
         const sortedMembers = [...rtMembers, ...players];        
@@ -180,7 +171,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     return unsubscribe;
 };
 
-// Všeobecná debugovacia funkcia pre zápasy
 const debugMatches = async () => {
     if (!window.db) {
         return;
@@ -197,7 +187,6 @@ const debugMatches = async () => {
         querySnapshot.forEach((doc, index) => {
             const match = doc.data();
             
-            // Konvertujeme identifikátory tímov
             let homeTeamDisplay = match.homeTeamIdentifier || 'N/A';
             let awayTeamDisplay = match.awayTeamIdentifier || 'N/A';
             
@@ -258,7 +247,6 @@ const debugMatches = async () => {
             });
             
             if (!found) {                
-                // Skúsime nájsť podobné názvy (po konverzii)
                 querySnapshot.forEach((doc) => {
                     const match = doc.data();
                     let homeConverted = match.homeTeamIdentifier || '';
@@ -287,15 +275,12 @@ const debugMatches = async () => {
     } catch (error) {}
 };
 
-// Spustíme debug po načítaní
 setTimeout(() => {
     debugMatches();
 }, 3000);
 
-// Pridáme funkciu do window objektu
 window.debugMatches = debugMatches;
 
-// Všeobecná debugovacia funkcia pre udalosti
 const debugMatchEvents = async () => {
     if (!window.db) {
         return;
@@ -332,22 +317,16 @@ const debugMatchEvents = async () => {
     } catch (error) {}
 };
 
-// Spustíme debug udalostí po načítaní
 setTimeout(() => {
     debugMatchEvents();
 }, 4000);
 
-// Pridáme funkciu do window objektu
 window.debugMatchEvents = debugMatchEvents;
 
-// --- FUNKCIA NA MANUÁLNU AKTUALIZÁCIU UI ---
-const forceUpdateUI = () => {
-    
-    // Nájdeme root element a znovu vykreslíme aplikáciu
+const forceUpdateUI = () => {    
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         try {
-            // Získame aktuálny stav z window objektu
             const userProfileData = window.globalUserProfileData || null;
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(TeamsOverviewApp, { 
@@ -357,45 +336,8 @@ const forceUpdateUI = () => {
     }
 };
 
-// Pridáme do window objektu
 window.forceUpdateUI = forceUpdateUI;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ============================================================
-// NOVÝ KOMPONENT PRE ZOBRAZENIE ZÁPASOV TÍMU
-// Vložte tento kód do teams.js, napríklad pred TeamsOverviewApp
-// ============================================================
-
-// Pomocné funkcie pre zobrazenie zápasov
 const formatMatchDateTime = (timestamp) => {
     if (!timestamp) return null;
     try {
@@ -469,10 +411,6 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-// ============================================================
-// KONEČNÁ VERZIA TeamMatchesList - spoľahlivá aktualizácia
-// ============================================================
-
 const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -485,7 +423,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [categoriesData, setCategoriesData] = useState({});
     const [allMatchesList, setAllMatchesList] = useState([]);
 
-    // Načítanie groupsData
     useEffect(() => {
         const loadGroups = async () => {
             if (!window.db) return;
@@ -502,7 +439,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         loadGroups();
     }, []);
 
-    // Načítanie kategórií
     useEffect(() => {
         const loadCategories = async () => {
             if (!window.db) return;
@@ -523,7 +459,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         loadCategories();
     }, []);
 
-    // Načítanie názvov hál
     const loadHallNames = async (matchesList) => {
         const hallIds = new Set();
         matchesList.forEach(match => {
@@ -542,26 +477,22 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         setHallNames(names);
     };
 
-    // Funkcia na konverziu názvov tímov cez matchTracker
     const convertTeamNames = async (matchesList) => {
         const names = { ...teamNames };
         let needsUpdate = false;
         
-        // Počkáme na dostupnosť matchTracker
         let attempts = 0;
         while (!window.matchTracker && attempts < 10) {
             await new Promise(resolve => setTimeout(resolve, 200));
             attempts++;
         }
         
-        // Získame všetky unikátne identifikátory tímov
         const teamIdentifiers = new Set();
         matchesList.forEach(match => {
             if (match.homeTeamIdentifier) teamIdentifiers.add(match.homeTeamIdentifier);
             if (match.awayTeamIdentifier) teamIdentifiers.add(match.awayTeamIdentifier);
         });
         
-        // Pre každý identifikátor zavoláme matchTracker
         if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
             for (const identifier of teamIdentifiers) {
                 const currentDisplayName = names[identifier] || getDisplayTeamName(identifier);
@@ -598,22 +529,18 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return names;
     };
 
-    // Hlavná funkcia na filtrovanie zápasov
     const filterMatches = (allMatches, names) => {
         const filtered = [];
         
         allMatches.forEach(match => {
-            // Získame konvertované názvy
             const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
             
-            // Kategória zápasu
             let matchCategory = match.categoryName;
             if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
                 matchCategory = categoriesData[match.categoryId];
             }
             
-            // Porovnanie
             if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
                 filtered.push({
                     ...match,
@@ -626,7 +553,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return filtered;
     };
 
-    // Výpočet gólov z udalostí
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0, awayGoals = 0;
         events.forEach(event => {
@@ -638,7 +564,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return { home: homeGoals, away: awayGoals };
     };
 
-    // Hlavný useEffect - načítanie a real-time listener
     useEffect(() => {
         if (!window.db || !teamName || !categoryName) {
             setLoading(false);
@@ -662,7 +587,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 }
             });
 
-            // Zoradenie
             allMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -675,19 +599,15 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             setMatchScoresFromDb(scores);
             await loadHallNames(allMatches);
             
-            // Konverzia názvov
             const convertedNames = await convertTeamNames(allMatches);
             
-            // Uloženie všetkých zápasov
             setAllMatchesList(allMatches);
             
-            // Filtrovanie
             const filtered = filterMatches(allMatches, convertedNames);
             setMatches(filtered);
             setLoading(false);
         };
 
-        // Prvotné načítanie
         const loadMatchesData = async () => {
             try {
                 const querySnapshot = await getDocs(matchesRef);
@@ -699,9 +619,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
 
         loadMatchesData();
 
-        // Real-time listener
         unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
-            // Získame aktuálny zoznam zápasov
             const allMatches = [];
             const statuses = {};
             const scores = {};
@@ -715,7 +633,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 }
             });
 
-            // Zoradenie
             allMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -728,13 +645,10 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             setMatchScoresFromDb(scores);
             await loadHallNames(allMatches);
             
-            // Konverzia názvov
             const convertedNames = await convertTeamNames(allMatches);
             
-            // Uloženie všetkých zápasov
             setAllMatchesList(allMatches);
             
-            // Filtrovanie
             const filtered = filterMatches(allMatches, convertedNames);
             setMatches(filtered);
         }, (error) => {
@@ -745,7 +659,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         };
     }, [teamName, categoryName, categoriesData]);
 
-    // Real-time listener na udalosti pre skóre
     useEffect(() => {
         if (!window.db || allMatchesList.length === 0) return;
 
@@ -798,7 +711,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         );
     }
 
-    // Zoskupenie podľa dní
     const getMatchesByDay = (matchesList) => {
         const groups = {};
         matchesList.forEach(match => {
@@ -899,7 +811,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                 showScore = true;
                             }
 
-                            // Použijeme konvertované názvy z teamNames
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match._homeDisplay || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match._awayDisplay || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
@@ -907,7 +818,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                             const lighterCategoryColor = getLighterColor(categoryColor);
                             const matchColors = getMatchColors(match);
 
-                            // Info tagy
                             const infoTags = [];
                             if (match.matchType && !match.isPlacementMatch) {
                                 infoTags.push(
@@ -1117,48 +1027,14 @@ const renderTeamDetails = () => {
                 `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
             )
         ),
-        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená) ---
         isMatchesVisible ? React.createElement(TeamMatchesList, {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || '',
             categoryId: categoryId
         }) : null,
-        // --- SÚPISKA TÍMU ---
         renderTeamRoster()
     );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const TeamsOverviewApp = (props) => {
     const [allTeams, setAllTeams] = useState([]);
@@ -1177,21 +1053,18 @@ const TeamsOverviewApp = (props) => {
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
 
-    // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
         window.pagesVisibility['rosters'].visible === true
     );
 
-    // --- STAV PRE VIDITEĽNOSŤ MATCHES ---
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['matches'] && 
         window.pagesVisibility['matches'].visible === true
     );
 
-    // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
     useEffect(() => {
         if (!window.db) return;
 
@@ -1275,11 +1148,9 @@ const TeamsOverviewApp = (props) => {
 
     const TOP_OFFSET = '0px'; 
 
-    // --- FUNKCIA NA KONVERZIU IDENTIFIKÁTORA NA ZOBRAZENÝ NÁZOV ---
     const convertIdentifierToDisplayName = (identifier) => {
         if (!identifier) return identifier;
         
-        // Skúsime použiť teamManager na synchrónnu konverziu
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             try {
                 const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
@@ -1291,11 +1162,9 @@ const TeamsOverviewApp = (props) => {
         return identifier;
     };
 
-    // --- LISTENER PRE ZMENY V matchEvents PRE AKTUALIZÁCIU UI ---
     useEffect(() => {
         if (!window.db) return;
         
-        // Počúvame na všetky zmeny v matchEvents
         const eventsRef = collection(window.db, 'matchEvents');
         const eventsQuery = query(eventsRef);
         
@@ -1311,8 +1180,6 @@ const TeamsOverviewApp = (props) => {
             if (unsubscribe) unsubscribe();
         };
     }, [selectedTeamDetails, teamRoster]);
-
-    // Vymeňte celý useEffect pre štatistiky (od riadku cca 612) za tento:
     
     useEffect(() => {    
         if (!teamRoster || teamRoster.length === 0 || !window.db) {
@@ -1328,21 +1195,17 @@ const TeamsOverviewApp = (props) => {
             return;
         }
     
-        // --- 1. ZÍSKAME VŠETKY matchId PRE TÍM ---
         const matchesRef = collection(window.db, 'matches');
         const matchesQuery = query(matchesRef);
     
         let matchIds = new Set();
         let isFirstLoad = true;
     
-        // --- FUNKCIA NA ZÍSKANIE ZÁKLADNÉHO NÁZVU BEZ SUFIXU ---
         const getBaseTeamName = (teamName) => {
             if (!teamName) return teamName;
-            // Odstránime sufix (posledné písmeno oddelené medzerou)
             const parts = teamName.trim().split(' ');
             if (parts.length >= 2) {
                 const lastPart = parts[parts.length - 1];
-                // Ak je posledná časť jedno písmeno (A-Z), považujeme to za sufix
                 if (lastPart.length === 1 && /[A-ZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽa-záäčďéíĺľňóôřšťúýž]/.test(lastPart)) {
                     return parts.slice(0, -1).join(' ');
                 }
@@ -1352,7 +1215,6 @@ const TeamsOverviewApp = (props) => {
     
         const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {
             
-            // Inicializujeme štatistiky pre každého člena
             const stats = {};
             teamRoster.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -1374,23 +1236,19 @@ const TeamsOverviewApp = (props) => {
                 };
             });
         
-            // Prejdeme všetky udalosti a pripočítame ich k príslušným členom
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
                 const matchId = eventData.matchId;
                 
-                // Kontrola kategórie - udalosť musí byť v rovnakej kategórii ako tím
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     return;
                 }
                 
-                // Získame informácie o zápase z mapovania
                 const matchInfo = matchTeamMap[matchId];
                 if (!matchInfo) {
                     return;
                 }
                 
-                // Zistíme, či udalosť patrí nášmu tímu
                 let isOurTeam = false;
                 if (eventData.team === 'home' && matchInfo.homeTeam === currentTeamName) {
                     isOurTeam = true;
@@ -1400,7 +1258,6 @@ const TeamsOverviewApp = (props) => {
                     return;
                 }
                 
-                // Nájdeme príslušného člena tímu podľa memberTypeKey a memberIndex
                 let foundMemberKey = null;
                 for (const [memberKey, stat] of Object.entries(stats)) {
                     if (stat.dbArrayName === eventData.memberTypeKey && stat.dbIndex === eventData.memberIndex) {
@@ -1415,7 +1272,6 @@ const TeamsOverviewApp = (props) => {
                 
                 const stat = stats[foundMemberKey];
                 
-                // Pripočítame štatistiky podľa typu udalosti
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
@@ -1444,7 +1300,6 @@ const TeamsOverviewApp = (props) => {
             return stats;
         };
     
-        // --- 3. POČÚVAME NA UDALOSTI PRE VŠETKY ZÁPASY TÍMU ---
         let eventsUnsubscribe = null;
     
         const setupEventsListener = (matchIdsArray) => {
@@ -1587,7 +1442,6 @@ const TeamsOverviewApp = (props) => {
             };
         };
     
-        // --- 4. POČÚVAME NA ZMENY V ZÁPASOCH A AKTUALIZUJEME UDALOSTI ---
         let unsubscribeMatches = null;
         let matchTeamMap = {};
     
@@ -1601,23 +1455,19 @@ const TeamsOverviewApp = (props) => {
                 const matchData = doc.data();
                 const matchId = doc.id;
                 
-                // Konvertujeme identifikátory tímov z zápasu na zobrazené názvy
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // Uložíme si mapovanie pre tento zápas
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway
                 };
                 
-                // Porovnávame CELÉ názvy (vrátane sufixu)
                 if (convertedHome === fullTeamName || convertedAway === fullTeamName) {
                     newMatchIds.add(matchId);
                 }
             });
         
-            // Aktualizujeme mapovanie tímov pre zápasy
             matchTeamMap = newMatchTeamMap;
         
             const newMatchIdsArray = Array.from(newMatchIds);
@@ -1657,7 +1507,6 @@ const TeamsOverviewApp = (props) => {
             try {
                 rosterUnsubscribe();
             } catch (e) {
-                // Ignorujeme chyby pri odhlasovaní
             }
             setRosterUnsubscribe(null);
         }
@@ -1696,7 +1545,6 @@ const TeamsOverviewApp = (props) => {
         window.__rosterTimeoutId = timeoutId;
     };
 
-    // Čistenie listenera pri zmene výberu
     useEffect(() => {
         return () => {
             if (rosterUnsubscribe) {
@@ -1712,7 +1560,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Načítanie súpisky pri zmene vybraného výskytu
     useEffect(() => {
         const categoryFromUrl = getCategoryFromUrl();
         const hasCategoryInUrl = !!categoryFromUrl;
@@ -1774,7 +1621,6 @@ const TeamsOverviewApp = (props) => {
         }
     }, [selectedTeamDetails, categoryIdToNameMap]);
 
-    // Funkcia na aktualizáciu URL hashu
     const updateUrlHash = (teamName, categoryName = null) => {
         let hashParts = [];
         if (categoryName) {
@@ -1799,7 +1645,6 @@ const TeamsOverviewApp = (props) => {
         }
     };
 
-    // Funkcia na parsovanie URL hashu
     const parseUrlHash = () => {
         const hash = window.location.hash;
         if (hash && hash.startsWith('#')) {
@@ -1828,13 +1673,11 @@ const TeamsOverviewApp = (props) => {
         return { teamName: null, categoryName: null };
     };
 
-    // Pomocná funkcia na získanie kategórie z URL
     const getCategoryFromUrl = () => {
         const { categoryName } = parseUrlHash();
         return categoryName;
     };
 
-    // Načítanie tímu z URL pri prvom načítaní
     useEffect(() => {
         if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
             const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
@@ -1975,7 +1818,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Počúvanie na zmeny v URL hash
     useEffect(() => {
         const handleHashChange = () => {
             if (!isInitialLoad) {
@@ -2265,8 +2107,6 @@ const TeamsOverviewApp = (props) => {
         }
         loadTeamRoster(occ.teamName, categoryName);
     };
-
-    // Vymeňte časť renderTeamRoster v teams.js (od cca riadku 1500) za:
     
     const renderTeamRoster = () => {
         const categoryFromUrl = getCategoryFromUrl();
@@ -2547,13 +2387,11 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená) ---
             isMatchesVisible ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId
             }) : null,
-            // --- SÚPISKA TÍMU ---
             renderTeamRoster()
         );
     };
@@ -2779,7 +2617,6 @@ const TeamsOverviewApp = (props) => {
         );
     };
 
-    // Hlavný render
     const renderMainContent = () => {
         if (selectedTeamDetails) {
             return renderTeamDetails();
@@ -2819,7 +2656,6 @@ const TeamsOverviewApp = (props) => {
     );
 };
 
-// Definícia funkcie handleDataUpdateAndRender
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
