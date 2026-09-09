@@ -567,8 +567,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
 };
 
 // ============================================================
-// OPRAVENÝ KOMPONENT TeamMatchesList - načítava všetky zápasy
-// a používa matchTracker pre konverziu názvov
+// OPRAVENÝ KOMPONENT TeamMatchesList - automatická aktualizácia
 // ============================================================
 
 const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
@@ -732,6 +731,15 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         return names; // Vrátime konvertované názvy
     };
 
+    // Hlavná funkcia na aktualizáciu zápasov - volá sa pri každej zmene
+    const updateMatches = async (allMatches, currentNames) => {
+        // Ak nemáme aktuálne názvy, použijeme existujúce
+        const names = currentNames || teamNames;
+        
+        // Filtrujeme zápasy pre aktuálny tím
+        filterMatchesForTeam(allMatches, names);
+    };
+
     // Výpočet gólov z udalostí
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0, awayGoals = 0;
@@ -810,7 +818,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                     });
 
                     if (hasChanges) {
-                        // Aktualizujeme všetky zápasy
+                        // Najprv aktualizujeme allMatchesList
                         setAllMatchesList(prev => {
                             const newList = [...prev];
                             updatedMatches.forEach(um => {
@@ -825,53 +833,62 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                     return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
                                 } catch (e) { return 0; }
                             });
+                            
+                            // Po aktualizácii allMatchesList, znovu spracujeme názvy a prefiltrujeme
+                            // Použijeme setTimeout aby sme mali istotu, že allMatchesList je aktualizovaný
+                            setTimeout(async () => {
+                                // Získame aktuálny zoznam zápasov
+                                const currentAllMatches = [...newList];
+                                
+                                // Znovu spracujeme názvy tímov pre všetky zápasy
+                                const currentNames = { ...teamNames };
+                                let namesUpdated = false;
+                                
+                                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                                    for (const match of updatedMatches) {
+                                        if (match.homeTeamIdentifier) {
+                                            const currentName = currentNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                                            if (currentName) {
+                                                try {
+                                                    const converted = await window.matchTracker.getTeamNameByDisplayId(currentName);
+                                                    if (converted && converted !== currentName && converted !== currentNames[match.homeTeamIdentifier]) {
+                                                        currentNames[match.homeTeamIdentifier] = converted;
+                                                        namesUpdated = true;
+                                                    }
+                                                } catch (err) {}
+                                            }
+                                        }
+                                        if (match.awayTeamIdentifier) {
+                                            const currentName = currentNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                                            if (currentName) {
+                                                try {
+                                                    const converted = await window.matchTracker.getTeamNameByDisplayId(currentName);
+                                                    if (converted && converted !== currentName && converted !== currentNames[match.awayTeamIdentifier]) {
+                                                        currentNames[match.awayTeamIdentifier] = converted;
+                                                        namesUpdated = true;
+                                                    }
+                                                } catch (err) {}
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (namesUpdated) {
+                                    setTeamNames(currentNames);
+                                    // Prefiltrujeme zápasy s novými názvami
+                                    filterMatchesForTeam(currentAllMatches, currentNames);
+                                } else {
+                                    // Prefiltrujeme zápasy s existujúcimi názvami
+                                    filterMatchesForTeam(currentAllMatches, currentNames);
+                                }
+                            }, 100);
+                            
                             return newList;
                         });
+                        
+                        // Aktualizujeme statusy a skóre
                         setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
                         setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
-                        
-                        // Po každej zmene zavoláme matchTracker pre všetky tímy
-                        // v aktualizovaných zápasoch
-                        const currentNames = { ...teamNames };
-                        let namesUpdated = false;
-                        
-                        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                            for (const match of updatedMatches) {
-                                if (match.homeTeamIdentifier) {
-                                    const currentName = currentNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
-                                    if (currentName) {
-                                        try {
-                                            const converted = await window.matchTracker.getTeamNameByDisplayId(currentName);
-                                            if (converted && converted !== currentName && converted !== currentNames[match.homeTeamIdentifier]) {
-                                                currentNames[match.homeTeamIdentifier] = converted;
-                                                namesUpdated = true;
-                                            }
-                                        } catch (err) {}
-                                    }
-                                }
-                                if (match.awayTeamIdentifier) {
-                                    const currentName = currentNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
-                                    if (currentName) {
-                                        try {
-                                            const converted = await window.matchTracker.getTeamNameByDisplayId(currentName);
-                                            if (converted && converted !== currentName && converted !== currentNames[match.awayTeamIdentifier]) {
-                                                currentNames[match.awayTeamIdentifier] = converted;
-                                                namesUpdated = true;
-                                            }
-                                        } catch (err) {}
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if (namesUpdated) {
-                            setTeamNames(currentNames);
-                            // Prefiltrujeme zápasy s novými názvami
-                            filterMatchesForTeam(allMatchesList, currentNames);
-                        } else {
-                            // Prefiltrujeme zápasy s existujúcimi názvami
-                            filterMatchesForTeam(allMatchesList, currentNames);
-                        }
                     }
                 });
 
