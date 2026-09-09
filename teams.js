@@ -567,7 +567,7 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
 };
 
 // ============================================================
-// UPRAVENÝ KOMPONENT TeamMatchesList - načítava všetky zápasy
+// OPRAVENÝ KOMPONENT TeamMatchesList - načítava všetky zápasy
 // a používa matchTracker pre konverziu názvov
 // ============================================================
 
@@ -640,6 +640,34 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         setHallNames(names);
     };
 
+    // Funkcia na filtrovanie zápasov pre aktuálny tím
+    const filterMatchesForTeam = (allMatches, names) => {
+        const filtered = [];
+        
+        allMatches.forEach(match => {
+            // Získame konvertované názvy tímov
+            const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+            const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
+            
+            // Kontrola kategórie - zápas musí byť v rovnakej kategórii
+            let matchCategory = match.categoryName;
+            if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
+                matchCategory = categoriesData[match.categoryId];
+            }
+            
+            // Porovnávame konvertované názvy s názvom tímu a kategóriou
+            if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
+                filtered.push({
+                    ...match,
+                    _homeDisplay: homeName,
+                    _awayDisplay: awayName
+                });
+            }
+        });
+        
+        setMatches(filtered);
+    };
+
     // Hlavná funkcia na spracovanie zápasov - načítava všetky zápasy
     // a konvertuje názvy tímov cez matchTracker
     const processMatchesWithTeamNames = async (matchesList) => {
@@ -700,6 +728,8 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         } else {
             setTeamNames(names);
         }
+        
+        return names; // Vrátime konvertované názvy
     };
 
     // Výpočet gólov z udalostí
@@ -754,11 +784,11 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 setMatchScoresFromDb(scores);
                 await loadHallNames(allMatches);
                 
-                // Spracujeme všetky zápasy cez matchTracker
-                await processMatchesWithTeamNames(allMatches);
+                // Spracujeme všetky zápasy cez matchTracker a získame konvertované názvy
+                const convertedNames = await processMatchesWithTeamNames(allMatches);
                 
-                // Filtrujeme zápasy pre aktuálny tím
-                filterMatchesForTeam(allMatches, names);
+                // Filtrujeme zápasy pre aktuálny tím s použitím konvertovaných názvov
+                filterMatchesForTeam(allMatches, convertedNames);
                 setLoading(false);
 
                 // Real-time listener na všetky zmeny v zápasoch
@@ -846,36 +876,9 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                 });
 
             } catch (err) {
+                console.error('[TeamMatchesList] Chyba pri načítaní:', err);
                 setLoading(false);
             }
-        };
-
-        // Funkcia na filtrovanie zápasov pre aktuálny tím
-        const filterMatchesForTeam = (allMatches, names) => {
-            const filtered = [];
-            
-            allMatches.forEach(match => {
-                // Získame konvertované názvy tímov
-                const homeName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
-                const awayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
-                
-                // Kontrola kategórie - zápas musí byť v rovnakej kategórii
-                let matchCategory = match.categoryName;
-                if (!matchCategory && match.categoryId && categoriesData[match.categoryId]) {
-                    matchCategory = categoriesData[match.categoryId];
-                }
-                
-                // Porovnávame konvertované názvy s názvom tímu a kategóriou
-                if ((homeName === teamName || awayName === teamName) && matchCategory === categoryName) {
-                    filtered.push({
-                        ...match,
-                        _homeDisplay: homeName,
-                        _awayDisplay: awayName
-                    });
-                }
-            });
-            
-            setMatches(filtered);
         };
 
         loadMatchesData();
@@ -1040,8 +1043,8 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                             }
 
                             // Použijeme konvertované názvy z teamNames
-                            const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match._homeDisplay || getDisplayTeamName(match.homeTeamIdentifier);
-                            const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match._awayDisplay || getDisplayTeamName(match.awayTeamIdentifier);
+                            const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match._homeDisplay || getDisplayTeamName(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+                            const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match._awayDisplay || getDisplayTeamName(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
                             const categoryColor = getCategoryDrawColor(match.categoryId);
                             const lighterCategoryColor = getLighterColor(categoryColor);
