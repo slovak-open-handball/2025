@@ -1188,12 +1188,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'h1',
                 { className: 'text-3xl font-bold text-gray-800 text-center' },
-                'Súpisky tímov'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-center text-gray-500 mt-1' },
-                'Prehľad všetkých členov všetkých tímov zoradený podľa počtu gólov'
+                'Štatistiky'
             )
         ),
         renderFilters(),
