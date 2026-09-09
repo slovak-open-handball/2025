@@ -1133,7 +1133,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         return React.createElement(
                             'tr',
                             { 
-                                key: `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex || idx}`,
+                                key: `${member.id || member.originalIndex}_${member.teamNameDisplay}_${member.categoryNameDisplay}`
                                 className: `${rowClass} transition-colors duration-150`
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, rank),
