@@ -603,7 +603,7 @@ const RostersTable = ({ isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
-    const [selectedCategory, setSelectedCategory] = useState(null); // NOVÝ STATE PRE FILTER
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
     const tableContainerRef = useRef(null);
@@ -623,7 +623,6 @@ const RostersTable = ({ isRostersVisible }) => {
     // Sledovanie zmien veľkosti okna
     useEffect(() => {
         const handleResize = () => {
-            // Použijeme requestAnimationFrame pre plynulejšie prekreslenie
             requestAnimationFrame(() => {
                 updateTableHeight();
             });
@@ -632,17 +631,6 @@ const RostersTable = ({ isRostersVisible }) => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, [updateTableHeight]);
-
-    // NASTAVENIE VÝŠKY PO KAŽDEJ ZMENE DÁT, KTORÉ OVPLYVŇUJÚ VEĽKOSŤ TABUĽKY
-    useEffect(() => {
-        // Počkáme na ďalší frame, aby sa tabuľka stihla vykresliť
-        const timer = setTimeout(() => {
-            updateTableHeight();
-        }, 100);
-
-        return () => clearTimeout(timer);
-    }, [allMembersData, isStatsReady, stableDisplayMembers, updateTableHeight]);
-  
 
     // Získanie unikátnych kategórií
     const getUniqueCategories = useCallback(() => {
@@ -653,19 +641,6 @@ const RostersTable = ({ isRostersVisible }) => {
             }
         });
         return Array.from(categories).sort((a, b) => slovakCollator.compare(a, b));
-    }, [allMembersData]);
-
-    useEffect(() => {
-        const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50;
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
-            }
-        };
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
     }, [allMembersData]);
 
     useEffect(() => {
@@ -877,8 +852,6 @@ const RostersTable = ({ isRostersVisible }) => {
             };
         });
 
-        const scorers = membersWithStats.filter(m => m.goals > 0);
-
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
         const nonScorers = membersWithStats.filter(m => m.goals === 0);
 
@@ -899,13 +872,17 @@ const RostersTable = ({ isRostersVisible }) => {
             return aNum - bNum;
         });
 
-        const result = [...goalsScorers, ...nonScorers];
-
-        return result;
+        return [...goalsScorers, ...nonScorers];
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory]);
 
-    // VŽDY používame displayMembers – žiadne staré poradie
-    const stableDisplayMembers = displayMembers;
+    // NASTAVENIE VÝŠKY PO KAŽDEJ ZMENE DÁT
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            updateTableHeight();
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [allMembersData, isStatsReady, displayMembers, updateTableHeight]);
 
     // FUNKCIA PRE RESET FILTRA
     const handleCategoryFilter = (category) => {
@@ -935,7 +912,7 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        if (stableDisplayMembers.length === 0) {
+        if (displayMembers.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'text-center py-8 text-gray-500' },
@@ -946,7 +923,7 @@ const RostersTable = ({ isRostersVisible }) => {
         // Vytvoríme mapu poradia podľa gólov (pre rank)
         const goalRankMap = new Map();
         let currentRank = 1;
-        stableDisplayMembers.forEach((member, idx) => {
+        displayMembers.forEach((member, idx) => {
             const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}`;
             if (member.goals > 0) {
                 goalRankMap.set(key, currentRank);
@@ -1019,7 +996,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
-                    stableDisplayMembers.map((member, idx) => {
+                    displayMembers.map((member, idx) => {
                         const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
 
                         const teamStatsKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
@@ -1038,7 +1015,6 @@ const RostersTable = ({ isRostersVisible }) => {
                         const totalPenalties = (stats.convertedPenalties || 0) + (stats.missedPenalties || 0);
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties || 0}/${totalPenalties}` : '';
 
-                        const hasGoals = Number((stats.goals || 0)) > 0;
                         const rowClass = idx % 2 === 0
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
@@ -1074,8 +1050,8 @@ const RostersTable = ({ isRostersVisible }) => {
                         null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
                             selectedCategory 
-                                ? `Počet členov v kategórii ${selectedCategory}: ${stableDisplayMembers.length}` 
-                                : `Celkový počet členov: ${stableDisplayMembers.length}`
+                                ? `Počet členov v kategórii ${selectedCategory}: ${displayMembers.length}` 
+                                : `Celkový počet členov: ${displayMembers.length}`
                         )
                     )
                 )
