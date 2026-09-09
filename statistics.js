@@ -817,23 +817,28 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     }, [allTeams, selectedTeamNameFilter, allStatsData]);
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
-    const handleStatsUpdate = (teamName, stats) => {
+    const handleStatsUpdate = (teamName, stats, categoryName) => {
+        // Vytvoríme unikátny kľúč: teamName + categoryName
+        const uniqueKey = `${teamName}_${categoryName}`;
+        
         setAllStatsData(prev => {
             const newStats = {
                 ...prev,
-                [teamName]: stats
+                [uniqueKey]: stats
             };
             
             // Po aktualizácii štatistík preusporiadame členov podľa gólov
             if (allMembersData.length > 0) {
                 const sortedMembers = [...allMembersData];
                 sortedMembers.sort((a, b) => {
-                    const teamStatsA = newStats[a.teamNameDisplay] || {};
-                    const teamStatsB = newStats[b.teamNameDisplay] || {};
-                    const keyA = `${a.type}_${a.originalIndex}`;
-                    const keyB = `${b.type}_${b.originalIndex}`;
-                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                    const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
+                    const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
+                    const teamStatsA = newStats[keyA] || {};
+                    const teamStatsB = newStats[keyB] || {};
+                    const memberKeyA = `${a.type}_${a.originalIndex}`;
+                    const memberKeyB = `${b.type}_${b.originalIndex}`;
+                    const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
+                    const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
                     
                     if (goalsB !== goalsA) {
                         return goalsB - goalsA;
@@ -852,11 +857,11 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             return newStats;
         });
     };
-
+    
     // Renderovanie kolektorov pre každý tím
     const renderStatsCollectors = () => {
         if (!isRostersVisible || allTeams.length === 0) return null;
-
+    
         const uniqueTeams = getUniqueTeams();
         let filteredTeams = uniqueTeams;
         if (selectedTeamNameFilter) {
@@ -864,17 +869,17 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 team.teamName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
             );
         }
-
+    
         const sortedTeams = filteredTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
-
+    
         return sortedTeams.map((teamGroup) => {
             return React.createElement(TeamStatsCollector, {
                 key: `${teamGroup.category}_${teamGroup.teamName}`,
                 teamName: teamGroup.teamName,
                 categoryName: teamGroup.category,
-                onStatsUpdate: handleStatsUpdate
+                onStatsUpdate: (teamName, stats) => handleStatsUpdate(teamName, stats, teamGroup.category)
             });
         });
     };
@@ -975,8 +980,9 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     { className: 'divide-y divide-gray-100' },
                     allMembersData.map((member, idx) => {
                         const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
-                        
-                        const teamStats = allStatsData[member.teamNameDisplay] || {};
+
+                        const teamStatsKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+                        const teamStats = allStatsData[teamStatsKey] || {};
                         const memberKey = `${member.type}_${member.originalIndex}`;
                         const stats = teamStats[memberKey] || {
                             goals: 0,
