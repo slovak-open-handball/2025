@@ -1039,7 +1039,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
                             selectedCategory 
-                                ? `Počet členov v kategórii "${selectedCategory}": ${stableDisplayMembers.length}` 
+                                ? `Počet členov v kategórii ${selectedCategory}: ${stableDisplayMembers.length}` 
                                 : `Celkový počet členov: ${stableDisplayMembers.length}`
                         )
                     )
