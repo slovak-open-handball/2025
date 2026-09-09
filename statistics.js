@@ -186,7 +186,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const [updateTrigger, setUpdateTrigger] = useState(0);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -194,7 +193,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let unsub = null;
         
         const loadRoster = () => {
-            
             const handleMembersUpdate = (members) => {
                 setRosterData(members);
             };
@@ -304,7 +302,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 // Kontrola, či udalosť patrí nášmu tímu a KATEGÓRII
                 if (eventData.team === 'home') {
-                    
                     if (homeTeam === fullTeamName && matchInfo.homeCategory === currentCategoryName) {
                         isOurTeam = true;
                     }
@@ -441,7 +438,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             let processedChunks = 0;
             
             chunks.forEach((chunk, index) => {
-                
                 const eventsRef = collection(window.db, 'matchEvents');
                 const eventsQuery = query(
                     eventsRef,
@@ -449,7 +445,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 );
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {                    
-                    // VYNULUJEME combinedStats PRE KAŽDÝ CHUNK - TOTO JE KĽÚČOVÉ!
                     const combinedStats = {};
                     
                     const chunkStats = calculateStatsFromEvents(eventsSnapshot);
@@ -485,7 +480,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     processedChunks++;
     
                     if (processedChunks === chunks.length) {
-                        // VYNULUJEME SPOLOČNÉ ŠTATISTIKY - TOTO JE KĽÚČOVÉ!
                         const finalStats = {};
                         Object.entries(combinedStats).forEach(([memberKey, stat]) => {
                             finalStats[memberKey] = {
@@ -543,8 +537,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // ULOŽÍME AJ KATEGÓRIE TÍMOV ZO ZÁPASU
-                // Skúsime rôzne možnosti, kde môže byť kategória uložená
                 const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
                 const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';                
                 
@@ -553,11 +545,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayTeam: convertedAway,
                     homeCategory: homeCategory,
                     awayCategory: awayCategory,
-                    // Uložíme aj pôvodné dáta pre debug
                     rawMatchData: matchData
                 };
                 
-                // Porovnávame aj kategóriu - tím musí mať rovnaký názov AJ kategóriu
                 const isHomeMatch = convertedHome === fullTeamName && homeCategory === currentCategoryName;
                 const isAwayMatch = convertedAway === fullTeamName && awayCategory === currentCategoryName;                
                 
@@ -599,26 +589,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 eventsUnsubscribe = null;
             }
         };
-    }, [rosterData, teamName, categoryName, updateTrigger]);
-    
-    // --- LISTENER NA ZMENY V matchEvents ---
-    useEffect(() => {
-        if (!window.db || !teamName || !categoryName) return;
-        
-        const eventsRef = collection(window.db, 'matchEvents');
-        const eventsQuery = query(eventsRef);
-        
-        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
-            if (rosterData.length > 0) {
-                setUpdateTrigger(prev => prev + 1);
-            }
-        }, (error) => {
-        });
-
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [teamName, categoryName, rosterData.length]);
+    }, [rosterData, teamName, categoryName]); // <-- ODSTRÁNENÝ updateTrigger
     
     return null;
 };
