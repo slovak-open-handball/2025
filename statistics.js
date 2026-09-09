@@ -832,51 +832,65 @@ const RostersTable = ({ isRostersVisible }) => {
         });
     };
 
-    // ZORADENIE - používame displayMembers s memoizáciou
     const displayMembers = useMemo(() => {
-        if (!isStatsReady || allMembersData.length === 0) return [];
-        
-        // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
-        const membersWithStats = allMembersData.map(member => {
-            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${member.type}_${member.originalIndex}`;
-            const stats = teamStats[memberKey] || { goals: 0 };
-            return {
-                ...member,
-                goals: Number(stats.goals || 0)
-            };
-        });
-
-        // Rozdelíme na strelcov a neskórujúcich
-        const goalsScorers = membersWithStats.filter(m => m.goals > 0);
-        const nonScorers = membersWithStats.filter(m => m.goals === 0);
-
-        // Zoradíme strelcov podľa gólov (zostupne)
-        goalsScorers.sort((a, b) => {
-            if (b.goals !== a.goals) return b.goals - a.goals;
-            
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            
-            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-        });
-
-        // Zoradíme ostatných podľa abecedy
-        nonScorers.sort((a, b) => {
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            
-            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-            if (nameCompare !== 0) return nameCompare;
-            
-            const aNum = parseInt(a.jerseyNumber) || 999;
-            const bNum = parseInt(b.jerseyNumber) || 999;
-            return aNum - bNum;
-        });
-
-        return [...goalsScorers, ...nonScorers];
-    }, [allMembersData, allStatsData, isStatsReady]);
+      if (!isStatsReady || allMembersData.length === 0) return []
+    
+      const membersWithStats = allMembersData.map(member => {
+        const key = member.teamNameDisplay + member.categoryNameDisplay
+        const teamStats = allStatsData[key] || {}
+        const memberKey = member.type + member.originalIndex
+        const stats = teamStats[memberKey] || { goals: 0 }
+    
+        return {
+          ...member,
+          goals: Number(stats.goals || 0)
+        }
+      })
+    
+      const goalsScorers = membersWithStats.filter(m => m.goals > 0)
+      const nonScorers = membersWithStats.filter(m => m.goals === 0)
+    
+      goalsScorers.sort((a, b) => {
+        if (b.goals !== a.goals) return b.goals - a.goals
+    
+        const teamCompare = slovakCollator.compare(
+          a.teamNameDisplay,
+          b.teamNameDisplay
+        )
+    
+        if (teamCompare !== 0) return teamCompare
+    
+        return slovakCollator.compare(
+          `${a.firstName} ${a.lastName}`,
+          `${b.firstName} ${b.lastName}`
+        )
+      })
+    
+      nonScorers.sort((a, b) => {
+        const teamCompare = slovakCollator.compare(
+          a.teamNameDisplay,
+          b.teamNameDisplay
+        )
+    
+        if (teamCompare !== 0) return teamCompare
+    
+        const nameCompare = slovakCollator.compare(
+          `${a.firstName} ${a.lastName}`,
+          `${b.firstName} ${b.lastName}`
+        )
+    
+        if (nameCompare !== 0) return nameCompare
+    
+        const aNum = parseInt(a.jerseyNumber) || 999
+        const bNum = parseInt(b.jerseyNumber) || 999
+    
+        return aNum - bNum
+      })
+    
+      return [...goalsScorers, ...nonScorers]
+    }, [allMembersData, allStatsData, isStatsReady])
+    
+    const stableDisplayMembers = displayMembers;
 
     // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
     const previousDisplayMembersRef = useRef([]);
