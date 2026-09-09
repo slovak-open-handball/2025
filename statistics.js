@@ -938,8 +938,8 @@ const RostersTable = ({ isRostersVisible }) => {
                     React.createElement(
                         'tr',
                         { className: 'border-b border-gray-200' },
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '40px' } }, 'Č.'),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, '#'),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '40px' } }, 'č. dresu'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Tím'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Kategória'),
