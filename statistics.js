@@ -723,7 +723,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 
                 if (loadedCount === totalTeams) {
                     // Zoradenie členov podľa GÓLOV (zostupne - najviac gólov navrchu)
-                    // a potom podľa názvu tímu a čísla dresu
                     allMembers.sort((a, b) => {
                         // Získame štatistiky pre každého člena
                         const teamStatsA = allStatsData[a.teamNameDisplay] || {};
@@ -885,7 +884,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     React.createElement(
                         'tr',
                         { className: 'border-b border-gray-200' },
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, '#'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '40px' } }, 'Č.'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Tím'),
@@ -958,20 +957,15 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                                     ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-xs' })
                                     : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs' })));
                         
-                        // Zvýraznenie riadkov s gólmi
-                        const hasGoals = (stats.goals || 0) > 0;
-                        const rowClass = idx % 2 === 0 
-                            ? (hasGoals ? 'bg-green-50 hover:bg-green-100' : 'bg-white hover:bg-blue-50')
-                            : (hasGoals ? 'bg-green-100 hover:bg-green-200' : 'bg-gray-50 hover:bg-blue-50');
-                        
                         // Poradie podľa gólov (zobrazenie čísla poradia)
                         const rank = idx + 1;
+                        const hasGoals = (stats.goals || 0) > 0;
                         
                         return React.createElement(
                             'tr',
                             { 
                                 key: `${member.teamNameDisplay}_${member.type}_${member.originalIndex || idx}`,
-                                className: `${rowClass} transition-colors duration-150`
+                                className: 'hover:bg-blue-50 transition-colors duration-150'
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, hasGoals ? rank : ''),
                             React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center text-xs' }, member.jerseyNumber || ''),
