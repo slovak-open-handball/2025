@@ -631,9 +631,6 @@ const RostersTable = ({ isRostersVisible }) => {
     // Načítanie tímov
     useEffect(() => {
         if (!window.db) return;
-
-        console.log('[RostersTable] Načítavam tímy z databázy...');
-
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
             let userTeamsList = [];
             querySnapshot.forEach((doc) => {
@@ -658,7 +655,6 @@ const RostersTable = ({ isRostersVisible }) => {
                     });
                 }
             });
-            console.log(`[RostersTable] Načítaných ${userTeamsList.length} tímov`);
             setAllTeams(userTeamsList);
         });
 
@@ -687,9 +683,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
     // NAČÍTANIE ČLENOV - SPUSTÍ SA IBA PRI ZMENE TEAMOV
     useEffect(() => {
-        if (!window.db || allTeams.length === 0) return;
-    
-        console.log('[RostersTable] Načítavam členov tímov...');
+        if (!window.db || allTeams.length === 0) return;    
     
         // Zrušíme predchádzajúce listenery
         unsubscribes.forEach(unsub => {
@@ -720,9 +714,7 @@ const RostersTable = ({ isRostersVisible }) => {
         setReceivedTeams(new Set());
         setAllMembersData([]);
         // Reset triggera pre štatistiky
-        setStatsUpdateTrigger(0);
-    
-        console.log(`[RostersTable] Načítavam ${sortedTeams.length} tímov:`, sortedTeams.map(t => `${t.teamName} (${t.category})`));
+        setStatsUpdateTrigger(0);    
     
         // Použijeme NOVÚ Mapu a NOVÉ sety
         const membersMap = new Map();
@@ -761,7 +753,6 @@ const RostersTable = ({ isRostersVisible }) => {
                 
                 if (loadedCount === totalTeams) {
                     const allMembers = Array.from(membersMap.values());
-                    console.log(`[RostersTable] Načítaných ${allMembers.length} členov z ${totalTeams} tímov`);
                     setAllMembersData(allMembers);
                 }
             };
@@ -770,7 +761,6 @@ const RostersTable = ({ isRostersVisible }) => {
                 const unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 newUnsubscribes.push(unsub);
             } catch (error) {
-                console.error(`[RostersTable] Chyba pri načítaní tímu ${teamName}:`, error);
                 if (!loadedTeamsSet.has(teamKey)) {
                     loadedTeamsSet.add(teamKey);
                     loadedCount++;
@@ -793,9 +783,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
-        const uniqueKey = `${teamName}_${categoryName}`;
-        
-        console.log(`[RostersTable] Prijaté štatistiky pre ${uniqueKey}:`, stats);
+        const uniqueKey = `${teamName}_${categoryName}`;        
         
         // NAHRADÍME štatistiky, NIE PRIDÁVAME!
         setAllStatsData(prev => {
@@ -823,7 +811,6 @@ const RostersTable = ({ isRostersVisible }) => {
                     const newCount = prevCount + 1;
                     // Ak sme dostali všetky štatistiky, nastavíme ready stav
                     if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
-                        console.log('[RostersTable] Všetky štatistiky boli načítané');
                         setIsStatsReady(true);
                     }
                     return newCount;
@@ -857,10 +844,8 @@ const RostersTable = ({ isRostersVisible }) => {
     // ZORADENIE - používame displayMembers s memoizáciou
     // PRIDÁVAME statsUpdateTrigger DO ZÁVISLOSTÍ PRE VYNÚTENIE PREPOČTU
     const displayMembers = useMemo(() => {
-        console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
         
         if (!isStatsReady || allMembersData.length === 0) {
-            console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
             return [];
         }
         
@@ -878,7 +863,6 @@ const RostersTable = ({ isRostersVisible }) => {
 
         // LOG: Počet členov a počet tých s gólmi
         const scorers = membersWithStats.filter(m => m.goals > 0);
-        console.log(`[RostersTable] Celkovo ${membersWithStats.length} členov, ${scorers.length} s gólmi`);
 
         // Rozdelíme na strelcov a neskórujúcich
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
@@ -908,14 +892,6 @@ const RostersTable = ({ isRostersVisible }) => {
         });
 
         const result = [...goalsScorers, ...nonScorers];
-        
-        // LOG: Prvých 5 členov po zoradení
-        if (result.length > 0) {
-            console.log('[RostersTable] Prvých 5 po zoradení:');
-            result.slice(0, 5).forEach((m, i) => {
-                console.log(`  ${i+1}. ${m.firstName} ${m.lastName} - ${m.goals} gólov (${m.teamNameDisplay})`);
-            });
-        }
         
         return result;
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]); // PRIDANÝ statsUpdateTrigger
@@ -954,7 +930,6 @@ const RostersTable = ({ isRostersVisible }) => {
         
         // AK sa zmenili góly, VŽDY AKTUALIZUJEME poradie
         if (goalsChanged) {
-            console.log('[RostersTable] Zmena v góloch - aktualizujem poradie');
             previousDisplayMembersRef.current = displayMembers;
             previousGoalsRef.current = currentGoalsMap;
             return displayMembers;
