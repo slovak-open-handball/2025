@@ -6,42 +6,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
 const listeners = new Set();
 
-// Stabilná notifikácia cez portál
-const NotificationPortal = () => {
-  const [notification, setNotification] = React.useState(null);
-  useEffect(() => {
-    let timer;
-    const unsubscribe = subscribe((notif) => {
-      setNotification(notif);
-      clearTimeout(timer);
-      timer = setTimeout(() => setNotification(null), 5000);
-    });
-    
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
-  }, []);
-  if (!notification) return null;
-  const typeClasses = {
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    info: 'bg-blue-600',
-    default: 'bg-gray-700'
-  }[notification.type || 'default'];
-  return ReactDOM.createPortal(
-    React.createElement(
-      'div',
-      {
-        key: notification.id,
-        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
-      },
-      notification.message
-    ),
-    document.body
-  );
-};
-
 export const subscribe = (cb) => {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -437,79 +401,61 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const listeners = [];
             let processedChunks = 0;
             
+            const chunkStatsMap = new Map();
+            
             chunks.forEach((chunk, index) => {
                 const eventsRef = collection(window.db, 'matchEvents');
+            
                 const eventsQuery = query(
                     eventsRef,
                     where('matchId', 'in', chunk)
                 );
-    
-                const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {                    
-                    const combinedStats = {};
-                    
+            
+                const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
                     const chunkStats = calculateStatsFromEvents(eventsSnapshot);
-                    
-                    Object.entries(chunkStats).forEach(([memberKey, stat]) => {
-                        if (!combinedStats[memberKey]) {
-                            combinedStats[memberKey] = {
-                                goals: 0,
-                                convertedPenalties: 0,
-                                missedPenalties: 0,
-                                yellowCards: 0,
-                                redCards: 0,
-                                blueCards: 0,
-                                exclusions: 0,
-                                dbArrayName: stat.dbArrayName,
-                                dbIndex: stat.dbIndex,
-                                name: stat.name,
-                                jerseyNumber: stat.jerseyNumber,
-                                memberType: stat.memberType,
-                                teamName: stat.teamName,
-                                categoryName: stat.categoryName
-                            };
-                        }
-                        combinedStats[memberKey].goals += stat.goals;
-                        combinedStats[memberKey].convertedPenalties += stat.convertedPenalties;
-                        combinedStats[memberKey].missedPenalties += stat.missedPenalties;
-                        combinedStats[memberKey].yellowCards += stat.yellowCards;
-                        combinedStats[memberKey].redCards += stat.redCards;
-                        combinedStats[memberKey].blueCards += stat.blueCards;
-                        combinedStats[memberKey].exclusions += stat.exclusions;
-                    });
-    
-                    processedChunks++;
-    
-                    if (processedChunks === chunks.length) {
-                        const finalStats = {};
-                        Object.entries(combinedStats).forEach(([memberKey, stat]) => {
-                            finalStats[memberKey] = {
-                                goals: stat.goals || 0,
-                                convertedPenalties: stat.convertedPenalties || 0,
-                                missedPenalties: stat.missedPenalties || 0,
-                                yellowCards: stat.yellowCards || 0,
-                                redCards: stat.redCards || 0,
-                                blueCards: stat.blueCards || 0,
-                                exclusions: stat.exclusions || 0,
-                                dbArrayName: stat.dbArrayName,
-                                dbIndex: stat.dbIndex,
-                                name: stat.name,
-                                jerseyNumber: stat.jerseyNumber,
-                                memberType: stat.memberType,
-                                teamName: stat.teamName,
-                                categoryName: stat.categoryName
-                            };
+            
+                    chunkStatsMap.set(index, chunkStats);
+            
+                    const combinedStats = {};
+            
+                    chunkStatsMap.forEach((stats) => {
+                        Object.entries(stats).forEach(([memberKey, stat]) => {
+                            if (!combinedStats[memberKey]) {
+                                combinedStats[memberKey] = {
+                                    goals: 0,
+                                    convertedPenalties: 0,
+                                    missedPenalties: 0,
+                                    yellowCards: 0,
+                                    redCards: 0,
+                                    blueCards: 0,
+                                    exclusions: 0,
+                                    dbArrayName: stat.dbArrayName,
+                                    dbIndex: stat.dbIndex,
+                                    name: stat.name,
+                                    jerseyNumber: stat.jerseyNumber,
+                                    memberType: stat.memberType,
+                                    teamName: stat.teamName,
+                                    categoryName: stat.categoryName
+                                };
+                            }
+            
+                            combinedStats[memberKey].goals += stat.goals;
+                            combinedStats[memberKey].convertedPenalties += stat.convertedPenalties;
+                            combinedStats[memberKey].missedPenalties += stat.missedPenalties;
+                            combinedStats[memberKey].yellowCards += stat.yellowCards;
+                            combinedStats[memberKey].redCards += stat.redCards;
+                            combinedStats[memberKey].blueCards += stat.blueCards;
+                            combinedStats[memberKey].exclusions += stat.exclusions;
                         });
-                        setMembersStats(finalStats);
-                        if (onStatsUpdate) onStatsUpdate(teamName, finalStats);
-                        processedChunks = 0;
-                    }
-                }, (error) => {
-                    processedChunks++;
-                    if (processedChunks === chunks.length) {
-                        processedChunks = 0;
+                    });
+            
+                    setMembersStats(combinedStats);
+            
+                    if (onStatsUpdate) {
+                        onStatsUpdate(teamName, combinedStats);
                     }
                 });
-    
+            
                 listeners.push(listener);
             });
     
@@ -1261,7 +1207,6 @@ const RostersTable = ({ isRostersVisible }) => {
 
 // --- HLAVNÁ KOMPONENTA ---
 const TeamsOverviewApp = (props) => {
-    const [uiNotification, setUiNotification] = useState(null);
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
@@ -1303,26 +1248,9 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Notifikácie
-    useEffect(() => {
-        let timer;
-        const unsubscribe = subscribe((notification) => {
-            setUiNotification(notification);
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                setUiNotification(null);
-            }, 5000);
-        });
-        return () => {
-            unsubscribe();
-            clearTimeout(timer);
-        };
-    }, []);
-
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full p-4 relative text-[87.5%]' },
-        React.createElement(NotificationPortal, null),
         React.createElement(
             'div',
             { className: 'mb-6' },
@@ -1369,12 +1297,6 @@ const handleDataUpdateAndRender = (event) => {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
                                 await updateDoc(userProfileRef, { email: user.email });
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });
                             }
                         }
                     } catch (error) {
