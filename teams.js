@@ -832,7 +832,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                             const matchColors = getMatchColors(match);
 
                             const infoTags = [];
-                            if (match.matchType && !match.isPlacementMatch) {
+                            if (match.matchType && !match.isPlacementMatch && match.matchType !== 'o 3. miesto') {
                                 infoTags.push(
                                     React.createElement('span', {
                                         key: 'type',
@@ -848,6 +848,16 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                         className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                         style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
                                     }, match.isPlacementMatch ? `o ${match.placementRank}. miesto` : 'o 3. miesto')
+                                );
+                            }
+                            if (match.groupName && !match.isPlacementMatch && match.matchType !== 'Zápas o 3. miesto') {
+                                const groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
+                                infoTags.push(
+                                    React.createElement('span', {
+                                        key: 'group',
+                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                        style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
+                                    }, match.groupName)
                                 );
                             }
                                                       
