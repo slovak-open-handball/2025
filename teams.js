@@ -566,6 +566,10 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
+// ============================================================
+// UPRAVENÝ KOMPONENT TeamMatchesList - používa matchTracker
+// ============================================================
+
 // KOMPONENT NA ZOBRAZENIE ZÁPASOV TÍMU
 const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [matches, setMatches] = useState([]);
@@ -635,9 +639,38 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
         setHallNames(names);
     };
 
-    // Konverzia názvov tímov
+    // Konverzia názvov tímov POMOCOU matchTracker (ASYNCHRÓNNA verzia)
     const processTeamNames = async (matchesList) => {
-        const names = {};
+        const names = { ...teamNames };
+        let needsUpdate = false;
+        
+        // Počkáme na dostupnosť matchTracker
+        let attempts = 0;
+        while (!window.matchTracker && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+        }
+        
+        if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+            // Fallback na synchrónnu verziu
+            for (const match of matchesList) {
+                let categoryNameLocal = match.categoryName;
+                if (!categoryNameLocal && match.categoryId && categoriesData[match.categoryId]) {
+                    categoryNameLocal = categoriesData[match.categoryId];
+                }
+                if (!categoryNameLocal) continue;
+
+                if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
+                    names[match.homeTeamIdentifier] = getDisplayTeamName(match.homeTeamIdentifier);
+                }
+                if (match.awayTeamIdentifier && !names[match.awayTeamIdentifier]) {
+                    names[match.awayTeamIdentifier] = getDisplayTeamName(match.awayTeamIdentifier);
+                }
+            }
+            setTeamNames(names);
+            return;
+        }
+        
         for (const match of matchesList) {
             let categoryNameLocal = match.categoryName;
             if (!categoryNameLocal && match.categoryId && categoriesData[match.categoryId]) {
@@ -646,19 +679,41 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
             if (!categoryNameLocal) continue;
 
             if (match.homeTeamIdentifier) {
-                const displayName = getDisplayTeamName(match.homeTeamIdentifier);
-                if (displayName && (displayName.includes(categoryNameLocal) || displayName === match.homeTeamIdentifier)) {
-                    names[match.homeTeamIdentifier] = displayName;
+                const currentDisplayName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                if (currentDisplayName && (currentDisplayName.includes(categoryNameLocal) || currentDisplayName === match.homeTeamIdentifier)) {
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
+                            names[match.homeTeamIdentifier] = newName;
+                            needsUpdate = true;
+                        }
+                    } catch (err) {}
+                } else if (!names[match.homeTeamIdentifier]) {
+                    names[match.homeTeamIdentifier] = currentDisplayName;
                 }
             }
+            
             if (match.awayTeamIdentifier) {
-                const displayName = getDisplayTeamName(match.awayTeamIdentifier);
-                if (displayName && (displayName.includes(categoryNameLocal) || displayName === match.awayTeamIdentifier)) {
-                    names[match.awayTeamIdentifier] = displayName;
+                const currentDisplayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                if (currentDisplayName && (currentDisplayName.includes(categoryNameLocal) || currentDisplayName === match.awayTeamIdentifier)) {
+                    try {
+                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
+                            names[match.awayTeamIdentifier] = newName;
+                            needsUpdate = true;
+                        }
+                    } catch (err) {}
+                } else if (!names[match.awayTeamIdentifier]) {
+                    names[match.awayTeamIdentifier] = currentDisplayName;
                 }
             }
         }
-        setTeamNames(names);
+        
+        if (needsUpdate) {
+            setTeamNames(prev => ({ ...prev, ...names }));
+        } else {
+            setTeamNames(names);
+        }
     };
 
     // Výpočet gólov z udalostí
@@ -771,6 +826,11 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                         });
                         setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
                         setMatchScoresFromDb(prev => ({ ...prev, ...updatedScores }));
+                        
+                        // Aktualizujeme názvy tímov aj pre nové zápasy
+                        if (Object.keys(updatedMatches).length > 0) {
+                            processTeamNames(updatedMatches);
+                        }
                     }
                 });
 
@@ -940,6 +1000,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                 showScore = true;
                             }
 
+                            // POUŽIJEME teamNames z procesTeamNames (ktorý používa matchTracker)
                             const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match._homeDisplay || getDisplayTeamName(match.homeTeamIdentifier);
                             const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match._awayDisplay || getDisplayTeamName(match.awayTeamIdentifier);
                             const matchHallName = hallNames[match.hallId] || 'Športová hala';
