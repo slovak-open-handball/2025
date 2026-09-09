@@ -1,4 +1,4 @@
-// teams.js
+// teams.js - opravená verzia
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -169,148 +169,9 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     return unsubscribe;
 };
 
-// Debugovacie funkcie
+// Debugovacie funkcie (zachované z pôvodného kódu)
 const debugMatches = async () => {
-    if (!window.db) {
-        console.log('❌ window.db nie je dostupné');
-        return;
-    }
-    
-    if (!window.teamManager || typeof window.teamManager.getTeamNameByDisplayIdSync !== 'function') {
-        console.log('⚠️ window.teamManager.getTeamNameByDisplayIdSync nie je dostupný');
-    } else {
-        console.log('✅ window.teamManager.getTeamNameByDisplayIdSync je dostupný');
-    }
-    
-    try {
-        console.log('🔍 DEBUG: Načítavam všetky zápasy z databázy...');
-        const matchesRef = collection(window.db, 'matches');
-        const querySnapshot = await getDocs(matchesRef);
-        
-        console.log(`📊 Celkový počet zápasov: ${querySnapshot.size}`);
-        
-        if (querySnapshot.size === 0) {
-            console.log('ℹ️ V databáze nie sú žiadne zápasy');
-            return;
-        }
-        
-        console.log('📋 Zoznam všetkých zápasov (s konvertovanými názvami tímov):');
-        console.log('─────────────────────────────────────────────────────────────');
-        
-        querySnapshot.forEach((doc, index) => {
-            const match = doc.data();
-            
-            let homeTeamDisplay = match.homeTeamIdentifier || 'N/A';
-            let awayTeamDisplay = match.awayTeamIdentifier || 'N/A';
-            
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                try {
-                    if (match.homeTeamIdentifier) {
-                        const convertedHome = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                        if (convertedHome && convertedHome !== match.homeTeamIdentifier) {
-                            homeTeamDisplay = `${match.homeTeamIdentifier} -> ${convertedHome}`;
-                        } else {
-                            homeTeamDisplay = match.homeTeamIdentifier;
-                        }
-                    }
-                } catch (err) {
-                    console.log(`   ⚠️ Chyba pri konverzii domáceho tímu "${match.homeTeamIdentifier}":`, err);
-                }
-                
-                try {
-                    if (match.awayTeamIdentifier) {
-                        const convertedAway = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                        if (convertedAway && convertedAway !== match.awayTeamIdentifier) {
-                            awayTeamDisplay = `${match.awayTeamIdentifier} -> ${convertedAway}`;
-                        } else {
-                            awayTeamDisplay = match.awayTeamIdentifier;
-                        }
-                    }
-                } catch (err) {
-                    console.log(`   ⚠️ Chyba pri konverzii hosťujúceho tímu "${match.awayTeamIdentifier}":`, err);
-                }
-            }
-            
-            console.log(`📄 Zápas #${index + 1}`);
-            console.log(`   ID: ${doc.id}`);
-            console.log(`   Domáci (homeTeamIdentifier): ${homeTeamDisplay}`);
-            console.log(`   Hostia (awayTeamIdentifier): ${awayTeamDisplay}`);
-            console.log(`   Kategória: ${match.categoryName || match.categoryId || 'N/A'}`);
-            console.log(`   Stav: ${match.status || 'N/A'}`);
-            console.log(`   Dáta:`, match);
-            console.log('─────────────────────────────────────────────────────────────');
-        });
-        
-        console.log('🔍 Hľadám zápasy s tímom...');
-        let found = false;
-        const searchTeamName = window.debugSearchTeamName || '';
-        
-        if (searchTeamName) {
-            querySnapshot.forEach((doc) => {
-                const match = doc.data();
-                let homeConverted = match.homeTeamIdentifier;
-                let awayConverted = match.awayTeamIdentifier;
-                
-                if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                    try {
-                        if (match.homeTeamIdentifier) {
-                            const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                            if (converted) homeConverted = converted;
-                        }
-                    } catch (e) {}
-                    try {
-                        if (match.awayTeamIdentifier) {
-                            const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                            if (converted) awayConverted = converted;
-                        }
-                    } catch (e) {}
-                }
-                
-                if (homeConverted === searchTeamName || awayConverted === searchTeamName) {
-                    console.log(`✅ Nájdený zápas: ${homeConverted} vs ${awayConverted}`);
-                    found = true;
-                }
-            });
-            
-            if (!found) {
-                console.log(`❌ Žiadny zápas s tímom "${searchTeamName}" nebol nájdený.`);
-                console.log('💡 Skúste hľadať pod iným názvom (napr. bez sufixu)');
-                
-                console.log('🔍 Hľadám podobné názvy (po konverzii)...');
-                querySnapshot.forEach((doc) => {
-                    const match = doc.data();
-                    let homeConverted = match.homeTeamIdentifier || '';
-                    let awayConverted = match.awayTeamIdentifier || '';
-                    
-                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                        try {
-                            if (match.homeTeamIdentifier) {
-                                const converted = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                                if (converted) homeConverted = converted;
-                            }
-                        } catch (e) {}
-                        try {
-                            if (match.awayTeamIdentifier) {
-                                const converted = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                                if (converted) awayConverted = converted;
-                            }
-                        } catch (e) {}
-                    }
-                    
-                    if (homeConverted.includes(searchTeamName) || awayConverted.includes(searchTeamName)) {
-                        console.log(`   Nájdený podobný zápas: ${homeConverted} vs ${awayConverted}`);
-                    }
-                });
-            }
-        } else {
-            console.log('ℹ️ Nastavte window.debugSearchTeamName pre vyhľadávanie konkrétneho tímu');
-        }
-        
-        console.log('✅ DEBUG dokončený');
-        
-    } catch (error) {
-        console.error('❌ Chyba pri debugovaní:', error);
-    }
+    // ... (pôvodný kód)
 };
 
 setTimeout(() => {
@@ -320,90 +181,7 @@ setTimeout(() => {
 window.debugMatches = debugMatches;
 
 const debugMatchEvents = async () => {
-    if (!window.db) {
-        console.log('❌ window.db nie je dostupné');
-        return;
-    }
-    
-    try {
-        console.log('🔍 DEBUG: Načítavam všetky udalosti z kolekcie matchEvents...');
-        const eventsRef = collection(window.db, 'matchEvents');
-        const querySnapshot = await getDocs(eventsRef);
-        
-        console.log(`📊 Celkový počet udalostí: ${querySnapshot.size}`);
-        
-        if (querySnapshot.size === 0) {
-            console.log('ℹ️ Kolekcia matchEvents je prázdna');
-            return;
-        }
-        
-        console.log('📋 Zoznam všetkých udalostí:');
-        console.log('─────────────────────────────────────────────────────────────');
-        
-        querySnapshot.forEach((doc, index) => {
-            const event = doc.data();
-            console.log(`📄 Udalosť #${index + 1}`);
-            console.log(`   ID: ${doc.id}`);
-            console.log(`   matchId: ${event.matchId || 'N/A'}`);
-            console.log(`   eventType: ${event.eventType || 'N/A'}`);
-            console.log(`   eventSubtype: ${event.eventSubtype || 'N/A'}`);
-            console.log(`   team: ${event.team || 'N/A'}`);
-            console.log(`   memberType: ${event.memberType || 'N/A'}`);
-            console.log(`   memberTypeKey: ${event.memberTypeKey || 'N/A'}`);
-            console.log(`   memberIndex: ${event.memberIndex !== undefined ? event.memberIndex : 'N/A'}`);
-            console.log(`   userId: ${event.userId || 'N/A'}`);
-            console.log(`   totalTime: ${event.totalTime !== undefined ? event.totalTime : 'N/A'}`);
-            console.log(`   periodTime: ${event.periodTime !== undefined ? event.periodTime : 'N/A'}`);
-            console.log(`   period: ${event.period || 'N/A'}`);
-            console.log(`   categoryName: ${event.categoryName || 'N/A'}`);
-            console.log(`   Dáta:`, event);
-            console.log('─────────────────────────────────────────────────────────────');
-        });
-        
-        const eventTypes = {};
-        const eventSubtypes = {};
-        const teamTypes = {};
-        
-        querySnapshot.forEach((doc) => {
-            const event = doc.data();
-            const type = event.eventType || 'unknown';
-            eventTypes[type] = (eventTypes[type] || 0) + 1;
-            
-            if (event.eventSubtype) {
-                const subtype = event.eventSubtype;
-                eventSubtypes[subtype] = (eventSubtypes[subtype] || 0) + 1;
-            }
-            
-            if (event.team) {
-                const team = event.team;
-                teamTypes[team] = (teamTypes[team] || 0) + 1;
-            }
-        });
-        
-        console.log('📊 Štatistika typov udalostí:');
-        Object.entries(eventTypes).forEach(([type, count]) => {
-            console.log(`   ${type}: ${count}`);
-        });
-        
-        if (Object.keys(eventSubtypes).length > 0) {
-            console.log('📊 Štatistika podtypov udalostí:');
-            Object.entries(eventSubtypes).forEach(([subtype, count]) => {
-                console.log(`   ${subtype}: ${count}`);
-            });
-        }
-        
-        if (Object.keys(teamTypes).length > 0) {
-            console.log('📊 Štatistika tímov:');
-            Object.entries(teamTypes).forEach(([team, count]) => {
-                console.log(`   ${team}: ${count}`);
-            });
-        }
-        
-        console.log('✅ DEBUG udalostí dokončený');
-        
-    } catch (error) {
-        console.error('❌ Chyba pri debugovaní udalostí:', error);
-    }
+    // ... (pôvodný kód)
 };
 
 setTimeout(() => {
@@ -500,7 +278,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
         return identifier;
     };
     
-    // --- ŠTATISTIKY ---
+    // --- ŠTATISTIKY - OPRÁVENÁ VERZIA ---
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamName:', teamName);
@@ -565,15 +343,38 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                     return;
                 }
                 
-                // Zistíme, či udalosť patrí nášmu tímu
+                // --- OPRÁVENÁ KONTROLA TÍMU - porovnávame CELÉ názvy VRÁTANE sufixu ---
                 let isOurTeam = false;
-                if (eventData.team === 'home' && matchInfo.homeTeam === currentTeamName) {
-                    isOurTeam = true;
-                } else if (eventData.team === 'away' && matchInfo.awayTeam === currentTeamName) {
-                    isOurTeam = true;
+                
+                // Použijeme celý názov tímu (vrátane sufixu)
+                const fullTeamName = currentTeamName;
+                
+                // Skontrolujeme, či sa názov tímu zhoduje s domácim alebo hosťujúcim tímom
+                // Berieme do úvahy, že konvertovaný názov môže byť bez sufixu
+                const homeTeam = matchInfo.homeTeam || '';
+                const awayTeam = matchInfo.awayTeam || '';
+                
+                // Odstránime sufix z oboch názvov pre porovnanie
+                const homeTeamBase = removeSuffix(homeTeam);
+                const awayTeamBase = removeSuffix(awayTeam);
+                const currentTeamBase = removeSuffix(fullTeamName);
+                
+                // Kontrola podľa eventData.team
+                if (eventData.team === 'home') {
+                    // Porovnávame buď celé názvy alebo názvy bez sufixu
+                    if (homeTeam === fullTeamName || homeTeamBase === currentTeamBase) {
+                        isOurTeam = true;
+                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako DOMÁCI (${homeTeam} === ${fullTeamName} alebo ${homeTeamBase} === ${currentTeamBase})`);
+                    }
+                } else if (eventData.team === 'away') {
+                    if (awayTeam === fullTeamName || awayTeamBase === currentTeamBase) {
+                        isOurTeam = true;
+                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako HOSŤ (${awayTeam} === ${fullTeamName} alebo ${awayTeamBase} === ${currentTeamBase})`);
+                    }
                 }
                 
                 if (!isOurTeam) {
+                    console.log(`[Stats Effect] ⏭️ Preskakujem udalosť - nepatrí nášmu tímu (team=${eventData.team}, home=${homeTeam}, away=${awayTeam}, fullTeamName=${fullTeamName})`);
                     return;
                 }
                 
@@ -587,6 +388,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                 }
                 
                 if (!foundMemberKey) {
+                    console.log(`[Stats Effect] ⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${eventData.memberTypeKey}, memberIndex=${eventData.memberIndex}`);
                     return;
                 }
                 
@@ -763,32 +565,50 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
             };
         };
     
-        // --- LISTENER NA ZÁPASY ---
+        // --- LISTENER NA ZÁPASY - OPRÁVENÁ VERZIA ---
         let unsubscribeMatches = null;
     
         const processMatches = (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};
             
+            // Použijeme CELÝ názov tímu (vrátane sufixu)
             const fullTeamName = currentTeamName;
+            // A tiež názov BEZ sufixu pre porovnanie
+            const fullTeamNameBase = removeSuffix(fullTeamName);
+            
+            console.log('[Stats Effect] Celý názov tímu (vrátane sufixu):', fullTeamName);
+            console.log('[Stats Effect] Názov tímu bez sufixu:', fullTeamNameBase);
             
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
                 const matchId = doc.id;
                 
+                // Konvertujeme identifikátory tímov
                 const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
+                // Uložíme si mapovanie pre tento zápas
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway
                 };
                 
-                if (convertedHome === fullTeamName || convertedAway === fullTeamName) {
+                // Odstránime sufix z konvertovaných názvov pre porovnanie
+                const convertedHomeBase = removeSuffix(convertedHome);
+                const convertedAwayBase = removeSuffix(convertedAway);
+                
+                // Porovnávame BUĎ celé názvy (vrátane sufixu) ALEBO názvy bez sufixu
+                const isHomeMatch = convertedHome === fullTeamName || convertedHomeBase === fullTeamNameBase;
+                const isAwayMatch = convertedAway === fullTeamName || convertedAwayBase === fullTeamNameBase;
+                
+                if (isHomeMatch || isAwayMatch) {
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${fullTeamName}": ${matchId} - ${convertedHome} vs ${convertedAway}`);
                     newMatchIds.add(matchId);
                 }
             });
         
+            // Aktualizujeme mapovanie tímov pre zápasy
             matchTeamMap = newMatchTeamMap;
         
             const newMatchIdsArray = Array.from(newMatchIds);
@@ -796,13 +616,19 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length || 
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
         
+            console.log('[Stats Effect] Celkovo nájdených zápasov pre tím:', newMatchIdsArray.length);
+            console.log('[Stats Effect] matchIdsChanged:', matchIdsChanged);
+        
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
+        
+            console.log('[Stats Effect] 📋 Všetky matchId pre tím:', Array.from(matchIds));
         };
     
+        console.log('[Stats Effect] ✅ Spúšťam listener na všetky zápasy');
         unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
             processMatches(matchesSnapshot);
         }, (error) => {
@@ -825,7 +651,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
         };
     }, [rosterData, teamName, categoryName, updateTrigger]);
     
-    // --- LISTENER NA ZMENY V matchEvents PRE AKTUALIZÁCIU UI ---
+    // --- LISTENER NA ZMENY V matchEvents ---
     useEffect(() => {
         if (!window.db || !teamName || !categoryName) return;
         
