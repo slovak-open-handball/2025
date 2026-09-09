@@ -48,7 +48,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
           const defaultPages = PAGE_DEFINITIONS.map(page => ({
             id: page.id,
             label: page.label,
-            visible: false, // Všetky stránky budú skryté
+            visible: page.defaultVisible || false,
           }));
           setPages(defaultPages);
         } else {
@@ -70,7 +70,7 @@ function PagesSettings({ db, showNotification, sendAdminNotification }) {
             .map(p => ({
               id: p.id,
               label: p.label,
-              visible: false,
+              visible: p.defaultVisible || false,
             }));
           
           const allPages = [...pagesData, ...missingPages];
