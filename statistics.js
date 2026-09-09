@@ -928,15 +928,6 @@ const RostersTable = ({ isRostersVisible }) => {
     
     }, [allMembersData, allStatsData, isStatsReady]);
     
-    
-    // ============================================================
-    // AKTUÁLNE PORADIE
-    // ============================================================
-    // Nepoužívame cache predchádzajúceho poradia.
-    // Pri realtime zmene gólov musí React dostať nové zoradené pole.
-    
-    const stableDisplayMembers = displayMembers;
-
     // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
     const previousDisplayMembersRef = useRef([]);
     // POUŽIJEME useRef na uchovanie predchádzajúcich gólov
