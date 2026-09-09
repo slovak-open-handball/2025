@@ -1172,38 +1172,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    const renderFilters = () => {
-        return React.createElement(
-            'div',
-            { className: 'flex flex-wrap gap-4 mb-6 items-end' },
-            React.createElement(
-                'div',
-                { className: 'flex flex-col flex-1 min-w-[200px]' },
-                React.createElement('label', { className: 'text-sm font-medium text-gray-600 mb-1' }, 'Hľadať tím'),
-                React.createElement(
-                    'input',
-                    {
-                        type: 'text',
-                        value: selectedTeamNameFilter,
-                        onChange: (e) => setSelectedTeamNameFilter(e.target.value),
-                        placeholder: 'Zadajte názov tímu...',
-                        className: 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    }
-                )
-            ),
-            selectedTeamNameFilter && React.createElement(
-                'button',
-                {
-                    onClick: () => {
-                        setSelectedTeamNameFilter('');
-                    },
-                    className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
-                },
-                'Vymazať filter ✕'
-            )
-        );
-    };
-
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full p-4 relative text-[87.5%]' },
@@ -1217,12 +1185,10 @@ const TeamsOverviewApp = (props) => {
                 'Štatistiky'
             )
         ),
-        renderFilters(),
         React.createElement(
             'div',
             { className: 'bg-white rounded-xl shadow-xl p-4' },
             React.createElement(RostersTable, {
-                selectedTeamNameFilter: selectedTeamNameFilter,
                 isRostersVisible: isRostersVisible
             })
         )
