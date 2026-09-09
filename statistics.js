@@ -900,7 +900,7 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // ZORADÍME PODĽA GÓLOV (strelec prví, potom podľa počtu gólov)
+        // ZORADÍME PODĽA GÓLOV (strelec prví, potom podľa počtu gólov) - S ABECEDNÝM ZORADENÍM PRE 0 GÓLOV
         const sorted = [...allMembersData].sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
             const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
@@ -925,6 +925,10 @@ const RostersTable = ({ isRostersVisible }) => {
             // Potom podľa tímu
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
+            
+            // Potom podľa mena (abecedne)
+            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+            if (nameCompare !== 0) return nameCompare;
             
             // Potom podľa čísla dresu
             const aNum = parseInt(a.jerseyNumber) || 999;
