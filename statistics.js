@@ -1,9 +1,9 @@
-// teams.js - opravená verzia so samostatnou komponentou pre tabuľku
+// teams.js - optimalizovaná verzia s čiastočnými aktualizáciami
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -170,11 +170,10 @@ const forceUpdateUI = () => {
 window.forceUpdateUI = forceUpdateUI;
 
 // --- KOMPONENTA PRE ZBER ŠTATISTÍK PRE JEDEN TÍM ---
-const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
+const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate, onMemberStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [unsubscribe, setUnsubscribe] = useState(null);
-    const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
     
     // Načítanie súpisky
@@ -188,6 +187,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const handleMembersUpdate = (members) => {
                 setRosterData(members);
                 setIsLoading(false);
+                // Odovzdáme členov rodičovi
+                if (onStatsUpdate) {
+                    onStatsUpdate(teamName, members);
+                }
             };
             
             try {
@@ -235,11 +238,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         return identifier;
     };
     
-    // --- ŠTATISTIKY ---
+    // --- ŠTATISTIKY - AKTUALIZUJEME IBA ZMENENÉ HODNOTY ---
     useEffect(() => {
         if (!rosterData || rosterData.length === 0 || !window.db) {
-            setMembersStats({});
-            if (onStatsUpdate) onStatsUpdate(teamName, {});
             return;
         }
     
@@ -247,8 +248,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const currentCategoryName = categoryName;
     
         if (!currentTeamName || !currentCategoryName) {
-            setMembersStats({});
-            if (onStatsUpdate) onStatsUpdate(teamName, {});
             return;
         }
     
@@ -258,10 +257,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
+        let previousStats = {};
     
-        const calculateStatsFromEvents = (eventsSnapshot) => {
+        // Inicializujeme štatistiky pre každého člena
+        const initializeStats = () => {
             const stats = {};
-            rosterData.forEach((member, idx) => {
+            rosterData.forEach((member) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
                 stats[memberKey] = {
                     goals: 0,
@@ -280,6 +281,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     categoryName: member.categoryName
                 };
             });
+            return stats;
+        };
+    
+        const calculateStatsFromEvents = (eventsSnapshot) => {
+            // Vytvoríme kópiu predchádzajúcich štatistík
+            const stats = { ...previousStats };
+            
+            // Ak ešte nemáme inicializované štatistiky, vytvoríme ich
+            if (Object.keys(stats).length === 0) {
+                const initStats = initializeStats();
+                Object.assign(stats, initStats);
+            }
         
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
@@ -327,31 +340,59 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 const stat = stats[foundMemberKey];
                 
+                // Ak sa zmenila hodnota, aktualizujeme ju
+                let changed = false;
                 switch (eventData.eventType) {
                     case 'goal':
-                        stat.goals++;
+                        stat.goals = (stat.goals || 0) + 1;
+                        changed = true;
                         if (eventData.eventSubtype === 'converted_penalty') {
-                            stat.convertedPenalties++;
+                            stat.convertedPenalties = (stat.convertedPenalties || 0) + 1;
                         }
                         break;
                     case 'penalty':
-                        stat.missedPenalties++;
+                        stat.missedPenalties = (stat.missedPenalties || 0) + 1;
+                        changed = true;
                         break;
                     case 'card':
                         if (eventData.eventSubtype === 'yellow') {
-                            stat.yellowCards++;
+                            stat.yellowCards = (stat.yellowCards || 0) + 1;
+                            changed = true;
                         } else if (eventData.eventSubtype === 'red') {
-                            stat.redCards++;
+                            stat.redCards = (stat.redCards || 0) + 1;
+                            changed = true;
                         } else if (eventData.eventSubtype === 'blue') {
-                            stat.blueCards++;
+                            stat.blueCards = (stat.blueCards || 0) + 1;
+                            changed = true;
                         }
                         break;
                     case 'exclusion':
-                        stat.exclusions++;
+                        stat.exclusions = (stat.exclusions || 0) + 1;
+                        changed = true;
                         break;
+                }
+                
+                // Ak sa zmenila hodnota, pošleme aktualizáciu pre konkrétneho člena
+                if (changed && onMemberStatsUpdate) {
+                    onMemberStatsUpdate(teamName, foundMemberKey, {
+                        goals: stat.goals,
+                        convertedPenalties: stat.convertedPenalties,
+                        missedPenalties: stat.missedPenalties,
+                        yellowCards: stat.yellowCards,
+                        redCards: stat.redCards,
+                        blueCards: stat.blueCards,
+                        exclusions: stat.exclusions,
+                        name: stat.name,
+                        jerseyNumber: stat.jerseyNumber,
+                        memberType: stat.memberType,
+                        teamName: stat.teamName,
+                        categoryName: stat.categoryName
+                    });
                 }
             });
         
+            // Uložíme aktuálne štatistiky pre ďalšie porovnanie
+            previousStats = { ...stats };
             return stats;
         };
     
@@ -366,28 +407,33 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }
     
             if (matchIdsArray.length === 0) {
-                const emptyStats = {};
-                rosterData.forEach((member, idx) => {
-                    const memberKey = `${member.type}_${member.originalIndex}`;
-                    emptyStats[memberKey] = {
-                        goals: 0,
-                        convertedPenalties: 0,
-                        missedPenalties: 0,
-                        yellowCards: 0,
-                        redCards: 0,
-                        blueCards: 0,
-                        exclusions: 0,
-                        dbArrayName: member.dbArrayName,
-                        dbIndex: member.originalIndex,
-                        name: `${member.firstName} ${member.lastName}`.trim(),
-                        jerseyNumber: member.jerseyNumber || '',
-                        memberType: member.type,
-                        teamName: member.teamName,
-                        categoryName: member.categoryName
-                    };
-                });
-                setMembersStats(emptyStats);
-                if (onStatsUpdate) onStatsUpdate(teamName, emptyStats);
+                // Ak nie sú žiadne zápasy, pošleme prázdne štatistiky
+                const emptyStats = initializeStats();
+                if (onStatsUpdate) {
+                    // Pošleme celé štatistiky pri prvom načítaní
+                    const statsObj = {};
+                    Object.entries(emptyStats).forEach(([key, stat]) => {
+                        statsObj[key] = {
+                            goals: 0,
+                            convertedPenalties: 0,
+                            missedPenalties: 0,
+                            yellowCards: 0,
+                            redCards: 0,
+                            blueCards: 0,
+                            exclusions: 0,
+                            name: stat.name,
+                            jerseyNumber: stat.jerseyNumber,
+                            memberType: stat.memberType,
+                            teamName: stat.teamName,
+                            categoryName: stat.categoryName
+                        };
+                    });
+                    // Pri prvom načítaní pošleme všetky štatistiky
+                    if (Object.keys(previousStats).length === 0) {
+                        onStatsUpdate(teamName, statsObj, true);
+                    }
+                }
+                previousStats = { ...emptyStats };
                 return;
             }
     
@@ -399,7 +445,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     
             const listeners = [];
             let processedChunks = 0;
-            const combinedStats = {};
+            const totalChunks = chunks.length;
+            let isFirstUpdate = true;
     
             chunks.forEach((chunk, index) => {
                 const eventsRef = collection(window.db, 'matchEvents');
@@ -409,42 +456,16 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 );
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
-                    const chunkStats = calculateStatsFromEvents(eventsSnapshot);
+                    const newStats = calculateStatsFromEvents(eventsSnapshot);
                     
-                    Object.entries(chunkStats).forEach(([memberKey, stat]) => {
-                        if (!combinedStats[memberKey]) {
-                            combinedStats[memberKey] = {
-                                goals: 0,
-                                convertedPenalties: 0,
-                                missedPenalties: 0,
-                                yellowCards: 0,
-                                redCards: 0,
-                                blueCards: 0,
-                                exclusions: 0,
-                                dbArrayName: stat.dbArrayName,
-                                dbIndex: stat.dbIndex,
-                                name: stat.name,
-                                jerseyNumber: stat.jerseyNumber,
-                                memberType: stat.memberType,
-                                teamName: stat.teamName,
-                                categoryName: stat.categoryName
-                            };
-                        }
-                        combinedStats[memberKey].goals += stat.goals;
-                        combinedStats[memberKey].convertedPenalties += stat.convertedPenalties;
-                        combinedStats[memberKey].missedPenalties += stat.missedPenalties;
-                        combinedStats[memberKey].yellowCards += stat.yellowCards;
-                        combinedStats[memberKey].redCards += stat.redCards;
-                        combinedStats[memberKey].blueCards += stat.blueCards;
-                        combinedStats[memberKey].exclusions += stat.exclusions;
-                    });
-    
                     processedChunks++;
     
-                    if (processedChunks === chunks.length) {
-                        const finalStats = {};
-                        Object.entries(combinedStats).forEach(([memberKey, stat]) => {
-                            finalStats[memberKey] = {
+                    // Po spracovaní všetkých chunkov pošleme celé štatistiky (iba pri prvom načítaní)
+                    if (processedChunks === totalChunks && isFirstUpdate) {
+                        // Pri prvom načítaní pošleme všetky štatistiky naraz
+                        const statsObj = {};
+                        Object.entries(newStats).forEach(([key, stat]) => {
+                            statsObj[key] = {
                                 goals: stat.goals || 0,
                                 convertedPenalties: stat.convertedPenalties || 0,
                                 missedPenalties: stat.missedPenalties || 0,
@@ -452,8 +473,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                                 redCards: stat.redCards || 0,
                                 blueCards: stat.blueCards || 0,
                                 exclusions: stat.exclusions || 0,
-                                dbArrayName: stat.dbArrayName,
-                                dbIndex: stat.dbIndex,
                                 name: stat.name,
                                 jerseyNumber: stat.jerseyNumber,
                                 memberType: stat.memberType,
@@ -461,33 +480,17 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                                 categoryName: stat.categoryName
                             };
                         });
-                        setMembersStats(finalStats);
-                        if (onStatsUpdate) onStatsUpdate(teamName, finalStats);
+                        if (onStatsUpdate) {
+                            onStatsUpdate(teamName, statsObj, true);
+                        }
+                        isFirstUpdate = false;
                         processedChunks = 0;
-                        
-                        Object.keys(combinedStats).forEach(key => {
-                            combinedStats[key] = {
-                                goals: 0,
-                                convertedPenalties: 0,
-                                missedPenalties: 0,
-                                yellowCards: 0,
-                                redCards: 0,
-                                blueCards: 0,
-                                exclusions: 0,
-                                dbArrayName: combinedStats[key].dbArrayName,
-                                dbIndex: combinedStats[key].dbIndex,
-                                name: combinedStats[key].name,
-                                jerseyNumber: combinedStats[key].jerseyNumber,
-                                memberType: combinedStats[key].memberType,
-                                teamName: combinedStats[key].teamName,
-                                categoryName: combinedStats[key].categoryName
-                            };
-                        });
                     }
                 }, (error) => {
                     console.error(`[Stats Effect] ❌ Chyba pri načítaní udalostí pre chunk ${index + 1}:`, error);
                     processedChunks++;
-                    if (processedChunks === chunks.length) {
+                    if (processedChunks === totalChunks && isFirstUpdate) {
+                        isFirstUpdate = false;
                         processedChunks = 0;
                     }
                 });
@@ -596,8 +599,10 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allMembersData, setAllMembersData] = useState([]);
     const [allStatsData, setAllStatsData] = useState({});
+    const [membersMap, setMembersMap] = useState({});
     const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [unsubscribes, setUnsubscribes] = useState([]);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -654,7 +659,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     }, []);
 
     // Získanie unikátnych tímov
-    const getUniqueTeams = () => {
+    const getUniqueTeams = useCallback(() => {
         const teamsMap = new Map();
         
         allTeams.forEach(team => {
@@ -669,7 +674,115 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         });
         
         return Array.from(teamsMap.values());
-    };
+    }, [allTeams]);
+
+    // Spracovanie štatistík z komponentov TeamStatsCollector - celé štatistiky (iba pri prvom načítaní)
+    const handleStatsUpdate = useCallback((teamName, stats, isInitial = false) => {
+        if (isInitial) {
+            // Pri prvom načítaní nastavíme celé štatistiky
+            setAllStatsData(prev => {
+                const newStats = {
+                    ...prev,
+                    [teamName]: stats
+                };
+                
+                // Po prvom načítaní všetkých štatistík preusporiadame členov
+                if (allMembersData.length > 0 && isInitialLoad) {
+                    const sortedMembers = [...allMembersData];
+                    sortedMembers.sort((a, b) => {
+                        const teamStatsA = newStats[a.teamNameDisplay] || {};
+                        const teamStatsB = newStats[b.teamNameDisplay] || {};
+                        const keyA = `${a.type}_${a.originalIndex}`;
+                        const keyB = `${b.type}_${b.originalIndex}`;
+                        const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+                        const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                        
+                        if (goalsB !== goalsA) {
+                            return goalsB - goalsA;
+                        }
+                        
+                        const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+                        if (teamCompare !== 0) return teamCompare;
+                        
+                        const aNum = parseInt(a.jerseyNumber) || 999;
+                        const bNum = parseInt(b.jerseyNumber) || 999;
+                        return aNum - bNum;
+                    });
+                    setAllMembersData(sortedMembers);
+                    setIsInitialLoad(false);
+                }
+                
+                return newStats;
+            });
+        }
+    }, [allMembersData, isInitialLoad]);
+
+    // Spracovanie aktualizácie štatistík pre konkrétneho člena
+    const handleMemberStatsUpdate = useCallback((teamName, memberKey, stats) => {
+        setAllStatsData(prev => {
+            const teamStats = prev[teamName] || {};
+            const updatedTeamStats = {
+                ...teamStats,
+                [memberKey]: stats
+            };
+            
+            const newStats = {
+                ...prev,
+                [teamName]: updatedTeamStats
+            };
+            
+            // Aktualizujeme zoradenie len pre tento tím
+            if (allMembersData.length > 0) {
+                // Zistíme, ktorí členovia patria do tohto tímu
+                const teamMembers = allMembersData.filter(m => m.teamNameDisplay === teamName);
+                const otherMembers = allMembersData.filter(m => m.teamNameDisplay !== teamName);
+                
+                // Zoradíme členov tohto tímu podľa gólov
+                const sortedTeamMembers = [...teamMembers].sort((a, b) => {
+                    const teamStatsA = newStats[a.teamNameDisplay] || {};
+                    const teamStatsB = newStats[b.teamNameDisplay] || {};
+                    const keyA = `${a.type}_${a.originalIndex}`;
+                    const keyB = `${b.type}_${b.originalIndex}`;
+                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                    
+                    if (goalsB !== goalsA) {
+                        return goalsB - goalsA;
+                    }
+                    
+                    const aNum = parseInt(a.jerseyNumber) || 999;
+                    const bNum = parseInt(b.jerseyNumber) || 999;
+                    return aNum - bNum;
+                });
+                
+                // Potrebujeme zoradiť všetkých členov podľa gólov naprieč všetkými tímami
+                const allSorted = [...allMembersData];
+                allSorted.sort((a, b) => {
+                    const teamStatsA = newStats[a.teamNameDisplay] || {};
+                    const teamStatsB = newStats[b.teamNameDisplay] || {};
+                    const keyA = `${a.type}_${a.originalIndex}`;
+                    const keyB = `${b.type}_${b.originalIndex}`;
+                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                    
+                    if (goalsB !== goalsA) {
+                        return goalsB - goalsA;
+                    }
+                    
+                    const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+                    if (teamCompare !== 0) return teamCompare;
+                    
+                    const aNum = parseInt(a.jerseyNumber) || 999;
+                    const bNum = parseInt(b.jerseyNumber) || 999;
+                    return aNum - bNum;
+                });
+                
+                setAllMembersData(allSorted);
+            }
+            
+            return newStats;
+        });
+    }, [allMembersData]);
 
     // Načítanie členov všetkých tímov
     useEffect(() => {
@@ -716,14 +829,34 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 const membersWithTeamInfo = members.map(m => ({
                     ...m,
                     teamNameDisplay: teamName,
-                    categoryNameDisplay: categoryName
+                    categoryNameDisplay: categoryName,
+                    // Vytvoríme unikátny kľúč pre každého člena
+                    uniqueKey: `${teamName}_${m.type}_${m.originalIndex}`
                 }));
                 allMembers = [...allMembers, ...membersWithTeamInfo];
                 loadedCount++;
                 
                 if (loadedCount === totalTeams) {
-                    // Zoradenie členov podľa názvu tímu a potom podľa čísla dresu
+                    // Uložíme mapovanie pre rýchly prístup
+                    const newMembersMap = {};
+                    allMembers.forEach(m => {
+                        newMembersMap[m.uniqueKey] = m;
+                    });
+                    setMembersMap(newMembersMap);
+                    
+                    // Zoradenie členov podľa gólov
                     allMembers.sort((a, b) => {
+                        const teamStatsA = allStatsData[a.teamNameDisplay] || {};
+                        const teamStatsB = allStatsData[b.teamNameDisplay] || {};
+                        const keyA = `${a.type}_${a.originalIndex}`;
+                        const keyB = `${b.type}_${b.originalIndex}`;
+                        const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+                        const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                        
+                        if (goalsB !== goalsA) {
+                            return goalsB - goalsA;
+                        }
+                        
                         const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
                         if (teamCompare !== 0) return teamCompare;
                         
@@ -734,6 +867,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     
                     setAllMembersData(allMembers);
                     setIsLoadingAll(false);
+                    setIsInitialLoad(false);
                 }
             };
             
@@ -746,6 +880,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 if (loadedCount === totalTeams) {
                     setAllMembersData(allMembers);
                     setIsLoadingAll(false);
+                    setIsInitialLoad(false);
                 }
             }
         });
@@ -757,18 +892,10 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams, selectedTeamNameFilter]);
-
-    // Spracovanie štatistík z komponentov TeamStatsCollector
-    const handleStatsUpdate = (teamName, stats) => {
-        setAllStatsData(prev => ({
-            ...prev,
-            [teamName]: stats
-        }));
-    };
+    }, [allTeams, selectedTeamNameFilter, getUniqueTeams]);
 
     // Renderovanie kolektorov pre každý tím
-    const renderStatsCollectors = () => {
+    const renderStatsCollectors = useCallback(() => {
         if (!isRostersVisible || allTeams.length === 0) return null;
 
         const uniqueTeams = getUniqueTeams();
@@ -788,13 +915,14 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 key: `${teamGroup.category}_${teamGroup.teamName}`,
                 teamName: teamGroup.teamName,
                 categoryName: teamGroup.category,
-                onStatsUpdate: handleStatsUpdate
+                onStatsUpdate: handleStatsUpdate,
+                onMemberStatsUpdate: handleMemberStatsUpdate
             });
         });
-    };
+    }, [isRostersVisible, allTeams, selectedTeamNameFilter, getUniqueTeams, handleStatsUpdate, handleMemberStatsUpdate]);
 
-    // Zobrazenie tabuľky - HLAVIČKA PODĽA POŽIADAVKY
-    const renderTable = () => {
+    // Zobrazenie tabuľky - použijeme useMemo pre optimalizáciu
+    const tableContent = useMemo(() => {
         if (!isRostersVisible) {
             return React.createElement(
                 'div',
@@ -833,14 +961,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     className: 'w-full border-collapse bg-white text-sm',
                     style: { minWidth: '900px' }
                 },
-                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-100 sticky top-0 z-20' },
                     React.createElement(
                         'tr',
                         { className: 'border-b border-gray-200' },
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, '#'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '40px' } }, 'Č.'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Tím'),
@@ -883,7 +1010,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         )
                     )
                 ),
-                // TELO TABUĽKY
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
@@ -913,15 +1039,16 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                                     ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-xs' })
                                     : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs' })));
                         
-                        const rowClass = idx % 2 === 0 ? 'bg-white hover:bg-blue-50' : 'bg-gray-50 hover:bg-blue-50';
+                        const rank = idx + 1;
+                        const hasGoals = (stats.goals || 0) > 0;
                         
                         return React.createElement(
                             'tr',
                             { 
-                                key: `${member.teamNameDisplay}_${member.type}_${member.originalIndex || idx}`,
-                                className: `${rowClass} transition-colors duration-150`
+                                key: member.uniqueKey || `${member.teamNameDisplay}_${member.type}_${member.originalIndex || idx}`,
+                                className: 'hover:bg-blue-50 transition-colors duration-150'
                             },
-                            React.createElement('td', { className: 'px-2 py-2 text-center' }, memberIcon),
+                            React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, hasGoals ? rank : ''),
                             React.createElement('td', { className: 'px-2 py-2 font-mono font-medium text-gray-700 text-center text-xs' }, member.jerseyNumber || ''),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-800 text-sm' }, fullName),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-xs' }, member.teamNameDisplay),
@@ -935,7 +1062,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         );
                     })
                 ),
-                // PÄTA TABUĽKY
                 React.createElement(
                     'tfoot',
                     { className: 'bg-gray-200 font-semibold' },
@@ -949,13 +1075,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 )
             )
         );
-    };
+    }, [isRostersVisible, isLoadingAll, allMembersData, allStatsData, maxTableHeight]);
 
     return React.createElement(
         React.Fragment,
         null,
         renderStatsCollectors(),
-        renderTable()
+        tableContent
     );
 };
 
@@ -1062,12 +1188,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'h1',
                 { className: 'text-3xl font-bold text-gray-800 text-center' },
-                'Súpisky tímov'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-center text-gray-500 mt-1' },
-                'Prehľad všetkých členov všetkých tímov'
+                'Štatistiky'
             )
         ),
         renderFilters(),
