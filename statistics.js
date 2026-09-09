@@ -940,7 +940,8 @@ const RostersTable = ({ isRostersVisible }) => {
 
         const displayMembers = sorted;
 
-        // Najprv zistíme, koľko členov má góly        const membersWithGoals = displayMembers.filter(m => {
+        // Najprv zistíme, koľko členov má góly        
+      const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${m.type}_${m.originalIndex}`;
