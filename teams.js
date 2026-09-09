@@ -1040,7 +1040,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                             const createMatchHash = (homeTeamId, awayTeamId) => {
                                 const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
                                 const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
-                                return `#match/${encodedHome}/${encodedAway}`;
+                                return `matches.html#match/${encodedHome}/${encodedAway}`;
                             };
 
                             rows.push(
