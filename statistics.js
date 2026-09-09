@@ -3,8 +3,44 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 const listeners = new Set();
+
+// Stabilná notifikácia cez portál
+const NotificationPortal = () => {
+  const [notification, setNotification] = React.useState(null);
+  useEffect(() => {
+    let timer;
+    const unsubscribe = subscribe((notif) => {
+      setNotification(notif);
+      clearTimeout(timer);
+      timer = setTimeout(() => setNotification(null), 5000);
+    });
+    
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, []);
+  if (!notification) return null;
+  const typeClasses = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    info: 'bg-blue-600',
+    default: 'bg-gray-700'
+  }[notification.type || 'default'];
+  return ReactDOM.createPortal(
+    React.createElement(
+      'div',
+      {
+        key: notification.id,
+        className: `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out opacity-100 scale-100 translate-y-0 ${typeClasses}`
+      },
+      notification.message
+    ),
+    document.body
+  );
+};
 
 export const subscribe = (cb) => {
   listeners.add(cb);
@@ -401,61 +437,79 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const listeners = [];
             let processedChunks = 0;
             
-            const chunkStatsMap = new Map();
-            
             chunks.forEach((chunk, index) => {
                 const eventsRef = collection(window.db, 'matchEvents');
-            
                 const eventsQuery = query(
                     eventsRef,
                     where('matchId', 'in', chunk)
                 );
-            
-                const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
-                    const chunkStats = calculateStatsFromEvents(eventsSnapshot);
-            
-                    chunkStatsMap.set(index, chunkStats);
-            
+    
+                const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {                    
                     const combinedStats = {};
-            
-                    chunkStatsMap.forEach((stats) => {
-                        Object.entries(stats).forEach(([memberKey, stat]) => {
-                            if (!combinedStats[memberKey]) {
-                                combinedStats[memberKey] = {
-                                    goals: 0,
-                                    convertedPenalties: 0,
-                                    missedPenalties: 0,
-                                    yellowCards: 0,
-                                    redCards: 0,
-                                    blueCards: 0,
-                                    exclusions: 0,
-                                    dbArrayName: stat.dbArrayName,
-                                    dbIndex: stat.dbIndex,
-                                    name: stat.name,
-                                    jerseyNumber: stat.jerseyNumber,
-                                    memberType: stat.memberType,
-                                    teamName: stat.teamName,
-                                    categoryName: stat.categoryName
-                                };
-                            }
-            
-                            combinedStats[memberKey].goals += stat.goals;
-                            combinedStats[memberKey].convertedPenalties += stat.convertedPenalties;
-                            combinedStats[memberKey].missedPenalties += stat.missedPenalties;
-                            combinedStats[memberKey].yellowCards += stat.yellowCards;
-                            combinedStats[memberKey].redCards += stat.redCards;
-                            combinedStats[memberKey].blueCards += stat.blueCards;
-                            combinedStats[memberKey].exclusions += stat.exclusions;
-                        });
+                    
+                    const chunkStats = calculateStatsFromEvents(eventsSnapshot);
+                    
+                    Object.entries(chunkStats).forEach(([memberKey, stat]) => {
+                        if (!combinedStats[memberKey]) {
+                            combinedStats[memberKey] = {
+                                goals: 0,
+                                convertedPenalties: 0,
+                                missedPenalties: 0,
+                                yellowCards: 0,
+                                redCards: 0,
+                                blueCards: 0,
+                                exclusions: 0,
+                                dbArrayName: stat.dbArrayName,
+                                dbIndex: stat.dbIndex,
+                                name: stat.name,
+                                jerseyNumber: stat.jerseyNumber,
+                                memberType: stat.memberType,
+                                teamName: stat.teamName,
+                                categoryName: stat.categoryName
+                            };
+                        }
+                        combinedStats[memberKey].goals += stat.goals;
+                        combinedStats[memberKey].convertedPenalties += stat.convertedPenalties;
+                        combinedStats[memberKey].missedPenalties += stat.missedPenalties;
+                        combinedStats[memberKey].yellowCards += stat.yellowCards;
+                        combinedStats[memberKey].redCards += stat.redCards;
+                        combinedStats[memberKey].blueCards += stat.blueCards;
+                        combinedStats[memberKey].exclusions += stat.exclusions;
                     });
-            
-                    setMembersStats(combinedStats);
-            
-                    if (onStatsUpdate) {
-                        onStatsUpdate(teamName, combinedStats);
+    
+                    processedChunks++;
+    
+                    if (processedChunks === chunks.length) {
+                        const finalStats = {};
+                        Object.entries(combinedStats).forEach(([memberKey, stat]) => {
+                            finalStats[memberKey] = {
+                                goals: stat.goals || 0,
+                                convertedPenalties: stat.convertedPenalties || 0,
+                                missedPenalties: stat.missedPenalties || 0,
+                                yellowCards: stat.yellowCards || 0,
+                                redCards: stat.redCards || 0,
+                                blueCards: stat.blueCards || 0,
+                                exclusions: stat.exclusions || 0,
+                                dbArrayName: stat.dbArrayName,
+                                dbIndex: stat.dbIndex,
+                                name: stat.name,
+                                jerseyNumber: stat.jerseyNumber,
+                                memberType: stat.memberType,
+                                teamName: stat.teamName,
+                                categoryName: stat.categoryName
+                            };
+                        });
+                        setMembersStats(finalStats);
+                        if (onStatsUpdate) onStatsUpdate(teamName, finalStats);
+                        processedChunks = 0;
+                    }
+                }, (error) => {
+                    processedChunks++;
+                    if (processedChunks === chunks.length) {
+                        processedChunks = 0;
                     }
                 });
-            
+    
                 listeners.push(listener);
             });
     
@@ -552,168 +606,22 @@ const RostersTable = ({ isRostersVisible }) => {
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     
     const tableContainerRef = useRef(null);
-    const [maxTableHeight, setMaxTableHeight] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return `${Math.max(window.innerHeight * 0.6, 200)}px`;
-        }
-  
-        return '60vh';
-    });
-    
-    useLayoutEffect(() => {
-        let resizeObserver = null;
-        let rafId = null;
-        let rafId2 = null;
-        let resizeTimer = null;
-    
-        const updateTableHeight = () => {
-            const element = tableContainerRef.current;
-    
-            if (!element) {
-                return;
-            }
-    
-            const rect = element.getBoundingClientRect();
-    
-            const viewportHeight =
-                window.visualViewport?.height || window.innerHeight;
-    
-            const bottomSpace = 50;
-    
-            const availableHeight =
-                viewportHeight - rect.top - bottomSpace;
-    
-            const newHeight =
-                `${Math.max(Math.floor(availableHeight), 200)}px`;
-    
-            setMaxTableHeight(prev => {
-                return prev === newHeight ? prev : newHeight;
-            });
-        };
-    
-        const scheduleUpdate = () => {
-            if (rafId) {
-                cancelAnimationFrame(rafId);
-            }
-    
-            rafId = requestAnimationFrame(() => {
-                updateTableHeight();
-    
-                // Druhé meranie po dokončení layoutu
-                rafId2 = requestAnimationFrame(() => {
-                    updateTableHeight();
-                });
-            });
-        };
-    
-        // ---------------------------------------------------------
-        // PRVÉ MERANIE
-        // ---------------------------------------------------------
-        //
-        // Jeden RAF často nestačí, pretože React/Tailwind/layout
-        // ešte nemusí byť úplne ustálený.
-        //
-        const initialize = () => {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        updateTableHeight();
-    
-                        // Ešte jedno meranie po ustálení layoutu
-                        requestAnimationFrame(() => {
-                            updateTableHeight();
-                        });
-                    });
-                });
-            });
-        };
-    
-        initialize();
-    
-        // ---------------------------------------------------------
-        // WINDOW RESIZE
-        // ---------------------------------------------------------
-    
-        const handleResize = () => {
-            clearTimeout(resizeTimer);
-    
-            resizeTimer = setTimeout(() => {
-                scheduleUpdate();
-            }, 10);
-        };
-    
-        window.addEventListener('resize', handleResize);
-    
-        // ---------------------------------------------------------
-        // VISUAL VIEWPORT
-        // ---------------------------------------------------------
-    
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener(
-                'resize',
-                handleResize
-            );
-        }
-    
-        // ---------------------------------------------------------
-        // RESIZE OBSERVER
-        // ---------------------------------------------------------
-        //
-        // NESLEDUJEME samotnú tabuľku, pretože jej height meníme
-        // sami. Sledujeme rodičovské elementy.
-        //
-    
-        if (window.ResizeObserver) {
-            resizeObserver = new ResizeObserver(() => {
-                scheduleUpdate();
-            });
-    
-            const element = tableContainerRef.current;
-    
-            if (element) {
-                const parent = element.parentElement;
-    
-                if (parent) {
-                    resizeObserver.observe(parent);
-    
-                    const grandParent = parent.parentElement;
-    
-                    if (grandParent) {
-                        resizeObserver.observe(grandParent);
-                    }
-                }
-            }
-        }
-    
-        // ---------------------------------------------------------
-        // CLEANUP
-        // ---------------------------------------------------------
-    
-        return () => {
-            window.removeEventListener('resize', handleResize);
-    
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener(
-                    'resize',
-                    handleResize
-                );
-            }
-    
-            clearTimeout(resizeTimer);
-    
-            if (rafId) {
-                cancelAnimationFrame(rafId);
-            }
-    
-            if (rafId2) {
-                cancelAnimationFrame(rafId2);
-            }
-    
-            if (resizeObserver) {
-                resizeObserver.disconnect();
+    const [maxTableHeight, setMaxTableHeight] = useState('60vh');
+
+    // Nastavenie výšky tabuľky
+    useEffect(() => {
+        const updateHeight = () => {
+            if (tableContainerRef.current) {
+                const rect = tableContainerRef.current.getBoundingClientRect();
+                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
+                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
             }
         };
-    }, []);
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, [allMembersData]);
 
     // Načítanie tímov
     useEffect(() => {
@@ -924,10 +832,9 @@ const RostersTable = ({ isRostersVisible }) => {
         });
     };
 
+    // ZORADENIE - vždy sa počíta nanovo podľa AKTUÁLNYCH štatistík
     const displayMembers = useMemo(() => {
-        if (!isStatsReady || allMembersData.length === 0) {
-            return [];
-        }
+        if (!isStatsReady || allMembersData.length === 0) return [];
     
         const membersWithStats = allMembersData.map(member => {
             const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
@@ -935,13 +842,7 @@ const RostersTable = ({ isRostersVisible }) => {
             const memberKey = `${member.type}_${member.originalIndex}`;
     
             const stats = teamStats[memberKey] || {
-                goals: 0,
-                convertedPenalties: 0,
-                missedPenalties: 0,
-                yellowCards: 0,
-                redCards: 0,
-                blueCards: 0,
-                exclusions: 0
+                goals: 0
             };
     
             return {
@@ -950,73 +851,72 @@ const RostersTable = ({ isRostersVisible }) => {
             };
         });
     
-        return [...membersWithStats].sort((a, b) => {
-            // 1. Hráči s gólmi vždy pred hráčmi bez gólov
-            const aHasGoals = a.goals > 0;
-            const bHasGoals = b.goals > 0;
+        // Najprv všetci, ktorí majú aspoň 1 gól
+        const goalsScorers = membersWithStats
+            .filter(member => member.goals > 0)
+            .sort((a, b) => {
+                // 1. počet gólov - zostupne
+                if (b.goals !== a.goals) {
+                    return b.goals - a.goals;
+                }
     
-            if (aHasGoals !== bHasGoals) {
-                return aHasGoals ? -1 : 1;
-            }
+                // 2. pri rovnakom počte gólov tím
+                const teamCompare = slovakCollator.compare(
+                    a.teamNameDisplay || '',
+                    b.teamNameDisplay || ''
+                );
     
-            // 2. Viac gólov = vyššie
-            if (a.goals !== b.goals) {
-                return b.goals - a.goals;
-            }
+                if (teamCompare !== 0) {
+                    return teamCompare;
+                }
     
-            // 3. Tím
-            const teamCompare = slovakCollator.compare(
-                a.teamNameDisplay || '',
-                b.teamNameDisplay || ''
-            );
+                // 3. pri rovnakom tíme meno
+                return slovakCollator.compare(
+                    `${a.firstName || ''} ${a.lastName || ''}`,
+                    `${b.firstName || ''} ${b.lastName || ''}`
+                );
+            });
     
-            if (teamCompare !== 0) {
-                return teamCompare;
-            }
+        // Potom všetci, ktorí nemajú žiadny gól
+        const nonScorers = membersWithStats
+            .filter(member => member.goals === 0)
+            .sort((a, b) => {
+                // 1. tím
+                const teamCompare = slovakCollator.compare(
+                    a.teamNameDisplay || '',
+                    b.teamNameDisplay || ''
+                );
     
-            // 4. Kategória
-            const categoryCompare = slovakCollator.compare(
-                a.categoryNameDisplay || '',
-                b.categoryNameDisplay || ''
-            );
+                if (teamCompare !== 0) {
+                    return teamCompare;
+                }
     
-            if (categoryCompare !== 0) {
-                return categoryCompare;
-            }
+                // 2. meno
+                const nameCompare = slovakCollator.compare(
+                    `${a.firstName || ''} ${a.lastName || ''}`,
+                    `${b.firstName || ''} ${b.lastName || ''}`
+                );
     
-            // 5. Priezvisko
-            const lastNameCompare = slovakCollator.compare(
-                a.lastName || '',
-                b.lastName || ''
-            );
+                if (nameCompare !== 0) {
+                    return nameCompare;
+                }
     
-            if (lastNameCompare !== 0) {
-                return lastNameCompare;
-            }
+                // 3. číslo dresu
+                const aNum = parseInt(a.jerseyNumber, 10) || 999;
+                const bNum = parseInt(b.jerseyNumber, 10) || 999;
     
-            // 6. Meno
-            const firstNameCompare = slovakCollator.compare(
-                a.firstName || '',
-                b.firstName || ''
-            );
+                return aNum - bNum;
+            });
     
-            if (firstNameCompare !== 0) {
-                return firstNameCompare;
-            }
-    
-            // 7. Číslo dresu
-            const aNum = parseInt(a.jerseyNumber, 10);
-            const bNum = parseInt(b.jerseyNumber, 10);
-    
-            if (!isNaN(aNum) || !isNaN(bNum)) {
-                return (isNaN(aNum) ? 999999 : aNum) -
-                       (isNaN(bNum) ? 999999 : bNum);
-            }
-    
-            return 0;
-        });
+        // DÔLEŽITÉ:
+        // Vždy najprv strelci a až potom hráči bez gólu.
+        // Pri každej zmene allStatsData sa toto poradie
+        // kompletne prepočíta.
+        return [...goalsScorers, ...nonScorers];
     
     }, [allMembersData, allStatsData, isStatsReady]);
+    
+    const stableDisplayMembers = displayMembers;
 
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
@@ -1042,7 +942,7 @@ const RostersTable = ({ isRostersVisible }) => {
         }
 
         // Ak nemáme žiadnych členov na zobrazenie
-        if (displayMembers.length === 0) {
+        if (stableDisplayMembers.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'text-center py-8 text-gray-500' },
@@ -1050,19 +950,19 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        const membersWithGoals = displayMembers.filter(
-            member => member.goals > 0
-        );
+        const membersWithGoals = stableDisplayMembers.filter(m => {
+            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${m.type}_${m.originalIndex}`;
+            return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
+        });
 
         return React.createElement(
             'div',
-            {
+            { 
                 className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
                 ref: tableContainerRef,
-                style: {
-                    height: maxTableHeight,
-                    maxHeight: maxTableHeight
-                }
+                style: { maxHeight: maxTableHeight }
             },
             React.createElement(
                 'table',
@@ -1124,7 +1024,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
-                    displayMembers.map((member, idx) => {
+                    stableDisplayMembers.map((member, idx) => {
                         const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
                         
                         const teamStatsKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
@@ -1189,7 +1089,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         'tr',
                         null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
-                            `Celkový počet členov: ${displayMembers.length}`
+                            `Celkový počet členov: ${stableDisplayMembers.length}`
                         )
                     )
                 )
@@ -1207,6 +1107,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
 // --- HLAVNÁ KOMPONENTA ---
 const TeamsOverviewApp = (props) => {
+    const [uiNotification, setUiNotification] = useState(null);
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
@@ -1248,9 +1149,26 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
+    // Notifikácie
+    useEffect(() => {
+        let timer;
+        const unsubscribe = subscribe((notification) => {
+            setUiNotification(notification);
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                setUiNotification(null);
+            }, 5000);
+        });
+        return () => {
+            unsubscribe();
+            clearTimeout(timer);
+        };
+    }, []);
+
     return React.createElement(
         'div',
         { className: 'flex flex-col w-full p-4 relative text-[87.5%]' },
+        React.createElement(NotificationPortal, null),
         React.createElement(
             'div',
             { className: 'mb-6' },
@@ -1297,6 +1215,12 @@ const handleDataUpdateAndRender = (event) => {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
                                 await updateDoc(userProfileRef, { email: user.email });
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userEmail: user.email,
+                                    changes: `zmena: e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                    timestamp: new Date(),
+                                });
                             }
                         }
                     } catch (error) {
