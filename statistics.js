@@ -1,4 +1,4 @@
-// teams.js - opravená verzia
+// teams.js - opravená verzia (používa len celé názvy vrátane sufixu)
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -53,7 +53,7 @@ const slovakCollator = new Intl.Collator('sk', {
     numeric: false
 });
 
-// Funkcia na odstránenie sufixu
+// Funkcia na odstránenie sufixu - používa sa LEN pre zobrazenie, NIE pre porovnávanie
 const removeSuffix = (teamName) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
     const lettersLower = letters.toLowerCase();
@@ -169,7 +169,7 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
     return unsubscribe;
 };
 
-// Debugovacie funkcie (zachované z pôvodného kódu)
+// Debugovacie funkcie
 const debugMatches = async () => {
     // ... (pôvodný kód)
 };
@@ -278,7 +278,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
         return identifier;
     };
     
-    // --- ŠTATISTIKY - OPRÁVENÁ VERZIA ---
+    // --- ŠTATISTIKY - POUŽÍVA LEN CELÉ NÁZVY VRÁTANE SUFIXU ---
     useEffect(() => {
         console.log('[Stats Effect] Spúšťam useEffect pre štatistiky');
         console.log('[Stats Effect] teamName:', teamName);
@@ -291,8 +291,11 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
             return;
         }
     
+        // POUŽÍVAME CELÝ NÁZOV VRÁTANE SUFIXU
         const currentTeamName = teamName;
         const currentCategoryName = categoryName;
+    
+        console.log('[Stats Effect] Hľadám zápasy pre tím (CELÝ NÁZOV):', currentTeamName);
     
         if (!currentTeamName || !currentCategoryName) {
             console.log('[Stats Effect] Podmienka TRUE: chýba teamName alebo categoryName');
@@ -343,38 +346,29 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                     return;
                 }
                 
-                // --- OPRÁVENÁ KONTROLA TÍMU - porovnávame CELÉ názvy VRÁTANE sufixu ---
+                // --- POROVNÁVAME LEN CELÉ NÁZVY VRÁTANE SUFIXU ---
                 let isOurTeam = false;
                 
                 // Použijeme celý názov tímu (vrátane sufixu)
                 const fullTeamName = currentTeamName;
                 
-                // Skontrolujeme, či sa názov tímu zhoduje s domácim alebo hosťujúcim tímom
-                // Berieme do úvahy, že konvertovaný názov môže byť bez sufixu
                 const homeTeam = matchInfo.homeTeam || '';
                 const awayTeam = matchInfo.awayTeam || '';
                 
-                // Odstránime sufix z oboch názvov pre porovnanie
-                const homeTeamBase = removeSuffix(homeTeam);
-                const awayTeamBase = removeSuffix(awayTeam);
-                const currentTeamBase = removeSuffix(fullTeamName);
-                
-                // Kontrola podľa eventData.team
+                // Kontrola podľa eventData.team - porovnávame PRESNE celé názvy
                 if (eventData.team === 'home') {
-                    // Porovnávame buď celé názvy alebo názvy bez sufixu
-                    if (homeTeam === fullTeamName || homeTeamBase === currentTeamBase) {
+                    if (homeTeam === fullTeamName) {
                         isOurTeam = true;
-                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako DOMÁCI (${homeTeam} === ${fullTeamName} alebo ${homeTeamBase} === ${currentTeamBase})`);
+                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako DOMÁCI (${homeTeam} === ${fullTeamName})`);
                     }
                 } else if (eventData.team === 'away') {
-                    if (awayTeam === fullTeamName || awayTeamBase === currentTeamBase) {
+                    if (awayTeam === fullTeamName) {
                         isOurTeam = true;
-                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako HOSŤ (${awayTeam} === ${fullTeamName} alebo ${awayTeamBase} === ${currentTeamBase})`);
+                        console.log(`[Stats Effect] ✅ Udalosť patrí nášmu tímu ako HOSŤ (${awayTeam} === ${fullTeamName})`);
                     }
                 }
                 
                 if (!isOurTeam) {
-                    console.log(`[Stats Effect] ⏭️ Preskakujem udalosť - nepatrí nášmu tímu (team=${eventData.team}, home=${homeTeam}, away=${awayTeam}, fullTeamName=${fullTeamName})`);
                     return;
                 }
                 
@@ -388,7 +382,6 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                 }
                 
                 if (!foundMemberKey) {
-                    console.log(`[Stats Effect] ⚠️ Nenašiel sa člen pre udalosť: memberTypeKey=${eventData.memberTypeKey}, memberIndex=${eventData.memberIndex}`);
                     return;
                 }
                 
@@ -565,20 +558,19 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
             };
         };
     
-        // --- LISTENER NA ZÁPASY - OPRÁVENÁ VERZIA ---
+        // --- LISTENER NA ZÁPASY - POROVNÁVAME LEN CELÉ NÁZVY ---
         let unsubscribeMatches = null;
     
         const processMatches = (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};
             
-            // Použijeme CELÝ názov tímu (vrátane sufixu)
+            // POUŽÍVAME CELÝ NÁZOV VRÁTANE SUFIXU
             const fullTeamName = currentTeamName;
-            // A tiež názov BEZ sufixu pre porovnanie
-            const fullTeamNameBase = removeSuffix(fullTeamName);
             
-            console.log('[Stats Effect] Celý názov tímu (vrátane sufixu):', fullTeamName);
-            console.log('[Stats Effect] Názov tímu bez sufixu:', fullTeamNameBase);
+            console.log('[Stats Effect] Hľadám zápasy pre tím (CELÝ NÁZOV):', fullTeamName);
+            
+            let matchCount = 0;
             
             matchesSnapshot.forEach(doc => {
                 const matchData = doc.data();
@@ -594,16 +586,13 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                     awayTeam: convertedAway
                 };
                 
-                // Odstránime sufix z konvertovaných názvov pre porovnanie
-                const convertedHomeBase = removeSuffix(convertedHome);
-                const convertedAwayBase = removeSuffix(convertedAway);
-                
-                // Porovnávame BUĎ celé názvy (vrátane sufixu) ALEBO názvy bez sufixu
-                const isHomeMatch = convertedHome === fullTeamName || convertedHomeBase === fullTeamNameBase;
-                const isAwayMatch = convertedAway === fullTeamName || convertedAwayBase === fullTeamNameBase;
+                // POROVNÁVAME PRESNE CELÉ NÁZVY VRÁTANE SUFIXU
+                const isHomeMatch = convertedHome === fullTeamName;
+                const isAwayMatch = convertedAway === fullTeamName;
                 
                 if (isHomeMatch || isAwayMatch) {
-                    console.log(`[Stats Effect]   ✅ Nájdený zápas pre "${fullTeamName}": ${matchId} - ${convertedHome} vs ${convertedAway}`);
+                    matchCount++;
+                    console.log(`[Stats Effect]   ✅ Nájdený zápas #${matchCount} pre "${fullTeamName}": ${matchId} - ${convertedHome} vs ${convertedAway}`);
                     newMatchIds.add(matchId);
                 }
             });
