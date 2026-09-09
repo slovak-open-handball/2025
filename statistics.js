@@ -631,6 +631,9 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [allMembersData, setAllMembersData] = useState([]);
     const [allStatsData, setAllStatsData] = useState({});
     const [unsubscribes, setUnsubscribes] = useState([]);
+    const [isStatsReady, setIsStatsReady] = useState(false);
+    const [totalTeamsCount, setTotalTeamsCount] = useState(0);
+    const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -704,7 +707,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // Načítanie členov všetkých tímov (BEZ ZORAĎOVANIA)
+    // Načítanie členov všetkých tímov
     useEffect(() => {
         if (!window.db || allTeams.length === 0) return;
 
@@ -731,8 +734,16 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
         if (sortedTeams.length === 0) {
             setAllMembersData([]);
+            setTotalTeamsCount(0);
+            setStatsReceivedCount(0);
+            setIsStatsReady(false);
             return;
         }
+
+        // Reset stavov - DÔLEŽITÉ: pri zmene filtrovania resetujeme ready stav
+        setTotalTeamsCount(sortedTeams.length);
+        setStatsReceivedCount(0);
+        setIsStatsReady(false);
 
         let allMembers = [];
         let loadedCount = 0;
@@ -754,7 +765,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 loadedCount++;
                 
                 if (loadedCount === totalTeams) {
-                    // ULOŽÍME BEZ ZORAĎOVANIA - zoraďovanie sa vykoná v renderTable
                     setAllMembersData(allMembers);
                 }
             };
@@ -777,7 +787,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 try { unsub(); } catch (e) {}
             });
         };
-    }, [allTeams, selectedTeamNameFilter]); // Odstránili sme allStatsData z dependencies
+    }, [allTeams, selectedTeamNameFilter]);
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
@@ -790,9 +800,19 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             };
             return newStats;
         });
+        
+        // Počítame prijaté štatistiky
+        setStatsReceivedCount(prev => {
+            const newCount = prev + 1;
+            // Ak sme dostali štatistiky pre všetky tímy, nastavíme ready stav
+            if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
+                setIsStatsReady(true);
+            }
+            return newCount;
+        });
     };
 
-    // Renderovanie kolektorov pre každý tím
+    // Renderovanie kolektorov pre každý tím (neviditeľné)
     const renderStatsCollectors = () => {
         if (!isRostersVisible || allTeams.length === 0) return null;
 
@@ -818,7 +838,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         });
     };
 
-    // Zobrazenie tabuľky - tu vykonávame zoraďovanie
+    // Zobrazenie tabuľky - IBA JEDNA TABUĽKA
     const renderTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
@@ -828,15 +848,22 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             );
         }
 
-        if (allMembersData.length === 0) {
+        // --- ČAKÁME KÝM SÚ NAČÍTANÉ VŠETKY DÁTA ---
+        // Ak nemáme členov alebo ešte nie sú štatistiky, zobrazíme načítavanie
+        if (allMembersData.length === 0 || !isStatsReady) {
+            const progressText = totalTeamsCount > 0 
+                ? `Načítavam štatistiky... (${statsReceivedCount}/${totalTeamsCount})` 
+                : 'Načítavam dáta...';
+            
             return React.createElement(
                 'div',
-                { className: 'text-center py-16 text-gray-500' },
-                'Žiadni členovia neboli nájdení.'
+                { className: 'text-center py-8' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
+                React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
             );
         }
 
-        // --- ZORAĎOVANIE PODĽA GÓLOV (vykoná sa pri každom renderovaní) ---
+        // --- ZORAĎOVANIE PODĽA GÓLOV ---
         const sortedMembers = [...allMembersData].sort((a, b) => {
             const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
             const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
@@ -847,16 +874,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
             const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
             
-            // Najprv podľa gólov (zostupne)
             if (goalsB !== goalsA) {
                 return goalsB - goalsA;
             }
             
-            // Potom podľa názvu tímu
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
             
-            // Nakoniec podľa čísla dresu
             const aNum = parseInt(a.jerseyNumber) || 999;
             const bNum = parseInt(b.jerseyNumber) || 999;
             return aNum - bNum;
@@ -925,7 +949,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         )
                     )
                 ),
-                // TELO TABUĽKY - používame sortedMembers
+                // TELO TABUĽKY
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
@@ -994,7 +1018,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         React.Fragment,
         null,
         renderStatsCollectors(),
-        renderTable()
+        renderTable() 
     );
 };
 
