@@ -604,10 +604,60 @@ const RostersTable = ({ isRostersVisible }) => {
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [categoryColors, setCategoryColors] = useState({}); // NOVÝ STATE PRE FARBY KATEGÓRIÍ
 
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
+
+    // FUNKCIA NA ZÍSKANIE SVETLEJŠEJ FARBY
+    const getLighterColor = (color) => {
+        if (!color) return '#E5E7EB';
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.85));
+        const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.85));
+        const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.85));
+        
+        return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+    };
+
+    // NAČÍTANIE FARIEB KATEGÓRIÍ Z DATABÁZY
+    useEffect(() => {
+        if (!window.db) return;
+
+        const loadCategoryColors = async () => {
+            try {
+                const settingsRef = doc(window.db, 'settings', 'categories');
+                const settingsSnap = await getDoc(settingsRef);
+                
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    const colors = {};
+                    
+                    Object.entries(data).forEach(([catId, catData]) => {
+                        if (catData.drawColor) {
+                            colors[catId] = catData.drawColor;
+                        }
+                        // Uložíme aj názov kategórie pre prípad, že by sme ho potrebovali
+                        if (catData.name) {
+                            if (!window.categoriesData) window.categoriesData = {};
+                            window.categoriesData[catId] = catData.name;
+                        }
+                    });
+                    
+                    setCategoryColors(colors);
+                    window.categoryDrawColors = colors;
+                }
+            } catch (err) {
+            }
+        };
+
+        loadCategoryColors();
+    }, []);
 
     // FUNKCIA NA AKTUÁLNE NASTAVENIE VÝŠKY
     const updateTableHeight = useCallback(() => {
@@ -632,15 +682,32 @@ const RostersTable = ({ isRostersVisible }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, [updateTableHeight]);
 
-    // Získanie unikátnych kategórií
-    const getUniqueCategories = useCallback(() => {
-        const categories = new Set();
+    // Získanie unikátnych kategórií s ich ID
+    const getUniqueCategoriesWithIds = useCallback(() => {
+        const categoriesMap = new Map();
         allMembersData.forEach(member => {
             if (member.categoryNameDisplay) {
-                categories.add(member.categoryNameDisplay);
+                // Pokúsime sa nájsť ID kategórie
+                let categoryId = null;
+                if (window.categoriesData) {
+                    for (const [id, name] of Object.entries(window.categoriesData)) {
+                        if (name === member.categoryNameDisplay) {
+                            categoryId = id;
+                            break;
+                        }
+                    }
+                }
+                if (!categoriesMap.has(member.categoryNameDisplay)) {
+                    categoriesMap.set(member.categoryNameDisplay, {
+                        name: member.categoryNameDisplay,
+                        id: categoryId
+                    });
+                }
             }
         });
-        return Array.from(categories).sort((a, b) => slovakCollator.compare(a, b));
+        return Array.from(categoriesMap.values()).sort((a, b) => 
+            slovakCollator.compare(a.name, b.name)
+        );
     }, [allMembersData]);
 
     useEffect(() => {
@@ -826,7 +893,7 @@ const RostersTable = ({ isRostersVisible }) => {
         });
     };
 
-    // ZORADENIE - presne podľa konzoly
+    // ZORADENIE
     const displayMembers = useMemo(() => {
         if (!isStatsReady || allMembersData.length === 0) {
             return [];
@@ -834,7 +901,6 @@ const RostersTable = ({ isRostersVisible }) => {
 
         let filteredMembers = allMembersData;
 
-        // FILTER PODĽA VYBRANEJ KATEGÓRIE
         if (selectedCategory) {
             filteredMembers = allMembersData.filter(member => 
                 member.categoryNameDisplay === selectedCategory
@@ -1059,9 +1125,9 @@ const RostersTable = ({ isRostersVisible }) => {
         );
     };
 
-    // RENDER FILTROVACÍCH TLAČIDIEL
+    // RENDER FILTROVACÍCH TLAČIDIEL S FARBAMI
     const renderCategoryFilters = () => {
-        const categories = getUniqueCategories();
+        const categories = getUniqueCategoriesWithIds();
         if (categories.length === 0) return null;
 
         return React.createElement(
@@ -1085,22 +1151,42 @@ const RostersTable = ({ isRostersVisible }) => {
                 'Všetky'
             ),
             categories.map(category => {
-                const isActive = selectedCategory === category;
+                const isActive = selectedCategory === category.name;
+                
+                // Získame farbu pre kategóriu
+                const color = categoryColors[category.id] || '#6B7280';
+                const lighterColor = getLighterColor(color);
+                
                 return React.createElement(
                     'button',
                     {
-                        key: category,
-                        onClick: () => handleCategoryFilter(category),
+                        key: category.name,
+                        onClick: () => handleCategoryFilter(category.name),
                         className: `px-3 py-1.5 text-sm rounded-full transition-all duration-200 ${
                             isActive 
-                                ? 'bg-blue-600 text-white shadow-md' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`
+                                ? 'text-white shadow-md scale-105' 
+                                : 'text-gray-700 hover:opacity-80'
+                        }`,
+                        style: {
+                            backgroundColor: isActive ? color : lighterColor,
+                            color: isActive ? '#FFFFFF' : (getContrastColor(lighterColor) || '#1F2937')
+                        }
                     },
-                    category
+                    category.name
                 );
             })
         );
+    };
+
+    // POMOCNÁ FUNKCIA PRE KONTRASTNÚ FARBU TEXTU
+    const getContrastColor = (hexColor) => {
+        if (!hexColor) return '#1F2937';
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.5 ? '#1F2937' : '#FFFFFF';
     };
 
     return React.createElement(
