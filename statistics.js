@@ -664,9 +664,9 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
     const loadingTimeoutRef = useRef(null);
     const isMounted = useRef(true);
-    const teamsLoadedRef = useRef(false);
     const membersLoadedRef = useRef(false);
     const statsLoadedRef = useRef(false);
+    const statsUpdateTimeoutRef = useRef(null);
 
     // Nastavenie výšky tabuľky
     useEffect(() => {
@@ -741,6 +741,35 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         return Array.from(teamsMap.values());
     }, [allTeams]);
 
+    // --- FUNKCIA NA ZORADENIE ČLENOV PODĽA GÓLOV ---
+    const sortMembersByGoals = useCallback((members, statsData) => {
+        if (!members || members.length === 0) return members;
+        
+        return [...members].sort((a, b) => {
+            // Získame štatistiky pre každého člena
+            const teamStatsA = statsData[a.teamNameDisplay] || {};
+            const teamStatsB = statsData[b.teamNameDisplay] || {};
+            const keyA = `${a.type}_${a.originalIndex}`;
+            const keyB = `${b.type}_${b.originalIndex}`;
+            const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+            const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+            
+            // Najprv podľa gólov (zostupne - najviac hore)
+            if (goalsB !== goalsA) {
+                return goalsB - goalsA;
+            }
+            
+            // Potom podľa názvu tímu
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            // Nakoniec podľa čísla dresu
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+    }, []);
+
     // Načítanie členov všetkých tímov
     useEffect(() => {
         if (!window.db || allTeams.length === 0) {
@@ -797,34 +826,16 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 loadedCount++;
                 
                 if (loadedCount === totalTeams) {
-                    // Zoradenie členov podľa GÓLOV (zostupne - najviac gólov navrchu)
-                    // a potom podľa názvu tímu a čísla dresu
-                    allMembers.sort((a, b) => {
-                        const teamStatsA = allStatsData[a.teamNameDisplay] || {};
-                        const teamStatsB = allStatsData[b.teamNameDisplay] || {};
-                        const keyA = `${a.type}_${a.originalIndex}`;
-                        const keyB = `${b.type}_${b.originalIndex}`;
-                        const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                        const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
-                        
-                        if (goalsB !== goalsA) {
-                            return goalsB - goalsA;
-                        }
-                        
-                        const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                        if (teamCompare !== 0) return teamCompare;
-                        
-                        const aNum = parseInt(a.jerseyNumber) || 999;
-                        const bNum = parseInt(b.jerseyNumber) || 999;
-                        return aNum - bNum;
-                    });
+                    // Ak už máme štatistiky, zoradíme podľa nich
+                    let sortedMembers = allMembers;
+                    if (Object.keys(allStatsData).length > 0) {
+                        sortedMembers = sortMembersByGoals(allMembers, allStatsData);
+                    }
                     
                     if (isMounted.current) {
-                        setAllMembersData(allMembers);
+                        setAllMembersData(sortedMembers);
                         setIsLoadingAll(false);
-                        // Označíme, že členovia sú načítaní
                         membersLoadedRef.current = true;
-                        // Kontrola, či sú načítané aj štatistiky
                         checkDataReady();
                     }
                 }
@@ -838,7 +849,11 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 loadedCount++;
                 if (loadedCount === totalTeams) {
                     if (isMounted.current) {
-                        setAllMembersData(allMembers);
+                        let sortedMembers = allMembers;
+                        if (Object.keys(allStatsData).length > 0) {
+                            sortedMembers = sortMembersByGoals(allMembers, allStatsData);
+                        }
+                        setAllMembersData(sortedMembers);
                         setIsLoadingAll(false);
                         membersLoadedRef.current = true;
                         checkDataReady();
@@ -869,7 +884,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 clearTimeout(loadingTimeoutRef.current);
             }
         };
-    }, [allTeams, selectedTeamNameFilter, getUniqueTeams]);
+    }, [allTeams, selectedTeamNameFilter, getUniqueTeams, sortMembersByGoals]);
 
     // Kontrola, či sú dáta pripravené na zobrazenie
     const checkDataReady = useCallback(() => {
@@ -891,36 +906,57 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             statsLoadedRef.current = true;
             
             // Po aktualizácii štatistík preusporiadame členov podľa gólov
-            if (allMembersData.length > 0) {
-                const sortedMembers = [...allMembersData];
-                sortedMembers.sort((a, b) => {
-                    const teamStatsA = newStats[a.teamNameDisplay] || {};
-                    const teamStatsB = newStats[b.teamNameDisplay] || {};
-                    const keyA = `${a.type}_${a.originalIndex}`;
-                    const keyB = `${b.type}_${b.originalIndex}`;
-                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
-                    
-                    if (goalsB !== goalsA) {
-                        return goalsB - goalsA;
-                    }
-                    
-                    const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                    if (teamCompare !== 0) return teamCompare;
-                    
-                    const aNum = parseInt(a.jerseyNumber) || 999;
-                    const bNum = parseInt(b.jerseyNumber) || 999;
-                    return aNum - bNum;
-                });
-                setAllMembersData(sortedMembers);
+            // Použijeme setTimeout na oneskorenie, aby sa zabezpečilo, že nové štatistiky sú už v stave
+            if (statsUpdateTimeoutRef.current) {
+                clearTimeout(statsUpdateTimeoutRef.current);
             }
+            
+            statsUpdateTimeoutRef.current = setTimeout(() => {
+                if (isMounted.current && allMembersData.length > 0) {
+                    // Získame aktuálne štatistiky (už s novými dátami)
+                    const currentStats = newStats;
+                    const sortedMembers = sortMembersByGoals(allMembersData, currentStats);
+                    setAllMembersData(sortedMembers);
+                }
+            }, 50);
             
             // Kontrola pripravenosti dát
             checkDataReady();
             
             return newStats;
         });
-    }, [allMembersData, checkDataReady]);
+    }, [allMembersData, sortMembersByGoals, checkDataReady]);
+
+    // Efekt na sledovanie zmien v allStatsData a preusporiadanie
+    useEffect(() => {
+        if (allMembersData.length > 0 && Object.keys(allStatsData).length > 0) {
+            // Použijeme setTimeout na debounce
+            if (statsUpdateTimeoutRef.current) {
+                clearTimeout(statsUpdateTimeoutRef.current);
+            }
+            
+            statsUpdateTimeoutRef.current = setTimeout(() => {
+                if (isMounted.current) {
+                    const sortedMembers = sortMembersByGoals(allMembersData, allStatsData);
+                    // Porovnáme, či sa zoznam zmenil
+                    const currentKeys = allMembersData.map(m => `${m.teamNameDisplay}_${m.type}_${m.originalIndex}`).join(',');
+                    const sortedKeys = sortedMembers.map(m => `${m.teamNameDisplay}_${m.type}_${m.originalIndex}`).join(',');
+                    if (currentKeys !== sortedKeys) {
+                        setAllMembersData(sortedMembers);
+                    }
+                }
+            }, 100);
+        }
+    }, [allStatsData, allMembersData, sortMembersByGoals]);
+
+    // Čistenie timeoutu pri odmontovaní
+    useEffect(() => {
+        return () => {
+            if (statsUpdateTimeoutRef.current) {
+                clearTimeout(statsUpdateTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Renderovanie kolektorov pre každý tím
     const renderStatsCollectors = useCallback(() => {
