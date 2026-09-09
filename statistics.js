@@ -605,6 +605,11 @@ const RostersTable = ({ isRostersVisible }) => {
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
     
+    // NOVÝ STAV PRE SLEDOVANIE ZMENY ŠTATISTÍK
+    const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
+    // REF PRE UCHOVANIE PREDCHÁDZAJÚCEHO PORADIA GÓLOV
+    const previousGoalsRankRef = useRef(new Map());
+    
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
@@ -626,6 +631,8 @@ const RostersTable = ({ isRostersVisible }) => {
     // Načítanie tímov
     useEffect(() => {
         if (!window.db) return;
+
+        console.log('[RostersTable] Načítavam tímy z databázy...');
 
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
             let userTeamsList = [];
@@ -651,6 +658,7 @@ const RostersTable = ({ isRostersVisible }) => {
                     });
                 }
             });
+            console.log(`[RostersTable] Načítaných ${userTeamsList.length} tímov`);
             setAllTeams(userTeamsList);
         });
 
@@ -681,6 +689,8 @@ const RostersTable = ({ isRostersVisible }) => {
     useEffect(() => {
         if (!window.db || allTeams.length === 0) return;
     
+        console.log('[RostersTable] Načítavam členov tímov...');
+    
         // Zrušíme predchádzajúce listenery
         unsubscribes.forEach(unsub => {
             try { unsub(); } catch (e) {}
@@ -709,6 +719,10 @@ const RostersTable = ({ isRostersVisible }) => {
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setAllMembersData([]);
+        // Reset triggera pre štatistiky
+        setStatsUpdateTrigger(0);
+    
+        console.log(`[RostersTable] Načítavam ${sortedTeams.length} tímov:`, sortedTeams.map(t => `${t.teamName} (${t.category})`));
     
         // Použijeme NOVÚ Mapu a NOVÉ sety
         const membersMap = new Map();
@@ -747,6 +761,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 
                 if (loadedCount === totalTeams) {
                     const allMembers = Array.from(membersMap.values());
+                    console.log(`[RostersTable] Načítaných ${allMembers.length} členov z ${totalTeams} tímov`);
                     setAllMembersData(allMembers);
                 }
             };
@@ -755,6 +770,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 const unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 newUnsubscribes.push(unsub);
             } catch (error) {
+                console.error(`[RostersTable] Chyba pri načítaní tímu ${teamName}:`, error);
                 if (!loadedTeamsSet.has(teamKey)) {
                     loadedTeamsSet.add(teamKey);
                     loadedCount++;
@@ -779,6 +795,8 @@ const RostersTable = ({ isRostersVisible }) => {
     const handleStatsUpdate = (teamName, stats, categoryName) => {
         const uniqueKey = `${teamName}_${categoryName}`;
         
+        console.log(`[RostersTable] Prijaté štatistiky pre ${uniqueKey}:`, stats);
+        
         // NAHRADÍME štatistiky, NIE PRIDÁVAME!
         setAllStatsData(prev => {
             const newStats = {
@@ -787,6 +805,9 @@ const RostersTable = ({ isRostersVisible }) => {
             };
             return newStats;
         });
+        
+        // INKREMENTUJEME TRIGGER PRE VYNÚTENIE PREPOČTU PORADIA
+        setStatsUpdateTrigger(prev => prev + 1);
         
         // Kontrola, či už sme dostali štatistiky pre tento tím
         setReceivedTeams(prev => {
@@ -802,6 +823,7 @@ const RostersTable = ({ isRostersVisible }) => {
                     const newCount = prevCount + 1;
                     // Ak sme dostali všetky štatistiky, nastavíme ready stav
                     if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
+                        console.log('[RostersTable] Všetky štatistiky boli načítané');
                         setIsStatsReady(true);
                     }
                     return newCount;
@@ -833,8 +855,14 @@ const RostersTable = ({ isRostersVisible }) => {
     };
 
     // ZORADENIE - používame displayMembers s memoizáciou
+    // PRIDÁVAME statsUpdateTrigger DO ZÁVISLOSTÍ PRE VYNÚTENIE PREPOČTU
     const displayMembers = useMemo(() => {
-        if (!isStatsReady || allMembersData.length === 0) return [];
+        console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
+        
+        if (!isStatsReady || allMembersData.length === 0) {
+            console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
+            return [];
+        }
         
         // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
         const membersWithStats = allMembersData.map(member => {
@@ -847,6 +875,10 @@ const RostersTable = ({ isRostersVisible }) => {
                 goals: Number(stats.goals || 0)
             };
         });
+
+        // LOG: Počet členov a počet tých s gólmi
+        const scorers = membersWithStats.filter(m => m.goals > 0);
+        console.log(`[RostersTable] Celkovo ${membersWithStats.length} členov, ${scorers.length} s gólmi`);
 
         // Rozdelíme na strelcov a neskórujúcich
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
@@ -875,8 +907,18 @@ const RostersTable = ({ isRostersVisible }) => {
             return aNum - bNum;
         });
 
-        return [...goalsScorers, ...nonScorers];
-    }, [allMembersData, allStatsData, isStatsReady]);
+        const result = [...goalsScorers, ...nonScorers];
+        
+        // LOG: Prvých 5 členov po zoradení
+        if (result.length > 0) {
+            console.log('[RostersTable] Prvých 5 po zoradení:');
+            result.slice(0, 5).forEach((m, i) => {
+                console.log(`  ${i+1}. ${m.firstName} ${m.lastName} - ${m.goals} gólov (${m.teamNameDisplay})`);
+            });
+        }
+        
+        return result;
+    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]); // PRIDANÝ statsUpdateTrigger
 
     // POUŽIJEME useRef na uchovanie predchádzajúceho poradia
     const previousDisplayMembersRef = useRef([]);
@@ -887,44 +929,34 @@ const RostersTable = ({ isRostersVisible }) => {
     const getStableDisplayMembers = useCallback(() => {
         if (displayMembers.length === 0) return [];
         
-        // Ak ešte nemáme predchádzajúce poradie, uložíme ho
-        if (previousDisplayMembersRef.current.length === 0) {
-            previousDisplayMembersRef.current = displayMembers;
-            // Uložíme aj góly
-            const goalsMap = new Map();
-            displayMembers.forEach(m => {
-                const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-                goalsMap.set(key, m.goals || 0);
-            });
-            previousGoalsRef.current = goalsMap;
-            return displayMembers;
-        }
-        
-        // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
-        const prevGoals = previousGoalsRef.current;
-        const currentGoals = new Map();
+        // AK SA ZMENIL TRIGGER, VŽDY AKTUALIZUJEME PORADIE
+        // To znamená, že pri každej zmene štatistík sa poradie prepočíta
+        const currentGoalsMap = new Map();
         displayMembers.forEach(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}_${m.type}_${m.originalIndex}`;
-            currentGoals.set(key, m.goals || 0);
+            currentGoalsMap.set(key, m.goals || 0);
         });
         
         // Skontrolujeme, či sa zmenil počet gólov u niektorého hráča
+        const prevGoals = previousGoalsRef.current;
         let goalsChanged = false;
         let anyGoalsChanged = false;
-        for (const [key, goals] of currentGoals) {
+        
+        for (const [key, goals] of currentGoalsMap) {
             if (prevGoals.get(key) !== goals) {
                 goalsChanged = true;
-                if (goals > 0) {
+                if (goals > 0 || (prevGoals.get(key) || 0) > 0) {
                     anyGoalsChanged = true;
                 }
                 break;
             }
         }
         
-        // Ak sa zmenili góly, vždy aktualizujeme poradie
+        // AK sa zmenili góly, VŽDY AKTUALIZUJEME poradie
         if (goalsChanged) {
+            console.log('[RostersTable] Zmena v góloch - aktualizujem poradie');
             previousDisplayMembersRef.current = displayMembers;
-            previousGoalsRef.current = currentGoals;
+            previousGoalsRef.current = currentGoalsMap;
             return displayMembers;
         }
         
