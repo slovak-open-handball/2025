@@ -1,4 +1,4 @@
-// teams.js - opravená verzia (používa len celé názvy vrátane sufixu)
+// teams.js - opravená verzia (používa celé názvy vrátane sufixu v hlavičke aj pri porovnávaní)
 import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -53,7 +53,7 @@ const slovakCollator = new Intl.Collator('sk', {
     numeric: false
 });
 
-// Funkcia na odstránenie sufixu - používa sa LEN pre zobrazenie, NIE pre porovnávanie
+// Funkcia na odstránenie sufixu - používa sa LEN pre zoskupovanie tímov, NIE pre zobrazenie v hlavičke
 const removeSuffix = (teamName) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÄČĎÉÍĽĹŇÓÔŘŠŤÚÝŽ';
     const lettersLower = letters.toLowerCase();
@@ -211,14 +211,12 @@ const forceUpdateUI = () => {
 window.forceUpdateUI = forceUpdateUI;
 
 // --- KOMPONENTA PRE JEDNOTLIVÝ TÍM SO ŠTATISTIKAMI ---
-const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
+const TeamRosterItem = ({ teamName, categoryName }) => {
     const [rosterData, setRosterData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
-    
-    const hasSuffix = teamName !== cleanName;
     
     // Načítanie súpisky
     useEffect(() => {
@@ -806,18 +804,9 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
                 className: 'px-4 py-3 bg-gradient-to-r from-blue-50 to-gray-50 border-b border-gray-200 flex justify-between items-center'
             },
             React.createElement(
-                'div',
-                { className: 'flex items-center gap-3' },
-                React.createElement(
-                    'h3',
-                    { className: 'font-semibold text-gray-800' },
-                    cleanName
-                ),
-                hasSuffix && React.createElement(
-                    'span',
-                    { className: 'text-xs text-gray-400' },
-                    `(${teamName})`
-                )
+                'h3',
+                { className: 'font-semibold text-gray-800' },
+                teamName  // ZOBRAZUJEME CELÝ NÁZOV VRÁTANE SUFIXU
             ),
             React.createElement(
                 'span',
@@ -948,7 +937,7 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    // Získanie všetkých unikátnych tímov
+    // Získanie všetkých unikátnych tímov - zoskupujeme podľa názvu BEZ sufixu, aby sme nemali duplicity
     const getAllUniqueTeams = () => {
         const teamsMap = new Map();
         
@@ -958,7 +947,7 @@ const TeamsOverviewApp = (props) => {
             
             if (!teamsMap.has(key)) {
                 teamsMap.set(key, {
-                    teamName: team.teamName,
+                    teamName: team.teamName,  // UCHOVÁVAME CELÝ NÁZOV VRÁTANE SUFIXU
                     cleanName: cleanName,
                     category: team.category,
                     occurrences: []
@@ -991,17 +980,17 @@ const TeamsOverviewApp = (props) => {
             );
         }
 
-        // Filtrovanie podľa názvu
+        // Filtrovanie podľa názvu - hľadáme v CELOM názve (vrátane sufixu)
         let filteredTeams = uniqueTeams;
         if (selectedTeamNameFilter) {
             filteredTeams = uniqueTeams.filter(team => 
-                team.cleanName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
+                team.teamName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())
             );
         }
 
-        // Zoradenie tímov podľa názvu
+        // Zoradenie tímov podľa CELÉHO názvu (vrátane sufixu)
         const sortedTeams = filteredTeams.sort((a, b) => {
-            return slovakCollator.compare(a.cleanName, b.cleanName);
+            return slovakCollator.compare(a.teamName, b.teamName);
         });
 
         if (sortedTeams.length === 0) {
@@ -1023,14 +1012,12 @@ const TeamsOverviewApp = (props) => {
                 'div',
                 { className: 'space-y-4 p-2' },
                 sortedTeams.map((teamGroup, index) => {
-                    const teamName = teamGroup.teamName;
-                    const cleanName = teamGroup.cleanName;
+                    const teamName = teamGroup.teamName;  // CELÝ NÁZOV VRÁTANE SUFIXU
                     const categoryName = teamGroup.category;
                     
                     return React.createElement(TeamRosterItem, {
                         key: `${categoryName}_${teamName}_${index}`,
                         teamName: teamName,
-                        cleanName: cleanName,
                         categoryName: categoryName
                     });
                 })
