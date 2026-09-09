@@ -892,8 +892,10 @@ const RostersTable = ({ isRostersVisible }) => {
             const teamStatsB = allStatsData[keyB] || {};
             const memberKeyA = `${a.type}_${a.originalIndex}`;
             const memberKeyB = `${b.type}_${b.originalIndex}`;
-            const goalsA = (teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0;
-            const goalsB = (teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0;
+            
+            // PREVEDieme "" NA 0!
+            const goalsA = Number((teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0);
+            const goalsB = Number((teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0);
             
             // 1. STRELCI VŽDY PRED OSTATNÝMI
             if (goalsA > 0 && goalsB === 0) return -1;
@@ -930,7 +932,7 @@ const RostersTable = ({ isRostersVisible }) => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${m.type}_${m.originalIndex}`;
-            return (teamStats[memberKey] && teamStats[memberKey].goals > 0);
+            return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
         });
 
         return React.createElement(
@@ -1019,7 +1021,7 @@ const RostersTable = ({ isRostersVisible }) => {
                         const totalPenalties = (stats.convertedPenalties || 0) + (stats.missedPenalties || 0);
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties || 0}/${totalPenalties}` : '';
                         
-                        const hasGoals = (stats.goals || 0) > 0;
+                        const hasGoals = Number((stats.goals || 0)) > 0;
                         const rowClass = idx % 2 === 0 
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
@@ -1051,7 +1053,7 @@ const RostersTable = ({ isRostersVisible }) => {
                             React.createElement('td', { className: 'px-2 py-2 text-gray-800 text-sm' }, fullName),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-xs' }, member.teamNameDisplay),
                             React.createElement('td', { className: 'px-2 py-2 text-gray-600 text-xs' }, member.categoryNameDisplay),
-                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600 text-sm' }, (stats.goals || 0) > 0 ? stats.goals : ''),
+                            React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-green-600 text-sm' }, Number((stats.goals || 0)) > 0 ? stats.goals : ''),
                             React.createElement('td', { className: 'px-2 py-2 text-center font-medium text-teal-600 text-sm' }, penaltiesDisplay),
                             React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-yellow-600 text-sm' }, (stats.yellowCards || 0) > 0 ? stats.yellowCards : ''),
                             React.createElement('td', { className: 'px-2 py-2 text-center font-bold text-red-600 text-sm' }, (stats.redCards || 0) > 0 ? stats.redCards : ''),
