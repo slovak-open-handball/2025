@@ -170,7 +170,6 @@ window.forceUpdateUI = forceUpdateUI;
 // --- KOMPONENTA PRE ZBER ŠTATISTÍK PRE JEDEN TÍM ---
 const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
@@ -181,24 +180,17 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let unsub = null;
         
         const loadRoster = () => {
-            setIsLoading(true);
             
             const handleMembersUpdate = (members) => {
                 setRosterData(members);
-                setIsLoading(false);
             };
             
             try {
                 unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 setUnsubscribe(() => unsub);
             } catch (error) {
-                setIsLoading(false);
                 setRosterData([]);
             }
-            
-            timeoutId = setTimeout(() => {
-                setIsLoading(false);
-            }, 10000);
         };
         
         loadRoster();
@@ -638,7 +630,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allMembersData, setAllMembersData] = useState([]);
     const [allStatsData, setAllStatsData] = useState({});
-    const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [unsubscribes, setUnsubscribes] = useState([]);
     
     const tableContainerRef = useRef(null);
@@ -740,11 +731,9 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
         if (sortedTeams.length === 0) {
             setAllMembersData([]);
-            setIsLoadingAll(false);
             return;
         }
 
-        setIsLoadingAll(true);
         let allMembers = [];
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
@@ -790,7 +779,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     });
                     
                     setAllMembersData(allMembers);
-                    setIsLoadingAll(false);
                 }
             };
             
@@ -801,7 +789,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 loadedCount++;
                 if (loadedCount === totalTeams) {
                     setAllMembersData(allMembers);
-                    setIsLoadingAll(false);
                 }
             }
         });
@@ -890,15 +877,6 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 'div',
                 { className: 'text-center py-12 text-gray-500' },
                 'Súpisky tímov nie sú momentálne dostupné.'
-            );
-        }
-
-        if (isLoadingAll) {
-            return React.createElement(
-                'div',
-                { className: 'text-center py-8' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
-                React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, 'Načítavam súpisky...')
             );
         }
 
