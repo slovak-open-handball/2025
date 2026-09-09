@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -614,12 +614,10 @@ const RostersTable = ({ isRostersVisible }) => {
         return '60vh';
     });
     
-    // Dynamická výška tabuľky podľa aktuálnej výšky viewportu
     useEffect(() => {
         let resizeObserver = null;
-        let frame1 = null;
-        let frame2 = null;
-        let frame3 = null;
+        let rafId = null;
+        let rafId2 = null;
         let resizeTimer = null;
     
         const updateTableHeight = () => {
@@ -631,7 +629,6 @@ const RostersTable = ({ isRostersVisible }) => {
     
             const rect = element.getBoundingClientRect();
     
-            // Výpočet priestoru od vrchu tabuľky po spodok viewportu
             const viewportHeight =
                 window.visualViewport?.height || window.innerHeight;
     
@@ -644,60 +641,67 @@ const RostersTable = ({ isRostersVisible }) => {
                 `${Math.max(Math.floor(availableHeight), 200)}px`;
     
             setMaxTableHeight(prev => {
-                if (prev === newHeight) {
-                    return prev;
-                }
-    
-                return newHeight;
+                return prev === newHeight ? prev : newHeight;
             });
         };
     
-        // ---------------------------------------------------------
-        // PRVOTNÉ NASTAVENIE
-        // ---------------------------------------------------------
-        //
-        // Dôležité:
-        // Počkáme na dokončenie viacerých fáz renderovania.
-        // Pri prvom frame ešte nemusí byť ustálená výška/pozícia
-        // všetkých rodičovských elementov.
-        //
-        const initializeHeight = () => {
-            frame1 = requestAnimationFrame(() => {
+        const scheduleUpdate = () => {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+            }
     
-                frame2 = requestAnimationFrame(() => {
+            rafId = requestAnimationFrame(() => {
+                updateTableHeight();
     
-                    frame3 = requestAnimationFrame(() => {
-                        updateTableHeight();
-                    });
-    
+                // Druhé meranie po dokončení layoutu
+                rafId2 = requestAnimationFrame(() => {
+                    updateTableHeight();
                 });
-    
             });
         };
     
-        initializeHeight();
+        // ---------------------------------------------------------
+        // PRVÉ MERANIE
+        // ---------------------------------------------------------
+        //
+        // Jeden RAF často nestačí, pretože React/Tailwind/layout
+        // ešte nemusí byť úplne ustálený.
+        //
+        const initialize = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        updateTableHeight();
+    
+                        // Ešte jedno meranie po ustálení layoutu
+                        requestAnimationFrame(() => {
+                            updateTableHeight();
+                        });
+                    });
+                });
+            });
+        };
+    
+        initialize();
     
         // ---------------------------------------------------------
-        // ZMENA VEĽKOSTI OKNA
+        // WINDOW RESIZE
         // ---------------------------------------------------------
+    
         const handleResize = () => {
             clearTimeout(resizeTimer);
     
-            // Počkáme, kým sa layout po resize ustáli
             resizeTimer = setTimeout(() => {
-                updateTableHeight();
-            }, 30);
+                scheduleUpdate();
+            }, 10);
         };
     
         window.addEventListener('resize', handleResize);
     
         // ---------------------------------------------------------
-        // MOBIL / TABLET - visualViewport
+        // VISUAL VIEWPORT
         // ---------------------------------------------------------
-        //
-        // visualViewport je užitočný napr. pri zmene výšky
-        // dostupného viewportu alebo pri zobrazovaní klávesnice.
-        //
+    
         if (window.visualViewport) {
             window.visualViewport.addEventListener(
                 'resize',
@@ -706,40 +710,39 @@ const RostersTable = ({ isRostersVisible }) => {
         }
     
         // ---------------------------------------------------------
-        // SLEDOVANIE ZMENY LAYOUTU
+        // RESIZE OBSERVER
         // ---------------------------------------------------------
+        //
+        // NESLEDUJEME samotnú tabuľku, pretože jej height meníme
+        // sami. Sledujeme rodičovské elementy.
+        //
+    
         if (window.ResizeObserver) {
             resizeObserver = new ResizeObserver(() => {
-                // ResizeObserver môže byť zavolaný ešte počas layoutu,
-                // preto výpočet presunieme do ďalšieho frame.
-                requestAnimationFrame(() => {
-                    updateTableHeight();
-                });
+                scheduleUpdate();
             });
     
-            // Samotný kontajner
-            if (tableContainerRef.current) {
-                resizeObserver.observe(tableContainerRef.current);
-            }
+            const element = tableContainerRef.current;
     
-            // Rodič tabuľky
-            const parent = tableContainerRef.current?.parentElement;
+            if (element) {
+                const parent = element.parentElement;
     
-            if (parent) {
-                resizeObserver.observe(parent);
-            }
+                if (parent) {
+                    resizeObserver.observe(parent);
     
-            // Ďalší rodič - napr. hlavný biely box
-            const grandParent = parent?.parentElement;
+                    const grandParent = parent.parentElement;
     
-            if (grandParent) {
-                resizeObserver.observe(grandParent);
+                    if (grandParent) {
+                        resizeObserver.observe(grandParent);
+                    }
+                }
             }
         }
     
         // ---------------------------------------------------------
         // CLEANUP
         // ---------------------------------------------------------
+    
         return () => {
             window.removeEventListener('resize', handleResize);
     
@@ -752,16 +755,12 @@ const RostersTable = ({ isRostersVisible }) => {
     
             clearTimeout(resizeTimer);
     
-            if (frame1) {
-                cancelAnimationFrame(frame1);
+            if (rafId) {
+                cancelAnimationFrame(rafId);
             }
     
-            if (frame2) {
-                cancelAnimationFrame(frame2);
-            }
-    
-            if (frame3) {
-                cancelAnimationFrame(frame3);
+            if (rafId2) {
+                cancelAnimationFrame(rafId2);
             }
     
             if (resizeObserver) {
