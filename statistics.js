@@ -636,14 +636,14 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
     const [loadedTeamsCount, setLoadedTeamsCount] = useState(0);
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [isDataReady, setIsDataReady] = useState(false);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
     
-    // Nový stav na sledovanie, či sú štatistiky pripravené
-    const [statsReady, setStatsReady] = useState(false);
-    const [pendingMembers, setPendingMembers] = useState([]);
-    const [pendingStats, setPendingStats] = useState({});
-    const [teamsWithStats, setTeamsWithStats] = useState(new Set());
-    const [totalTeamsWithStats, setTotalTeamsWithStats] = useState(0);
+    // Ref na sledovanie prvého načítania
+    const isFirstLoadComplete = useRef(false);
+    const tempMembersRef = useRef([]);
+    const tempStatsRef = useRef({});
+    const teamsLoadedRef = useRef(new Set());
+    const statsLoadedRef = useRef(new Set());
+    const expectedTeamsCountRef = useRef(0);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
@@ -717,19 +717,47 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         return Array.from(teamsMap.values());
     };
 
-    // Reset stavu pri zmene filtra
-    useEffect(() => {
-        if (!isInitialLoad) {
-            setIsDataReady(false);
-            setStatsReady(false);
-            setLoadedTeamsCount(0);
+    // Funkcia na aktualizáciu a zoradenie tabuľky
+    const updateAndSortTable = () => {
+        const members = tempMembersRef.current;
+        const stats = tempStatsRef.current;
+        
+        if (members.length === 0) {
             setAllMembersData([]);
             setAllStatsData({});
-            setPendingMembers([]);
-            setPendingStats({});
-            setTeamsWithStats(new Set());
+            setIsDataReady(true);
+            setIsLoadingAll(false);
+            return;
         }
-    }, [selectedTeamNameFilter]);
+        
+        // Zoradenie členov podľa gólov
+        const sortedMembers = [...members];
+        sortedMembers.sort((a, b) => {
+            const teamStatsA = stats[a.teamNameDisplay] || {};
+            const teamStatsB = stats[b.teamNameDisplay] || {};
+            const keyA = `${a.type}_${a.originalIndex}`;
+            const keyB = `${b.type}_${b.originalIndex}`;
+            const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+            const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+            
+            if (goalsB !== goalsA) {
+                return goalsB - goalsA;
+            }
+            
+            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+            if (teamCompare !== 0) return teamCompare;
+            
+            const aNum = parseInt(a.jerseyNumber) || 999;
+            const bNum = parseInt(b.jerseyNumber) || 999;
+            return aNum - bNum;
+        });
+        
+        setAllMembersData(sortedMembers);
+        setAllStatsData(stats);
+        setIsDataReady(true);
+        setIsLoadingAll(false);
+        isFirstLoadComplete.current = true;
+    };
 
     // Načítanie členov všetkých tímov
     useEffect(() => {
@@ -757,71 +785,82 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         });
 
         if (sortedTeams.length === 0) {
+            tempMembersRef.current = [];
+            tempStatsRef.current = {};
+            teamsLoadedRef.current = new Set();
+            statsLoadedRef.current = new Set();
             setAllMembersData([]);
+            setAllStatsData({});
             setIsLoadingAll(false);
             setIsDataReady(true);
-            setStatsReady(true);
             setTotalTeamsCount(0);
             setLoadedTeamsCount(0);
-            setTotalTeamsWithStats(0);
+            expectedTeamsCountRef.current = 0;
             return;
         }
 
-        // Reset stavov
-        setIsLoadingAll(true);
-        setIsDataReady(false);
-        setStatsReady(false);
-        setLoadedTeamsCount(0);
-        setTotalTeamsCount(sortedTeams.length);
-        setTotalTeamsWithStats(sortedTeams.length);
+        // Reset stavov - ale ponecháme existujúce dáta ak už boli načítané
+        const wasFirstLoad = isFirstLoadComplete.current;
         
-        let allMembers = [];
+        // Resetujeme len ak ide o nové dáta (filter alebo prvé načítanie)
+        if (!wasFirstLoad || selectedTeamNameFilter) {
+            tempMembersRef.current = [];
+            tempStatsRef.current = {};
+            teamsLoadedRef.current = new Set();
+            statsLoadedRef.current = new Set();
+            setIsDataReady(false);
+            setIsLoadingAll(true);
+        }
+        
+        setTotalTeamsCount(sortedTeams.length);
+        expectedTeamsCountRef.current = sortedTeams.length;
+        
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
         const newUnsubscribes = [];
-        const teamLoadedStatus = {};
-        let statsLoadedCount = 0;
-        const teamStatsLoaded = new Set();
         
-        // Dočasné ukladanie členov a štatistík
-        let tempMembers = [];
-        let tempStats = {};
-
         // Funkcia na kontrolu, či sú všetky dáta načítané
         const checkAllDataLoaded = () => {
-            // Musia byť načítané všetky súpisky A všetky štatistiky
-            const allRostersLoaded = loadedCount === totalTeams;
-            const allStatsLoaded = statsLoadedCount === totalTeams;
+            const allRostersLoaded = teamsLoadedRef.current.size === expectedTeamsCountRef.current;
+            const allStatsLoaded = statsLoadedRef.current.size === expectedTeamsCountRef.current;
             
-            if (allRostersLoaded && allStatsLoaded && totalTeams > 0) {
-                // Teraz máme všetky dáta - môžeme ich zoradiť a zobraziť
-                const sortedMembers = [...tempMembers];
-                sortedMembers.sort((a, b) => {
-                    const teamStatsA = tempStats[a.teamNameDisplay] || {};
-                    const teamStatsB = tempStats[b.teamNameDisplay] || {};
-                    const keyA = `${a.type}_${a.originalIndex}`;
-                    const keyB = `${b.type}_${b.originalIndex}`;
-                    const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
-                    const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+            if (allRostersLoaded && allStatsLoaded && expectedTeamsCountRef.current > 0) {
+                // Všetky dáta sú načítané - aktualizujeme a zoradíme tabuľku
+                updateAndSortTable();
+            } else if (allRostersLoaded && expectedTeamsCountRef.current > 0) {
+                // Súpisky sú načítané, ale ešte nie všetky štatistiky
+                // Zobrazíme zatiaľ neúplné dáta, aby sa nezobrazoval loading
+                if (tempMembersRef.current.length > 0 && !isFirstLoadComplete.current) {
+                    // Prvé načítanie - zobrazíme dáta hneď ako máme aspoň nejaké
+                    const members = tempMembersRef.current;
+                    const stats = tempStatsRef.current;
                     
-                    if (goalsB !== goalsA) {
-                        return goalsB - goalsA;
-                    }
+                    const sortedMembers = [...members];
+                    sortedMembers.sort((a, b) => {
+                        const teamStatsA = stats[a.teamNameDisplay] || {};
+                        const teamStatsB = stats[b.teamNameDisplay] || {};
+                        const keyA = `${a.type}_${a.originalIndex}`;
+                        const keyB = `${b.type}_${b.originalIndex}`;
+                        const goalsA = (teamStatsA[keyA] && teamStatsA[keyA].goals) || 0;
+                        const goalsB = (teamStatsB[keyB] && teamStatsB[keyB].goals) || 0;
+                        
+                        if (goalsB !== goalsA) {
+                            return goalsB - goalsA;
+                        }
+                        
+                        const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+                        if (teamCompare !== 0) return teamCompare;
+                        
+                        const aNum = parseInt(a.jerseyNumber) || 999;
+                        const bNum = parseInt(b.jerseyNumber) || 999;
+                        return aNum - bNum;
+                    });
                     
-                    const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-                    if (teamCompare !== 0) return teamCompare;
-                    
-                    const aNum = parseInt(a.jerseyNumber) || 999;
-                    const bNum = parseInt(b.jerseyNumber) || 999;
-                    return aNum - bNum;
-                });
-                
-                setAllMembersData(sortedMembers);
-                setAllStatsData(tempStats);
-                setIsLoadingAll(false);
-                setIsDataReady(true);
-                setStatsReady(true);
-                setIsInitialLoad(false);
+                    setAllMembersData(sortedMembers);
+                    setAllStatsData(stats);
+                    setIsDataReady(true);
+                    setIsLoadingAll(false);
+                }
             }
         };
 
@@ -829,7 +868,13 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             const teamName = teamGroup.teamName;
             const categoryName = teamGroup.category;
             const teamKey = `${teamName}_${categoryName}`;
-            teamLoadedStatus[teamKey] = false;
+            
+            // Ak už máme tento tím načítaný, preskočíme
+            if (teamsLoadedRef.current.has(teamKey) && statsLoadedRef.current.has(teamKey)) {
+                loadedCount++;
+                setLoadedTeamsCount(loadedCount);
+                return;
+            }
             
             const handleMembersUpdate = (members) => {
                 const membersWithTeamInfo = members.map(m => ({
@@ -837,30 +882,68 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                     teamNameDisplay: teamName,
                     categoryNameDisplay: categoryName
                 }));
+                
                 // Pridáme do dočasného poľa
-                tempMembers = [...tempMembers, ...membersWithTeamInfo];
-                loadedCount++;
-                setLoadedTeamsCount(loadedCount);
-                checkAllDataLoaded();
-            };
-            
-            const handleStatsLoaded = (teamName, loaded) => {
-                if (!teamStatsLoaded.has(teamName)) {
-                    teamStatsLoaded.add(teamName);
-                    statsLoadedCount++;
-                    setLoadedTeamsCount(prev => Math.max(prev, statsLoadedCount));
+                const existingMembers = tempMembersRef.current.filter(
+                    m => !(m.teamNameDisplay === teamName && m.categoryNameDisplay === categoryName)
+                );
+                tempMembersRef.current = [...existingMembers, ...membersWithTeamInfo];
+                
+                if (!teamsLoadedRef.current.has(teamKey)) {
+                    teamsLoadedRef.current.add(teamKey);
+                    loadedCount++;
+                    setLoadedTeamsCount(loadedCount);
                 }
+                
+                // Ak ešte nemáme štatistiky pre tento tím, vytvoríme prázdne
+                if (!statsLoadedRef.current.has(teamKey)) {
+                    const emptyStats = {};
+                    membersWithTeamInfo.forEach((member) => {
+                        const memberKey = `${member.type}_${member.originalIndex}`;
+                        emptyStats[memberKey] = {
+                            goals: 0,
+                            convertedPenalties: 0,
+                            missedPenalties: 0,
+                            yellowCards: 0,
+                            redCards: 0,
+                            blueCards: 0,
+                            exclusions: 0,
+                            dbArrayName: member.dbArrayName,
+                            dbIndex: member.originalIndex,
+                            name: `${member.firstName} ${member.lastName}`.trim(),
+                            jerseyNumber: member.jerseyNumber || '',
+                            memberType: member.type,
+                            teamName: member.teamName,
+                            categoryName: member.categoryName
+                        };
+                    });
+                    tempStatsRef.current = {
+                        ...tempStatsRef.current,
+                        [teamName]: emptyStats
+                    };
+                }
+                
                 checkAllDataLoaded();
             };
             
             const handleStatsUpdate = (teamName, stats) => {
-                // Uložíme štatistiky do dočasného objektu
-                tempStats = {
-                    ...tempStats,
+                tempStatsRef.current = {
+                    ...tempStatsRef.current,
                     [teamName]: stats
                 };
-                // Aktualizujeme pendingStats pre prípad, že by sme potrebovali re-render
-                setPendingStats(tempStats);
+                
+                // Ak už sú dáta zobrazené, aktualizujeme ich
+                if (isDataReady && allMembersData.length > 0) {
+                    updateAndSortTable();
+                }
+            };
+            
+            const handleStatsLoaded = (teamName, loaded) => {
+                const key = `${teamName}_${categoryName}`;
+                if (!statsLoadedRef.current.has(key)) {
+                    statsLoadedRef.current.add(key);
+                }
+                checkAllDataLoaded();
             };
             
             try {
@@ -868,8 +951,11 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                 newUnsubscribes.push(unsub);
             } catch (error) {
                 console.error(`[loadTeamMembers] Chyba pre ${teamName}:`, error);
-                loadedCount++;
-                setLoadedTeamsCount(loadedCount);
+                if (!teamsLoadedRef.current.has(teamKey)) {
+                    teamsLoadedRef.current.add(teamKey);
+                    loadedCount++;
+                    setLoadedTeamsCount(loadedCount);
+                }
                 checkAllDataLoaded();
             }
         });
@@ -885,14 +971,20 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
     // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats) => {
-        // Táto funkcia sa volá z TeamStatsCollector - aktualizujeme stav
+        // Aktualizujeme stav
         setAllStatsData(prev => {
             const newStats = {
                 ...prev,
                 [teamName]: stats
             };
             
-            // Ak už sú dáta pripravené, môžeme aktualizovať poradie
+            // Aktualizujeme aj dočasný stav
+            tempStatsRef.current = {
+                ...tempStatsRef.current,
+                [teamName]: stats
+            };
+            
+            // Ak už sú dáta pripravené, aktualizujeme poradie
             if (allMembersData.length > 0 && isDataReady) {
                 const sortedMembers = [...allMembersData];
                 sortedMembers.sort((a, b) => {
@@ -923,7 +1015,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
 
     // Callback pre načítanie štatistík tímu
     const handleStatsLoaded = (teamName, loaded) => {
-        // Tento callback sa volá z TeamStatsCollector, keď sú štatistiky načítané
+        // Tento callback sa volá z TeamStatsCollector
     };
 
     // Renderovanie kolektorov pre každý tím
@@ -953,28 +1045,7 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
         });
     };
 
-    // Zobrazenie loading stavu
-    const renderLoading = () => {
-        return React.createElement(
-            'div',
-            { className: 'flex flex-col items-center justify-center py-16' },
-            React.createElement('div', { 
-                className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4' 
-            }),
-            React.createElement(
-                'p', 
-                { className: 'text-gray-600 text-base' },
-                'Načítavam súpisky a štatistiky...'
-            ),
-            totalTeamsCount > 0 && React.createElement(
-                'p',
-                { className: 'text-gray-400 text-sm mt-2' },
-                `Načítaných ${loadedTeamsCount} z ${totalTeamsCount} tímov`
-            )
-        );
-    };
-
-    // Zobrazenie tabuľky
+    // Zobrazenie tabuľky - už bez loading stavu, zobrazuje sa priamo
     const renderTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
@@ -984,16 +1055,48 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
             );
         }
 
-        // Zobrazíme loading, kým nie sú dáta pripravené
-        if (!isDataReady || !statsReady || isLoadingAll) {
-            return renderLoading();
+        // Prvé načítanie - zobrazíme loading len na začiatku
+        if (!isFirstLoadComplete.current && isLoadingAll) {
+            return React.createElement(
+                'div',
+                { className: 'flex flex-col items-center justify-center py-16' },
+                React.createElement('div', { 
+                    className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4' 
+                }),
+                React.createElement(
+                    'p', 
+                    { className: 'text-gray-600 text-base' },
+                    'Načítavam súpisky a štatistiky...'
+                ),
+                totalTeamsCount > 0 && React.createElement(
+                    'p',
+                    { className: 'text-gray-400 text-sm mt-2' },
+                    `Načítaných ${loadedTeamsCount} z ${totalTeamsCount} tímov`
+                )
+            );
         }
 
-        if (allMembersData.length === 0) {
+        if (allMembersData.length === 0 && !isLoadingAll) {
             return React.createElement(
                 'div',
                 { className: 'text-center py-16 text-gray-500' },
                 'Žiadni členovia neboli nájdení.'
+            );
+        }
+
+        // Ak máme dáta, zobrazíme tabuľku (aj počas aktualizácie)
+        if (allMembersData.length === 0 && isLoadingAll) {
+            return React.createElement(
+                'div',
+                { className: 'flex flex-col items-center justify-center py-16' },
+                React.createElement('div', { 
+                    className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4' 
+                }),
+                React.createElement(
+                    'p', 
+                    { className: 'text-gray-600 text-base' },
+                    'Načítavam dáta...'
+                )
             );
         }
 
@@ -1082,21 +1185,11 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         const totalPenalties = (stats.convertedPenalties || 0) + (stats.missedPenalties || 0);
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties || 0}/${totalPenalties}` : '';
                         
-                        const memberIcon = member.type === 'Hráč' 
-                            ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-xs' })
-                            : (member.type === 'Člen RT (muž)' 
-                                ? React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 text-xs' })
-                                : (member.type === 'Člen RT (žena)'
-                                    ? React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 text-xs' })
-                                    : React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs' })));
-                        
-                        // Zvýraznenie riadkov s gólmi
                         const hasGoals = (stats.goals || 0) > 0;
                         const rowClass = idx % 2 === 0 
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
                         
-                        // Poradie podľa gólov (zobrazenie čísla poradia)
                         const rank = idx + 1;
                         
                         return React.createElement(
