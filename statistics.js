@@ -281,6 +281,13 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchTeamMap = {};
         let isSubscribed = true;
     
+        // Vytvoríme mapovanie pre rýchle vyhľadávanie členov podľa dbArrayName a originalIndex
+        const memberLookupMap = {};
+        rosterData.forEach((member) => {
+            const key = `${member.dbArrayName}_${member.originalIndex}`;
+            memberLookupMap[key] = member;
+        });
+    
         const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
             rosterData.forEach((member, idx) => {
@@ -307,15 +314,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const eventData = doc.data();
                 const matchId = eventData.matchId;
                 
+                // Kontrola kategórie - udalosť musí byť v rovnakej kategórii ako tím
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     return;
                 }
                 
+                // Získame informácie o zápase z mapovania
                 const matchInfo = matchTeamMap[matchId];
                 if (!matchInfo) {
                     return;
                 }
                 
+                // Zistíme, či udalosť patrí nášmu tímu
                 let isOurTeam = false;
                 const fullTeamName = currentTeamName;
                 const homeTeam = matchInfo.homeTeam || '';
@@ -335,20 +345,33 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     return;
                 }
                 
-                let foundMemberKey = null;
-                for (const [memberKey, stat] of Object.entries(stats)) {
-                    if (stat.dbArrayName === eventData.memberTypeKey && stat.dbIndex === eventData.memberIndex) {
-                        foundMemberKey = memberKey;
-                        break;
-                    }
-                }
+                // --- DÔLEŽITÁ ZMENA: Použijeme memberTypeKey a memberIndex na priradenie ---
+                // V teams.js sa používa memberTypeKey (napr. 'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails')
+                // a memberIndex (index v poli)
+                const memberTypeKey = eventData.memberTypeKey;
+                const memberIndex = eventData.memberIndex;
                 
-                if (!foundMemberKey) {
+                if (memberTypeKey === undefined || memberIndex === undefined) {
                     return;
                 }
                 
-                const stat = stats[foundMemberKey];
+                // Nájdeme člena pomocou mapovania
+                const lookupKey = `${memberTypeKey}_${memberIndex}`;
+                const foundMember = memberLookupMap[lookupKey];
                 
+                if (!foundMember) {
+                    return;
+                }
+                
+                // Nájdeme štatistiky pre tohto člena
+                const memberKey = `${foundMember.type}_${foundMember.originalIndex}`;
+                const stat = stats[memberKey];
+                
+                if (!stat) {
+                    return;
+                }
+                
+                // Pripočítame štatistiky podľa typu udalosti
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
