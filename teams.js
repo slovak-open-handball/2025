@@ -956,6 +956,12 @@ const renderTeamDetails = () => {
         if (foundId) categoryId = foundId;
     }
 
+    // Zistíme, či je nejaké tlačidlo modré (vybrané)
+    // T.j. či máme vybranú kategóriu a tím
+    const isAnyButtonSelected = hasCategoryInUrl && 
+                                selectedTeamDetails.category !== null &&
+                                selectedTeamDetails.category !== undefined;
+
     return React.createElement(
         'div',
         { className: 'w-full' },
@@ -1027,7 +1033,8 @@ const renderTeamDetails = () => {
                 `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
             )
         ),
-        isMatchesVisible ? React.createElement(TeamMatchesList, {
+        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
+        (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || '',
             categoryId: categoryId
@@ -2316,6 +2323,12 @@ const TeamsOverviewApp = (props) => {
             if (foundId) categoryId = foundId;
         }
     
+        // Zistíme, či je nejaké tlačidlo modré (vybrané)
+        // T.j. či máme vybranú kategóriu a tím
+        const isAnyButtonSelected = hasCategoryInUrl && 
+                                    selectedTeamDetails.category !== null &&
+                                    selectedTeamDetails.category !== undefined;
+    
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -2387,7 +2400,8 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            isMatchesVisible ? React.createElement(TeamMatchesList, {
+            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
+            (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId
