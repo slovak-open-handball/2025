@@ -1126,24 +1126,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     );
 };
 
-// ============================================================
-// UPRAVENÁ FUNKCIA renderTeamDetails - vložte TeamMatchesList
-// ============================================================
-
-// Pôvodná funkcia renderTeamDetails v teams.js bola takáto:
-// const renderTeamDetails = () => {
-//     if (!selectedTeamDetails) return null;
-//     ...
-//     return React.createElement(
-//         'div',
-//         { className: 'w-full' },
-//         ... (box s kategóriami) ...
-//         renderTeamRoster()
-//     );
-// };
-
-// UPRAVENÁ VERZIA - medzi box s kategóriami a súpisku vkladáme TeamMatchesList:
-
 const renderTeamDetails = () => {
     if (!selectedTeamDetails) return null;
 
@@ -1156,7 +1138,6 @@ const renderTeamDetails = () => {
         return slovakCollator.compare(a.teamName, b.teamName);
     });
 
-    // Získame categoryId pre vybranú kategóriu
     let categoryId = null;
     const currentCategoryName = selectedTeamDetails.category || categoryFromUrl;
     if (currentCategoryName) {
@@ -1192,7 +1173,6 @@ const renderTeamDetails = () => {
                 )
             )
         ),
-        // --- BOX S KATEGÓRIAMI (pôvodný) ---
         React.createElement(
             'div',
             { className: 'bg-white rounded-xl shadow-xl p-6' },
@@ -1236,13 +1216,13 @@ const renderTeamDetails = () => {
                 `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
             )
         ),
-        // --- NOVÝ KOMPONENT: ZÁPASY TÍMU (vložený medzi kategórie a súpisku) ---
-        React.createElement(TeamMatchesList, {
+        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená) ---
+        isMatchesVisible ? React.createElement(TeamMatchesList, {
             teamName: selectedTeamDetails.teamName,
             categoryName: selectedTeamDetails.category || categoryFromUrl || '',
             categoryId: categoryId
-        }),
-        // --- SÚPISKA TÍMU (pôvodná) ---
+        }) : null,
+        // --- SÚPISKA TÍMU ---
         renderTeamRoster()
     );
 };
@@ -1294,13 +1274,20 @@ const TeamsOverviewApp = (props) => {
     const [rosterCategoryName, setRosterCategoryName] = useState('');
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const [updateTrigger, setUpdateTrigger] = useState(0);   
+    const [updateTrigger, setUpdateTrigger] = useState(0);
 
     // --- STAV PRE VIDITEĽNOSŤ SÚPISIEK ---
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['rosters'] && 
         window.pagesVisibility['rosters'].visible === true
+    );
+
+    // --- STAV PRE VIDITEĽNOSŤ MATCHES ---
+    const [isMatchesVisible, setIsMatchesVisible] = useState(
+        window.pagesVisibility && 
+        window.pagesVisibility['matches'] && 
+        window.pagesVisibility['matches'].visible === true
     );
 
     // --- REAL-TIME LISTENER PRE ZMENY VIDITEĽNOSTI SÚPISIEK ---
@@ -1319,18 +1306,27 @@ const TeamsOverviewApp = (props) => {
         const pagesRef = collection(window.db, 'pages');
         const unsubscribe = onSnapshot(pagesRef, (snapshot) => {
             let rostersVisible = false;
+            let matchesVisible = false;
             
             snapshot.forEach((doc) => {
                 if (doc.id === 'rosters') {
                     const data = doc.data();
                     rostersVisible = data.visible === true;
                 }
+                if (doc.id === 'matches') {
+                    const data = doc.data();
+                    matchesVisible = data.visible === true;
+                }
             });
             
             if (!window.pagesVisibility) window.pagesVisibility = {};
             window.pagesVisibility['rosters'] = { visible: rostersVisible };
+            window.pagesVisibility['matches'] = { visible: matchesVisible };
+            
             setIsRostersVisible(rostersVisible);
+            setIsMatchesVisible(matchesVisible);
         }, (error) => {
+            console.error('[TeamsOverviewApp] Chyba pri počúvaní pages:', error);
         });
 
         return () => {
@@ -2664,26 +2660,23 @@ const TeamsOverviewApp = (props) => {
 
     const renderTeamDetails = () => {
         if (!selectedTeamDetails) return null;
-
+    
         const categoryFromUrl = getCategoryFromUrl();
         const hasCategoryInUrl = !!categoryFromUrl;
-
+    
         const sortedOccurrences = [...selectedTeamDetails.occurrences].sort((a, b) => {
             const categoryCompare = slovakCollator.compare(a.category, b.category);
-            if (categoryCompare !== 0) {
-                return categoryCompare;
-            }
+            if (categoryCompare !== 0) return categoryCompare;
             return slovakCollator.compare(a.teamName, b.teamName);
         });
-
-        // Získame categoryId pre vybranú kategóriu
+    
         let categoryId = null;
         const currentCategoryName = selectedTeamDetails.category || categoryFromUrl;
         if (currentCategoryName) {
             const foundId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === currentCategoryName);
             if (foundId) categoryId = foundId;
         }
-
+    
         return React.createElement(
             'div',
             { className: 'w-full' },
@@ -2712,7 +2705,6 @@ const TeamsOverviewApp = (props) => {
                     )
                 )
             ),
-            // --- BOX S KATEGÓRIAMI ---
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-xl shadow-xl p-6' },
@@ -2734,7 +2726,6 @@ const TeamsOverviewApp = (props) => {
                                            occ.teamName === selectedTeamDetails.teamName;
                             }
                         }
-                        
                         const buttonLabel = `${occ.category} | ${occ.teamName}`;
                         return React.createElement(
                             'button',
@@ -2757,12 +2748,12 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // --- NOVÝ KOMPONENT: ZÁPASY TÍMU ---
-            React.createElement(TeamMatchesList, {
+            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená) ---
+            isMatchesVisible ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
                 categoryId: categoryId
-            }),
+            }) : null,
             // --- SÚPISKA TÍMU ---
             renderTeamRoster()
         );
