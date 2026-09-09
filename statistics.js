@@ -963,7 +963,7 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // Použijeme už zoradených členov zo stavu (bez duplicít)
+        // POUŽIJEME VŽDY sortedMembers (ak existujú), NIE allMembersData
         const displayMembers = sortedMembers.length > 0 ? sortedMembers : allMembersData;
 
         // Najprv zistíme, koľko členov má góly
