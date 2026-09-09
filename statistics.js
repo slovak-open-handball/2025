@@ -285,9 +285,11 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const eventData = doc.data();
                 const matchId = eventData.matchId;
                 
+                // --- PRIDANÁ KONTROLA KATEGÓRIE (rovnako ako v teams.js) ---
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     return;
                 }
+                // -----------------------------------------------------------
                 
                 const matchInfo = matchTeamMap[matchId];
                 if (!matchInfo) {
