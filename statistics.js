@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const { useState, useEffect, useMemo } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -844,6 +844,7 @@ const RostersTable = ({ isRostersVisible }) => {
     // ZORADENIE - používame displayMembers s memoizáciou
     const displayMembers = useMemo(() => {
         console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
+        console.log('[RostersTable] Nové poradie pripravené (trigger:', statsUpdateTrigger, ')');
         
         if (!isStatsReady || allMembersData.length === 0) {
             console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
@@ -906,40 +907,8 @@ const RostersTable = ({ isRostersVisible }) => {
         return result;
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]);
 
-    // Použijeme ref na uchovanie posledného platného poradia
-    const stableDisplayMembersRef = useRef([]);
-    // Ref na sledovanie posledného triggera
-    const lastTriggerRef = useRef(0);
-
-    // Získame stabilné poradie - TERAZ VŽDY VRÁTIME displayMembers, KEĎ SA ZMENIL TRIGGER
-    const getStableDisplayMembers = useCallback(() => {
-        // Ak nemáme dáta, vrátime prázdne pole
-        if (displayMembers.length === 0) {
-            return [];
-        }
-
-        // AK SA ZMENIL TRIGGER, VŽDY AKTUALIZUJEME PORADIE
-        if (statsUpdateTrigger !== lastTriggerRef.current) {
-            console.log('[RostersTable] Trigger sa zmenil - aktualizujem poradie (trigger:', statsUpdateTrigger, ')');
-            lastTriggerRef.current = statsUpdateTrigger;
-            stableDisplayMembersRef.current = displayMembers;
-            return displayMembers;
-        }
-
-        // Ak sa trigger nezmenil, vrátime predchádzajúce poradie
-        // (ale ak je prázdne, nastavíme ho)
-        if (stableDisplayMembersRef.current.length === 0) {
-            console.log('[RostersTable] Prvé načítanie - nastavujem poradie');
-            stableDisplayMembersRef.current = displayMembers;
-            lastTriggerRef.current = statsUpdateTrigger;
-            return displayMembers;
-        }
-
-        return stableDisplayMembersRef.current;
-    }, [displayMembers, statsUpdateTrigger]);
-
-    // Získame stabilné poradie
-    const stableDisplayMembers = getStableDisplayMembers();
+    // Používame priamo vypočítané poradie - UI sa vždy prekreslí podľa aktuálnych dát
+    const stableDisplayMembers = displayMembers;
 
     // Zobrazenie tabuľky - používa stableDisplayMembers
     const renderTable = () => {
