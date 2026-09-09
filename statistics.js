@@ -439,8 +439,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     
             const listeners = [];
             let processedChunks = 0;
-            const combinedStats = {};
-    
+            
             chunks.forEach((chunk, index) => {
                 
                 const eventsRef = collection(window.db, 'matchEvents');
@@ -450,6 +449,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 );
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {                    
+                    // VYNULUJEME combinedStats PRE KAŽDÝ CHUNK - TOTO JE KĽÚČOVÉ!
+                    const combinedStats = {};
+                    
                     const chunkStats = calculateStatsFromEvents(eventsSnapshot);
                     
                     Object.entries(chunkStats).forEach(([memberKey, stat]) => {
@@ -482,7 +484,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     
                     processedChunks++;
     
-                    if (processedChunks === chunks.length) {                        
+                    if (processedChunks === chunks.length) {
+                        // VYNULUJEME SPOLOČNÉ ŠTATISTIKY - TOTO JE KĽÚČOVÉ!
                         const finalStats = {};
                         Object.entries(combinedStats).forEach(([memberKey, stat]) => {
                             finalStats[memberKey] = {
@@ -505,25 +508,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         setMembersStats(finalStats);
                         if (onStatsUpdate) onStatsUpdate(teamName, finalStats);
                         processedChunks = 0;
-                        
-                        Object.keys(combinedStats).forEach(key => {
-                            combinedStats[key] = {
-                                goals: 0,
-                                convertedPenalties: 0,
-                                missedPenalties: 0,
-                                yellowCards: 0,
-                                redCards: 0,
-                                blueCards: 0,
-                                exclusions: 0,
-                                dbArrayName: combinedStats[key].dbArrayName,
-                                dbIndex: combinedStats[key].dbIndex,
-                                name: combinedStats[key].name,
-                                jerseyNumber: combinedStats[key].jerseyNumber,
-                                memberType: combinedStats[key].memberType,
-                                teamName: combinedStats[key].teamName,
-                                categoryName: combinedStats[key].categoryName
-                            };
-                        });
                     }
                 }, (error) => {
                     processedChunks++;
