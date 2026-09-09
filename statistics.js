@@ -3,7 +3,7 @@ import React from "https://esm.sh/react@18.2.0";
 import ReactDOM from "https://esm.sh/react-dom@18.2.0";
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, getDocs, setDoc, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 const listeners = new Set();
 
 // Stabilná notifikácia cez portál
@@ -186,9 +186,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const hasReloadedRef = useRef(false);
-    const initialGoalsCountRef = useRef(0);
-    const isFirstEventsProcessedRef = useRef(false);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -262,13 +259,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let isFirstLoad = true;
         let matchTeamMap = {};
     
-        const calculateStatsFromEvents = (eventsSnapshot) => {
-            // Resetujeme príznaky pri každom novom výpočte
-            // (ale iba ak ešte neboli spracované prvé udalosti)
-            if (!isFirstEventsProcessedRef.current) {
-                initialGoalsCountRef.current = 0;
-            }
-            
+        const calculateStatsFromEvents = (eventsSnapshot) => {            
             const stats = {};
             rosterData.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -289,8 +280,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     categoryName: member.categoryName
                 };
             });
-        
-            let totalGoals = 0;
         
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
@@ -378,7 +367,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
-                        totalGoals++;
                         if (eventData.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
                         }
@@ -400,31 +388,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         break;
                 }
             });
-
-            // --- KONTROLA PRVÉHO GÓLU A OBNOVENIE STRÁNKY ---
-            // Ak ešte nebolo obnovené a už máme spracované prvé udalosti
-            if (!hasReloadedRef.current && isFirstEventsProcessedRef.current) {
-                // Ak pri prvom načítaní neboli žiadne góly a teraz nejaké sú
-                if (initialGoalsCountRef.current === 0 && totalGoals > 0) {
-                    // Prvý gól bol pridaný - obnovíme stránku
-                    hasReloadedRef.current = true;
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 100);
-                }
-            }
-
-            // Ak ešte neboli spracované prvé udalosti
-            if (!isFirstEventsProcessedRef.current) {
-                // Uložíme počet gólov pri prvom načítaní
-                initialGoalsCountRef.current = totalGoals;
-                isFirstEventsProcessedRef.current = true;
-                
-                // Ak pri prvom načítaní už boli góly, zablokujeme obnovenie
-                if (totalGoals > 0) {
-                    hasReloadedRef.current = true;
-                }
-            }
         
             return stats;
         };
@@ -462,9 +425,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 });
                 setMembersStats(emptyStats);
                 if (onStatsUpdate) onStatsUpdate(teamName, emptyStats);
-                // Označíme, že prvé udalosti boli spracované
-                isFirstEventsProcessedRef.current = true;
-                initialGoalsCountRef.current = 0;
                 return;
             }
     
@@ -606,8 +566,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
-                // Resetujeme príznak prvého načítania udalostí
-                isFirstEventsProcessedRef.current = false;
                 setupEventsListener(newMatchIdsArray);
             }
         };
@@ -650,38 +608,19 @@ const RostersTable = ({ isRostersVisible }) => {
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
-    useLayoutEffect(() => {
+    // Nastavenie výšky tabuľky
+    useEffect(() => {
         const updateHeight = () => {
             if (tableContainerRef.current) {
                 const rect = tableContainerRef.current.getBoundingClientRect();
-                if (rect.top === 0 && rect.height === 0) {
-                    requestAnimationFrame(() => updateHeight());
-                    return;
-                }
                 const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
                 setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
             }
         };
-    
-        const timeoutId = setTimeout(() => {
-            updateHeight();
-        }, 50);
-    
+
+        updateHeight();
         window.addEventListener('resize', updateHeight);
-        
-        const resizeObserver = new ResizeObserver(() => {
-            updateHeight();
-        });
-        
-        if (tableContainerRef.current) {
-            resizeObserver.observe(tableContainerRef.current);
-        }
-        
-        return () => {
-            clearTimeout(timeoutId);
-            window.removeEventListener('resize', updateHeight);
-            resizeObserver.disconnect();
-        };
+        return () => window.removeEventListener('resize', updateHeight);
     }, [allMembersData]);
 
     // Načítanie tímov
