@@ -220,6 +220,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
     
     useEffect(() => {
         let timeoutId = null;
+        let unsub = null;
         
         const loadRoster = () => {
             setIsLoading(true);
@@ -230,7 +231,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
             };
             
             try {
-                const unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
+                unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 setUnsubscribe(() => unsub);
             } catch (error) {
                 console.error(`[TeamRosterItem] Chyba pri načítaní súpisky pre ${teamName}:`, error);
@@ -246,9 +247,9 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
         loadRoster();
         
         return () => {
-            if (unsubscribe) {
+            if (unsub) {
                 try {
-                    unsubscribe();
+                    unsub();
                 } catch (e) {}
             }
             if (timeoutId) {
@@ -361,7 +362,7 @@ const TeamRosterItem = ({ teamName, cleanName, categoryName }) => {
         React.createElement(
             'div',
             { className: 'p-3' },
-            renderRasterTable()
+            renderRosterTable()  // <-- OPRAVENÉ: teraz je to renderRosterTable
         )
     );
 };
