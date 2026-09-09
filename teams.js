@@ -943,7 +943,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32' }, 'Miesto'),
                         React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
-                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'Stav')
+                        React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, '')
                     )
                 ),
                 React.createElement(
@@ -1034,19 +1034,6 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
                                         className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                         style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
                                     }, match.groupName)
-                                );
-                            }
-                            let categoryDisplayTag = match.categoryName;
-                            if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
-                                categoryDisplayTag = categoriesData[match.categoryId];
-                            }
-                            if (categoryDisplayTag) {
-                                infoTags.push(
-                                    React.createElement('span', {
-                                        key: 'category',
-                                        className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                        style: { backgroundColor: lighterCategoryColor, color: categoryColor, fontWeight: '500' }
-                                    }, categoryDisplayTag)
                                 );
                             }
 
