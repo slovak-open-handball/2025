@@ -834,22 +834,6 @@ const RostersTable = ({ isRostersVisible }) => {
 
     const displayMembers = useMemo(() => {
         if (!isStatsReady || allMembersData.length === 0) return [];
-        
-        const goalsScorers = [];
-        const nonScorers = [];
-    
-        allMembersData.forEach(member => {
-            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${member.type}_${member.originalIndex}`;
-            const goals = Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0);
-            
-            if (goals > 0) {
-                goalsScorers.push(member);
-            } else {
-                nonScorers.push(member);
-            }
-        });
     
         // Zoradíme strelcov podľa gólov (zostupne)
         goalsScorers.sort((a, b) => {
@@ -895,7 +879,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 'Súpisky tímov nie sú momentálne dostupné.'
             );
         }
-
+    
         // Čakáme kým sú načítané všetky dáta
         if (allMembersData.length === 0 || !isStatsReady) {
             const progressText = totalTeamsCount > 0 
@@ -909,69 +893,15 @@ const RostersTable = ({ isRostersVisible }) => {
                 React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
             );
         }
-
-        // ROZDELÍME HRÁČOV NA STRELCOV A OSTATNÝCH (RUČNE, BEZ SORT)
-        const goalsScorers = [];
-        const nonScorers = [];
-
-        allMembersData.forEach(member => {
-            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${member.type}_${member.originalIndex}`;
-            const goals = Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0);
-            
-            if (goals > 0) {
-                goalsScorers.push(member);
-            } else {
-                nonScorers.push(member);
-            }
-        });
-
-        // Zoradíme strelcov podľa gólov (zostupne)
-        goalsScorers.sort((a, b) => {
-            const keyA = `${a.teamNameDisplay}_${a.categoryNameDisplay}`;
-            const keyB = `${b.teamNameDisplay}_${b.categoryNameDisplay}`;
-            const teamStatsA = allStatsData[keyA] || {};
-            const teamStatsB = allStatsData[keyB] || {};
-            const memberKeyA = `${a.type}_${a.originalIndex}`;
-            const memberKeyB = `${b.type}_${b.originalIndex}`;
-            const goalsA = Number((teamStatsA[memberKeyA] && teamStatsA[memberKeyA].goals) || 0);
-            const goalsB = Number((teamStatsB[memberKeyB] && teamStatsB[memberKeyB].goals) || 0);
-            
-            if (goalsB !== goalsA) return goalsB - goalsA;
-            
-            // Ak majú rovnaké góly, zoradíme podľa tímu
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            
-            // Potom podľa mena
-            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-        });
-
-        // Zoradíme ostatných podľa abecedy (tím, meno, číslo dresu)
-        nonScorers.sort((a, b) => {
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            
-            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-            if (nameCompare !== 0) return nameCompare;
-            
-            const aNum = parseInt(a.jerseyNumber) || 999;
-            const bNum = parseInt(b.jerseyNumber) || 999;
-            return aNum - bNum;
-        });
-
-        // SPOJÍME - STRELCI VŽDY PRED OSTATNÝMI!
-        const displayMembers = [...goalsScorers, ...nonScorers];
-
-        // Najprv zistíme, koľko členov má góly (iba strelci)
+    
+        // Namiesto toho použijeme existujúci displayMembers z useMemo
         const membersWithGoals = displayMembers.filter(m => {
             const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
             const memberKey = `${m.type}_${m.originalIndex}`;
             return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
         });
-
+    
         return React.createElement(
             'div',
             { 
@@ -985,7 +915,7 @@ const RostersTable = ({ isRostersVisible }) => {
                     className: 'w-full border-collapse bg-white text-sm',
                     style: { minWidth: '900px' }
                 },
-                // HLAVIČKA TABUĽKY
+                // HLAVIČKA TABUĽKY (rovnaká)
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-100 sticky top-0 z-20' },
@@ -1063,10 +993,8 @@ const RostersTable = ({ isRostersVisible }) => {
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
                         
-                        // Správne poradie - len pre tých, čo majú góly
                         let rank = '';
                         if (hasGoals) {
-                            // Nájdeme poradie medzi strelcami
                             const goalRank = membersWithGoals.findIndex(m => {
                                 const mKey = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
                                 const mStats = allStatsData[mKey] || {};
