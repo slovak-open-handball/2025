@@ -187,8 +187,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const firstGoalProcessedRef = useRef(false);
+    const initialLoadDoneRef = useRef(false);
     const hadGoalsOnLoadRef = useRef(false);
-    const initialLoadDoneRef = useRef(false); // Pridané: či už bolo dokončené prvé načítanie
     
     // Načítanie súpisky
     useEffect(() => {
@@ -261,7 +261,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
-        let isFirstEventsProcessed = false; // Pridané: či už boli spracované prvé udalosti
+        let isFirstEventsProcessed = false;
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
@@ -285,7 +285,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 };
             });
         
-            // Premenná na sledovanie, či bol nájdený nejaký gól
             let foundAnyGoal = false;
         
             eventsSnapshot.forEach((doc) => {
@@ -371,11 +370,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 const stat = stats[foundMemberKey];
                 
-                // AKTUALIZÁCIA ŠTATISTÍK
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
-                        // Ak ide o gól, označíme, že sme našli aspoň jeden gól
                         foundAnyGoal = true;
                         if (eventData.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
@@ -404,7 +401,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (foundAnyGoal && !firstGoalProcessedRef.current) {
                 // Ak ešte neboli spracované prvé udalosti
                 if (!isFirstEventsProcessed) {
-                    // Toto je prvé načítanie - zapamätáme si, že pri načítaní už boli góly
+                    // Toto je prvé načítanie - góly už v DB boli
                     hadGoalsOnLoadRef.current = true;
                     firstGoalProcessedRef.current = true;
                     isFirstEventsProcessed = true;
@@ -429,7 +426,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (!foundAnyGoal && !isFirstEventsProcessed) {
                 // Prvé načítanie bez gólov
                 isFirstEventsProcessed = true;
-                hadGoalsOnLoadRef.current = false; // Explicitne nastavíme na false
+                hadGoalsOnLoadRef.current = false;
             }
         
             return stats;
@@ -660,9 +657,7 @@ const RostersTable = ({ isRostersVisible }) => {
         const updateHeight = () => {
             if (tableContainerRef.current) {
                 const rect = tableContainerRef.current.getBoundingClientRect();
-                // Ak je rect.top = 0, znamená to, že kontajner ešte nie je vykreslený
                 if (rect.top === 0 && rect.height === 0) {
-                    // Skúsime to neskôr
                     requestAnimationFrame(() => updateHeight());
                     return;
                 }
@@ -671,14 +666,12 @@ const RostersTable = ({ isRostersVisible }) => {
             }
         };
     
-        // Spustíme s oneskorením, aby sa DOM stihol vykresliť
         const timeoutId = setTimeout(() => {
             updateHeight();
         }, 50);
     
         window.addEventListener('resize', updateHeight);
         
-        // ResizeObserver pre spoľahlivejšie sledovanie
         const resizeObserver = new ResizeObserver(() => {
             updateHeight();
         });
