@@ -186,9 +186,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const firstGoalProcessedRef = useRef(false);
+    const hasReloadedRef = useRef(false);
     const initialLoadDoneRef = useRef(false);
-    const hadGoalsOnLoadRef = useRef(false);
     
     // Načítanie súpisky
     useEffect(() => {
@@ -261,6 +260,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
+        let initialGoalsCount = 0;
         let isFirstEventsProcessed = false;
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
@@ -285,7 +285,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 };
             });
         
-            let foundAnyGoal = false;
+            let totalGoals = 0;
         
             eventsSnapshot.forEach((doc) => {
                 const eventData = doc.data();
@@ -373,7 +373,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 switch (eventData.eventType) {
                     case 'goal':
                         stat.goals++;
-                        foundAnyGoal = true;
+                        totalGoals++;
                         if (eventData.eventSubtype === 'converted_penalty') {
                             stat.convertedPenalties++;
                         }
@@ -396,37 +396,29 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             });
 
-            // --- KONTROLA PRVÉHO GÓLU ---
-            // Ak sme našli gól a ešte sme neobnovili stránku
-            if (foundAnyGoal && !firstGoalProcessedRef.current) {
-                // Ak ešte neboli spracované prvé udalosti
-                if (!isFirstEventsProcessed) {
-                    // Toto je prvé načítanie - góly už v DB boli
-                    hadGoalsOnLoadRef.current = true;
-                    firstGoalProcessedRef.current = true;
-                    isFirstEventsProcessed = true;
-                    // NEobnovujeme stránku - góly už v DB boli
-                } else {
-                    // Toto nie je prvé načítanie
-                    // Ak pri načítaní neboli žiadne góly, tak toto je prvý nový gól
-                    if (!hadGoalsOnLoadRef.current) {
-                        // Prvý gól pridaný po načítaní - OBNOVÍME
-                        firstGoalProcessedRef.current = true;
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 100);
-                    } else {
-                        // Ďalší gól - neobnovujeme
-                        firstGoalProcessedRef.current = true;
-                    }
+            // --- KONTROLA PRVÉHO GÓLU - OBNOVENIE STRÁNKY ---
+            // Ak ešte nebolo obnovené a už sme spracovali prvé udalosti
+            if (!hasReloadedRef.current && isFirstEventsProcessed) {
+                // Ak pri prvom načítaní neboli žiadne góly a teraz nejaké sú
+                if (initialGoalsCount === 0 && totalGoals > 0) {
+                    // Prvý gól bol pridaný - obnovíme stránku
+                    hasReloadedRef.current = true;
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
                 }
             }
 
-            // Ak sme nenašli žiadny gól a ešte neboli spracované prvé udalosti
-            if (!foundAnyGoal && !isFirstEventsProcessed) {
-                // Prvé načítanie bez gólov
+            // Ak ešte neboli spracované prvé udalosti
+            if (!isFirstEventsProcessed) {
+                // Uložíme počet gólov pri prvom načítaní
+                initialGoalsCount = totalGoals;
                 isFirstEventsProcessed = true;
-                hadGoalsOnLoadRef.current = false;
+                
+                // Ak pri prvom načítaní už boli góly, zablokujeme obnovenie
+                if (totalGoals > 0) {
+                    hasReloadedRef.current = true;
+                }
             }
         
             return stats;
@@ -465,9 +457,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 });
                 setMembersStats(emptyStats);
                 if (onStatsUpdate) onStatsUpdate(teamName, emptyStats);
-                // Označíme, že prvé udalosti boli spracované (aj keď prázdne)
                 isFirstEventsProcessed = true;
-                hadGoalsOnLoadRef.current = false;
+                initialGoalsCount = 0;
                 return;
             }
     
