@@ -285,11 +285,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const eventData = doc.data();
                 const matchId = eventData.matchId;
                 
-                // --- PRIDANÁ KONTROLA KATEGÓRIE (rovnako ako v teams.js) ---
+                // KONTROLA KATEGÓRIE
                 if (eventData.categoryName && eventData.categoryName !== currentCategoryName) {
                     return;
                 }
-                // -----------------------------------------------------------
                 
                 const matchInfo = matchTeamMap[matchId];
                 if (!matchInfo) {
@@ -315,11 +314,43 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     return;
                 }
                 
+                // --- UPRAVENÉ POROVNANIE PRE memberTypeKey a memberIndex ---
                 let foundMemberKey = null;
+                const eventMemberTypeKey = eventData.memberTypeKey || eventData.memberType || '';
+                const eventMemberIndex = eventData.memberIndex;
+                
+                // Ak nemáme memberIndex, nemôžeme priradiť
+                if (eventMemberIndex === undefined || eventMemberIndex === null) {
+                    return;
+                }
+                
                 for (const [memberKey, stat] of Object.entries(stats)) {
-                    if (stat.dbArrayName === eventData.memberTypeKey && stat.dbIndex === eventData.memberIndex) {
+                    // Porovnávame podľa dbArrayName a originalIndex
+                    // dbArrayName môže byť: 'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails'
+                    // memberTypeKey v udalosti môže byť: 'playerDetails', 'menTeamMemberDetails', 'womenTeamMemberDetails'
+                    if (stat.dbArrayName === eventMemberTypeKey && stat.dbIndex === eventMemberIndex) {
                         foundMemberKey = memberKey;
                         break;
+                    }
+                }
+                
+                // Ak sme nenašli podľa presnej zhody, skúsime alternatívne mapovanie
+                if (!foundMemberKey) {
+                    // Mapovanie medzi rôznymi názvami polí
+                    const typeMapping = {
+                        'players': 'playerDetails',
+                        'playerDetails': 'players',
+                        'menTeamMemberDetails': 'menTeamMemberDetails',
+                        'womenTeamMemberDetails': 'womenTeamMemberDetails'
+                    };
+                    
+                    const mappedType = typeMapping[eventMemberTypeKey] || eventMemberTypeKey;
+                    
+                    for (const [memberKey, stat] of Object.entries(stats)) {
+                        if (stat.dbArrayName === mappedType && stat.dbIndex === eventMemberIndex) {
+                            foundMemberKey = memberKey;
+                            break;
+                        }
                     }
                 }
                 
