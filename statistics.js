@@ -594,7 +594,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     return null;
 };
 
-// --- KOMPONENTA PRE TABUĽKU SÚPISIEK ---
 const RostersTable = ({ isRostersVisible }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allMembersData, setAllMembersData] = useState([]);
@@ -604,31 +603,24 @@ const RostersTable = ({ isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
-    
-    // NOVÝ STAV PRE SLEDOVANIE ZMENY ŠTATISTÍK
+
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
-    // REF PRE UCHOVANIE PREDCHÁDZAJÚCEHO PORADIA GÓLOV
-    const previousGoalsRankRef = useRef(new Map());
-    
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
 
-    // Nastavenie výšky tabuľky
     useEffect(() => {
         const updateHeight = () => {
             if (tableContainerRef.current) {
                 const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
+                const calculatedMaxHeight = window.innerHeight - rect.top - 50;
                 setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
             }
         };
-
         updateHeight();
         window.addEventListener('resize', updateHeight);
         return () => window.removeEventListener('resize', updateHeight);
     }, [allMembersData]);
 
-    // Načítanie tímov
     useEffect(() => {
         if (!window.db) return;
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
@@ -657,19 +649,15 @@ const RostersTable = ({ isRostersVisible }) => {
             });
             setAllTeams(userTeamsList);
         });
-
         return () => {
             if (unsubscribeUsers) unsubscribeUsers();
         };
     }, []);
 
-    // Získanie unikátnych tímov
     const getUniqueTeams = () => {
         const teamsMap = new Map();
-        
         allTeams.forEach(team => {
             const key = `${team.teamName}_${team.category}`;
-            
             if (!teamsMap.has(key)) {
                 teamsMap.set(key, {
                     teamName: team.teamName,
@@ -677,27 +665,22 @@ const RostersTable = ({ isRostersVisible }) => {
                 });
             }
         });
-        
         return Array.from(teamsMap.values());
     };
 
-    // NAČÍTANIE ČLENOV - SPUSTÍ SA IBA PRI ZMENE TEAMOV
     useEffect(() => {
-        if (!window.db || allTeams.length === 0) return;    
-    
-        // Zrušíme predchádzajúce listenery
+        if (!window.db || allTeams.length === 0) return;
+
         unsubscribes.forEach(unsub => {
             try { unsub(); } catch (e) {}
         });
         setUnsubscribes([]);
-    
+
         const uniqueTeams = getUniqueTeams();
-        
-        // Zoradenie tímov
         const sortedTeams = uniqueTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
-    
+
         if (sortedTeams.length === 0) {
             setAllMembersData([]);
             setTotalTeamsCount(0);
@@ -706,35 +689,28 @@ const RostersTable = ({ isRostersVisible }) => {
             setReceivedTeams(new Set());
             return;
         }
-    
-        // Reset stavov - VŽDY NOVÉ (ale iba pri zmene tímov)
+
         setTotalTeamsCount(sortedTeams.length);
         setStatsReceivedCount(0);
         setIsStatsReady(false);
         setReceivedTeams(new Set());
         setAllMembersData([]);
-        // Reset triggera pre štatistiky
-        setStatsUpdateTrigger(0);    
-    
-        // Použijeme NOVÚ Mapu a NOVÉ sety
+        setStatsUpdateTrigger(0);
+
         const membersMap = new Map();
         const loadedTeamsSet = new Set();
         let loadedCount = 0;
         const totalTeams = sortedTeams.length;
         const newUnsubscribes = [];
-    
+
         sortedTeams.forEach((teamGroup) => {
             const teamName = teamGroup.teamName;
             const categoryName = teamGroup.category;
             const teamKey = `${teamName}_${categoryName}`;
-            
+
             const handleMembersUpdate = (members) => {
-                // Pridávame členov do Mapy s DEDUPLIKÁCIOU
                 members.forEach(m => {
-                    // Vytvoríme unikátny kľúč pre hráča
                     const uniqueKey = `${teamName}_${categoryName}_${m.type}_${m.firstName || ''}_${m.lastName || ''}_${m.jerseyNumber || m.originalIndex}`;
-                    
-                    // Ak hráč ešte nie je v mape, pridáme ho
                     if (!membersMap.has(uniqueKey)) {
                         membersMap.set(uniqueKey, {
                             ...m,
@@ -744,19 +720,18 @@ const RostersTable = ({ isRostersVisible }) => {
                         });
                     }
                 });
-                
-                // Ak už bol tím načítaný, nepočítame ho znova
+
                 if (!loadedTeamsSet.has(teamKey)) {
                     loadedTeamsSet.add(teamKey);
                     loadedCount++;
                 }
-                
+
                 if (loadedCount === totalTeams) {
                     const allMembers = Array.from(membersMap.values());
                     setAllMembersData(allMembers);
                 }
             };
-            
+
             try {
                 const unsub = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
                 newUnsubscribes.push(unsub);
@@ -771,9 +746,9 @@ const RostersTable = ({ isRostersVisible }) => {
                 }
             }
         });
-    
+
         setUnsubscribes(newUnsubscribes);
-    
+
         return () => {
             newUnsubscribes.forEach(unsub => {
                 try { unsub(); } catch (e) {}
@@ -781,11 +756,8 @@ const RostersTable = ({ isRostersVisible }) => {
         };
     }, [allTeams]);
 
-    // Spracovanie štatistík z komponentov TeamStatsCollector
     const handleStatsUpdate = (teamName, stats, categoryName) => {
-        const uniqueKey = `${teamName}_${categoryName}`;        
-        
-        // NAHRADÍME štatistiky, NIE PRIDÁVAME!
+        const uniqueKey = `${teamName}_${categoryName}`;
         setAllStatsData(prev => {
             const newStats = {
                 ...prev,
@@ -793,40 +765,31 @@ const RostersTable = ({ isRostersVisible }) => {
             };
             return newStats;
         });
-        
-        // INKREMENTUJEME TRIGGER PRE VYNÚTENIE PREPOČTU PORADIA
+
         setStatsUpdateTrigger(prev => prev + 1);
-        
-        // Kontrola, či už sme dostali štatistiky pre tento tím
+
         setReceivedTeams(prev => {
             const newSet = new Set(prev);
             const teamKey = `${teamName}_${categoryName}`;
-            
-            // Ak ešte nemáme štatistiky pre tento tím, pridáme ho
+
             if (!newSet.has(teamKey)) {
                 newSet.add(teamKey);
-                
-                // Aktualizujeme počet prijatých
                 setStatsReceivedCount(prevCount => {
                     const newCount = prevCount + 1;
-                    // Ak sme dostali všetky štatistiky, nastavíme ready stav
                     if (newCount >= totalTeamsCount && totalTeamsCount > 0) {
                         setIsStatsReady(true);
                     }
                     return newCount;
                 });
             }
-            
             return newSet;
         });
     };
 
-    // Renderovanie kolektorov pre každý tím (neviditeľné)
     const renderStatsCollectors = () => {
         if (!isRostersVisible || allTeams.length === 0) return null;
 
         const uniqueTeams = getUniqueTeams();
-        
         const sortedTeams = uniqueTeams.sort((a, b) => {
             return slovakCollator.compare(a.teamName, b.teamName);
         });
@@ -841,17 +804,15 @@ const RostersTable = ({ isRostersVisible }) => {
         });
     };
 
-    // ZORADENIE - používame displayMembers s memoizáciou
+    // ZORADENIE - presne podľa konzoly
     const displayMembers = useMemo(() => {
         console.log('[RostersTable] Prepočítavam zoradenie členov (trigger:', statsUpdateTrigger, ')');
-        console.log('[RostersTable] Nové poradie pripravené (trigger:', statsUpdateTrigger, ')');
-        
+
         if (!isStatsReady || allMembersData.length === 0) {
             console.log('[RostersTable] Zoradenie: nie sú dáta alebo štatistiky nie sú pripravené');
             return [];
         }
-        
-        // Vytvoríme kopiu členov s ich aktuálnymi štatistikami
+
         const membersWithStats = allMembersData.map(member => {
             const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
             const teamStats = allStatsData[key] || {};
@@ -863,54 +824,45 @@ const RostersTable = ({ isRostersVisible }) => {
             };
         });
 
-        // LOG: Počet členov a počet tých s gólmi
         const scorers = membersWithStats.filter(m => m.goals > 0);
         console.log(`[RostersTable] Celkovo ${membersWithStats.length} členov, ${scorers.length} s gólmi`);
 
-        // Rozdelíme na strelcov a neskórujúcich
         const goalsScorers = membersWithStats.filter(m => m.goals > 0);
         const nonScorers = membersWithStats.filter(m => m.goals === 0);
 
-        // Zoradíme strelcov podľa gólov (zostupne)
         goalsScorers.sort((a, b) => {
             if (b.goals !== a.goals) return b.goals - a.goals;
-            
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
-            
             return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
         });
 
-        // Zoradíme ostatných podľa abecedy
         nonScorers.sort((a, b) => {
             const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
             if (teamCompare !== 0) return teamCompare;
-            
             const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
             if (nameCompare !== 0) return nameCompare;
-            
             const aNum = parseInt(a.jerseyNumber) || 999;
             const bNum = parseInt(b.jerseyNumber) || 999;
             return aNum - bNum;
         });
 
         const result = [...goalsScorers, ...nonScorers];
-        
-        // LOG: Prvých 5 členov po zoradení
+
         if (result.length > 0) {
             console.log('[RostersTable] Prvých 5 po zoradení:');
             result.slice(0, 5).forEach((m, i) => {
                 console.log(`  ${i+1}. ${m.firstName} ${m.lastName} - ${m.goals} gólov (${m.teamNameDisplay})`);
             });
         }
-        
+
         return result;
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger]);
 
-    // Používame priamo vypočítané poradie - UI sa vždy prekreslí podľa aktuálnych dát
+    // VŽDY používame displayMembers – žiadne staré poradie
     const stableDisplayMembers = displayMembers;
 
-    // Zobrazenie tabuľky - používa stableDisplayMembers
+    // Zobrazenie tabuľky
     const renderTable = () => {
         if (!isRostersVisible) {
             return React.createElement(
@@ -921,10 +873,10 @@ const RostersTable = ({ isRostersVisible }) => {
         }
 
         if (allMembersData.length === 0 || !isStatsReady) {
-            const progressText = totalTeamsCount > 0 
-                ? `Načítavam štatistiky... (${statsReceivedCount}/${totalTeamsCount})` 
+            const progressText = totalTeamsCount > 0
+                ? `Načítavam štatistiky... (${statsReceivedCount}/${totalTeamsCount})`
                 : 'Načítavam dáta...';
-            
+
             return React.createElement(
                 'div',
                 { className: 'text-center py-8' },
@@ -933,7 +885,6 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        // Ak nemáme žiadnych členov na zobrazenie
         if (stableDisplayMembers.length === 0) {
             return React.createElement(
                 'div',
@@ -942,27 +893,30 @@ const RostersTable = ({ isRostersVisible }) => {
             );
         }
 
-        const membersWithGoals = stableDisplayMembers.filter(m => {
-            const key = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${m.type}_${m.originalIndex}`;
-            return Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0) > 0;
+        // Vytvoríme mapu poradia podľa gólov (pre rank)
+        const goalRankMap = new Map();
+        let currentRank = 1;
+        stableDisplayMembers.forEach((member, idx) => {
+            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}`;
+            if (member.goals > 0) {
+                goalRankMap.set(key, currentRank);
+                currentRank++;
+            }
         });
 
         return React.createElement(
             'div',
-            { 
+            {
                 className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
                 ref: tableContainerRef,
                 style: { maxHeight: maxTableHeight }
             },
             React.createElement(
                 'table',
-                { 
+                {
                     className: 'w-full border-collapse bg-white text-sm',
                     style: { minWidth: '900px' }
                 },
-                // HLAVIČKA TABUĽKY
                 React.createElement(
                     'thead',
                     { className: 'bg-gray-100 sticky top-0 z-20' },
@@ -974,37 +928,37 @@ const RostersTable = ({ isRostersVisible }) => {
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Tím'),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Kategória'),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-futbol text-green-600 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'Gól')
                             )
                         ),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-futbol text-teal-500 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, '7m')
                             )
                         ),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-square text-yellow-500 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'ŽK')
                             )
                         ),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-square text-red-600 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'ČK')
                             )
                         ),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-square text-blue-500 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'MK')
                             )
                         ),
-                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } }, 
+                        React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '55px' } },
                             React.createElement('div', { className: 'flex flex-col items-center' },
                                 React.createElement('i', { className: 'fa-solid fa-clock text-orange-500 text-sm' }),
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vylúč.')
@@ -1012,13 +966,12 @@ const RostersTable = ({ isRostersVisible }) => {
                         )
                     )
                 ),
-                // TELO TABUĽKY
                 React.createElement(
                     'tbody',
                     { className: 'divide-y divide-gray-100' },
                     stableDisplayMembers.map((member, idx) => {
                         const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
-                        
+
                         const teamStatsKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
                         const teamStats = allStatsData[teamStatsKey] || {};
                         const memberKey = `${member.type}_${member.originalIndex}`;
@@ -1031,33 +984,22 @@ const RostersTable = ({ isRostersVisible }) => {
                             blueCards: 0,
                             exclusions: 0
                         };
-                        
+
                         const totalPenalties = (stats.convertedPenalties || 0) + (stats.missedPenalties || 0);
                         const penaltiesDisplay = totalPenalties > 0 ? `${stats.convertedPenalties || 0}/${totalPenalties}` : '';
-                        
+
                         const hasGoals = Number((stats.goals || 0)) > 0;
-                        const rowClass = idx % 2 === 0 
+                        const rowClass = idx % 2 === 0
                             ? 'bg-white hover:bg-blue-50'
                             : 'bg-gray-50 hover:bg-blue-50';
-                        
-                        let rank = '';
-                        if (hasGoals) {
-                            const goalRank = membersWithGoals.findIndex(m => {
-                                const mKey = `${m.teamNameDisplay}_${m.categoryNameDisplay}`;
-                                const mStats = allStatsData[mKey] || {};
-                                const mMemberKey = `${m.type}_${m.originalIndex}`;
-                                return m.teamNameDisplay === member.teamNameDisplay && 
-                                       m.categoryNameDisplay === member.categoryNameDisplay &&
-                                       m.type === member.type &&
-                                       m.originalIndex === member.originalIndex;
-                            });
-                            rank = goalRank + 1;
-                        }
-                        
+
+                        const uniqueMemberKey = `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex}`;
+                        const rank = goalRankMap.get(uniqueMemberKey) || '';
+
                         return React.createElement(
                             'tr',
-                            { 
-                                key: `${member.teamNameDisplay}_${member.categoryNameDisplay}_${member.type}_${member.originalIndex || idx}`,
+                            {
+                                key: uniqueMemberKey,
                                 className: `${rowClass} transition-colors duration-150`
                             },
                             React.createElement('td', { className: 'px-2 py-2 text-center text-xs text-gray-400' }, rank),
