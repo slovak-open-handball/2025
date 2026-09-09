@@ -935,7 +935,7 @@ const RostersTable = ({ isRostersVisible }) => {
             return aNum - bNum;
         });
 
-        // Spojíme ich: strelci na začiatku, potom ostatní
+        // SPOJÍME - STRELCI MUSIA BYŤ VŽDY PRVÍ!
         const displayMembers = [...goalsScorers, ...nonScorers];
 
         // Najprv zistíme, koľko členov má góly (iba strelci)
