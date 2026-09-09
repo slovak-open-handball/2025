@@ -604,8 +604,6 @@ const RostersTable = ({ isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
-    const [stableDisplayMembers, setStableDisplayMembers] = useState([]);
-    const [isInitialized, setIsInitialized] = useState(false);
     
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
