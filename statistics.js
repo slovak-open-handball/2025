@@ -834,6 +834,22 @@ const RostersTable = ({ isRostersVisible }) => {
 
     const displayMembers = useMemo(() => {
         if (!isStatsReady || allMembersData.length === 0) return [];
+        
+        const goalsScorers = [];
+        const nonScorers = [];
+    
+        allMembersData.forEach(member => {
+            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+            const teamStats = allStatsData[key] || {};
+            const memberKey = `${member.type}_${member.originalIndex}`;
+            const goals = Number((teamStats[memberKey] && teamStats[memberKey].goals) || 0);
+            
+            if (goals > 0) {
+                goalsScorers.push(member);
+            } else {
+                nonScorers.push(member);
+            }
+        });
     
         // Zoradíme strelcov podľa gólov (zostupne)
         goalsScorers.sort((a, b) => {
