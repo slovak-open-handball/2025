@@ -1050,8 +1050,8 @@ const RostersTable = ({ selectedTeamNameFilter, isRostersVisible }) => {
                         // Zvýraznenie riadkov s gólmi
                         const hasGoals = (stats.goals || 0) > 0;
                         const rowClass = idx % 2 === 0 
-                            ? (hasGoals ? 'bg-green-50 hover:bg-green-100' : 'bg-white hover:bg-blue-50')
-                            : (hasGoals ? 'bg-green-100 hover:bg-green-200' : 'bg-gray-50 hover:bg-blue-50');
+                            ? 'bg-white hover:bg-blue-50'
+                            : 'bg-gray-50 hover:bg-blue-50';
                         
                         // Poradie podľa gólov (zobrazenie čísla poradia)
                         const rank = idx + 1;
