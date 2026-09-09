@@ -186,9 +186,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     const [rosterData, setRosterData] = useState([]);
     const [unsubscribe, setUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
-    const [firstGoalLoaded, setFirstGoalLoaded] = useState(false);
     const firstGoalProcessedRef = useRef(false);
     const initialCheckDoneRef = useRef(false);
+    const hadGoalsOnLoadRef = useRef(false); // Pridané: sledovanie, či už boli góly pri načítaní
     
     // Načítanie súpisky
     useEffect(() => {
@@ -261,6 +261,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let matchIds = new Set();
         let isFirstLoad = true;
         let matchTeamMap = {};
+        let isFirstEventsLoad = true; // Pridané: sledovanie prvého načítania udalostí
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
@@ -398,28 +399,28 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             });
 
-            // --- KONTROLA, ČI IDE O PRVÝ GÓL (POUZE AK SME EŠTE NEROBILI KONTROLU) ---
-            // Ak sme našli gól, ešte sme nespracovali prvú kontrolu a ešte sme neobnovili stránku
-            if (foundAnyGoal && !initialCheckDoneRef.current && !firstGoalProcessedRef.current) {
-                // Označíme, že sme už vykonali prvú kontrolu
-                initialCheckDoneRef.current = true;
-                
-                // Teraz potrebujeme zistiť, či už v databáze nejaké góly boli
-                // Urobíme to tak, že skontrolujeme, či je to prvý snapshot
-                // a či je to prvýkrát, čo vidíme gól
-                
-                // Ak sme našli gól pri prvom načítaní (isFirstLoad), 
-                // znamená to, že v databáze už nejaké góly boli
-                if (isFirstLoad) {
-                    // Góly už v databáze boli, neobnovujeme stránku
-                    firstGoalProcessedRef.current = true; // Zablokujeme ďalšie obnovenia
+            // --- KONTROLA PRVÉHO GÓLU ---
+            // Ak sme našli gól a ešte sme neobnovili stránku
+            if (foundAnyGoal && !firstGoalProcessedRef.current) {
+                // Ak je to prvýkrát, čo načítavame udalosti
+                if (isFirstEventsLoad) {
+                    // Toto je prvé načítanie - góly už v DB boli
+                    hadGoalsOnLoadRef.current = true; // Zapamätáme si, že pri načítaní už boli góly
+                    firstGoalProcessedRef.current = true; // Zablokujeme obnovenie
+                    isFirstEventsLoad = false;
                 } else {
-                    // Toto je nový gól pridaný po načítaní stránky - obnovíme
-                    firstGoalProcessedRef.current = true;
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 100);
+                    // Toto nie je prvé načítanie - ide o nový gól
+                    // Skontrolujeme, či pri načítaní už nejaké góly boli
+                    if (!hadGoalsOnLoadRef.current) {
+                        // Pri načítaní neboli žiadne góly, takže toto je prvý gól vôbec
+                        firstGoalProcessedRef.current = true;
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 100);
+                    } else {
+                        // Pri načítaní už boli góly, takže toto je ďalší gól - neobnovujeme
+                        firstGoalProcessedRef.current = true;
+                    }
                 }
             }
         
@@ -600,6 +601,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (matchIdsChanged || isFirstLoad) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
+                // Resetujeme príznak prvého načítania udalostí, keď sa menia zápasy
+                isFirstEventsLoad = true;
                 setupEventsListener(newMatchIdsArray);
             }
         };
