@@ -240,6 +240,14 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         if (!teamNameToCheck || !categoryNameToCheck) return false;
         return teamNameToCheck.includes(categoryNameToCheck);
     };
+
+    // Počkať, kým matchTracker bude pripravený (max 5 sekúnd)
+    let waitAttempts = 0;
+    while ((!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') && waitAttempts < 25) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        waitAttempts++;
+    }
+    console.log('[TeamStatsCollector] matchTracker pripravený po', waitAttempts * 200, 'ms');
     
     // --- ŠTATISTIKY ---
     useEffect(() => {
@@ -276,28 +284,28 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
             if (!matchTeamName) return matchTeamName;
             const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
-            console.log('[mapMatchTeamName] VSTUP:', {
-                matchTeamName,
-                categoryNameForMapping,
-                containsCategory
-            });
-            if (containsCategory) {
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                    try {
-                        const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
-                        console.log('[mapMatchTeamName] VÝSTUP z matchTracker:', {
-                            matchTeamName,
-                            mapped,
-                            typ: typeof mapped
-                        });
-                        if (mapped) return mapped;
-                    } catch (err) {
-                        console.log('[mapMatchTeamName] CHYBA:', err);
-                    }
-                } else {
-                    console.log('[mapMatchTeamName] matchTracker NEEXISTUJE alebo nemá getTeamNameByDisplayId');
-                }
+            console.log('[mapMatchTeamName] VSTUP:', { matchTeamName, categoryNameForMapping, containsCategory });
+            if (!containsCategory) return matchTeamName;
+            
+            if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+                console.log('[mapMatchTeamName] matchTracker NEEXISTUJE');
+                return matchTeamName;
             }
+            
+            // Skús až 5-krát s malou pauzou, kým matchTracker vráti hodnotu
+            for (let attempt = 0; attempt < 5; attempt++) {
+                try {
+                    const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
+                    console.log(`[mapMatchTeamName] Pokus ${attempt + 1}:`, { matchTeamName, mapped, typ: typeof mapped });
+                    if (mapped) return mapped;
+                } catch (err) {
+                    console.log(`[mapMatchTeamName] Pokus ${attempt + 1} CHYBA:`, err);
+                }
+                // Pauza 300ms pred ďalším pokusom
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            console.log('[mapMatchTeamName] Po 5 pokusoch stále null, vraciam pôvodný názov');
             return matchTeamName;
         };
     
