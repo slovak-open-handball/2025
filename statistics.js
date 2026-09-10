@@ -350,6 +350,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (!matchInfo) {
                     return;
                 }
+
+                console.log('[calculateStatsFromEvents] matchId:', matchId, 'matchInfo:', matchInfo);
         
                 let isOurTeam = false;
                 const homeTeam = matchInfo.homeTeam || '';
@@ -540,17 +542,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let pendingProcessResolve = null;
         
         const processMatches = async (matchesSnapshot) => {
+            console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
             if (isCancelled) return;
             
-            // Ak matchTracker ešte nie je pripravený, uložíme snapshot a počkáme
             const isMatchTrackerReady = 
                 typeof window.matchTracker?.isDataReady === 'function' && 
                 window.matchTracker.isDataReady();
             
+            console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady);
+            
             if (!isMatchTrackerReady && !matchTrackerWasReady) {
-                console.log('[processMatches] matchTracker ešte nie je pripravený, ukladám snapshot na neskoršie spracovanie');
+                console.log('[processMatches] matchTracker ešte nie je pripravený, ukladám snapshot');
                 pendingSnapshot = matchesSnapshot;
-                // Neuložíme statusy, počkáme na matchTrackerReady
                 return;
             }
             
@@ -559,7 +562,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 console.log('[processMatches] matchTracker je teraz pripravený, spúšťam mapovanie');
             }
             
-            // ... zvyšok pôvodného kódu processMatches ...
             const newMatchIds = new Set();
             const newMatchTeamMap = {};
         
@@ -595,6 +597,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
             mappingIncomplete = false;
         
+            // 🔥 NAJPRV ZMAPUJEME VŠETKY TÍMY
             for (const { id: matchId, data: matchData } of rawMatches) {
                 if (isCancelled) return;
                 
@@ -640,6 +643,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 previousMatchStatuses[matchId] = matchData.status || 'scheduled';
             });
         
+            // 🔥 AŽ TERAZ NASTAVÍME matchTeamMap - PRED setupEventsListener
             matchTeamMap = newMatchTeamMap;
             console.log('[processMatches] Nájdených matchIds:', newMatchIds.size, 'mappingIncomplete:', mappingIncomplete);
         
@@ -648,9 +652,11 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length ||
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
         
+            // 🔥 Listenery spustíme VŽDY, keď sa robilo mapovanie (shouldRemap) alebo sa zmenili matchIds
             if (shouldRemap || matchIdsChanged) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
+                // DÔLEŽITÉ: setupEventsListener musí byť až po tom, čo je matchTeamMap naplnený
                 setupEventsListener(newMatchIdsArray);
             }
         };
