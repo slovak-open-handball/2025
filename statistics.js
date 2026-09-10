@@ -318,7 +318,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
-            console.log('[calculateStatsFromEvents] eventData:', { matchId, team: eventData.team, categoryName: eventData.categoryName, matchInfo: matchTeamMap[matchId] });
             const stats = {};
             rosterData.forEach((member) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
