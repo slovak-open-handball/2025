@@ -290,6 +290,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
+            console.log('[mapMatchTeamName] matchTeamName:', matchTeamName, 'categoryNameForMapping:', categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
             if (!matchTeamName) return matchTeamName;
             const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
             if (!containsCategory) return matchTeamName;
@@ -311,12 +312,14 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             } catch (err) {
                 console.log('[mapMatchTeamName] CHYBA:', err);
             }
+
+            console.log('[mapMatchTeamName] matchTeamName:', matchTeamName, 'categoryNameForMapping:', categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
             
             return matchTeamName;
         };
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
-            // ... (rovnaké ako predtým, bez zmien)
+            console.log('[calculateStatsFromEvents] eventData:', { matchId, team: eventData.team, categoryName: eventData.categoryName, matchInfo: matchTeamMap[matchId] });
             const stats = {};
             rosterData.forEach((member) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -436,13 +439,13 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         stat.exclusions++;
                         break;
                 }
-            });
-        
+            });        
             return stats;
+            console.log('[calculateStatsFromEvents] eventData:', { matchId, team: eventData.team, categoryName: eventData.categoryName, matchInfo: matchTeamMap[matchId] });
         };
     
         const setupEventsListener = (matchIdsArray) => {
-            // ... (rovnaké ako predtým, bez zmien)
+            console.log('[setupEventsListener] matchIdsArray.length:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
             if (eventsUnsubscribe) {
                 try { eventsUnsubscribe(); } catch (e) {}
                 eventsUnsubscribe = null;
@@ -535,6 +538,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     try { listener(); } catch (e) {}
                 });
             };
+            console.log('[setupEventsListener] matchIdsArray.length:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
         };
 
         // Uložíme si posledný snapshot, aby sme ho mohli spracovať, keď bude matchTracker ready
@@ -543,6 +547,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
         const processMatches = async (matchesSnapshot) => {
             console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
+            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
             if (isCancelled) return;
             
             const isMatchTrackerReady = 
