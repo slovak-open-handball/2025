@@ -1344,9 +1344,7 @@ const RostersTable = ({ isRostersVisible }) => {
         }
 
         if (allMembersData.length === 0 || !isStatsReady) {
-            const progressText = totalTeamsCount > 0
-                ? `Načítavam štatistiky... (${statsReceivedCount}/${totalTeamsCount})`
-                : 'Načítavam dáta...';
+            const progressText = `Načítavam...`;
             return React.createElement('div', { className: 'text-center py-8' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
                 React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
