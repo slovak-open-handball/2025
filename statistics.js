@@ -290,6 +290,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
+            console.log('[mapMatchTeamName] VSTUP:', matchTeamName, categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
             if (!matchTeamName) return matchTeamName;
             const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
             if (!containsCategory) return matchTeamName;
@@ -318,6 +319,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
+            console.log('[calculateStatsFromEvents] matchInfo:', matchId, matchInfo, 'currentTeamName:', currentTeamName, 'eventTeam:', eventData.team, 'eventCategoryName:', eventData.categoryName);
             const stats = {};
             rosterData.forEach((member) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -442,6 +444,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const setupEventsListener = (matchIdsArray) => {
+            console.log('[setupEventsListener] matchIdsArray:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
+            console.log('[setupEventsListener] matchTeamMap sample:', Object.entries(matchTeamMap).slice(0, 2));
             console.log('[setupEventsListener] matchIdsArray.length:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
             if (eventsUnsubscribe) {
                 try { eventsUnsubscribe(); } catch (e) {}
@@ -545,6 +549,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const processMatches = async (matchesSnapshot) => {
             console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
             console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
+            console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady, 'isFirstLoad:', isFirstLoad, 'pendingSnapshot:', !!pendingSnapshot);
             if (isCancelled) return;
             
             const isMatchTrackerReady = 
@@ -675,6 +680,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         // Handler pre matchTrackerReady
         const handleMatchTrackerReady = () => {
             console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
+            console.log('[handleMatchTrackerReady] pendingSnapshot:', !!pendingSnapshot, 'matchTrackerWasReady:', matchTrackerWasReady);
             if (isCancelled) return;
             
             matchTrackerWasReady = true;
