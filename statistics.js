@@ -723,13 +723,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
             console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount');
             matchTrackerWasReady = true;
-            getDocs(matchesQuery).then(snapshot => {
-                processMatches(snapshot).catch(err => {
-                    console.log('[processMatches pri mount] CHYBA:', err);
-                });
-            }).catch(err => {
-                console.log('[getDocs pri mount] CHYBA:', err);
-            });
         }
         
         return () => {
