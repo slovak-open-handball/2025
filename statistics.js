@@ -663,18 +663,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-        
-                // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas preskočíme
-                if (homeIncomplete || awayIncomplete) {
-                    console.log(`[processMatches] Zápas ${matchId} preskočený (homeReason=${homeResult.reason}, awayReason=${awayResult.reason})`);
-                    continue;
-                }
-        
+                
+                // 🔥 NAJPRV zisti, či je náš tím v tomto zápase
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
-        
+                
+                // 🔥 Ak je náš tím v zápase, PRIDAJ matchId do newMatchIds VŽDY
+                // (aj keď je súper nezmapovaný — listener sa musí vytvoriť, aby sa udalosti dali spracovať,
+                //  keď sa súper neskôr namapuje)
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
+                }
+                
+                // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas sa nezapočíta do štatistík (continue),
+                // ale matchId JE v newMatchIds → listener sa vytvorí
+                if (homeIncomplete || awayIncomplete) {
+                    console.log(`[processMatches] Zápas ${matchId} má nezmapovaného súpera (homeReason=${homeResult.reason}, awayReason=${awayResult.reason})`);
+                    continue;
                 }
             }
         
