@@ -275,6 +275,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let previousMatchStatuses = {};
         // Flag, či sme už mali možnosť robiť mapovanie (matchTracker pripravený)
         let matchTrackerWasReady = false;
+        let matchTrackerReadyHandled = false;
     
         // Pomocné funkcie
         const teamNameContainsCategory = (teamNameToCheck, categoryNameToCheck) => {
