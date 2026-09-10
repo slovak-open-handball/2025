@@ -593,27 +593,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             for (const { id: matchId, data: matchData } of rawMatches) {
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
-        
-                console.log('[processMatches] Pred mapovaním:', {
-                    matchId,
-                    convertedHome,
-                    convertedAway,
-                    homeTeamIdentifier: matchData.homeTeamIdentifier,
-                    awayTeamIdentifier: matchData.awayTeamIdentifier
-                });
-        
-                convertedHome = await mapMatchTeamName(convertedHome, currentCategoryName);
-                convertedAway = await mapMatchTeamName(convertedAway, currentCategoryName);
-        
-                console.log('[processMatches] Po mapovaní:', {
-                    matchId,
-                    convertedHome,
-                    convertedAway
-                });
-        
+            
+                // ZÍSKAJ KATEGÓRIU ZÁPASU (nie currentCategoryName tímu!)
                 const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
                 const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';
-        
+            
+                // Mapovanie robiť s kategóriou ZÁPASU, nie tímu
+                convertedHome = await mapMatchTeamName(convertedHome, homeCategory);
+                convertedAway = await mapMatchTeamName(convertedAway, awayCategory);
+            
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway,
@@ -621,19 +609,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-        
+            
                 const isHomeMatch = convertedHome === currentTeamName && homeCategory === currentCategoryName;
                 const isAwayMatch = convertedAway === currentTeamName && awayCategory === currentCategoryName;
-        
-                console.log('[processMatches] Zhoda:', {
-                    matchId,
-                    isHomeMatch,
-                    isAwayMatch,
-                    homeCategory,
-                    awayCategory,
-                    currentCategoryName
-                });
-        
+            
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
