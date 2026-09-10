@@ -553,11 +553,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     
                     // 🔥 Ak sa nič nezmenilo, preskočíme prepočet
                     if (!hasChange) {
-                        console.log('[setupEventsListener] Žiadna zmena v udalostiach, preskakujem prepočet');
                         return;
-                    }
-                    
-                    console.log('[setupEventsListener] Zmena v udalostiach, prepočítavam štatistiky...');
+                    }                    
                     
                     const combinedStats = {};
                     const chunkStats = calculateStatsFromEvents(eventsSnapshot);
@@ -934,7 +931,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (!hasUnmappedMatches) return;
             
             try {
-                console.log('[checkMappingChanges] Existujú nezmapované zápasy, skúšam remap...');
                 const snapshot = await getDocs(matchesQuery);
                 await processMatches(snapshot, true);
             } catch (err) {
@@ -947,21 +943,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (isCancelled) return;
             if (!matchTrackerWasReady) return;
             
-            // 🔥 NOVÉ: Aktualizuj lokálnu cache hneď, aby sme vedeli, či sa niečo zmenilo
-            // (toto je len rýchla kontrola, samotné udalosti sa načítajú v listeneroch)
             let hasChange = false;
             try {
                 const eventsRef = collection(window.db, 'matchEvents');
-                // Nemôžeme použiť getDocs tu (je to async), tak použijeme flag
-                // Namiesto toho sa spoliehame na to, že listenery už aktualizovali cache
-                // a scheduleGlobalRemap sa volá len ak sa naozaj niečo zmenilo
-                hasChange = true;  // scheduleGlobalRemap sa volá len pri zmene
+                hasChange = true; 
             } catch (e) {
                 hasChange = true;
             }
             
             if (!hasChange) {
-                console.log('[scheduleGlobalRemap] Žiadna zmena, preskakujem remap');
                 return;
             }
             
@@ -973,7 +963,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (isCancelled) return;
                 if (!matchTrackerWasReady) return;
                 
-                console.log('[scheduleGlobalRemap] Spúšťam remap po debounce...');
                 getDocs(matchesQuery).then(snapshot => {
                     processMatches(snapshot, true).catch(err => {
                     });
