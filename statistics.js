@@ -290,7 +290,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
-            console.log('[mapMatchTeamName] matchTeamName:', matchTeamName, 'categoryNameForMapping:', categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
             if (!matchTeamName) return matchTeamName;
             const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
             if (!containsCategory) return matchTeamName;
@@ -441,7 +440,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             });        
             return stats;
-            console.log('[calculateStatsFromEvents] eventData:', { matchId, team: eventData.team, categoryName: eventData.categoryName, matchInfo: matchTeamMap[matchId] });
         };
     
         const setupEventsListener = (matchIdsArray) => {
