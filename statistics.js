@@ -983,6 +983,27 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     return null;
 };
 
+// --- LOCALSTORAGE CACHE ---
+const ROSTERS_CACHE_KEY = 'rosters_table_cache_v1';
+
+const saveToLocalStorage = (data) => {
+    try {
+        localStorage.setItem(ROSTERS_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+        // Ak je localStorage plný alebo nedostupný, ignorujeme
+    }
+};
+
+const loadFromLocalStorage = () => {
+    try {
+        const raw = localStorage.getItem(ROSTERS_CACHE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        return null;
+    }
+};
+
 const RostersTable = ({ isRostersVisible }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [allMembersData, setAllMembersData] = useState([]);
@@ -998,6 +1019,25 @@ const RostersTable = ({ isRostersVisible }) => {
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
     const tableContainerRef = useRef(null);
     const [maxTableHeight, setMaxTableHeight] = useState('60vh');
+
+    // Cache stavy
+    const [cachedDisplayMembers, setCachedDisplayMembers] = useState(null);
+    const [cachedSelectedCategory, setCachedSelectedCategory] = useState(null);
+    const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+
+    // Načítanie cached dát pri prvom mounte
+    useEffect(() => {
+        const cached = loadFromLocalStorage();
+        if (cached && cached.displayMembers && cached.displayMembers.length > 0) {
+            setCachedDisplayMembers(cached.displayMembers);
+            setCachedSelectedCategory(cached.selectedCategory || null);
+            // Ak máme cached kategóriu, nastavíme ju ako vybranú
+            if (cached.selectedCategory) {
+                setSelectedCategory(cached.selectedCategory);
+            }
+        }
+        setIsCacheLoaded(true);
+    }, []);
 
     // Pomocná funkcia – vráti unikátne kategórie z allTeams (nie z allMembersData)
     const getUniqueCategoriesWithIds = useCallback(() => {
@@ -1092,7 +1132,7 @@ const RostersTable = ({ isRostersVisible }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, [updateTableHeight]);
 
-    // Načítanie všetkých tímov (používateľov) – beží vždy, ale používame ich len keď je vybraná kategória
+    // Načítanie všetkých tímov (používateľov)
     useEffect(() => {
         if (!window.db) return;
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
@@ -1140,7 +1180,7 @@ const RostersTable = ({ isRostersVisible }) => {
         return Array.from(teamsMap.values());
     }, [allTeams, selectedCategory]);
 
-    // 🔥 Kompletný reset všetkých načítaných dát a listenerov
+    // Kompletný reset všetkých načítaných dát a listenerov
     const resetAllData = useCallback(() => {
         unsubscribes.forEach(unsub => {
             try { unsub(); } catch (e) {}
@@ -1157,7 +1197,7 @@ const RostersTable = ({ isRostersVisible }) => {
 
     // Načítanie členov – spustí sa len ak je vybraná kategória
     useEffect(() => {
-        // 🔥 Pri každej zmene kategórie najprv vyčistíme všetky dáta
+        // Pri každej zmene kategórie najprv vyčistíme všetky dáta
         unsubscribes.forEach(unsub => { try { unsub(); } catch (e) {} });
         setUnsubscribes([]);
         setAllMembersData([]);
@@ -1279,10 +1319,27 @@ const RostersTable = ({ isRostersVisible }) => {
         );
     };
 
-    // Zoradenie – funguje len ak je vybraná kategória a štatistiky sú ready
+    // Zoradenie – použije cached dáta ak ešte nie sú živé dáta pripravené
     const displayMembers = useMemo(() => {
-        if (!selectedCategory || !isStatsReady || allMembersData.length === 0) return [];
+        // Ak nie je vybraná kategória, vrátime prázdne pole
+        if (!selectedCategory) {
+            return [];
+        }
 
+        // Ak ešte nemáme živé dáta pripravené, skúsime cached
+        if (!isStatsReady || allMembersData.length === 0) {
+            if (cachedDisplayMembers && cachedDisplayMembers.length > 0) {
+                const filtered = cachedDisplayMembers.filter(
+                    m => m.categoryNameDisplay === selectedCategory
+                );
+                if (filtered.length > 0) {
+                    return filtered;
+                }
+            }
+            return [];
+        }
+
+        // Živé dáta – pôvodný výpočet
         const filteredMembers = allMembersData.filter(member =>
             member.categoryNameDisplay === selectedCategory
         );
@@ -1315,20 +1372,29 @@ const RostersTable = ({ isRostersVisible }) => {
             return aNum - bNum;
         });
 
-        return [...goalsScorers, ...nonScorers];
-    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory]);
+        const result = [...goalsScorers, ...nonScorers];
+
+        // Uložíme finálnu zobrazenú tabuľku do localStorage
+        if (result.length > 0) {
+            saveToLocalStorage({
+                displayMembers: result,
+                selectedCategory: selectedCategory,
+                savedAt: Date.now()
+            });
+        }
+
+        return result;
+    }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory, cachedDisplayMembers]);
 
     useEffect(() => {
         const timer = setTimeout(updateTableHeight, 100);
         return () => clearTimeout(timer);
     }, [allMembersData, isStatsReady, displayMembers, updateTableHeight]);
 
-    // 🔥 UPRAVENÉ: Pri prepnutí kategórie vždy všetko vymažeme
+    // Pri prepnutí kategórie vždy všetko vymažeme, ale cached pre novú kategóriu použijeme
     const handleCategoryFilter = (category) => {
         const newCategory = selectedCategory === category ? null : category;
-        // Kompletný reset pred zmenou kategórie
         resetAllData();
-        // Až potom nastavíme novú kategóriu
         setSelectedCategory(newCategory);
     };
 
@@ -1343,17 +1409,13 @@ const RostersTable = ({ isRostersVisible }) => {
                 'Vyberte kategóriu pre zobrazenie štatistík.');
         }
 
-        if (allMembersData.length === 0 || !isStatsReady) {
+        if (displayMembers.length === 0) {
+            // Ak máme cached pre túto kategóriu, ale ešte neboli načítané živé dáta
             const progressText = `Načítavanie...`;
             return React.createElement('div', { className: 'text-center py-8' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
                 React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
             );
-        }
-
-        if (displayMembers.length === 0) {
-            return React.createElement('div', { className: 'text-center py-8 text-gray-500' },
-                `Žiadni členovia v kategórii: ${selectedCategory}`);
         }
 
         const goalRankMap = new Map();
