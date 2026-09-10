@@ -592,7 +592,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // - je forceRemap (napr. z matchTrackerReady)
             // - alebo sa objavil nový completed zápas a predchádzajúce mapovanie bolo neúplné
             // - alebo sa zmenil počet/identifikátory zápasov (matchIdsChanged) - to riešime nižšie
-            const shouldRemap = forceRemap || (mappingIncomplete && hasNewCompletedMatch);
+            const shouldRemap = forceRemap || hasNewCompletedMatch;
         
             console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch, 'forceRemap:', forceRemap);
         
