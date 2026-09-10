@@ -1036,6 +1036,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 try { eventsUnsubscribe(); } catch (e) {}
                 eventsUnsubscribe = null;
             }
+            
+            // 🔥 NOVÉ: Vyčisti lokálnu cache udalostí
+            localEventsCache.clear();
+            lastEventsHash = '';
         };
     }, [rosterData, teamName, categoryName]);
     
