@@ -299,7 +299,14 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
-                console.log('[mapMatchTeamName] VÝSTUP:', { matchTeamName, mapped, typ: typeof mapped });
+                console.log('[mapMatchTeamName] VÝSTUP:', { 
+                    matchTeamName, 
+                    mapped, 
+                    typ: typeof mapped, 
+                    jeNull: mapped === null,
+                    jeUndefined: mapped === undefined,
+                    jePrazdny: mapped === ''
+                });
                 if (mapped) return mapped;
             } catch (err) {
                 console.log('[mapMatchTeamName] CHYBA:', err);
@@ -620,6 +627,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 // Mapovanie robiť s kategóriou ZÁPASU, nie tímu
                 const mappedHome = await mapMatchTeamName(convertedHome, homeCategory);
                 const mappedAway = await mapMatchTeamName(convertedAway, awayCategory);
+
+                console.log('[processMatches] Po mapovaní:', {
+                    matchId,
+                    convertedHome,
+                    mappedHome,
+                    homeContainsCategory,
+                    homeZlyhalo: homeContainsCategory && mappedHome === convertedHome,
+                    convertedAway,
+                    mappedAway,
+                    awayContainsCategory,
+                    awayZlyhalo: awayContainsCategory && mappedAway === convertedAway
+                });
                 
                 // Ak mapovanie zlyhalo (obsahoval kategóriu, ale mapped === pôvodný), označ mappingIncomplete
                 if (homeContainsCategory && mappedHome === convertedHome) {
