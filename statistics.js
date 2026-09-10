@@ -1112,6 +1112,32 @@ const RostersTable = ({ isRostersVisible }) => {
         }
     }, []);
 
+    // POMOCNÁ FUNKCIA NA ZÍSKANIE SVETLEJŠEJ FARBY
+    const getLighterColor = (color) => {
+        if (!color) return '#E5E7EB';
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+    
+        const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.85));
+        const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.85));
+        const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.85));
+    
+        return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+    };
+    
+    // POMOCNÁ FUNKCIA PRE KONTRASTNÚ FARBU TEXTU
+    const getContrastColor = (hexColor) => {
+        if (!hexColor) return '#1F2937';
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.5 ? '#1F2937' : '#FFFFFF';
+    };
+
     useEffect(() => {
         const handleResize = () => requestAnimationFrame(updateTableHeight);
         window.addEventListener('resize', handleResize);
