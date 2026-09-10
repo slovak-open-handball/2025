@@ -285,7 +285,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }
             
             // Skús až 5-krát s malou pauzou, kým matchTracker vráti hodnotu
-            for (let attempt = 0; attempt < 5; attempt++) {
+            for (let attempt = 0; attempt < 2; attempt++) {
                 try {
                     const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                     console.log(`[mapMatchTeamName] Pokus ${attempt + 1}:`, { matchTeamName, mapped, typ: typeof mapped });
