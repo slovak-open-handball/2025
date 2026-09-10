@@ -592,18 +592,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // - je forceRemap (napr. z matchTrackerReady)
             // - alebo sa objavil nový completed zápas a predchádzajúce mapovanie bolo neúplné
             // - alebo sa zmenil počet/identifikátory zápasov (matchIdsChanged) - to riešime nižšie
-            const shouldRemap = forceRemap || hasNewCompletedMatch;
-        
+            // 🔥 ROZŠÍRENÉ: remap spustíme aj keď je mappingIncomplete, aj bez nového completed zápasu
+            const shouldRemap = forceRemap 
+                || hasNewCompletedMatch 
+                || mappingIncomplete;
+            
             console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch, 'forceRemap:', forceRemap);
-        
+            
             // Ak netreba remapovať, len uložíme statusy a skončíme
             if (!shouldRemap) {
                 rawMatches.forEach(({ id: matchId, data: matchData }) => {
                     previousMatchStatuses[matchId] = matchData.status || 'scheduled';
                 });
-                // Aj tak skontrolujeme, či sa nezmenili matchIds (napr. pribudol nový zápas)
-                // -> to riešime tak, že vždy prepočítame matchIds, ale BEZ mapovania
-                // (mapovanie by vrátilo pôvodné názvy, čo je OK, lebo ešte nebolo potrebné)
                 return;
             }
         
@@ -668,11 +668,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const oldMatchIdsArray = Array.from(matchIds);
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length ||
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-        
-            // 🔥 Listenery spustíme VŽDY, keď sa robilo mapovanie (shouldRemap)
-            if (shouldRemap || matchIdsChanged) {
+            
+            // 🔥 KĽÚČOVÉ: Ak sme robili mapovanie (shouldRemap === true), VŽDY znovu nastavíme listenery.
+            // Je to potrebné, pretože matchTeamMap sa zmenil a listenery musia pracovať s novými názvami.
+            if (shouldRemap) {
                 matchIds = newMatchIds;
-                // DÔLEŽITÉ: setupEventsListener musí byť až po tom, čo je matchTeamMap naplnený
+                setupEventsListener(newMatchIdsArray);
+            } else if (matchIdsChanged) {
+                // Ak sa nezmenil matchTeamMap, ale zmenili sa matchIds, stačí aktualizovať listenery
+                matchIds = newMatchIds;
                 setupEventsListener(newMatchIdsArray);
             }
         };
@@ -685,29 +689,33 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         }, (error) => {
             console.log('[onSnapshot matches] CHYBA:', error);
         });
+
+        let readyCheckInterval = null;
+        let readyCheckAttempts = 0;
+        const MAX_READY_ATTEMPTS = 600; // 600 * 100ms = 60 sekúnd
         
         const handleMatchTrackerReady = () => {
             console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
-            console.log('[handleMatchTrackerReady] pendingSnapshot:', !!pendingSnapshot, 'matchTrackerWasReady:', matchTrackerWasReady);
             if (isCancelled) return;
             if (matchTrackerReadyHandled) return;
             matchTrackerReadyHandled = true;
-            
             matchTrackerWasReady = true;
-            // NE nastavujeme isFirstLoad = true, lebo to by spustilo mapovanie pri prvotnom načítaní
-            // Namiesto toho použijeme forceRemap = true
             
-            // Ak máme uložený pending snapshot, spracujeme ho
+            // 🔥 Vyčisti polling, ak ešte beží (event vyhral)
+            if (typeof readyCheckInterval !== 'undefined' && readyCheckInterval) {
+                clearInterval(readyCheckInterval);
+                readyCheckInterval = null;
+            }
+            
             if (pendingSnapshot) {
                 const snap = pendingSnapshot;
                 pendingSnapshot = null;
-                processMatches(snap, true).catch(err => {  // 🔥 forceRemap = true
+                processMatches(snap, true).catch(err => {
                     console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                 });
             } else {
-                // Inak načítame aktuálne dáta
                 getDocs(matchesQuery).then(snapshot => {
-                    processMatches(snapshot, true).catch(err => {  // 🔥 forceRemap = true
+                    processMatches(snapshot, true).catch(err => {
                         console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                     });
                 }).catch(err => {
@@ -719,23 +727,82 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         window.addEventListener('matchTrackerReady', handleMatchTrackerReady);
         matchTrackerReadyListener = handleMatchTrackerReady;
         
-        // Ak je matchTracker už pripravený pri mount
-        if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
-            console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount, spúšťam mapovanie');
-            matchTrackerWasReady = true;
-            matchTrackerReadyHandled = true;  // 🔥 aby sa event nespracoval znova
-            getDocs(matchesQuery).then(snapshot => {
-                processMatches(snapshot, true).catch(err => {  // 🔥 forceRemap = true
-                    console.log('[processMatches pri mount] CHYBA:', err);
-                });
-            }).catch(err => {
-                console.log('[getDocs pri mount] CHYBA:', err);
-            });
+        const checkTrackerReady = () => {
+            if (isCancelled) {
+                if (readyCheckInterval) {
+                    clearInterval(readyCheckInterval);
+                    readyCheckInterval = null;
+                }
+                return;
+            }
+            
+            // Ak už bolo spracované cez event, zastav polling
+            if (matchTrackerReadyHandled) {
+                if (readyCheckInterval) {
+                    clearInterval(readyCheckInterval);
+                    readyCheckInterval = null;
+                }
+                return;
+            }
+            
+            // Skontroluj, či je tracker pripravený
+            if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
+                console.log('[TeamStatsCollector] Polling: matchTracker je pripravený, spúšťam mapovanie');
+                matchTrackerReadyHandled = true;
+                matchTrackerWasReady = true;
+                
+                if (readyCheckInterval) {
+                    clearInterval(readyCheckInterval);
+                    readyCheckInterval = null;
+                }
+                
+                // Použi pendingSnapshot ak existuje, inak načítaj aktuálne dáta
+                if (pendingSnapshot) {
+                    const snap = pendingSnapshot;
+                    pendingSnapshot = null;
+                    processMatches(snap, true).catch(err => {
+                        console.log('[processMatches z pollingu] CHYBA:', err);
+                    });
+                } else {
+                    getDocs(matchesQuery).then(snapshot => {
+                        processMatches(snapshot, true).catch(err => {
+                            console.log('[processMatches z pollingu] CHYBA:', err);
+                        });
+                    }).catch(err => {
+                        console.log('[getDocs z pollingu] CHYBA:', err);
+                    });
+                }
+                return;
+            }
+            
+            readyCheckAttempts++;
+            if (readyCheckAttempts >= MAX_READY_ATTEMPTS) {
+                console.log('[TeamStatsCollector] Polling: prekročený maximálny počet pokusov, zastavujem');
+                if (readyCheckInterval) {
+                    clearInterval(readyCheckInterval);
+                    readyCheckInterval = null;
+                }
+            }
+        };
+        
+        // Prvá kontrola hneď (pre prípad, že tracker je už pripravený)
+        checkTrackerReady();
+        
+        // Ak ešte nie je pripravený, spustíme polling každých 100ms
+        if (!matchTrackerReadyHandled) {
+            readyCheckInterval = setInterval(checkTrackerReady, 100);
         }
         
         return () => {
             isCancelled = true;
             pendingSnapshot = null;
+            
+            // 🔥 NOVÉ: Vyčisti polling interval
+            if (readyCheckInterval) {
+                clearInterval(readyCheckInterval);
+                readyCheckInterval = null;
+            }
+            
             if (matchTrackerReadyListener) {
                 window.removeEventListener('matchTrackerReady', matchTrackerReadyListener);
                 matchTrackerReadyListener = null;
