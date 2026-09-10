@@ -1477,18 +1477,51 @@ const TeamsOverviewApp = (props) => {
         let unsubscribeMatches = null;
         let matchTeamMap = {};
     
-        const processMatches = (matchesSnapshot) => {
+        // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
+        const teamNameContainsCategory = (teamName, categoryName) => {
+            if (!teamName || !categoryName) return false;
+            return teamName.includes(categoryName);
+        };
+        
+        // Pomocná async funkcia na zmapovanie názvu tímu zo zápasu
+        const mapMatchTeamName = async (matchTeamName, categoryName) => {
+            if (!matchTeamName) return matchTeamName;
+            // Ak názov tímu obsahuje názov kategórie, treba ho zmapovať
+            if (teamNameContainsCategory(matchTeamName, categoryName)) {
+                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    try {
+                        const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
+                        if (mapped) return mapped;
+                    } catch (err) {
+                        // ignorovať
+                    }
+                }
+            }
+            return matchTeamName;
+        };
+        
+        // V processMatches - upravíme tak, aby sa mapovanie dialo asynchrónne
+        const processMatches = async (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};            
             
             const fullTeamName = currentTeamName;
+            const categoryForMapping = currentCategoryName;
             
+            // Najprv zozbierame všetky zápasy a ich tímy
+            const rawMatches = [];
             matchesSnapshot.forEach(doc => {
-                const matchData = doc.data();
-                const matchId = doc.id;
+                rawMatches.push({ id: doc.id, data: doc.data() });
+            });
+            
+            // Asynchrónne zmapujeme názvy tímov, ktoré obsahujú názov kategórie
+            for (const { id: matchId, data: matchData } of rawMatches) {
+                let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
+                let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                const convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
-                const convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
+                // Ak názov tímu obsahuje názov kategórie, zmapuj cez matchTracker
+                convertedHome = await mapMatchTeamName(convertedHome, categoryForMapping);
+                convertedAway = await mapMatchTeamName(convertedAway, categoryForMapping);
                 
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
@@ -1498,7 +1531,7 @@ const TeamsOverviewApp = (props) => {
                 if (convertedHome === fullTeamName || convertedAway === fullTeamName) {
                     newMatchIds.add(matchId);
                 }
-            });
+            }
         
             matchTeamMap = newMatchTeamMap;
         
@@ -1513,6 +1546,10 @@ const TeamsOverviewApp = (props) => {
                 setupEventsListener(newMatchIdsArray);
             }        
         };
+        
+        unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
+            processMatches(matchesSnapshot).catch(() => {});
+        }, (error) => {});
     
         unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
             processMatches(matchesSnapshot);
