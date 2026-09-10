@@ -534,18 +534,40 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 });
             };
         };
-    
+
+        // Uložíme si posledný snapshot, aby sme ho mohli spracovať, keď bude matchTracker ready
+        let pendingSnapshot = null;
+        let pendingProcessResolve = null;
+        
         const processMatches = async (matchesSnapshot) => {
             if (isCancelled) return;
             
+            // Ak matchTracker ešte nie je pripravený, uložíme snapshot a počkáme
+            const isMatchTrackerReady = 
+                typeof window.matchTracker?.isDataReady === 'function' && 
+                window.matchTracker.isDataReady();
+            
+            if (!isMatchTrackerReady && !matchTrackerWasReady) {
+                console.log('[processMatches] matchTracker ešte nie je pripravený, ukladám snapshot na neskoršie spracovanie');
+                pendingSnapshot = matchesSnapshot;
+                // Neuložíme statusy, počkáme na matchTrackerReady
+                return;
+            }
+            
+            if (isMatchTrackerReady && !matchTrackerWasReady) {
+                matchTrackerWasReady = true;
+                console.log('[processMatches] matchTracker je teraz pripravený, spúšťam mapovanie');
+            }
+            
+            // ... zvyšok pôvodného kódu processMatches ...
             const newMatchIds = new Set();
             const newMatchTeamMap = {};
-    
+        
             const rawMatches = [];
             matchesSnapshot.forEach(doc => {
                 rawMatches.push({ id: doc.id, data: doc.data() });
             });
-    
+        
             // Detekcia nového completed zápasu
             let hasNewCompletedMatch = false;
             rawMatches.forEach(({ id: matchId, data: matchData }) => {
@@ -555,69 +577,49 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     hasNewCompletedMatch = true;
                 }
             });
-    
-            // Zisti, či je matchTracker pripravený
-            const isMatchTrackerReady = 
-                typeof window.matchTracker?.isDataReady === 'function' && 
-                window.matchTracker.isDataReady();
-    
-            // Ak nie je pripravený, nerob mapovanie, len ulož statusy
-            if (!isMatchTrackerReady && !matchTrackerWasReady) {
-                console.log('[processMatches] matchTracker ešte nie je pripravený, ukladám statusy');
-                rawMatches.forEach(({ id: matchId, data: matchData }) => {
-                    previousMatchStatuses[matchId] = matchData.status || 'scheduled';
-                });
-                return;
-            }
-    
-            if (isMatchTrackerReady && !matchTrackerWasReady) {
-                matchTrackerWasReady = true;
-                console.log('[processMatches] matchTracker je teraz pripravený, spúšťam mapovanie');
-            }
-    
-            // shouldRemap = prvotné načítanie ALEBO (mappingIncomplete a nový completed zápas)
+        
             const shouldRemap = isFirstLoad || (mappingIncomplete && hasNewCompletedMatch);
-    
+        
             console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch);
-    
+        
             if (!shouldRemap) {
                 rawMatches.forEach(({ id: matchId, data: matchData }) => {
                     previousMatchStatuses[matchId] = matchData.status || 'scheduled';
                 });
                 return;
             }
-    
+        
             if (!isFirstLoad && mappingIncomplete && hasNewCompletedMatch) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
-    
+        
             mappingIncomplete = false;
-    
+        
             for (const { id: matchId, data: matchData } of rawMatches) {
                 if (isCancelled) return;
                 
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
-    
+        
                 const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
                 const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';
-    
+        
                 const homeContainsCategory = teamNameContainsCategory(convertedHome, homeCategory);
                 const awayContainsCategory = teamNameContainsCategory(convertedAway, awayCategory);
-    
+        
                 const mappedHome = await mapMatchTeamName(convertedHome, homeCategory);
                 const mappedAway = await mapMatchTeamName(convertedAway, awayCategory);
-    
+        
                 if (homeContainsCategory && mappedHome === convertedHome) {
                     mappingIncomplete = true;
                 }
                 if (awayContainsCategory && mappedAway === convertedAway) {
                     mappingIncomplete = true;
                 }
-    
+        
                 convertedHome = mappedHome;
                 convertedAway = mappedAway;
-    
+        
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway,
@@ -625,35 +627,35 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-    
+        
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
-    
+        
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
             }
-    
+        
             rawMatches.forEach(({ id: matchId, data: matchData }) => {
                 previousMatchStatuses[matchId] = matchData.status || 'scheduled';
             });
-    
+        
             matchTeamMap = newMatchTeamMap;
             console.log('[processMatches] Nájdených matchIds:', newMatchIds.size, 'mappingIncomplete:', mappingIncomplete);
-    
+        
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length ||
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
-    
+        
             if (shouldRemap || matchIdsChanged) {
                 matchIds = newMatchIds;
                 isFirstLoad = false;
                 setupEventsListener(newMatchIdsArray);
             }
         };
-    
-        // Spustenie onSnapshot
+        
+        // onSnapshot
         unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
             processMatches(matchesSnapshot).catch(err => {
                 console.log('[processMatches] CHYBA:', err);
@@ -661,22 +663,24 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         }, (error) => {
             console.log('[onSnapshot matches] CHYBA:', error);
         });
-    
-        // 🔥 KĽÚČOVÉ: Počúvame na event matchTrackerReady
-        // Ak ešte nie je pripravený, počkáme na event a potom znovu spustíme processMatches
+        
+        // Handler pre matchTrackerReady
         const handleMatchTrackerReady = () => {
-            console.log('[TeamStatsCollector] matchTrackerReady event prijatý, spúšťam re-mapovanie');
-            // Znovu spustíme processMatches s aktuálnym snapshotom
-            if (!isCancelled) {
-                // Vytvoríme nový snapshot z aktuálnych dát
-                const currentSnapshot = {
-                    forEach: (callback) => {
-                        // Nemáme priamy prístup k snapshotu, ale môžeme použiť onSnapshot znova
-                        // Namiesto toho len nastavíme flag, že treba re-mapovať
-                        isFirstLoad = true;
-                    }
-                };
-                // Jednoduchšie: znovu načítame matches
+            console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
+            if (isCancelled) return;
+            
+            matchTrackerWasReady = true;
+            isFirstLoad = true;  // ← DÔLEŽITÉ: zabezpečíme, že sa spraví mapovanie
+            
+            // Ak máme uložený pending snapshot, spracujeme ho
+            if (pendingSnapshot) {
+                const snap = pendingSnapshot;
+                pendingSnapshot = null;
+                processMatches(snap).catch(err => {
+                    console.log('[processMatches po matchTrackerReady] CHYBA:', err);
+                });
+            } else {
+                // Inak načítame aktuálne dáta
                 getDocs(matchesQuery).then(snapshot => {
                     processMatches(snapshot).catch(err => {
                         console.log('[processMatches po matchTrackerReady] CHYBA:', err);
@@ -686,14 +690,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 });
             }
         };
-    
-        // Zaregistrujeme listener
+        
         window.addEventListener('matchTrackerReady', handleMatchTrackerReady);
         matchTrackerReadyListener = handleMatchTrackerReady;
-    
-        // Ak už je matchTracker pripravený, spustíme re-mapovanie okamžite
+        
+        // Ak je matchTracker už pripravený pri mount
         if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
-            console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount, spúšťam re-mapovanie');
+            console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount');
+            matchTrackerWasReady = true;
+            isFirstLoad = true;
             getDocs(matchesQuery).then(snapshot => {
                 processMatches(snapshot).catch(err => {
                     console.log('[processMatches pri mount] CHYBA:', err);
@@ -702,15 +707,14 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 console.log('[getDocs pri mount] CHYBA:', err);
             });
         }
-    
+        
         return () => {
             isCancelled = true;
-            
+            pendingSnapshot = null;
             if (matchTrackerReadyListener) {
                 window.removeEventListener('matchTrackerReady', matchTrackerReadyListener);
                 matchTrackerReadyListener = null;
             }
-            
             if (unsubscribeMatches) {
                 try { unsubscribeMatches(); } catch (e) {}
                 unsubscribeMatches = null;
