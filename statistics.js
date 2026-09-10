@@ -556,6 +556,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let pendingProcessResolve = null;
         let retryTimeoutId = null;
         let mappingPollInterval = null;
+        let globalEventsUnsubscribe = null;
+        let globalEventsDebounceId = null;
         
         const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
@@ -903,6 +905,42 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
         
         mappingPollInterval = setInterval(checkMappingChanges, 5000);
+
+                // 🔥 NOVÉ: Listener na matchEvents s debounce — pri každej zmene spusti remap
+        let globalEventsDebounceId = null;
+        
+        const scheduleGlobalRemap = () => {
+            if (isCancelled) return;
+            if (!matchTrackerWasReady) return;
+            
+            // Debounce: ak prišlo veľa zmien za sebou, spustí sa len posledná
+            if (globalEventsDebounceId) {
+                clearTimeout(globalEventsDebounceId);
+            }
+            globalEventsDebounceId = setTimeout(() => {
+                if (isCancelled) return;
+                if (!matchTrackerWasReady) return;
+                
+                console.log('[globalEventsListener] Spúšťam remap po debounce...');
+                getDocs(matchesQuery).then(snapshot => {
+                    processMatches(snapshot, true).catch(err => {
+                        console.log('[processMatches z globalEventsListener] CHYBA:', err);
+                    });
+                }).catch(err => {
+                    console.log('[getDocs z globalEventsListener] CHYBA:', err);
+                });
+            }, 2000);  // 2s debounce
+        };
+        
+        const eventsRef = collection(window.db, 'matchEvents');
+        const eventsQuery = query(eventsRef);
+        
+        globalEventsUnsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+            if (isCancelled) return;
+            scheduleGlobalRemap();
+        }, (error) => {
+            console.log('[globalEventsListener] CHYBA:', error);
+        });
         
         return () => {
             isCancelled = true;
@@ -911,6 +949,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (retryTimeoutId) {
                 clearTimeout(retryTimeoutId);
                 retryTimeoutId = null;
+            }
+
+            // 🔥 NOVÉ: Vyčisti globalEvents listener
+            if (globalEventsUnsubscribe) {
+                try { globalEventsUnsubscribe(); } catch (e) {}
+                globalEventsUnsubscribe = null;
+            }
+            
+            // 🔥 NOVÉ: Vyčisti debounce
+            if (globalEventsDebounceId) {
+                clearTimeout(globalEventsDebounceId);
+                globalEventsDebounceId = null;
             }
             
             // 🔥 NOVÉ: Vyčisti mapping polling
