@@ -1186,7 +1186,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
 
                         const isRemovedFromRoster = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
                         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
-                        const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+                        const isExcludedNormally = 
+                            matchStatus !== 'completed' && 
+                            exclusionInfo?.isExcluded === true && 
+                            (exclusionInfo?.remainingSeconds || 0) > 0;
                         const isExcluded = isRemovedFromRoster || isExcludedNormally || isSuspendedByBlue;
                         
                         let exclusionDisplayRow = null;
@@ -1203,6 +1206,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         if (isExcluded) {
                             if (isRemovedFromRoster) {
                                 rowClassName = `hover:bg-orange-50 transition-colors ${cursorClass} opacity-80 bg-orange-100`;
+                            } else if (matchStatus === 'completed') {
+                                rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
                             } else {
                                 rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`;
                             }
@@ -1221,7 +1226,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                     )
                                 )
                             );
-                        } else if (isExcludedNormally) {
+                        } else if (isExcludedNormally && matchStatus !== 'completed') {
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
