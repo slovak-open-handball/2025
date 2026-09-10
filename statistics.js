@@ -721,8 +721,16 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
         // Ak je matchTracker už pripravený pri mount
         if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
-            console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount');
+            console.log('[TeamStatsCollector] matchTracker je už pripravený pri mount, spúšťam mapovanie');
             matchTrackerWasReady = true;
+            matchTrackerReadyHandled = true;  // 🔥 aby sa event nespracoval znova
+            getDocs(matchesQuery).then(snapshot => {
+                processMatches(snapshot, true).catch(err => {  // 🔥 forceRemap = true
+                    console.log('[processMatches pri mount] CHYBA:', err);
+                });
+            }).catch(err => {
+                console.log('[getDocs pri mount] CHYBA:', err);
+            });
         }
         
         return () => {
