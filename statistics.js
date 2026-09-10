@@ -291,19 +291,25 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
-            if (!matchTeamName) return matchTeamName;
-            const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
-            if (!containsCategory) return matchTeamName;
-            
-            if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
-                return matchTeamName;
+            if (!matchTeamName) {
+                return { mapped: matchTeamName, incomplete: false };
             }
-            
+            const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
+            if (!containsCategory) {
+                // Tím neobsahuje názov kategórie → nepotrebuje mapovanie → complete
+                return { mapped: matchTeamName, incomplete: false };
+            }
+        
+            if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+                // Tracker neexistuje → nevieme namapovať → incomplete
+                return { mapped: matchTeamName, incomplete: true };
+            }
+        
             if (typeof window.matchTracker.isDataReady === 'function' && !window.matchTracker.isDataReady()) {
                 console.log('[mapMatchTeamName] matchTracker ešte nie je pripravený');
-                return { mapped: matchTeamName, incomplete: true };  // <-- signal incomplete
+                return { mapped: matchTeamName, incomplete: true };
             }
-            
+        
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                 console.log('[mapMatchTeamName] VÝSTUP:', { matchTeamName, mapped });
