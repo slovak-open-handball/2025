@@ -621,6 +621,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // 🔥 NOVÝ FLAG: retry má zmysel len ak je dôvod retryovateľný (tracker not ready / error)
             let retryableIncomplete = false;
         
+            // 🔥 KĽÚČOVÉ: previousMatchTeamMap musí byť PRED cyklom for,
+            // aby obsahoval staré namapované názvy z predchádzajúceho behu
+            const previousMatchTeamMap = matchTeamMap || {};
+        
             // 🔥 NAJPRV ZMAPUJEME VŠETKY TÍMY
             for (const { id: matchId, data: matchData } of rawMatches) {
                 if (isCancelled) return;
@@ -639,26 +643,35 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
                 const homeIncomplete = homeContainsCategory && homeResult.incomplete;
                 const awayIncomplete = awayContainsCategory && awayResult.incomplete;
-
-                // Pred cyklom for:
-                const previousMatchTeamMap = matchTeamMap || {};
-                
-                // V cykle for:
-                const homeResult = await mapMatchTeamName(convertedHome, homeCategory);
-                const awayResult = await mapMatchTeamName(convertedAway, awayCategory);
-                
+        
+                if (homeIncomplete) {
+                    mappingIncomplete = true;
+                    if (homeResult.reason === 'tracker_not_ready' || 
+                        homeResult.reason === 'error' || 
+                        homeResult.reason === 'tracker_missing') {
+                        retryableIncomplete = true;
+                    }
+                }
+                if (awayIncomplete) {
+                    mappingIncomplete = true;
+                    if (awayResult.reason === 'tracker_not_ready' || 
+                        awayResult.reason === 'error' || 
+                        awayResult.reason === 'tracker_missing') {
+                        retryableIncomplete = true;
+                    }
+                }
+        
                 // 🔥 Zisti, či nové mapovanie prinieslo reálny názov (líši sa od identifikátora)
                 const homeMapped = homeResult.mapped && homeResult.mapped !== matchData.homeTeamIdentifier;
                 const awayMapped = awayResult.mapped && awayResult.mapped !== matchData.awayTeamIdentifier;
-                
+        
                 // 🔥 Ak nové mapovanie zlyhalo, skús použiť staré mapovanie z previousMatchTeamMap
                 let finalHome = homeResult.mapped;
                 let finalAway = awayResult.mapped;
-                
+        
                 if (!homeMapped && previousMatchTeamMap[matchId]) {
                     const oldHome = previousMatchTeamMap[matchId].homeTeam;
                     if (oldHome && oldHome !== matchData.homeTeamIdentifier && oldHome !== convertedHome) {
-                        // Starý názov je namapovaný (líši sa od identifikátora aj od nového konvertovaného)
                         finalHome = oldHome;
                         console.log(`[processMatches] Používam starý namapovaný názov pre home: ${oldHome}`);
                     }
@@ -670,26 +683,27 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         console.log(`[processMatches] Používam starý namapovaný názov pre away: ${oldAway}`);
                     }
                 }
-                
+        
+                convertedHome = finalHome;
+                convertedAway = finalAway;
+        
                 newMatchTeamMap[matchId] = {
-                    homeTeam: finalHome,
-                    awayTeam: finalAway,
+                    homeTeam: convertedHome,
+                    awayTeam: convertedAway,
                     homeCategory: homeCategory,
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-                
+        
                 // 🔥 NAJPRV zisti, či je náš tím v tomto zápase
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
-                
+        
                 // 🔥 Ak je náš tím v zápase, PRIDAJ matchId do newMatchIds VŽDY
-                // (aj keď je súper nezmapovaný — listener sa musí vytvoriť, aby sa udalosti dali spracovať,
-                //  keď sa súper neskôr namapuje)
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
-                
+        
                 // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas sa nezapočíta do štatistík (continue),
                 // ale matchId JE v newMatchIds → listener sa vytvorí
                 if (homeIncomplete || awayIncomplete) {
