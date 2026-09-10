@@ -319,7 +319,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
-            console.log('[calculateStatsFromEvents] matchInfo:', matchId, matchInfo, 'currentTeamName:', currentTeamName, 'eventTeam:', eventData.team, 'eventCategoryName:', eventData.categoryName);
             const stats = {};
             rosterData.forEach((member) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -547,14 +546,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let pendingProcessResolve = null;
         
         const processMatches = async (matchesSnapshot) => {
-            console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
-            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
             if (isCancelled) return;
-            
+    
+            // 🔥 DEKLARÁCIA HNEĎ NA ZAČIATKU
             const isMatchTrackerReady = 
                 typeof window.matchTracker?.isDataReady === 'function' && 
                 window.matchTracker.isDataReady();
             
+            console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
+            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
             console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady);
             
             if (!isMatchTrackerReady && !matchTrackerWasReady) {
