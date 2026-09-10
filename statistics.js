@@ -634,16 +634,16 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             
                 const homeResult = await mapMatchTeamName(convertedHome, homeCategory);
                 const awayResult = await mapMatchTeamName(convertedAway, awayCategory);
-            
+                
                 const homeIncomplete = homeContainsCategory && homeResult.incomplete;
                 const awayIncomplete = awayContainsCategory && awayResult.incomplete;
-            
+                
                 if (homeIncomplete) mappingIncomplete = true;
                 if (awayIncomplete) mappingIncomplete = true;
-            
+                
                 convertedHome = homeResult.mapped;
                 convertedAway = awayResult.mapped;
-            
+                
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway,
@@ -651,17 +651,16 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-            
-                // 🔥 KĽÚČOVÉ: Ak je aspoň jeden tím nezmapovaný, tento zápas PRESKOČÍME
-                // (nepridáme do newMatchIds, takže jeho udalosti sa nebudú načítavať)
+                
+                // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas preskočíme
                 if (homeIncomplete || awayIncomplete) {
                     console.log(`[processMatches] Zápas ${matchId} preskočený (homeIncomplete=${homeIncomplete}, awayIncomplete=${awayIncomplete})`);
                     continue;
                 }
-            
+                
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
-            
+                
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
