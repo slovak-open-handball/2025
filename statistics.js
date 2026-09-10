@@ -1025,9 +1025,6 @@ const RostersTable = ({ isRostersVisible }) => {
     const [cachedSelectedCategory, setCachedSelectedCategory] = useState(null);
     const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
-    // Špeciálna hodnota pre "Všetky kategórie"
-    const ALL_CATEGORIES = '__ALL__';
-
     // Načítanie cached dát pri prvom mounte – NEobnovujeme selectedCategory
     useEffect(() => {
         const cached = loadFromLocalStorage();
@@ -1163,11 +1160,11 @@ const RostersTable = ({ isRostersVisible }) => {
         return () => { if (unsubscribeUsers) unsubscribeUsers(); };
     }, []);
 
-    // Unikátne tímy – filtrované podľa selectedCategory (ak je "__ALL__", vráti všetky)
+    // Unikátne tímy – filtrované podľa selectedCategory
     const getUniqueTeams = useCallback(() => {
         const teamsMap = new Map();
         allTeams.forEach(team => {
-            if (selectedCategory && selectedCategory !== ALL_CATEGORIES && team.category !== selectedCategory) return;
+            if (selectedCategory && team.category !== selectedCategory) return;
             const key = `${team.teamName}_${team.category}`;
             if (!teamsMap.has(key)) {
                 teamsMap.set(key, {
@@ -1194,7 +1191,7 @@ const RostersTable = ({ isRostersVisible }) => {
         setStatsUpdateTrigger(0);
     }, [unsubscribes]);
 
-    // Načítanie členov – spustí sa len ak je vybraná kategória (alebo "__ALL__")
+    // Načítanie členov – spustí sa len ak je vybraná kategória
     useEffect(() => {
         // Pri každej zmene kategórie najprv vyčistíme všetky dáta
         unsubscribes.forEach(unsub => { try { unsub(); } catch (e) {} });
@@ -1324,19 +1321,13 @@ const RostersTable = ({ isRostersVisible }) => {
         if (!selectedCategory) {
             return [];
         }
-
-        // Pomocná funkcia na filtrovanie podľa kategórie (s podporou "__ALL__")
-        const filterByCategory = (members) => {
-            if (selectedCategory === ALL_CATEGORIES) {
-                return members;
-            }
-            return members.filter(m => m.categoryNameDisplay === selectedCategory);
-        };
-
+    
         // Ak máme živé dáta (allMembersData), použijeme ich – aj keď ešte nie sú všetky štatistiky
         if (allMembersData.length > 0) {
-            const filteredMembers = filterByCategory(allMembersData);
-
+            const filteredMembers = allMembersData.filter(member =>
+                member.categoryNameDisplay === selectedCategory
+            );
+    
             const membersWithStats = filteredMembers.map(member => {
                 const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
                 const teamStats = allStatsData[key] || {};
@@ -1344,17 +1335,17 @@ const RostersTable = ({ isRostersVisible }) => {
                 const stats = teamStats[memberKey] || { goals: 0 };
                 return { ...member, goals: Number(stats.goals || 0) };
             });
-
+    
             const goalsScorers = membersWithStats.filter(m => m.goals > 0);
             const nonScorers = membersWithStats.filter(m => m.goals === 0);
-
+    
             goalsScorers.sort((a, b) => {
                 if (b.goals !== a.goals) return b.goals - a.goals;
                 const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
                 if (teamCompare !== 0) return teamCompare;
                 return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
             });
-
+    
             nonScorers.sort((a, b) => {
                 const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
                 if (teamCompare !== 0) return teamCompare;
@@ -1364,9 +1355,9 @@ const RostersTable = ({ isRostersVisible }) => {
                 const bNum = parseInt(b.jerseyNumber) || 999;
                 return aNum - bNum;
             });
-
+    
             const result = [...goalsScorers, ...nonScorers];
-
+    
             // Uložíme finálnu zobrazenú tabuľku do localStorage (len ak sú štatistiky hotové)
             if (result.length > 0 && isStatsReady) {
                 saveToLocalStorage({
@@ -1375,18 +1366,20 @@ const RostersTable = ({ isRostersVisible }) => {
                     savedAt: Date.now()
                 });
             }
-
+    
             return result;
         }
-
+    
         // Ak nemáme živé dáta, skúsime cached
         if (cachedDisplayMembers && cachedDisplayMembers.length > 0) {
-            const filtered = filterByCategory(cachedDisplayMembers);
+            const filtered = cachedDisplayMembers.filter(
+                m => m.categoryNameDisplay === selectedCategory
+            );
             if (filtered.length > 0) {
                 return filtered;
             }
         }
-
+    
         return [];
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory, cachedDisplayMembers]);
 
@@ -1407,12 +1400,12 @@ const RostersTable = ({ isRostersVisible }) => {
             return React.createElement('div', { className: 'text-center py-12 text-gray-500' },
                 'Súpisky tímov nie sú momentálne dostupné.');
         }
-
+    
         if (!selectedCategory) {
             return React.createElement('div', { className: 'text-center py-12 text-gray-500' },
                 'Vyberte kategóriu pre zobrazenie štatistík.');
         }
-
+    
         // Ak ešte nemáme všetkých členov načítaných, zobrazíme loader
         if (allMembersData.length === 0) {
             const progressText = `Načítavanie...`;
@@ -1421,12 +1414,11 @@ const RostersTable = ({ isRostersVisible }) => {
                 React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
             );
         }
-
+    
         // Ak máme členov, ale žiadnych v tejto kategórii
         if (displayMembers.length === 0) {
-            const label = selectedCategory === ALL_CATEGORIES ? 'žiadnych' : `v kategórii: ${selectedCategory}`;
             return React.createElement('div', { className: 'text-center py-8 text-gray-500' },
-                `Žiadni členovia ${label}`);
+                `Žiadni členovia v kategórii: ${selectedCategory}`);
         }
 
         const goalRankMap = new Map();
@@ -1438,11 +1430,6 @@ const RostersTable = ({ isRostersVisible }) => {
                 currentRank++;
             }
         });
-
-        // Text pre footer – podľa režimu
-        const footerCategoryLabel = selectedCategory === ALL_CATEGORIES
-            ? 'všetkých kategórií'
-            : `kategórii ${selectedCategory}`;
 
         return React.createElement('div', {
             className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
@@ -1523,7 +1510,7 @@ const RostersTable = ({ isRostersVisible }) => {
                 React.createElement('tfoot', { className: 'bg-gray-200 font-semibold' },
                     React.createElement('tr', null,
                         React.createElement('td', { colSpan: '11', className: 'px-2 py-2 text-center text-xs text-gray-600' },
-                            `Počet členov ${footerCategoryLabel}: ${displayMembers.length}`
+                            `Počet členov v kategórii ${selectedCategory}: ${displayMembers.length}`
                         )
                     )
                 )
@@ -1535,27 +1522,8 @@ const RostersTable = ({ isRostersVisible }) => {
         const categories = getUniqueCategoriesWithIds();
         if (categories.length === 0) return null;
 
-        const isAllActive = selectedCategory === ALL_CATEGORIES;
-        const allColor = '#111827'; // tmavá pre "Všetky kategórie"
-        const allLighterColor = getLighterColor(allColor);
-
         return React.createElement('div', { className: 'mb-4 flex flex-wrap gap-2 items-center' },
             React.createElement('span', { className: 'text-sm font-medium text-gray-700 mr-2' }, 'Filtrovať podľa kategórie:'),
-
-            // Tlačidlo "Všetky kategórie"
-            React.createElement('button', {
-                key: '__ALL__',
-                onClick: () => handleCategoryFilter(ALL_CATEGORIES),
-                className: `px-3 py-1.5 text-sm rounded-full transition-all duration-200 font-semibold ${
-                    isAllActive ? 'text-white shadow-md scale-105' : 'text-gray-700 hover:opacity-80'
-                }`,
-                style: {
-                    backgroundColor: isAllActive ? allColor : allLighterColor,
-                    color: isAllActive ? '#FFFFFF' : (getContrastColor(allLighterColor) || '#1F2937')
-                }
-            }, 'Všetky kategórie'),
-
-            // Tlačidlá jednotlivých kategórií
             categories.map(category => {
                 const isActive = selectedCategory === category.name;
                 const color = categoryColors[category.id] || '#6B7280';
