@@ -259,7 +259,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let isFirstLoad = true;
         let matchTeamMap = {};
     
-        const calculateStatsFromEvents = (eventsSnapshot) => {            
+        const calculateStatsFromEvents = (eventsSnapshot) => {
             const stats = {};
             rosterData.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -294,7 +294,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (!matchInfo) {
                     return;
                 }                
-                
+        
                 let isOurTeam = false;
                 const fullTeamName = currentTeamName;
                 const homeTeam = matchInfo.homeTeam || '';
@@ -314,7 +314,20 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (!isOurTeam) {
                     return;
                 }
-                
+        
+                // NOVÁ ČASŤ: Zistiť, či sa názov kategórie nachádza v názve tímu zápasu
+                const matchTeamName = eventData.team === 'home' ? homeTeam : awayTeam;
+                if (eventData.categoryName && matchTeamName && matchTeamName.includes(eventData.categoryName)) {
+                    // Ak áno, pošli názov tímu zo zápasu do getTeamNameByDisplayId
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            window.matchTracker.getTeamNameByDisplayId(matchTeamName);
+                        } catch (err) {
+                            // ignorovať chybu
+                        }
+                    }
+                }
+        
                 // --- UPRAVENÉ POROVNANIE PRE memberTypeKey a memberIndex ---
                 let foundMemberKey = null;
                 const eventMemberTypeKey = eventData.memberTypeKey || eventData.memberType || '';
