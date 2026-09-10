@@ -1025,16 +1025,12 @@ const RostersTable = ({ isRostersVisible }) => {
     const [cachedSelectedCategory, setCachedSelectedCategory] = useState(null);
     const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
-    // Načítanie cached dát pri prvom mounte
+    // Načítanie cached dát pri prvom mounte – NEobnovujeme selectedCategory
     useEffect(() => {
         const cached = loadFromLocalStorage();
         if (cached && cached.displayMembers && cached.displayMembers.length > 0) {
             setCachedDisplayMembers(cached.displayMembers);
             setCachedSelectedCategory(cached.selectedCategory || null);
-            // Ak máme cached kategóriu, nastavíme ju ako vybranú
-            if (cached.selectedCategory) {
-                setSelectedCategory(cached.selectedCategory);
-            }
         }
         setIsCacheLoaded(true);
     }, []);
