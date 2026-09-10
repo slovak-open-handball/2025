@@ -1325,65 +1325,66 @@ const RostersTable = ({ isRostersVisible }) => {
         if (!selectedCategory) {
             return [];
         }
-
-        // Ak ešte nemáme živé dáta pripravené, skúsime cached
-        if (!isStatsReady || allMembersData.length === 0) {
-            if (cachedDisplayMembers && cachedDisplayMembers.length > 0) {
-                const filtered = cachedDisplayMembers.filter(
-                    m => m.categoryNameDisplay === selectedCategory
-                );
-                if (filtered.length > 0) {
-                    return filtered;
-                }
-            }
-            return [];
-        }
-
-        // Živé dáta – pôvodný výpočet
-        const filteredMembers = allMembersData.filter(member =>
-            member.categoryNameDisplay === selectedCategory
-        );
-
-        const membersWithStats = filteredMembers.map(member => {
-            const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
-            const teamStats = allStatsData[key] || {};
-            const memberKey = `${member.type}_${member.originalIndex}`;
-            const stats = teamStats[memberKey] || { goals: 0 };
-            return { ...member, goals: Number(stats.goals || 0) };
-        });
-
-        const goalsScorers = membersWithStats.filter(m => m.goals > 0);
-        const nonScorers = membersWithStats.filter(m => m.goals === 0);
-
-        goalsScorers.sort((a, b) => {
-            if (b.goals !== a.goals) return b.goals - a.goals;
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-        });
-
-        nonScorers.sort((a, b) => {
-            const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
-            if (teamCompare !== 0) return teamCompare;
-            const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
-            if (nameCompare !== 0) return nameCompare;
-            const aNum = parseInt(a.jerseyNumber) || 999;
-            const bNum = parseInt(b.jerseyNumber) || 999;
-            return aNum - bNum;
-        });
-
-        const result = [...goalsScorers, ...nonScorers];
-
-        // Uložíme finálnu zobrazenú tabuľku do localStorage
-        if (result.length > 0) {
-            saveToLocalStorage({
-                displayMembers: result,
-                selectedCategory: selectedCategory,
-                savedAt: Date.now()
+    
+        // Ak máme živé dáta (allMembersData), použijeme ich – aj keď ešte nie sú všetky štatistiky
+        if (allMembersData.length > 0) {
+            const filteredMembers = allMembersData.filter(member =>
+                member.categoryNameDisplay === selectedCategory
+            );
+    
+            const membersWithStats = filteredMembers.map(member => {
+                const key = `${member.teamNameDisplay}_${member.categoryNameDisplay}`;
+                const teamStats = allStatsData[key] || {};
+                const memberKey = `${member.type}_${member.originalIndex}`;
+                const stats = teamStats[memberKey] || { goals: 0 };
+                return { ...member, goals: Number(stats.goals || 0) };
             });
+    
+            const goalsScorers = membersWithStats.filter(m => m.goals > 0);
+            const nonScorers = membersWithStats.filter(m => m.goals === 0);
+    
+            goalsScorers.sort((a, b) => {
+                if (b.goals !== a.goals) return b.goals - a.goals;
+                const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+                if (teamCompare !== 0) return teamCompare;
+                return slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+            });
+    
+            nonScorers.sort((a, b) => {
+                const teamCompare = slovakCollator.compare(a.teamNameDisplay, b.teamNameDisplay);
+                if (teamCompare !== 0) return teamCompare;
+                const nameCompare = slovakCollator.compare(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`);
+                if (nameCompare !== 0) return nameCompare;
+                const aNum = parseInt(a.jerseyNumber) || 999;
+                const bNum = parseInt(b.jerseyNumber) || 999;
+                return aNum - bNum;
+            });
+    
+            const result = [...goalsScorers, ...nonScorers];
+    
+            // Uložíme finálnu zobrazenú tabuľku do localStorage (len ak sú štatistiky hotové)
+            if (result.length > 0 && isStatsReady) {
+                saveToLocalStorage({
+                    displayMembers: result,
+                    selectedCategory: selectedCategory,
+                    savedAt: Date.now()
+                });
+            }
+    
+            return result;
         }
-
-        return result;
+    
+        // Ak nemáme živé dáta, skúsime cached
+        if (cachedDisplayMembers && cachedDisplayMembers.length > 0) {
+            const filtered = cachedDisplayMembers.filter(
+                m => m.categoryNameDisplay === selectedCategory
+            );
+            if (filtered.length > 0) {
+                return filtered;
+            }
+        }
+    
+        return [];
     }, [allMembersData, allStatsData, isStatsReady, statsUpdateTrigger, selectedCategory, cachedDisplayMembers]);
 
     useEffect(() => {
@@ -1403,19 +1404,25 @@ const RostersTable = ({ isRostersVisible }) => {
             return React.createElement('div', { className: 'text-center py-12 text-gray-500' },
                 'Súpisky tímov nie sú momentálne dostupné.');
         }
-
+    
         if (!selectedCategory) {
             return React.createElement('div', { className: 'text-center py-12 text-gray-500' },
                 'Vyberte kategóriu pre zobrazenie štatistík.');
         }
-
-        if (displayMembers.length === 0) {
-            // Ak máme cached pre túto kategóriu, ale ešte neboli načítané živé dáta
+    
+        // Ak ešte nemáme všetkých členov načítaných, zobrazíme loader
+        if (allMembersData.length === 0) {
             const progressText = `Načítavanie...`;
             return React.createElement('div', { className: 'text-center py-8' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto' }),
                 React.createElement('p', { className: 'text-sm text-gray-500 mt-2' }, progressText)
             );
+        }
+    
+        // Ak máme členov, ale žiadnych v tejto kategórii
+        if (displayMembers.length === 0) {
+            return React.createElement('div', { className: 'text-center py-8 text-gray-500' },
+                `Žiadni členovia v kategórii: ${selectedCategory}`);
         }
 
         const goalRankMap = new Map();
