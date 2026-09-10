@@ -341,36 +341,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const awayTeam = matchInfo.awayTeam || '';
                 const matchTeamName = eventData.team === 'home' ? homeTeam : awayTeam;
         
-                // Ak názov tímu zo zápasu obsahuje názov kategórie, treba ho zmapovať
-                let mappedMatchTeamName = matchTeamName;
-                if (eventData.categoryName && matchTeamName && matchTeamName.includes(eventData.categoryName)) {
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            // POZOR: getTeamNameByDisplayId je async, ale tu sme v sync kontexte.
-                            // Preto použijeme synchronnú verziu, ak existuje, inak fallback.
-                            if (typeof window.matchTracker.getTeamNameByDisplayIdSync === 'function') {
-                                const mapped = window.matchTracker.getTeamNameByDisplayIdSync(matchTeamName);
-                                if (mapped && mapped !== matchTeamName) {
-                                    mappedMatchTeamName = mapped;
-                                }
-                            } else {
-                                // Ak sync verzia neexistuje, aspoň zavoláme async (fire & forget),
-                                // aby sa cache naplnila pre ďalšie volania.
-                                window.matchTracker.getTeamNameByDisplayId(matchTeamName).catch(() => {});
-                            }
-                        } catch (err) {
-                            // ignorovať
-                        }
-                    }
-                }
-        
-                // Porovnávame zmapovaný názov
                 if (eventData.team === 'home') {
-                    if (mappedMatchTeamName === currentTeamName && matchInfo.homeCategory === currentCategoryName) {
+                    if (homeTeam === currentTeamName && matchInfo.homeCategory === currentCategoryName) {
                         isOurTeam = true;
                     }
                 } else if (eventData.team === 'away') {
-                    if (mappedMatchTeamName === currentTeamName && matchInfo.awayCategory === currentCategoryName) {
+                    if (awayTeam === currentTeamName && matchInfo.awayCategory === currentCategoryName) {
                         isOurTeam = true;
                     }
                 }
@@ -610,12 +586,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     rawMatchData: matchData
                 };
             
-                const isHomeMatch = convertedHome === currentTeamName && homeCategory === currentCategoryName;
-                const isAwayMatch = convertedAway === currentTeamName && awayCategory === currentCategoryName;
-            
-                if (isHomeMatch || isAwayMatch) {
-                    newMatchIds.add(matchId);
-                }
+//                const isHomeMatch = convertedHome === currentTeamName && homeCategory === currentCategoryName;
+//                const isAwayMatch = convertedAway === currentTeamName && awayCategory === currentCategoryName;
+//            
+//                if (isHomeMatch || isAwayMatch) {
+//                    newMatchIds.add(matchId);
+//                }
             }
         
             matchTeamMap = newMatchTeamMap;
