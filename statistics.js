@@ -625,26 +625,25 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
-        
+            
                 const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
                 const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';
-        
+            
                 const homeContainsCategory = teamNameContainsCategory(convertedHome, homeCategory);
                 const awayContainsCategory = teamNameContainsCategory(convertedAway, awayCategory);
-        
+            
                 const homeResult = await mapMatchTeamName(convertedHome, homeCategory);
                 const awayResult = await mapMatchTeamName(convertedAway, awayCategory);
-
-                if (homeContainsCategory && homeResult.incomplete) {
-                    mappingIncomplete = true;
-                }
-                if (awayContainsCategory && awayResult.incomplete) {
-                    mappingIncomplete = true;
-                }
-                
+            
+                const homeIncomplete = homeContainsCategory && homeResult.incomplete;
+                const awayIncomplete = awayContainsCategory && awayResult.incomplete;
+            
+                if (homeIncomplete) mappingIncomplete = true;
+                if (awayIncomplete) mappingIncomplete = true;
+            
                 convertedHome = homeResult.mapped;
                 convertedAway = awayResult.mapped;
-        
+            
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway,
@@ -652,10 +651,17 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-        
+            
+                // 🔥 KĽÚČOVÉ: Ak je aspoň jeden tím nezmapovaný, tento zápas PRESKOČÍME
+                // (nepridáme do newMatchIds, takže jeho udalosti sa nebudú načítavať)
+                if (homeIncomplete || awayIncomplete) {
+                    console.log(`[processMatches] Zápas ${matchId} preskočený (homeIncomplete=${homeIncomplete}, awayIncomplete=${awayIncomplete})`);
+                    continue;
+                }
+            
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
-        
+            
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
