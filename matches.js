@@ -1070,7 +1070,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
 
                         const isRemovedFromRoster = isPlayerRemovedFromRoster(member, matchId, rosterRemovals);
                         const isSuspendedByBlue = isPlayerSuspendedByBlueCard(member);
-                        const isExcludedNormally = exclusionInfo?.isExcluded === true && (exclusionInfo?.remainingSeconds || 0) > 0;
+                        const isExcludedNormally = 
+                            matchStatus !== 'completed' && 
+                            exclusionInfo?.isExcluded === true && 
+                            (exclusionInfo?.remainingSeconds || 0) > 0;
                         
                         let rowClassName = 'hover:bg-gray-50 transition-colors cursor-default';
                         
@@ -1099,7 +1102,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                                     )
                                 )
                             );
-                        } else if (isExcludedNormally) {
+                        } else if (isExcludedNormally && matchStatus !== 'completed') {
                             const remainingSeconds = exclusionInfo.remainingSeconds;
                             const mins = Math.floor(remainingSeconds / 60);
                             const secs = remainingSeconds % 60;
