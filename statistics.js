@@ -546,16 +546,16 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let pendingSnapshot = null;
         let pendingProcessResolve = null;
         
-        const processMatches = async (matchesSnapshot) => {
+        const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
-    
+        
             // 🔥 DEKLARÁCIA HNEĎ NA ZAČIATKU
             const isMatchTrackerReady = 
                 typeof window.matchTracker?.isDataReady === 'function' && 
                 window.matchTracker.isDataReady();
             
             console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
-            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
+            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot, 'forceRemap:', forceRemap);
             console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady);
             
             if (!isMatchTrackerReady && !matchTrackerWasReady) {
@@ -566,7 +566,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             
             if (isMatchTrackerReady && !matchTrackerWasReady) {
                 matchTrackerWasReady = true;
-                console.log('[processMatches] matchTracker je teraz pripravený, spúšťam mapovanie');
+                console.log('[processMatches] matchTracker je teraz pripravený');
             }
             
             const newMatchIds = new Set();
@@ -587,14 +587,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             });
         
-            const shouldRemap = isFirstLoad || (mappingIncomplete && hasNewCompletedMatch);
+            // 🔥 KĽÚČOVÁ ZMENA: shouldRemap NIE JE viazané na isFirstLoad!
+            // Mapovanie sa spustí LEN keď:
+            // - je forceRemap (napr. z matchTrackerReady)
+            // - alebo sa objavil nový completed zápas a predchádzajúce mapovanie bolo neúplné
+            // - alebo sa zmenil počet/identifikátory zápasov (matchIdsChanged) - to riešime nižšie
+            const shouldRemap = forceRemap || (mappingIncomplete && hasNewCompletedMatch);
         
-            console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch);
+            console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch, 'forceRemap:', forceRemap);
         
+            // Ak netreba remapovať, len uložíme statusy a skončíme
             if (!shouldRemap) {
                 rawMatches.forEach(({ id: matchId, data: matchData }) => {
                     previousMatchStatuses[matchId] = matchData.status || 'scheduled';
                 });
+                // Aj tak skontrolujeme, či sa nezmenili matchIds (napr. pribudol nový zápas)
+                // -> to riešime tak, že vždy prepočítame matchIds, ale BEZ mapovania
+                // (mapovanie by vrátilo pôvodné názvy, čo je OK, lebo ešte nebolo potrebné)
                 return;
             }
         
@@ -652,6 +661,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
             // 🔥 AŽ TERAZ NASTAVÍME matchTeamMap - PRED setupEventsListener
             matchTeamMap = newMatchTeamMap;
+            isFirstLoad = false;  // 🔥 až teraz, keď sme naozaj spravili mapovanie
             console.log('[processMatches] Nájdených matchIds:', newMatchIds.size, 'mappingIncomplete:', mappingIncomplete);
         
             const newMatchIdsArray = Array.from(newMatchIds);
@@ -659,10 +669,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length ||
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
         
-            // 🔥 Listenery spustíme VŽDY, keď sa robilo mapovanie (shouldRemap) alebo sa zmenili matchIds
+            // 🔥 Listenery spustíme VŽDY, keď sa robilo mapovanie (shouldRemap)
             if (shouldRemap || matchIdsChanged) {
                 matchIds = newMatchIds;
-                isFirstLoad = false;
                 // DÔLEŽITÉ: setupEventsListener musí byť až po tom, čo je matchTeamMap naplnený
                 setupEventsListener(newMatchIdsArray);
             }
@@ -677,27 +686,28 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             console.log('[onSnapshot matches] CHYBA:', error);
         });
         
-        // Handler pre matchTrackerReady
         const handleMatchTrackerReady = () => {
             console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
             console.log('[handleMatchTrackerReady] pendingSnapshot:', !!pendingSnapshot, 'matchTrackerWasReady:', matchTrackerWasReady);
             if (isCancelled) return;
             if (matchTrackerReadyHandled) return;
+            matchTrackerReadyHandled = true;
             
             matchTrackerWasReady = true;
-            isFirstLoad = true;  // ← DÔLEŽITÉ: zabezpečíme, že sa spraví mapovanie
+            // NE nastavujeme isFirstLoad = true, lebo to by spustilo mapovanie pri prvotnom načítaní
+            // Namiesto toho použijeme forceRemap = true
             
             // Ak máme uložený pending snapshot, spracujeme ho
             if (pendingSnapshot) {
                 const snap = pendingSnapshot;
                 pendingSnapshot = null;
-                processMatches(snap).catch(err => {
+                processMatches(snap, true).catch(err => {  // 🔥 forceRemap = true
                     console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                 });
             } else {
                 // Inak načítame aktuálne dáta
                 getDocs(matchesQuery).then(snapshot => {
-                    processMatches(snapshot).catch(err => {
+                    processMatches(snapshot, true).catch(err => {  // 🔥 forceRemap = true
                         console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                     });
                 }).catch(err => {
