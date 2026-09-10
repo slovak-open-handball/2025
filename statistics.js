@@ -291,7 +291,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
-            console.log('[mapMatchTeamName] VSTUP:', matchTeamName, categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
             if (!matchTeamName) return matchTeamName;
             const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
             if (!containsCategory) return matchTeamName;
@@ -300,23 +299,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 return matchTeamName;
             }
             
-            // Skontroluj, či je matchTracker pripravený
             if (typeof window.matchTracker.isDataReady === 'function' && !window.matchTracker.isDataReady()) {
-                console.log('[mapMatchTeamName] matchTracker ešte nie je pripravený (isDataReady = false)');
-                return matchTeamName;
+                console.log('[mapMatchTeamName] matchTracker ešte nie je pripravený');
+                return { mapped: matchTeamName, incomplete: true };  // <-- signal incomplete
             }
             
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                 console.log('[mapMatchTeamName] VÝSTUP:', { matchTeamName, mapped });
-                if (mapped) return mapped;
+                if (mapped && mapped !== matchTeamName) {
+                    return { mapped, incomplete: false };
+                }
+                // Tracker je ready, ale nevrátil namapovaný názov → tím tam ešte nie je
+                return { mapped: matchTeamName, incomplete: true };
             } catch (err) {
                 console.log('[mapMatchTeamName] CHYBA:', err);
+                return { mapped: matchTeamName, incomplete: true };
             }
-
-            console.log('[mapMatchTeamName] matchTeamName:', matchTeamName, 'categoryNameForMapping:', categoryNameForMapping, 'isDataReady:', window.matchTracker?.isDataReady?.());
-            
-            return matchTeamName;
         };
     
         const calculateStatsFromEvents = (eventsSnapshot) => {
@@ -545,6 +544,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         // Uložíme si posledný snapshot, aby sme ho mohli spracovať, keď bude matchTracker ready
         let pendingSnapshot = null;
         let pendingProcessResolve = null;
+        let retryTimeoutId = null;
         
         const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
@@ -626,18 +626,18 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const homeContainsCategory = teamNameContainsCategory(convertedHome, homeCategory);
                 const awayContainsCategory = teamNameContainsCategory(convertedAway, awayCategory);
         
-                const mappedHome = await mapMatchTeamName(convertedHome, homeCategory);
-                const mappedAway = await mapMatchTeamName(convertedAway, awayCategory);
-        
-                if (homeContainsCategory && mappedHome === convertedHome) {
+                const homeResult = await mapMatchTeamName(convertedHome, homeCategory);
+                const awayResult = await mapMatchTeamName(convertedAway, awayCategory);
+
+                if (homeContainsCategory && homeResult.incomplete) {
                     mappingIncomplete = true;
                 }
-                if (awayContainsCategory && mappedAway === convertedAway) {
+                if (awayContainsCategory && awayResult.incomplete) {
                     mappingIncomplete = true;
                 }
-        
-                convertedHome = mappedHome;
-                convertedAway = mappedAway;
+                
+                convertedHome = homeResult.mapped;
+                convertedAway = awayResult.mapped;
         
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
@@ -679,6 +679,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 matchIds = newMatchIds;
                 setupEventsListener(newMatchIdsArray);
             }
+
+            if (mappingIncomplete && !isCancelled) {
+                console.log('[processMatches] mappingIncomplete = true, naplánujem retry o 2s');
+                if (retryTimeoutId) clearTimeout(retryTimeoutId);
+                retryTimeoutId = setTimeout(() => {
+                    if (isCancelled) return;
+                    console.log('[processMatches] Retry mapovania po 2s');
+                    // Znovu načítaj aktuálny snapshot a spusti processMatches s forceRemap
+                    getDocs(matchesQuery).then(snapshot => {
+                        processMatches(snapshot, true).catch(err => {
+                            console.log('[processMatches retry] CHYBA:', err);
+                        });
+                    }).catch(err => {
+                        console.log('[getDocs retry] CHYBA:', err);
+                    });
+                }, 2000);
+            }            
         };
         
         // onSnapshot
@@ -796,6 +813,11 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         return () => {
             isCancelled = true;
             pendingSnapshot = null;
+
+            if (retryTimeoutId) {
+                clearTimeout(retryTimeoutId);
+                retryTimeoutId = null;
+            }
             
             // 🔥 NOVÉ: Vyčisti polling interval
             if (readyCheckInterval) {
