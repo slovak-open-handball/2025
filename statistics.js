@@ -294,30 +294,34 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (!matchTeamName) {
                 return { mapped: matchTeamName, incomplete: false, reason: null };
             }
-            const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
-            if (!containsCategory) {
-                // Tím neobsahuje názov kategórie → nepotrebuje mapovanie → complete
-                return { mapped: matchTeamName, incomplete: false, reason: null };
-            }
-        
+            
+            // 🔥 VŽDY skús getTeamNameByDisplayId, aj keď tím neobsahuje názov kategórie
+            // (rovnako ako teams.js convertTeamNames)
+            
             if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
-                // Tracker neexistuje → nevieme namapovať → incomplete (retryable)
                 return { mapped: matchTeamName, incomplete: true, reason: 'tracker_missing' };
             }
-        
+            
             if (typeof window.matchTracker.isDataReady === 'function' && !window.matchTracker.isDataReady()) {
                 console.log('[mapMatchTeamName] matchTracker ešte nie je pripravený');
                 return { mapped: matchTeamName, incomplete: true, reason: 'tracker_not_ready' };
             }
-        
+            
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                 console.log('[mapMatchTeamName] VÝSTUP:', { matchTeamName, mapped });
                 if (mapped && mapped !== matchTeamName) {
                     return { mapped, incomplete: false, reason: null };
                 }
-                // Tracker je ready, ale nevrátil namapovaný názov → skupina nie je 100% → NEretryovať
-                return { mapped: matchTeamName, incomplete: true, reason: 'group_not_ready' };
+                // Tracker je ready, ale nevrátil namapovaný názov
+                // → skús zistiť, či to má zmysel (obsahuje kategóriu)
+                const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
+                if (containsCategory) {
+                    // Očakávali sme mapovanie, ale neprišlo → skupina nie je 100%
+                    return { mapped: matchTeamName, incomplete: true, reason: 'group_not_ready' };
+                }
+                // Neobsahuje kategóriu → nepotrebuje mapovanie → complete
+                return { mapped: matchTeamName, incomplete: false, reason: null };
             } catch (err) {
                 console.log('[mapMatchTeamName] CHYBA:', err);
                 return { mapped: matchTeamName, incomplete: true, reason: 'error' };
@@ -635,30 +639,41 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
                 const homeIncomplete = homeContainsCategory && homeResult.incomplete;
                 const awayIncomplete = awayContainsCategory && awayResult.incomplete;
-        
-                if (homeIncomplete) {
-                    mappingIncomplete = true;
-                    if (homeResult.reason === 'tracker_not_ready' || 
-                        homeResult.reason === 'error' || 
-                        homeResult.reason === 'tracker_missing') {
-                        retryableIncomplete = true;
+
+                // Pred cyklom for:
+                const previousMatchTeamMap = matchTeamMap || {};
+                
+                // V cykle for:
+                const homeResult = await mapMatchTeamName(convertedHome, homeCategory);
+                const awayResult = await mapMatchTeamName(convertedAway, awayCategory);
+                
+                // 🔥 Zisti, či nové mapovanie prinieslo reálny názov (líši sa od identifikátora)
+                const homeMapped = homeResult.mapped && homeResult.mapped !== matchData.homeTeamIdentifier;
+                const awayMapped = awayResult.mapped && awayResult.mapped !== matchData.awayTeamIdentifier;
+                
+                // 🔥 Ak nové mapovanie zlyhalo, skús použiť staré mapovanie z previousMatchTeamMap
+                let finalHome = homeResult.mapped;
+                let finalAway = awayResult.mapped;
+                
+                if (!homeMapped && previousMatchTeamMap[matchId]) {
+                    const oldHome = previousMatchTeamMap[matchId].homeTeam;
+                    if (oldHome && oldHome !== matchData.homeTeamIdentifier && oldHome !== convertedHome) {
+                        // Starý názov je namapovaný (líši sa od identifikátora aj od nového konvertovaného)
+                        finalHome = oldHome;
+                        console.log(`[processMatches] Používam starý namapovaný názov pre home: ${oldHome}`);
                     }
                 }
-                if (awayIncomplete) {
-                    mappingIncomplete = true;
-                    if (awayResult.reason === 'tracker_not_ready' || 
-                        awayResult.reason === 'error' || 
-                        awayResult.reason === 'tracker_missing') {
-                        retryableIncomplete = true;
+                if (!awayMapped && previousMatchTeamMap[matchId]) {
+                    const oldAway = previousMatchTeamMap[matchId].awayTeam;
+                    if (oldAway && oldAway !== matchData.awayTeamIdentifier && oldAway !== convertedAway) {
+                        finalAway = oldAway;
+                        console.log(`[processMatches] Používam starý namapovaný názov pre away: ${oldAway}`);
                     }
                 }
-        
-                convertedHome = homeResult.mapped;
-                convertedAway = awayResult.mapped;
-        
+                
                 newMatchTeamMap[matchId] = {
-                    homeTeam: convertedHome,
-                    awayTeam: convertedAway,
+                    homeTeam: finalHome,
+                    awayTeam: finalAway,
                     homeCategory: homeCategory,
                     awayCategory: awayCategory,
                     rawMatchData: matchData
