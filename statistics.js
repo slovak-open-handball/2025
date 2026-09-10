@@ -905,9 +905,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
         
         mappingPollInterval = setInterval(checkMappingChanges, 5000);
-
-                // 🔥 NOVÉ: Listener na matchEvents s debounce — pri každej zmene spusti remap
-        let globalEventsDebounceId = null;
         
         const scheduleGlobalRemap = () => {
             if (isCancelled) return;
