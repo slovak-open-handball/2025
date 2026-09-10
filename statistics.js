@@ -446,6 +446,69 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             });        
             return stats;
         };
+
+        // 🔥 NOVÉ: Vypočíta hash zo snapshotu udalostí pre daný matchId
+        const computeEventsHash = (events) => {
+            if (!events || events.length === 0) return 'empty';
+            
+            // Zoradíme podľa ID (alebo iného stabilného kľúča) a spojíme
+            const sorted = [...events].sort((a, b) => {
+                const aId = a.id || '';
+                const bId = b.id || '';
+                return aId.localeCompare(bId);
+            });
+            
+            return sorted.map(e => {
+                const id = e.id || '';
+                const type = e.eventType || '';
+                const subtype = e.eventSubtype || '';
+                const team = e.team || '';
+                const memberIdx = e.memberIndex ?? '';
+                const memberTypeKey = e.memberTypeKey || e.memberType || '';
+                return `${id}|${type}|${subtype}|${team}|${memberIdx}|${memberTypeKey}`;
+            }).join(';');
+        };
+        
+        // 🔥 NOVÉ: Aktualizuje lokálnu cache a vráti true, ak sa niečo zmenilo
+        const updateLocalEventsCache = (eventsSnapshot) => {
+            let anyChange = false;
+            
+            // Zozbierame udalosti podľa matchId
+            const eventsByMatch = new Map();
+            
+            eventsSnapshot.forEach((doc) => {
+                const data = doc.data();
+                const matchId = data.matchId;
+                if (!matchId) return;
+                
+                if (!eventsByMatch.has(matchId)) {
+                    eventsByMatch.set(matchId, []);
+                }
+                eventsByMatch.get(matchId).push({ id: doc.id, ...data });
+            });
+            
+            // Pre každý matchId porovnáme s cache
+            for (const [matchId, newEvents] of eventsByMatch.entries()) {
+                const oldEvents = localEventsCache.get(matchId) || [];
+                const oldHash = computeEventsHash(oldEvents);
+                const newHash = computeEventsHash(newEvents);
+                
+                if (oldHash !== newHash) {
+                    anyChange = true;
+                    localEventsCache.set(matchId, newEvents);
+                }
+            }
+            
+            // Skontrolujeme aj matchId, ktoré už nie sú v snapshote (zmazané)
+            for (const matchId of localEventsCache.keys()) {
+                if (!eventsByMatch.has(matchId)) {
+                    anyChange = true;
+                    localEventsCache.delete(matchId);
+                }
+            }
+            
+            return anyChange;
+        };
     
         const setupEventsListener = (matchIdsArray) => {
             if (eventsUnsubscribe) {
@@ -485,9 +548,20 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const eventsQuery = query(eventsRef, where('matchId', 'in', chunk));
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
+                    // 🔥 NOVÉ: Aktualizuj lokálnu cache a zisti, či sa niečo zmenilo
+                    const hasChange = updateLocalEventsCache(eventsSnapshot);
+                    
+                    // 🔥 Ak sa nič nezmenilo, preskočíme prepočet
+                    if (!hasChange) {
+                        console.log('[setupEventsListener] Žiadna zmena v udalostiach, preskakujem prepočet');
+                        return;
+                    }
+                    
+                    console.log('[setupEventsListener] Zmena v udalostiach, prepočítavam štatistiky...');
+                    
                     const combinedStats = {};
                     const chunkStats = calculateStatsFromEvents(eventsSnapshot);
-    
+                
                     Object.entries(chunkStats).forEach(([memberKey, stat]) => {
                         if (!combinedStats[memberKey]) {
                             combinedStats[memberKey] = {
@@ -507,9 +581,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                         combinedStats[memberKey].blueCards += stat.blueCards;
                         combinedStats[memberKey].exclusions += stat.exclusions;
                     });
-    
+                
                     processedChunks++;
-    
+                
                     if (processedChunks === chunks.length) {
                         const finalStats = {};
                         Object.entries(combinedStats).forEach(([memberKey, stat]) => {
@@ -549,6 +623,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let mappingPollInterval = null;
         let globalEventsUnsubscribe = null;
         let globalEventsDebounceId = null;
+        const localEventsCache = new Map();
+        let lastEventsHash = '';
         
         const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
@@ -858,6 +934,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (!hasUnmappedMatches) return;
             
             try {
+                console.log('[checkMappingChanges] Existujú nezmapované zápasy, skúšam remap...');
                 const snapshot = await getDocs(matchesQuery);
                 await processMatches(snapshot, true);
             } catch (err) {
@@ -870,6 +947,24 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (isCancelled) return;
             if (!matchTrackerWasReady) return;
             
+            // 🔥 NOVÉ: Aktualizuj lokálnu cache hneď, aby sme vedeli, či sa niečo zmenilo
+            // (toto je len rýchla kontrola, samotné udalosti sa načítajú v listeneroch)
+            let hasChange = false;
+            try {
+                const eventsRef = collection(window.db, 'matchEvents');
+                // Nemôžeme použiť getDocs tu (je to async), tak použijeme flag
+                // Namiesto toho sa spoliehame na to, že listenery už aktualizovali cache
+                // a scheduleGlobalRemap sa volá len ak sa naozaj niečo zmenilo
+                hasChange = true;  // scheduleGlobalRemap sa volá len pri zmene
+            } catch (e) {
+                hasChange = true;
+            }
+            
+            if (!hasChange) {
+                console.log('[scheduleGlobalRemap] Žiadna zmena, preskakujem remap');
+                return;
+            }
+            
             // Debounce: ak prišlo veľa zmien za sebou, spustí sa len posledná
             if (globalEventsDebounceId) {
                 clearTimeout(globalEventsDebounceId);
@@ -878,12 +973,13 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (isCancelled) return;
                 if (!matchTrackerWasReady) return;
                 
+                console.log('[scheduleGlobalRemap] Spúšťam remap po debounce...');
                 getDocs(matchesQuery).then(snapshot => {
                     processMatches(snapshot, true).catch(err => {
                     });
                 }).catch(err => {
                 });
-            }, 2000);
+            }, 200);
         };
         
         const eventsRef = collection(window.db, 'matchEvents');
