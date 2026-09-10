@@ -303,13 +303,11 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }
             
             if (typeof window.matchTracker.isDataReady === 'function' && !window.matchTracker.isDataReady()) {
-                console.log('[mapMatchTeamName] matchTracker ešte nie je pripravený');
                 return { mapped: matchTeamName, incomplete: true, reason: 'tracker_not_ready' };
             }
             
             try {
                 const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
-                console.log('[mapMatchTeamName] VÝSTUP:', { matchTeamName, mapped });
                 if (mapped && mapped !== matchTeamName) {
                     return { mapped, incomplete: false, reason: null };
                 }
@@ -323,7 +321,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 // Neobsahuje kategóriu → nepotrebuje mapovanie → complete
                 return { mapped: matchTeamName, incomplete: false, reason: null };
             } catch (err) {
-                console.log('[mapMatchTeamName] CHYBA:', err);
                 return { mapped: matchTeamName, incomplete: true, reason: 'error' };
             }
         };
@@ -362,8 +359,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (!matchInfo) {
                     return;
                 }
-
-                console.log('[calculateStatsFromEvents] matchId:', matchId, 'matchInfo:', matchInfo);
         
                 let isOurTeam = false;
                 const homeTeam = matchInfo.homeTeam || '';
@@ -453,9 +448,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         };
     
         const setupEventsListener = (matchIdsArray) => {
-            console.log('[setupEventsListener] matchIdsArray:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
-            console.log('[setupEventsListener] matchTeamMap sample:', Object.entries(matchTeamMap).slice(0, 2));
-            console.log('[setupEventsListener] matchIdsArray.length:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
             if (eventsUnsubscribe) {
                 try { eventsUnsubscribe(); } catch (e) {}
                 eventsUnsubscribe = null;
@@ -548,7 +540,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     try { listener(); } catch (e) {}
                 });
             };
-            console.log('[setupEventsListener] matchIdsArray.length:', matchIdsArray.length, 'matchTeamMap keys:', Object.keys(matchTeamMap).length);
         };
 
         // Uložíme si posledný snapshot, aby sme ho mohli spracovať, keď bude matchTracker ready
@@ -565,21 +556,15 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // 🔥 DEKLARÁCIA HNEĎ NA ZAČIATKU
             const isMatchTrackerReady = 
                 typeof window.matchTracker?.isDataReady === 'function' && 
-                window.matchTracker.isDataReady();
-        
-            console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
-            console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot, 'forceRemap:', forceRemap);
-            console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady);
+                window.matchTracker.isDataReady();        
         
             if (!isMatchTrackerReady && !matchTrackerWasReady) {
-                console.log('[processMatches] matchTracker ešte nie je pripravený, ukladám snapshot');
                 pendingSnapshot = matchesSnapshot;
                 return;
             }
         
             if (isMatchTrackerReady && !matchTrackerWasReady) {
                 matchTrackerWasReady = true;
-                console.log('[processMatches] matchTracker je teraz pripravený');
             }
         
             const newMatchIds = new Set();
@@ -603,9 +588,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // 🔥 ROZŠÍRENÉ: remap spustíme aj keď je mappingIncomplete, aj bez nového completed zápasu
             const shouldRemap = forceRemap 
                 || hasNewCompletedMatch 
-                || mappingIncomplete;
-        
-            console.log('[processMatches] shouldRemap:', shouldRemap, 'mappingIncomplete:', mappingIncomplete, 'hasNewCompletedMatch:', hasNewCompletedMatch, 'forceRemap:', forceRemap);
+                || mappingIncomplete;        
         
             // Ak netreba remapovať, len uložíme statusy a skončíme
             if (!shouldRemap) {
@@ -676,14 +659,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     const oldHome = previousMatchTeamMap[matchId].homeTeam;
                     if (oldHome && oldHome !== matchData.homeTeamIdentifier && oldHome !== convertedHome) {
                         finalHome = oldHome;
-                        console.log(`[processMatches] Používam starý namapovaný názov pre home: ${oldHome}`);
                     }
                 }
                 if (!awayMapped && previousMatchTeamMap[matchId]) {
                     const oldAway = previousMatchTeamMap[matchId].awayTeam;
                     if (oldAway && oldAway !== matchData.awayTeamIdentifier && oldAway !== convertedAway) {
                         finalAway = oldAway;
-                        console.log(`[processMatches] Používam starý namapovaný názov pre away: ${oldAway}`);
                     }
                 }
         
@@ -710,7 +691,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas sa nezapočíta do štatistík (continue),
                 // ale matchId JE v newMatchIds → listener sa vytvorí
                 if (homeIncomplete || awayIncomplete) {
-                    console.log(`[processMatches] Zápas ${matchId} má nezmapovaného súpera (homeReason=${homeResult.reason}, awayReason=${awayResult.reason})`);
                     continue;
                 }
             }
@@ -722,7 +702,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             // 🔥 AŽ TERAZ NASTAVÍME matchTeamMap - PRED setupEventsListener
             matchTeamMap = newMatchTeamMap;
             isFirstLoad = false;
-            console.log('[processMatches] Nájdených matchIds:', newMatchIds.size, 'mappingIncomplete:', mappingIncomplete, 'retryableIncomplete:', retryableIncomplete);
         
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
@@ -740,31 +719,23 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
             // 🔥 RETRY LEN AK JE DÔVOD RETRYOVATEĽNÝ
             if (retryableIncomplete && !isCancelled) {
-                console.log('[processMatches] retryableIncomplete = true, naplánujem retry o 5s');
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 retryTimeoutId = setTimeout(() => {
                     if (isCancelled) return;
-                    console.log('[processMatches] Retry mapovania po 5s');
                     getDocs(matchesQuery).then(snapshot => {
                         processMatches(snapshot, true).catch(err => {
-                            console.log('[processMatches retry] CHYBA:', err);
                         });
                     }).catch(err => {
-                        console.log('[getDocs retry] CHYBA:', err);
                     });
                 }, 5000);
-            } else if (mappingIncomplete) {
-                console.log('[processMatches] mappingIncomplete = true, ale dôvod je "group_not_ready" → žiadny retry (čaká sa na dokončenie skupiny)');
             }
         };
         
         // onSnapshot
         unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
             processMatches(matchesSnapshot).catch(err => {
-                console.log('[processMatches] CHYBA:', err);
             });
         }, (error) => {
-            console.log('[onSnapshot matches] CHYBA:', error);
         });
 
         let readyCheckInterval = null;
@@ -772,7 +743,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const MAX_READY_ATTEMPTS = 600; // 600 * 100ms = 60 sekúnd
         
         const handleMatchTrackerReady = () => {
-            console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
             if (isCancelled) return;
             if (matchTrackerReadyHandled) return;
             matchTrackerReadyHandled = true;
@@ -788,15 +758,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const snap = pendingSnapshot;
                 pendingSnapshot = null;
                 processMatches(snap, true).catch(err => {
-                    console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                 });
             } else {
                 getDocs(matchesQuery).then(snapshot => {
                     processMatches(snapshot, true).catch(err => {
-                        console.log('[processMatches po matchTrackerReady] CHYBA:', err);
                     });
                 }).catch(err => {
-                    console.log('[getDocs po matchTrackerReady] CHYBA:', err);
                 });
             }
         };
@@ -824,7 +791,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             
             // Skontroluj, či je tracker pripravený
             if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
-                console.log('[TeamStatsCollector] Polling: matchTracker je pripravený, spúšťam mapovanie');
                 matchTrackerReadyHandled = true;
                 matchTrackerWasReady = true;
                 
@@ -838,15 +804,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     const snap = pendingSnapshot;
                     pendingSnapshot = null;
                     processMatches(snap, true).catch(err => {
-                        console.log('[processMatches z pollingu] CHYBA:', err);
                     });
                 } else {
                     getDocs(matchesQuery).then(snapshot => {
                         processMatches(snapshot, true).catch(err => {
-                            console.log('[processMatches z pollingu] CHYBA:', err);
                         });
                     }).catch(err => {
-                        console.log('[getDocs z pollingu] CHYBA:', err);
                     });
                 }
                 return;
@@ -854,7 +817,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             
             readyCheckAttempts++;
             if (readyCheckAttempts >= MAX_READY_ATTEMPTS) {
-                console.log('[TeamStatsCollector] Polling: prekročený maximálny počet pokusov, zastavujem');
                 if (readyCheckInterval) {
                     clearInterval(readyCheckInterval);
                     readyCheckInterval = null;
@@ -896,11 +858,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (!hasUnmappedMatches) return;
             
             try {
-                console.log('[mappingPoll] Kontrolujem zmeny v mapovaní...');
                 const snapshot = await getDocs(matchesQuery);
                 await processMatches(snapshot, true);
             } catch (err) {
-                console.log('[mappingPoll] CHYBA:', err);
             }
         };
         
@@ -918,15 +878,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (isCancelled) return;
                 if (!matchTrackerWasReady) return;
                 
-                console.log('[globalEventsListener] Spúšťam remap po debounce...');
                 getDocs(matchesQuery).then(snapshot => {
                     processMatches(snapshot, true).catch(err => {
-                        console.log('[processMatches z globalEventsListener] CHYBA:', err);
                     });
                 }).catch(err => {
-                    console.log('[getDocs z globalEventsListener] CHYBA:', err);
                 });
-            }, 2000);  // 2s debounce
+            }, 2000);
         };
         
         const eventsRef = collection(window.db, 'matchEvents');
@@ -936,7 +893,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (isCancelled) return;
             scheduleGlobalRemap();
         }, (error) => {
-            console.log('[globalEventsListener] CHYBA:', error);
         });
         
         return () => {
