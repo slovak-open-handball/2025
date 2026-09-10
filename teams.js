@@ -1233,8 +1233,7 @@ const TeamsOverviewApp = (props) => {
             return teamName;
         };
     
-        const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {
-            
+        const calculateStatsFromEvents = (eventsSnapshot, chunkIndex) => {    
             const stats = {};
             teamRoster.forEach((member, idx) => {
                 const memberKey = `${member.type}_${member.originalIndex}`;
@@ -1276,6 +1275,19 @@ const TeamsOverviewApp = (props) => {
                     isOurTeam = true;
                 } else {
                     return;
+                }
+        
+                // NOVÁ ČASŤ: Zistiť, či sa názov kategórie nachádza v názve tímu zápasu
+                const matchTeamName = eventData.team === 'home' ? matchInfo.homeTeam : matchInfo.awayTeam;
+                if (eventData.categoryName && matchTeamName && matchTeamName.includes(eventData.categoryName)) {
+                    // Ak áno, pošli názov tímu zo zápasu do getTeamNameByDisplayId
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            window.matchTracker.getTeamNameByDisplayId(matchTeamName);
+                        } catch (err) {
+                            // ignorovať chybu
+                        }
+                    }
                 }
                 
                 let foundMemberKey = null;
