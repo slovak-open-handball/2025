@@ -86,7 +86,6 @@ const loadTeamMembers = (teamName, categoryName, onUpdate, onMappedName) => {
                 if (foundTeam) {
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
                         foundTeam.playerDetails.forEach((player, idx) => {
-                            // Kľúč: Tím + Kategória + Typ + Meno + Priezvisko + Číslo dresu (alebo index)
                             const uniqueKey = `${actualTeamName}_${categoryName}_Hrac_${player.firstName || ''}_${player.lastName || ''}_${player.jerseyNumber || idx}`;
                             if (!membersMap.has(uniqueKey)) {
                                 membersMap.set(uniqueKey, {
@@ -269,15 +268,11 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let isCancelled = false;
         let matchTrackerReadyListener = null;
     
-        // Sledovanie, či bolo mapovanie neúspešné (nejaký tím vrátil null)
         let mappingIncomplete = false;
-        // Sledovanie predchádzajúcich statusov, aby sme detekovali prechod na 'completed'
         let previousMatchStatuses = {};
-        // Flag, či sme už mali možnosť robiť mapovanie (matchTracker pripravený)
         let matchTrackerWasReady = false;
         let matchTrackerReadyHandled = false;
     
-        // Pomocné funkcie
         const teamNameContainsCategory = (teamNameToCheck, categoryNameToCheck) => {
             if (!teamNameToCheck || !categoryNameToCheck) return false;
             return teamNameToCheck.includes(categoryNameToCheck);
@@ -295,9 +290,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 return { mapped: matchTeamName, incomplete: false, reason: null };
             }
             
-            // 🔥 VŽDY skús getTeamNameByDisplayId, aj keď tím neobsahuje názov kategórie
-            // (rovnako ako teams.js convertTeamNames)
-            
             if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
                 return { mapped: matchTeamName, incomplete: true, reason: 'tracker_missing' };
             }
@@ -311,14 +303,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 if (mapped && mapped !== matchTeamName) {
                     return { mapped, incomplete: false, reason: null };
                 }
-                // Tracker je ready, ale nevrátil namapovaný názov
-                // → skús zistiť, či to má zmysel (obsahuje kategóriu)
                 const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
                 if (containsCategory) {
-                    // Očakávali sme mapovanie, ale neprišlo → skupina nie je 100%
                     return { mapped: matchTeamName, incomplete: true, reason: 'group_not_ready' };
                 }
-                // Neobsahuje kategóriu → nepotrebuje mapovanie → complete
                 return { mapped: matchTeamName, incomplete: false, reason: null };
             } catch (err) {
                 return { mapped: matchTeamName, incomplete: true, reason: 'error' };
@@ -447,11 +435,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             return stats;
         };
 
-        // 🔥 NOVÉ: Vypočíta hash zo snapshotu udalostí pre daný matchId
         const computeEventsHash = (events) => {
             if (!events || events.length === 0) return 'empty';
             
-            // Zoradíme podľa ID (alebo iného stabilného kľúča) a spojíme
             const sorted = [...events].sort((a, b) => {
                 const aId = a.id || '';
                 const bId = b.id || '';
@@ -469,11 +455,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }).join(';');
         };
         
-        // 🔥 NOVÉ: Aktualizuje lokálnu cache a vráti true, ak sa niečo zmenilo
         const updateLocalEventsCache = (eventsSnapshot) => {
             let anyChange = false;
             
-            // Zozbierame udalosti podľa matchId
             const eventsByMatch = new Map();
             
             eventsSnapshot.forEach((doc) => {
@@ -487,7 +471,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 eventsByMatch.get(matchId).push({ id: doc.id, ...data });
             });
             
-            // Pre každý matchId porovnáme s cache
             for (const [matchId, newEvents] of eventsByMatch.entries()) {
                 const oldEvents = localEventsCache.get(matchId) || [];
                 const oldHash = computeEventsHash(oldEvents);
@@ -499,7 +482,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             }
             
-            // Skontrolujeme aj matchId, ktoré už nie sú v snapshote (zmazané)
             for (const matchId of localEventsCache.keys()) {
                 if (!eventsByMatch.has(matchId)) {
                     anyChange = true;
@@ -548,10 +530,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 const eventsQuery = query(eventsRef, where('matchId', 'in', chunk));
     
                 const listener = onSnapshot(eventsQuery, (eventsSnapshot) => {
-                    // 🔥 NOVÉ: Aktualizuj lokálnu cache a zisti, či sa niečo zmenilo
                     const hasChange = updateLocalEventsCache(eventsSnapshot);
                     
-                    // 🔥 Ak sa nič nezmenilo, preskočíme prepočet
                     if (!hasChange) {
                         return;
                     }                    
@@ -613,7 +593,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             };
         };
 
-        // Uložíme si posledný snapshot, aby sme ho mohli spracovať, keď bude matchTracker ready
         let pendingSnapshot = null;
         let pendingProcessResolve = null;
         let retryTimeoutId = null;
@@ -626,7 +605,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
         
-            // 🔥 DEKLARÁCIA HNEĎ NA ZAČIATKU
             const isMatchTrackerReady = 
                 typeof window.matchTracker?.isDataReady === 'function' && 
                 window.matchTracker.isDataReady();        
@@ -648,7 +626,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 rawMatches.push({ id: doc.id, data: doc.data() });
             });
         
-            // Detekcia nového completed zápasu
             let hasNewCompletedMatch = false;
             rawMatches.forEach(({ id: matchId, data: matchData }) => {
                 const currentStatus = matchData.status || 'scheduled';
@@ -658,12 +635,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 }
             });
         
-            // 🔥 ROZŠÍRENÉ: remap spustíme aj keď je mappingIncomplete, aj bez nového completed zápasu
             const shouldRemap = forceRemap 
                 || hasNewCompletedMatch 
                 || mappingIncomplete;        
         
-            // Ak netreba remapovať, len uložíme statusy a skončíme
             if (!shouldRemap) {
                 rawMatches.forEach(({ id: matchId, data: matchData }) => {
                     previousMatchStatuses[matchId] = matchData.status || 'scheduled';
@@ -677,14 +652,10 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         
             mappingIncomplete = false;
         
-            // 🔥 NOVÝ FLAG: retry má zmysel len ak je dôvod retryovateľný (tracker not ready / error)
             let retryableIncomplete = false;
         
-            // 🔥 KĽÚČOVÉ: previousMatchTeamMap musí byť PRED cyklom for,
-            // aby obsahoval staré namapované názvy z predchádzajúceho behu
             const previousMatchTeamMap = matchTeamMap || {};
         
-            // 🔥 NAJPRV ZMAPUJEME VŠETKY TÍMY
             for (const { id: matchId, data: matchData } of rawMatches) {
                 if (isCancelled) return;
         
@@ -720,11 +691,9 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     }
                 }
         
-                // 🔥 Zisti, či nové mapovanie prinieslo reálny názov (líši sa od identifikátora)
                 const homeMapped = homeResult.mapped && homeResult.mapped !== matchData.homeTeamIdentifier;
                 const awayMapped = awayResult.mapped && awayResult.mapped !== matchData.awayTeamIdentifier;
         
-                // 🔥 Ak nové mapovanie zlyhalo, skús použiť staré mapovanie z previousMatchTeamMap
                 let finalHome = homeResult.mapped;
                 let finalAway = awayResult.mapped;
         
@@ -752,17 +721,13 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     rawMatchData: matchData
                 };
         
-                // 🔥 NAJPRV zisti, či je náš tím v tomto zápase
                 const isHomeMatch = convertedHome === currentTeamName && categoryMatches(homeCategory, currentCategoryName);
                 const isAwayMatch = convertedAway === currentTeamName && categoryMatches(awayCategory, currentCategoryName);
         
-                // 🔥 Ak je náš tím v zápase, PRIDAJ matchId do newMatchIds VŽDY
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
         
-                // 🔥 Ak je aspoň jeden tím nezmapovaný, zápas sa nezapočíta do štatistík (continue),
-                // ale matchId JE v newMatchIds → listener sa vytvorí
                 if (homeIncomplete || awayIncomplete) {
                     continue;
                 }
@@ -772,7 +737,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 previousMatchStatuses[matchId] = matchData.status || 'scheduled';
             });
         
-            // 🔥 AŽ TERAZ NASTAVÍME matchTeamMap - PRED setupEventsListener
             matchTeamMap = newMatchTeamMap;
             isFirstLoad = false;
         
@@ -781,7 +745,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             const matchIdsChanged = newMatchIdsArray.length !== oldMatchIdsArray.length ||
                                    newMatchIdsArray.some(id => !oldMatchIdsArray.includes(id));
         
-            // 🔥 KĽÚČOVÉ: Ak sme robili mapovanie (shouldRemap === true), VŽDY znovu nastavíme listenery.
             if (shouldRemap) {
                 matchIds = newMatchIds;
                 setupEventsListener(newMatchIdsArray);
@@ -790,7 +753,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 setupEventsListener(newMatchIdsArray);
             }
         
-            // 🔥 RETRY LEN AK JE DÔVOD RETRYOVATEĽNÝ
             if (retryableIncomplete && !isCancelled) {
                 if (retryTimeoutId) clearTimeout(retryTimeoutId);
                 retryTimeoutId = setTimeout(() => {
@@ -804,7 +766,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }
         };
         
-        // onSnapshot
         unsubscribeMatches = onSnapshot(matchesQuery, (matchesSnapshot) => {
             processMatches(matchesSnapshot).catch(err => {
             });
@@ -813,7 +774,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
 
         let readyCheckInterval = null;
         let readyCheckAttempts = 0;
-        const MAX_READY_ATTEMPTS = 600; // 600 * 100ms = 60 sekúnd
+        const MAX_READY_ATTEMPTS = 600;
         
         const handleMatchTrackerReady = () => {
             if (isCancelled) return;
@@ -821,7 +782,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             matchTrackerReadyHandled = true;
             matchTrackerWasReady = true;
             
-            // 🔥 Vyčisti polling, ak ešte beží (event vyhral)
             if (typeof readyCheckInterval !== 'undefined' && readyCheckInterval) {
                 clearInterval(readyCheckInterval);
                 readyCheckInterval = null;
@@ -853,7 +813,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 return;
             }
             
-            // Ak už bolo spracované cez event, zastav polling
             if (matchTrackerReadyHandled) {
                 if (readyCheckInterval) {
                     clearInterval(readyCheckInterval);
@@ -862,7 +821,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 return;
             }
             
-            // Skontroluj, či je tracker pripravený
             if (typeof window.matchTracker?.isDataReady === 'function' && window.matchTracker.isDataReady()) {
                 matchTrackerReadyHandled = true;
                 matchTrackerWasReady = true;
@@ -872,7 +830,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     readyCheckInterval = null;
                 }
                 
-                // Použi pendingSnapshot ak existuje, inak načítaj aktuálne dáta
                 if (pendingSnapshot) {
                     const snap = pendingSnapshot;
                     pendingSnapshot = null;
@@ -897,10 +854,8 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             }
         };
         
-        // Prvá kontrola hneď (pre prípad, že tracker je už pripravený)
         checkTrackerReady();
         
-        // Ak ešte nie je pripravený, spustíme polling každých 100ms
         if (!matchTrackerReadyHandled) {
             readyCheckInterval = setInterval(checkTrackerReady, 100);
         }
@@ -909,7 +864,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (isCancelled) return;
             if (!matchTrackerWasReady) return;
             
-            // Zisti, či existujú nezmapované zápasy
             let hasUnmappedMatches = false;
             for (const matchId in matchTeamMap) {
                 const info = matchTeamMap[matchId];
@@ -955,7 +909,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 return;
             }
             
-            // Debounce: ak prišlo veľa zmien za sebou, spustí sa len posledná
             if (globalEventsDebounceId) {
                 clearTimeout(globalEventsDebounceId);
             }
@@ -989,25 +942,21 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 retryTimeoutId = null;
             }
 
-            // 🔥 NOVÉ: Vyčisti globalEvents listener
             if (globalEventsUnsubscribe) {
                 try { globalEventsUnsubscribe(); } catch (e) {}
                 globalEventsUnsubscribe = null;
             }
             
-            // 🔥 NOVÉ: Vyčisti debounce
             if (globalEventsDebounceId) {
                 clearTimeout(globalEventsDebounceId);
                 globalEventsDebounceId = null;
             }
             
-            // 🔥 NOVÉ: Vyčisti mapping polling
             if (mappingPollInterval) {
                 clearInterval(mappingPollInterval);
                 mappingPollInterval = null;
             }
             
-            // 🔥 NOVÉ: Vyčisti polling interval
             if (readyCheckInterval) {
                 clearInterval(readyCheckInterval);
                 readyCheckInterval = null;
@@ -1026,7 +975,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                 eventsUnsubscribe = null;
             }
             
-            // 🔥 NOVÉ: Vyčisti lokálnu cache udalostí
             localEventsCache.clear();
             lastEventsHash = '';
         };
@@ -1044,7 +992,7 @@ const RostersTable = ({ isRostersVisible }) => {
     const [totalTeamsCount, setTotalTeamsCount] = useState(0);
     const [statsReceivedCount, setStatsReceivedCount] = useState(0);
     const [receivedTeams, setReceivedTeams] = useState(new Set());
-    const [selectedCategory, setSelectedCategory] = useState(null); // predvolene nič nevybrané
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [categoryColors, setCategoryColors] = useState({});
 
     const [statsUpdateTrigger, setStatsUpdateTrigger] = useState(0);
@@ -1192,27 +1140,38 @@ const RostersTable = ({ isRostersVisible }) => {
         return Array.from(teamsMap.values());
     }, [allTeams, selectedCategory]);
 
+    // 🔥 Kompletný reset všetkých načítaných dát a listenerov
+    const resetAllData = useCallback(() => {
+        unsubscribes.forEach(unsub => {
+            try { unsub(); } catch (e) {}
+        });
+        setUnsubscribes([]);
+        setAllMembersData([]);
+        setAllStatsData({});
+        setTotalTeamsCount(0);
+        setStatsReceivedCount(0);
+        setIsStatsReady(false);
+        setReceivedTeams(new Set());
+        setStatsUpdateTrigger(0);
+    }, [unsubscribes]);
+
     // Načítanie členov – spustí sa len ak je vybraná kategória
     useEffect(() => {
-        if (!window.db || allTeams.length === 0 || !selectedCategory) {
-            // Vyčistíme predchádzajúce listenery
-            unsubscribes.forEach(unsub => { try { unsub(); } catch (e) {} });
-            setUnsubscribes([]);
-            setAllMembersData([]);
-            setAllStatsData({});
-            setTotalTeamsCount(0);
-            setStatsReceivedCount(0);
-            setIsStatsReady(false);
-            setReceivedTeams(new Set());
-            return;
-        }
-
-        // Vyčistíme staré listenery
+        // 🔥 Pri každej zmene kategórie najprv vyčistíme všetky dáta
         unsubscribes.forEach(unsub => { try { unsub(); } catch (e) {} });
         setUnsubscribes([]);
         setAllMembersData([]);
         setAllStatsData({});
+        setTotalTeamsCount(0);
+        setStatsReceivedCount(0);
+        setIsStatsReady(false);
+        setReceivedTeams(new Set());
         setStatsUpdateTrigger(0);
+
+        // Ak nie je vybraná kategória alebo nemáme tímy, skončíme
+        if (!window.db || !selectedCategory || allTeams.length === 0) {
+            return;
+        }
 
         const uniqueTeams = getUniqueTeams();
         const sortedTeams = uniqueTeams.sort((a, b) =>
@@ -1220,17 +1179,10 @@ const RostersTable = ({ isRostersVisible }) => {
         );
 
         if (sortedTeams.length === 0) {
-            setTotalTeamsCount(0);
-            setStatsReceivedCount(0);
-            setIsStatsReady(false);
-            setReceivedTeams(new Set());
             return;
         }
 
         setTotalTeamsCount(sortedTeams.length);
-        setStatsReceivedCount(0);
-        setIsStatsReady(false);
-        setReceivedTeams(new Set());
 
         const membersMap = new Map();
         const loadedTeamsSet = new Set();
@@ -1285,7 +1237,7 @@ const RostersTable = ({ isRostersVisible }) => {
         return () => {
             newUnsubscribes.forEach(unsub => { try { unsub(); } catch (e) {} });
         };
-    }, [allTeams, selectedCategory]); // POZOR: závisí od selectedCategory
+    }, [allTeams, selectedCategory]);
 
     const handleStatsUpdate = (teamName, stats, categoryName) => {
         const uniqueKey = `${teamName}_${categoryName}`;
@@ -1371,8 +1323,13 @@ const RostersTable = ({ isRostersVisible }) => {
         return () => clearTimeout(timer);
     }, [allMembersData, isStatsReady, displayMembers, updateTableHeight]);
 
+    // 🔥 UPRAVENÉ: Pri prepnutí kategórie vždy všetko vymažeme
     const handleCategoryFilter = (category) => {
-        setSelectedCategory(prev => prev === category ? null : category);
+        const newCategory = selectedCategory === category ? null : category;
+        // Kompletný reset pred zmenou kategórie
+        resetAllData();
+        // Až potom nastavíme novú kategóriu
+        setSelectedCategory(newCategory);
     };
 
     const renderTable = () => {
@@ -1401,8 +1358,6 @@ const RostersTable = ({ isRostersVisible }) => {
                 `Žiadni členovia v kategórii: ${selectedCategory}`);
         }
 
-        // ... zvyšok renderTable zostáva rovnaký ...
-        // (rank mapa, tabuľka, tfoot – bez zmien)
         const goalRankMap = new Map();
         let currentRank = 1;
         displayMembers.forEach((member) => {
@@ -1422,7 +1377,6 @@ const RostersTable = ({ isRostersVisible }) => {
                 className: 'w-full border-collapse bg-white text-sm',
                 style: { minWidth: '900px' }
             },
-                // thead – rovnaké ako predtým
                 React.createElement('thead', { className: 'bg-gray-100 sticky top-0 z-20' },
                     React.createElement('tr', { className: 'border-b border-gray-200' },
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, '#'),
@@ -1456,7 +1410,6 @@ const RostersTable = ({ isRostersVisible }) => {
                                 React.createElement('span', { className: 'text-xs mt-0.5' }, 'Vylúč.')))
                     )
                 ),
-                // tbody – rovnaké
                 React.createElement('tbody', { className: 'divide-y divide-gray-100' },
                     displayMembers.map((member, idx) => {
                         const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy';
