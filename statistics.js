@@ -240,21 +240,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         if (!teamNameToCheck || !categoryNameToCheck) return false;
         return teamNameToCheck.includes(categoryNameToCheck);
     };
-
-    const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
-        if (!matchTeamName) return matchTeamName;
-        if (teamNameContainsCategory(matchTeamName, categoryNameForMapping)) {
-            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                try {
-                    const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
-                    if (mapped) return mapped;
-                } catch (err) {
-                    // ignorovať
-                }
-            }
-        }
-        return matchTeamName;
-    };
     
     // --- ŠTATISTIKY ---
     useEffect(() => {
@@ -290,14 +275,27 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
     
         const mapMatchTeamName = async (matchTeamName, categoryNameForMapping) => {
             if (!matchTeamName) return matchTeamName;
-            if (teamNameContainsCategory(matchTeamName, categoryNameForMapping)) {
+            const containsCategory = teamNameContainsCategory(matchTeamName, categoryNameForMapping);
+            console.log('[mapMatchTeamName] VSTUP:', {
+                matchTeamName,
+                categoryNameForMapping,
+                containsCategory
+            });
+            if (containsCategory) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
+                        console.log('[mapMatchTeamName] VÝSTUP z matchTracker:', {
+                            matchTeamName,
+                            mapped,
+                            typ: typeof mapped
+                        });
                         if (mapped) return mapped;
                     } catch (err) {
-                        // ignorovať
+                        console.log('[mapMatchTeamName] CHYBA:', err);
                     }
+                } else {
+                    console.log('[mapMatchTeamName] matchTracker NEEXISTUJE alebo nemá getTeamNameByDisplayId');
                 }
             }
             return matchTeamName;
@@ -579,27 +577,43 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             };
         };
     
-        // KLUCOVA CAST: processMatches je async a setupEventsListener sa vola AZ PO dokonceni mapovania
         const processMatches = async (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};
-    
+        
             const rawMatches = [];
             matchesSnapshot.forEach(doc => {
                 rawMatches.push({ id: doc.id, data: doc.data() });
             });
-    
-            // Najprv zmapujeme vsetky timy
+        
+            console.log('[processMatches] Počet zápasov:', rawMatches.length);
+            console.log('[processMatches] currentTeamName:', currentTeamName);
+            console.log('[processMatches] currentCategoryName:', currentCategoryName);
+        
             for (const { id: matchId, data: matchData } of rawMatches) {
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
-    
+        
+                console.log('[processMatches] Pred mapovaním:', {
+                    matchId,
+                    convertedHome,
+                    convertedAway,
+                    homeTeamIdentifier: matchData.homeTeamIdentifier,
+                    awayTeamIdentifier: matchData.awayTeamIdentifier
+                });
+        
                 convertedHome = await mapMatchTeamName(convertedHome, currentCategoryName);
                 convertedAway = await mapMatchTeamName(convertedAway, currentCategoryName);
-    
+        
+                console.log('[processMatches] Po mapovaní:', {
+                    matchId,
+                    convertedHome,
+                    convertedAway
+                });
+        
                 const homeCategory = matchData.homeCategory || matchData.categoryName || matchData.categoryId || '';
                 const awayCategory = matchData.awayCategory || matchData.categoryName || matchData.categoryId || '';
-    
+        
                 newMatchTeamMap[matchId] = {
                     homeTeam: convertedHome,
                     awayTeam: convertedAway,
@@ -607,17 +621,26 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
                     awayCategory: awayCategory,
                     rawMatchData: matchData
                 };
-    
+        
                 const isHomeMatch = convertedHome === currentTeamName && homeCategory === currentCategoryName;
                 const isAwayMatch = convertedAway === currentTeamName && awayCategory === currentCategoryName;
-    
+        
+                console.log('[processMatches] Zhoda:', {
+                    matchId,
+                    isHomeMatch,
+                    isAwayMatch,
+                    homeCategory,
+                    awayCategory,
+                    currentCategoryName
+                });
+        
                 if (isHomeMatch || isAwayMatch) {
                     newMatchIds.add(matchId);
                 }
             }
-    
-            // Az TERAZ nastavime matchTeamMap - pred setupEventsListener
+        
             matchTeamMap = newMatchTeamMap;
+            console.log('[processMatches] Celkovo nájdených matchIds:', newMatchIds.size);
     
             const newMatchIdsArray = Array.from(newMatchIds);
             const oldMatchIdsArray = Array.from(matchIds);
