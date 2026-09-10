@@ -549,7 +549,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         const processMatches = async (matchesSnapshot) => {
             console.log('[processMatches] VOLANIE, isCancelled:', isCancelled);
             console.log('[processMatches] VOLANIE, isFirstLoad:', isFirstLoad, 'matchTrackerWasReady:', matchTrackerWasReady, 'pendingSnapshot:', !!pendingSnapshot);
-            console.log('[processMatches] isMatchTrackerReady:', isMatchTrackerReady, 'matchTrackerWasReady:', matchTrackerWasReady, 'isFirstLoad:', isFirstLoad, 'pendingSnapshot:', !!pendingSnapshot);
             if (isCancelled) return;
             
             const isMatchTrackerReady = 
@@ -682,6 +681,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             console.log('[TeamStatsCollector] matchTrackerReady event prijatý');
             console.log('[handleMatchTrackerReady] pendingSnapshot:', !!pendingSnapshot, 'matchTrackerWasReady:', matchTrackerWasReady);
             if (isCancelled) return;
+            if (matchTrackerReadyHandled) return;
             
             matchTrackerWasReady = true;
             isFirstLoad = true;  // ← DÔLEŽITÉ: zabezpečíme, že sa spraví mapovanie
