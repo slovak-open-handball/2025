@@ -11219,7 +11219,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('span', null, awayMemberCount || 0)
                                             ),
-                                            !isSpecialMatch && React.createElement(
+                                            !isSpecialMatch && match.status !== 'completed' && React.createElement(
                                                 React.Fragment,
                                                 null,
                                                 React.createElement(
@@ -12294,7 +12294,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        },
                                                                                        React.createElement('span', null, match.awayTotalMembersCount || 0)
                                                                                    ),
-                                                                                   !isSpecialMatch && React.createElement(
+                                                                                   !isSpecialMatch && match.status !== 'completed' && React.createElement(
                                                                                        React.Fragment,
                                                                                        null,
                                                                                        React.createElement(
