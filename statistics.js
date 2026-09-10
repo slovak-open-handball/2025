@@ -240,14 +240,6 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         if (!teamNameToCheck || !categoryNameToCheck) return false;
         return teamNameToCheck.includes(categoryNameToCheck);
     };
-
-    // Počkať, kým matchTracker bude pripravený (max 5 sekúnd)
-    let waitAttempts = 0;
-    while ((!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') && waitAttempts < 25) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        waitAttempts++;
-    }
-    console.log('[TeamStatsCollector] matchTracker pripravený po', waitAttempts * 200, 'ms');
     
     // --- ŠTATISTIKY ---
     useEffect(() => {
