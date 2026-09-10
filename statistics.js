@@ -555,6 +555,7 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         let pendingSnapshot = null;
         let pendingProcessResolve = null;
         let retryTimeoutId = null;
+        let mappingPollInterval = null;
         
         const processMatches = async (matchesSnapshot, forceRemap = false) => {
             if (isCancelled) return;
@@ -866,6 +867,42 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
         if (!matchTrackerReadyHandled) {
             readyCheckInterval = setInterval(checkTrackerReady, 100);
         }
+
+        const checkMappingChanges = async () => {
+            if (isCancelled) return;
+            if (!matchTrackerWasReady) return;
+            
+            // Zisti, či existujú nezmapované zápasy
+            let hasUnmappedMatches = false;
+            for (const matchId in matchTeamMap) {
+                const info = matchTeamMap[matchId];
+                if (!info) continue;
+                
+                const homeCategory = info.homeCategory || '';
+                const awayCategory = info.awayCategory || '';
+                
+                if (info.homeTeam && teamNameContainsCategory(info.homeTeam, homeCategory)) {
+                    hasUnmappedMatches = true;
+                    break;
+                }
+                if (info.awayTeam && teamNameContainsCategory(info.awayTeam, awayCategory)) {
+                    hasUnmappedMatches = true;
+                    break;
+                }
+            }
+            
+            if (!hasUnmappedMatches) return;
+            
+            try {
+                console.log('[mappingPoll] Kontrolujem zmeny v mapovaní...');
+                const snapshot = await getDocs(matchesQuery);
+                await processMatches(snapshot, true);
+            } catch (err) {
+                console.log('[mappingPoll] CHYBA:', err);
+            }
+        };
+        
+        mappingPollInterval = setInterval(checkMappingChanges, 5000);
         
         return () => {
             isCancelled = true;
@@ -874,6 +911,12 @@ const TeamStatsCollector = ({ teamName, categoryName, onStatsUpdate }) => {
             if (retryTimeoutId) {
                 clearTimeout(retryTimeoutId);
                 retryTimeoutId = null;
+            }
+            
+            // 🔥 NOVÉ: Vyčisti mapping polling
+            if (mappingPollInterval) {
+                clearInterval(mappingPollInterval);
+                mappingPollInterval = null;
             }
             
             // 🔥 NOVÉ: Vyčisti polling interval
