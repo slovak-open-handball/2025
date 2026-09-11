@@ -636,7 +636,10 @@ function App() {
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null,
                 playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    jerseyNumber: '',
+                    jerseyNumberColor1: '', // NOVINKA
+                    jerseyNumberColor2: '', // NOVINKA
+                    firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 })),
                 womenTeamMemberDetails: existingTeamData.womenTeamMemberDetails || Array.from({ length: parseInt(existingTeamData.womenTeamMembers, 10) || 0 }).map(() => ({
