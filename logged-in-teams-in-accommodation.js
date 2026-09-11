@@ -1965,17 +1965,17 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         {
                             onClick: saveAccommodationAssignment,
                             disabled: !selectedAccommodationId || isLoading,
-                            className: `px-6 py-2.5 text-white rounded-lg transition ${
+                            className: `px-6 py-2.5 rounded-lg transition border-2 ${
                                 selectedAccommodationId && !isLoading
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-green-400 cursor-not-allowed'
+                                    ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                                    : 'bg-white text-green-600 border-green-600 cursor-not-allowed'
                             }`
                         },
                         isLoading
                             ? React.createElement(
                                 'span',
                                 { className: 'flex items-center gap-2' },
-                                React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-white' }),
+                                React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-green-600' }),
                                 'Ukladám...'
                             )
                             : selectedTeam?.assignedPlace ? 'Zmeniť' : 'Priradiť'
