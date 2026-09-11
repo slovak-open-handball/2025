@@ -667,7 +667,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         React.createElement(
         'div',
         { 
-            className: 'w-full max-w-7xl mx-auto px-2', // Rozšírené z pôvodnej šírky
+            className: 'w-full px-2',
             style: { width: '100%' }
         },
             React.createElement(
