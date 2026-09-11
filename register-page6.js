@@ -736,12 +736,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 py-4 rounded-lg mb-4 space-y-2' },
                                     React.createElement('p', { className: 'font-semibold text-blue-800 mb-4 px-4' }, `Tím: ${team.teamName}`),
     
-                                    // ===================== HRÁČI =====================
+                                                                        // ===================== HRÁČI =====================
                                     playersCount > 0 && React.createElement(
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
-                                    
-                                                                                // HLAVIČKA
+
+                                        // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
@@ -800,12 +800,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 )
                                             )
                                         ),
-                                    
+
                                         // RIADKY HRÁČOV
                                         Array.from({ length: playersCount }).map((_, playerIndex) => {
                                             const player = team.playerDetails?.[playerIndex] || {};
                                             const playerSpecificErrors = playerErrors?.[categoryName]?.[teamIndex]?.[playerIndex] || {};
-                                    
+
                                             return React.createElement('div', {
                                                 key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
@@ -993,12 +993,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             );
                                         })
                                     ),
-                                    
+
                                     // ===================== ŽENY – REALIZAČNÝ TÍM =====================
                                     womenMembersCount > 0 && React.createElement(
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
-                                    
+
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
@@ -1042,7 +1042,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 )
                                             )
                                         ),
-                                    
+
                                         // RIADKY ŽIEN
                                         Array.from({ length: womenMembersCount }).map((_, memberIndex) => {
                                             const member = team.womenTeamMemberDetails?.[memberIndex] || {};
@@ -1162,13 +1162,13 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             );
                                         })
                                     ),
-                                    
+
                                     // ===================== MUŽI – REALIZAČNÝ TÍM =====================
                                     menMembersCount > 0 && React.createElement(
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (muži)'),
-                                    
-                                                                                // HLAVIČKA
+
+                                        // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
@@ -1211,7 +1211,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 )
                                             )
                                         ),
-                                    
+
                                         // RIADKY MUŽOV
                                         Array.from({ length: menMembersCount }).map((_, memberIndex) => {
                                             const member = team.menTeamMemberDetails?.[memberIndex] || {};
@@ -1331,12 +1331,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             );
                                         })
                                     ),
-                                    
+
                                     // ===================== ŠOFÉRI – MUŽI =====================
                                     driversMaleCount > 0 && React.createElement(
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
-                                    
+
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
@@ -1380,7 +1380,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 )
                                             )
                                         ),
-                                    
+
                                         // RIADKY ŠOFÉROV MUŽOV
                                         Array.from({ length: driversMaleCount }).map((_, driverIndex) => {
                                             const driver = team.driverDetailsMale?.[driverIndex] || {};
@@ -1500,7 +1500,56 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             );
                                         })
                                     ),
-                                    
+
+                                    // ===================== ŠOFÉRI – ŽENY =====================
+                                    driversFemaleCount > 0 && React.createElement(
+                                        'div', { className: 'overflow-x-auto' },
+                                        React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
+
+                                        // HLAVIČKA
+                                        React.createElement('div', { className: 'inline-block min-w-full mb-2' },
+                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                                React.createElement('div', {
+                                                    className: 'grid items-end gap-x-4 gap-y-2 w-max',
+                                                    style: {
+                                                        gridTemplateColumns: hasAccommodation
+                                                            ? GRID_DRIVERS_WITH_ACCOMMODATION
+                                                            : GRID_DRIVERS_NO_ACCOMMODATION
+                                                    }
+                                                },
+                                                    React.createElement('div', null,
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Meno')
+                                                    ),
+                                                    React.createElement('div', null,
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
+                                                    ),
+                                                    React.createElement('div', null,
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
+                                                    ),
+                                                    hasAccommodation && React.createElement(React.Fragment, null,
+                                                        React.createElement('div', null,
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
+                                                        ),
+                                                        React.createElement('div', null,
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
+                                                        ),
+                                                        React.createElement('div', null,
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
+                                                        ),
+                                                        React.createElement('div', null,
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
+                                                        ),
+                                                        React.createElement('div', null,
+                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Štát')
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ),
+
                                         // RIADKY ŠOFÉROV ŽIEN
                                         Array.from({ length: driversFemaleCount }).map((_, driverIndex) => {
                                             const driver = team.driverDetailsFemale?.[driverIndex] || {};
