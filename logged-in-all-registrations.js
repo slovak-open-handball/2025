@@ -698,20 +698,43 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return entry && entry.count > 1;
     };
 
-    const jerseyNumberCounts = React.useMemo(() => {
+    const jerseyNumber1Counts = React.useMemo(() => {
         const counts = new Map();
         if (team && team.playerDetails) {
             team.playerDetails.forEach(player => {
-                [player.jerseyNumber, player.jerseyNumber2].forEach(jerseyNum => {
-                    if (jerseyNum && jerseyNum.toString().trim() !== '') {
-                        const key = jerseyNum.toString().trim();
-                        counts.set(key, (counts.get(key) || 0) + 1);
-                    }
-                });
+                if (player.jerseyNumber && player.jerseyNumber.toString().trim() !== '') {
+                    const key = player.jerseyNumber.toString().trim();
+                    counts.set(key, (counts.get(key) || 0) + 1);
+                }
             });
         }
         return counts;
     }, [team]);
+    
+    const jerseyNumber2Counts = React.useMemo(() => {
+        const counts = new Map();
+        if (team && team.playerDetails) {
+            team.playerDetails.forEach(player => {
+                if (player.jerseyNumber2 && player.jerseyNumber2.toString().trim() !== '') {
+                    const key = player.jerseyNumber2.toString().trim();
+                    counts.set(key, (counts.get(key) || 0) + 1);
+                }
+            });
+        }
+        return counts;
+    }, [team]);
+    
+    const isJerseyNumber1Duplicate = (jerseyNumber) => {
+        if (!jerseyNumber) return false;
+        const key = jerseyNumber.toString().trim();
+        return jerseyNumber1Counts.get(key) > 1;
+    };
+    
+    const isJerseyNumber2Duplicate = (jerseyNumber2) => {
+        if (!jerseyNumber2) return false;
+        const key = jerseyNumber2.toString().trim();
+        return jerseyNumber2Counts.get(key) > 1;
+    };
 
     const isJerseyNumberDuplicate = (jerseyNumber) => {
         if (!jerseyNumber) return false;
@@ -1104,8 +1127,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
                         : 'px-4 py-2 whitespace-nowrap min-w-max';
                     
-                    const isJerseyDuplicate = member.type === 'Hráč' && isJerseyNumberDuplicate(member.jerseyNumber);
-                    const jerseyNumberCellClass = isJerseyDuplicate 
+                    const isJersey1Duplicate = member.type === 'Hráč' && isJerseyNumber1Duplicate(member.jerseyNumber);
+                    const jerseyNumber1CellClass = isJersey1Duplicate 
+                        ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
+                        : 'px-4 py-2 whitespace-nowrap min-w-max';
+
+                    const isJersey2Duplicate = member.type === 'Hráč' && isJerseyNumber2Duplicate(member.jerseyNumber2);
+                    const jerseyNumber2CellClass = isJersey2Duplicate 
                         ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
                         : 'px-4 py-2 whitespace-nowrap min-w-max';
 
@@ -1144,8 +1172,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, 
                             member._dateOfBirth ? formatDateToDMMYYYY(member._dateOfBirth) : '-'
                         ),
-                        React.createElement('td', { className: jerseyNumberCellClass }, member.jerseyNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber2 || '-'),
+                        React.createElement('td', { className: jerseyNumber1CellClass }, member.jerseyNumber || '-'),
+                        React.createElement('td', { className: jerseyNumber2CellClass }, member.jerseyNumber2 || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
                             member.registrationNumber || '-'
                         ),
@@ -1354,7 +1382,8 @@ const formatLabel = (key) => {
     if (key === 'isMenuToggled') return 'Prepínač menu';
     if (key === 'note') return 'Poznámka';
     if (key === '_category' || key === 'category') return 'Kategória tímu'; 
-    if (key === 'jerseyNumber') return 'Číslo dresu';
+    if (key === 'jerseyNumber') return 'Číslo dresu 1';
+    if (key === 'jerseyNumber2') return 'Číslo dresu 2';
     if (key === 'registrationNumber') return 'Číslo registrácie';
     if (key === 'time') return 'Čas príchodu'; 
     if (key === 'jerseyHomeColor') return 'Farba dresov 1';
@@ -1407,14 +1436,14 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
 const getMemberChangesForNotification = (original, updated, memberName, teamName, category, clubName = 'Neznámy klub') => {
     const changes = [];
     
-    const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'registrationNumber'];
+    // PRIDANÉ: jerseyNumber2
+    const memberFields = ['firstName', 'lastName', 'jerseyNumber', 'jerseyNumber2', 'registrationNumber'];
     
     memberFields.forEach(field => {
         const originalValue = original[field] !== undefined && original[field] !== null ? String(original[field]) : '';
         const updatedValue = updated[field] !== undefined && updated[field] !== null ? String(updated[field]) : '';
         if (originalValue !== updatedValue) {
             const label = formatLabel(field);
-            // PRIDANÝ NÁZOV KLUBU
             changes.push(`${memberName} (Klub: ${clubName}, ${category}, tím: ${teamName}) – zmena ${label}: z '${originalValue || '-'}' na '${updatedValue || '-'}'`);
         }
     });
@@ -2598,7 +2627,6 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         };
                     }
             
-                    // Špeciálne spracovanie pre dvojicu jerseyNumber a jerseyNumber2 - obe v jednom riadku
                     if (path === 'jerseyNumber') {
                         const jersey1Value = getNestedValue(localEditedData, 'jerseyNumber') || '';
                         const jersey2Value = getNestedValue(localEditedData, 'jerseyNumber2') || '';
@@ -5353,6 +5381,7 @@ function AllRegistrationsApp() {
                             firstName: updatedDataFromModal.firstName || '',
                             lastName: updatedDataFromModal.lastName || '',
                             jerseyNumber: updatedDataFromModal.jerseyNumber || '',
+                            jerseyNumber2: updatedDataFromModal.jerseyNumber2 || '',
                             registrationNumber: updatedDataFromModal.registrationNumber || '',
                             isRegistered: updatedDataFromModal.isRegistered || false
                         };
@@ -5426,6 +5455,9 @@ function AllRegistrationsApp() {
                       }
                       if (updatedDataFromModal.jerseyNumber !== undefined) {
                           existingMember.jerseyNumber = updatedDataFromModal.jerseyNumber;
+                      }
+                      if (updatedDataFromModal.jerseyNumber2 !== undefined) {
+                          existingMember.jerseyNumber2 = updatedDataFromModal.jerseyNumber2;
                       }
                       if (updatedDataFromModal.registrationNumber !== undefined) {
                           existingMember.registrationNumber = updatedDataFromModal.registrationNumber;
