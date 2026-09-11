@@ -2513,13 +2513,8 @@ const AssignMatchToBreakModal = ({
                     console.log(`🔍 [isMatchEligibleForBreak] breakStartMinutes: ${breakStartMinutes}min (${breakStartTime})`);
                     
                     // ===== KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI ZÁKLADNÝCH ZÁPASOV V ROVNAKOM DNI =====
-                    // OPRAVA: Táto kontrola bola príliš reštriktívna. 
                     // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
-                    // zápas nemôže byť priradený do tohto voľného času - ALE LEN AK JE TO SKUTOČNE KONFLIKT.
-                    // 
-                    // POZNÁMKA: Toto je zámerná kontrola - nadstavbová skupina musí byť PO základných zápasoch.
-                    // Ak je voľný čas pred koncom základných zápasov, zápas sa nezobrazí.
-                    // To je SPRÁVNE správanie, ale môže to byť mätúce, ak používateľ nevidí dôvod.
+                    // zápas nemôže byť priradený do tohto voľného času
                     if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
                         console.log(`❌ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} (${breakStartMinutes}min) je PRED koncom základných zápasov (${latestEndInSameDay}min) - BLOKUJEM`);
                         console.log(`   Dôvod: Nadstavbová skupina musí byť odohraná PO základných zápasoch.`);
@@ -2529,107 +2524,23 @@ const AssignMatchToBreakModal = ({
                     
                     console.log(`✅ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} je PO základných zápasoch - POKRAČUJEM`);
                 }
-                
-                // ===== KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
-                // v ROVNAKEJ HALE a DNI
-                const relatedMatches = allMatches.filter(m => 
-                    m.categoryId === match.categoryId &&
-                    m.groupName === match.groupName &&
-                    m.id !== match.id &&
-                    m.scheduledTime
-                );
-                
-                console.log(`🔍 [isMatchEligibleForBreak] Súvisiace zápasy v nadstavbovej skupine ${match.groupName}: ${relatedMatches.length}`);
-                
-                let latestSameHallEnd = 0;
-                let latestSameHallEndMatch = null;
-                let hasSameHallMatches = false;
-                
-                for (const relMatch of relatedMatches) {
-                    if (relMatch.hallId !== hallId) continue;
-                    
-                    const relDate = relMatch.scheduledTime.toDate();
-                    const relDateStr = getLocalDateStr(relDate);
-                    
-                    if (relDateStr !== currentDateStr) continue;
-                    
-                    hasSameHallMatches = true;
-                    
-                    const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                    let relDuration = 0;
-                    let relBreak = 5;
-                    if (relCategory) {
-                        const periods = relCategory.periods || 2;
-                        const periodDuration = relCategory.periodDuration || 20;
-                        const breakDurationValue = relCategory.breakDuration || 2;
-                        relDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
-                        relBreak = relCategory.matchBreak || 5;
-                    }
-                    const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
-                    
-                    console.log(`🔍 [isMatchEligibleForBreak] Súvisiaci zápas ${relMatch.id} v rovnakej hale končí o ${relEndMinutes}min`);
-                    
-                    if (relEndMinutes > latestSameHallEnd) {
-                        latestSameHallEnd = relEndMinutes;
-                        latestSameHallEndMatch = relMatch;
-                    }
-                }
-                
-                // ===== KĽÚČOVÁ OPRAVA =====
-                // Kontrola, či sa zápas zmestí do voľného času:
-                // 1. Ak existujú súvisiace zápasy v tej istej hale a dni, voľný čas musí byť PO ich skončení
-                // 2. ALE ZÁROVEŇ musíme skontrolovať, či sa zápas vôbec zmestí do voľného času
-                //    (breakDuration je dĺžka voľného času)
-                if (hasSameHallMatches && latestSameHallEnd > 0) {
-                    // Kontrola, či je voľný čas po skončení súvisiacich zápasov
-                    if (breakStartMinutes < latestSameHallEnd) {
-                        console.log(`❌ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} (${breakStartMinutes}min) je PRED koncom súvisiacich zápasov v tej istej hale (${latestSameHallEnd}min) - BLOKUJEM`);
-                        console.log(`   Dôvod: Zápas z nadstavbovej skupiny musí byť odohraný PO predchádzajúcich zápasoch v tej istej hale.`);
-                        console.log(`   Najneskorší súvisiaci zápas: ${latestSameHallEndMatch?.id} končí o ${latestSameHallEnd}min`);
-                        return false;
-                    }
-                    
-                    // ===== NOVÁ KONTROLA: Skontroluj, či sa zápas zmestí do voľného času =====
-                    // Ak je voľný čas po súvisiacich zápasoch, skontroluj, či sa zápas vôbec zmestí
-                    // do zostávajúceho voľného času (breakDuration je celková dĺžka voľného času)
-                    if (breakDuration > 0 && matchDuration > 0) {
-                        const remainingTimeInBreak = breakStartMinutes + breakDuration - latestSameHallEnd;
-                        
-                        console.log(`🔍 [isMatchEligibleForBreak] Kontrola zmestenia sa do voľného času:`, {
-                            breakStartMinutes: breakStartMinutes,
-                            breakDuration: breakDuration,
-                            breakEndMinutes: breakStartMinutes + breakDuration,
-                            latestSameHallEnd: latestSameHallEnd,
-                            remainingTimeInBreak: remainingTimeInBreak,
-                            matchDuration: matchDuration
-                        });
-                        
-                        // Ak je voľný čas po súvisiacich zápasoch, ale zápas sa nezmestí,
-                        // stále môže byť vhodný, ak sa zmestí aspoň čiastočne? 
-                        // NIE - zápas sa musí zmestiť celý.
-                        // ALE pozor: breakDuration je dĺžka voľného času, ktorá začína na breakStartMinutes.
-                        // Ak latestSameHallEnd > breakStartMinutes, potom voľný čas začína až po latestSameHallEnd.
-                        // Skutočný voľný čas je od max(breakStartMinutes, latestSameHallEnd) po breakStartMinutes + breakDuration.
-                        const actualFreeStart = Math.max(breakStartMinutes, latestSameHallEnd);
-                        const actualFreeEnd = breakStartMinutes + breakDuration;
-                        const actualFreeDuration = actualFreeEnd - actualFreeStart;
-                        
-                        console.log(`🔍 [isMatchEligibleForBreak] Skutočný voľný čas: ${actualFreeStart}min - ${actualFreeEnd}min (${actualFreeDuration}min)`);
-                        console.log(`🔍 [isMatchEligibleForBreak] Potrebná dĺžka zápasu: ${matchDuration}min`);
-                        
-                        if (actualFreeDuration < matchDuration) {
-                            console.log(`❌ [isMatchEligibleForBreak] Zápas sa nezmestí do skutočného voľného času (${actualFreeDuration}min < ${matchDuration}min) - BLOKUJEM`);
-                            return false;
-                        }
-                        
-                        console.log(`✅ [isMatchEligibleForBreak] Zápas sa zmestí do skutočného voľného času - POKRAČUJEM`);
-                    }
-                }
-                
-                console.log(`✅ [isMatchEligibleForBreak] Všetky kontroly pre nadstavbovú skupinu prešli - ZÁPAS JE VHODNÝ`);
             }
-        }        
-
+            
+            // ===== POZNÁMKA =====
+            // KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE BOLA ODSTRÁNENÁ.
+            // 
+            // Dôvod: V modálnom okne "Priradiť zápas do voľného času" sa NESMÚ kontrolovať
+            // zápasy z rovnakej skupiny (napr. skupina J), pretože to by blokovalo priradenie
+            // zápasov, ktoré už majú iné zápasy v tej istej hale.
+            //
+            // Kontrola sa vykonáva IBA na základe základných skupín (A, B, C, ...) extrahovaných
+            // z názvov tímov - rovnako ako v modálnom okne "Priradiť zápas do haly".
+            //
+            // Ak chcete, aby sa kontrolovali aj súvisiace zápasy v rovnakej nadstavbovej skupine,
+            // použite modálne okno "Priradiť zápas do haly", kde je táto kontrola implementovaná
+            // v funkcii calculateFirstAvailableTimeWithSpider.
+        }
+        
         return true;
     };
 
