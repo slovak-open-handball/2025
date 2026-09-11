@@ -4639,7 +4639,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     // Berie do úvahy IBA:
     // 1. Súvisiace zápasy v ROVNAKEJ HALE (blokujú čas v tejto hale)
     // 2. Dátumovú logiku (skorší deň = OK, neskorší deň = blok)
-    // Súvisiace zápasy v INÝCH HALÁCH neblokujú čas v tejto hale.
+    // 3. Základné skupiny (B, C, ...) - ak sú v NESKORŠOM dni, blokujú CELÝ DEŇ
     const getTimeFromAdvancedGroupRelatedMatches = (currentMatch, allMatches, categories, hallId, date, hallStartTime) => {
         if (!currentMatch || !currentMatch.groupName || !groupsByCategory) return null;
         
@@ -4651,11 +4651,55 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const [hallStartHours, hallStartMinutes] = hallStartTime.split(':').map(Number);
         const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
         
-        // ===== 1. KONTROLA DÁTUMOVEJ LOGIKY =====
-        // Zistíme, či niektorý súvisiaci zápas (v akejkoľvek hale) je v NESKORŠOM dni.
-        // Ak áno, aktuálny zápas musí byť PRED ním - to je OK, len nesmieme ísť do neskoršieho dňa.
-        // Zistíme, či niektorý súvisiaci zápas je v SKORŠOM dni - to je OK, aktuálny môže byť v tento deň.
+        // ===== 0. KONTROLA ZÁKLADNÝCH SKUPÍN (B, C, ...) V NESKORŠOM DNI =====
+        // Ak existuje základný zápas v NESKORŠOM dni, aktuálny zápas NEMÔŽE byť priradený
+        // v tento deň (musí byť pred ním, teda v skoršom alebo rovnakom dni, ale nie po ňom).
+        const homeTeamName = getTeamNameByIdentifierForEffect(currentMatch.homeTeamIdentifier);
+        const awayTeamName = getTeamNameByIdentifierForEffect(currentMatch.awayTeamIdentifier);
         
+        const extractGroupLetter = (teamName) => {
+            if (!teamName) return null;
+            const match = teamName.match(/\s(\d+)([A-Z])$/);
+            if (match) {
+                return match[2];
+            }
+            return null;
+        };
+        
+        const homeLetter = extractGroupLetter(homeTeamName);
+        const awayLetter = extractGroupLetter(awayTeamName);
+        
+        const targetLetters = new Set();
+        if (homeLetter) targetLetters.add(homeLetter);
+        if (awayLetter) targetLetters.add(awayLetter);
+        
+        if (targetLetters.size > 0) {
+            // Získame všetky zápasy v základných skupinách (všetky haly, všetky dni)
+            const basicGroupMatches = allMatches.filter(m => 
+                m.categoryId === currentMatch.categoryId &&
+                m.id !== currentMatch.id &&
+                m.scheduledTime &&
+                m.groupName && m.groupName.startsWith('skupina ')
+            );
+            
+            for (const letter of targetLetters) {
+                const groupName = `skupina ${letter}`;
+                const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
+                
+                for (const basicMatch of matchesInGroup) {
+                    const basicDate = basicMatch.scheduledTime.toDate();
+                    const basicDateStr = getLocalDateStr(basicDate);
+                    
+                    // ===== AK JE ZÁKLADNÝ ZÁPAS V NESKORŠOM DNI → BLOKUJ CELÝ DEŇ =====
+                    if (basicDateStr > currentDateStr) {
+                        console.log(`📈 [getTimeFromAdvancedGroupRelatedMatches] ⚠️ Základný zápas (${groupName}) je v NESKORŠOM dni (${basicDateStr}) ako aktuálny (${currentDateStr}) - BLOKUJEM CELÝ DEŇ!`);
+                        return null;
+                    }
+                }
+            }
+        }
+        
+        // ===== 1. NAJNOVŠÍ KONIEC SÚVISIACICH ZÁPASOV V ROVNAKEJ HALE A DNI =====
         const relatedMatches = allMatches.filter(m => 
             m.categoryId === currentMatch.categoryId &&
             m.groupName === currentMatch.groupName &&
@@ -4663,11 +4707,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             m.scheduledTime
         );
         
-        // Kontrola: ak existuje súvisiaci zápas v neskoršom dni, je to OK (aktuálny je pred ním).
-        // Kontrola: ak existuje súvisiaci zápas v skoršom dni, je to tiež OK (aktuálny je po ňom).
-        // Problém by bol len vtedy, ak by existoval zápas v ROVNAKOM dni v ROVNAKEJ HALE.
-        
-        // ===== 2. NAJNOVŠÍ KONIEC SÚVISIACICH ZÁPASOV V ROVNAKEJ HALE A DNI =====
         let latestSameHallEnd = 0;
         
         for (const relMatch of relatedMatches) {
@@ -4696,7 +4735,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
         }
         
-        // ===== 3. KONTROLA SÚVISIACICH ZÁPASOV V ZÁKLADNÝCH SKUPINÁCH V ROVNAKEJ HALE A DNI =====
+        // ===== 2. KONTROLA SÚVISIACICH ZÁPASOV V ZÁKLADNÝCH SKUPINÁCH V ROVNAKEJ HALE A DNI =====
         const basicGroupMatches = allMatches.filter(m => 
             m.categoryId === currentMatch.categoryId &&
             m.id !== currentMatch.id &&
@@ -4704,25 +4743,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             m.groupName && m.groupName.startsWith('skupina ') &&
             m.hallId === hallId
         );
-        
-        const homeTeamName = getTeamNameByIdentifierForEffect(currentMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifierForEffect(currentMatch.awayTeamIdentifier);
-        
-        const extractGroupLetter = (teamName) => {
-            if (!teamName) return null;
-            const match = teamName.match(/\s(\d+)([A-Z])$/);
-            if (match) {
-                return match[2];
-            }
-            return null;
-        };
-        
-        const homeLetter = extractGroupLetter(homeTeamName);
-        const awayLetter = extractGroupLetter(awayTeamName);
-        
-        const targetLetters = new Set();
-        if (homeLetter) targetLetters.add(homeLetter);
-        if (awayLetter) targetLetters.add(awayLetter);
         
         if (targetLetters.size > 0) {
             for (const letter of targetLetters) {
@@ -4754,15 +4774,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
         }
         
-        // ===== 4. VÝPOČET NAJSKORŠIEHO MOŽNÉHO ČASU =====
-        // Začíname od času začiatku haly, alebo od konca súvisiacich zápasov v TEJTO hale (podľa toho, čo je neskôr)
+        // ===== 3. VÝPOČET NAJSKORŠIEHO MOŽNÉHO ČASU =====
         let startFromMinutes = hallStartMinutesTotal;
         
         if (latestSameHallEnd > 0) {
             startFromMinutes = Math.max(startFromMinutes, latestSameHallEnd);
         }
         
-        // ===== 5. NÁJDENIE VOĽNÉHO ČASU V TEJTO HALE =====
+        // ===== 4. NÁJDENIE VOĽNÉHO ČASU V TEJTO HALE =====
         const matchBreak = categories.find(c => c.name === currentMatch?.categoryName)?.matchBreak || 5;
         const matchCategory = categories.find(c => c.name === currentMatch.categoryName);
         let matchDuration = 0;
