@@ -7,30 +7,23 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/fireb
 function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }) {
     if (!show) return null;
 
-    // Dynamické triedy pre tlačidlá v modálnom okne
     const getModalButtonClasses = (originalBgColorClass, disabledState) => {
         const baseClasses = 'py-2 px-4 rounded-lg transition-colors duration-200';
         const colorMatch = originalBgColorClass.match(/bg-(.+)-(\d+)/);
 
-        // NOVINKA: Špecifické ošetrenie pre 'bg-gray-300' pre zabezpečenie čierneho textu
         if (originalBgColorClass === 'bg-gray-300') {
             if (disabledState) {
-                // Pre zablokované tlačidlo "Späť na úpravu"
                 return `${baseClasses} bg-white border border-gray-300 text-black opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
             } else {
-                // Pre aktívne tlačidlo "Späť na úpravu"
                 return `${baseClasses} bg-gray-300 hover:bg-gray-400 text-black`;
             }
         }
 
-        // Pôvodná logika pre ostatné tlačidlá (napr. zelené, modré)
         if (disabledState && colorMatch) {
             const colorName = colorMatch[1];
             const colorShade = colorMatch[2];
             return `${baseClasses} bg-white border border-${colorName}-${colorShade} text-${colorName}-${colorShade} opacity-50 cursor-not-allowed hover:cursor-not-allowed`;
         } else {
-            // Špeciálne ošetrenie pre sivé tlačidlá, ktoré používajú text-gray-800, nie text-white.
-            // Táto časť sa už pre 'bg-gray-300' nespustí vďaka prvej podmienke.
             if (originalBgColorClass.includes('bg-gray-')) {
                 return `${baseClasses} ${originalBgColorClass} ${originalBgColorClass.replace('bg-', 'hover:bg-')} text-gray-800`;
             } else {
@@ -47,8 +40,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
             { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
             React.createElement('h2', { className: 'text-xl font-bold mb-4 text-center' }, 'Potvrdenie e-mailovej adresy'),
             React.createElement('p', { className: 'mb-4 text-center' }, `Pre dokončenie registrácie potvrďte, že zadaná e-mailová adresa je správna:`),
-            React.createElement('p', { className: 'mb-2 text-center font-bold text-blue-700 break-words' }, userEmail), // Zobrazenie e-mailu
-            // NOVINKA: Pridaný text pod e-mailovú adresu
+            React.createElement('p', { className: 'mb-2 text-center font-bold text-blue-700 break-words' }, userEmail),
             React.createElement('p', { className: 'mb-6 text-center text-gray-600 text-sm' }, 'Na túto zadanú e-mailovú adresu bude odoslané potvrdenie o zaregistrovaní vášho klubu na turnaj.'),
 
             React.createElement(
@@ -58,7 +50,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
                     'button',
                     {
                         onClick: onClose,
-                        className: getModalButtonClasses('bg-gray-300', loading), // Používa upravenú funkciu
+                        className: getModalButtonClasses('bg-gray-300', loading),
                         disabled: loading,
                     },
                     'Späť na úpravu'
@@ -73,7 +65,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
-                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // ZMENA: text-white na text-blue-500
+                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
                             React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
@@ -94,9 +86,12 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
     const [arrivalDateTime, setArrivalDateTime] = React.useState(null);
     const [loadingArrivalDate, setLoadingArrivalDate] = React.useState(true);
 
-    // Načítanie dátumu a času príchodu z databázy - používame window.db
+    // NOVINKA: Stav pre URL adresy z settings/urlLinks
+    const [tournamentRulesUrl, setTournamentRulesUrl] = React.useState('');
+    const [tournamentReglementUrl, setTournamentReglementUrl] = React.useState('');
+
+    // Načítanie dátumu a času príchodu z databázy
     React.useEffect(() => {
-        // Počkáme, kým je window.db dostupné
         const checkDbAndLoad = () => {
             if (!window.db) {
                 setTimeout(checkDbAndLoad, 100);
@@ -149,26 +144,62 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         };
     }, []);
 
+    // NOVINKA: Načítanie URL adries (Pravidlá turnaja + Reglement turnaja) z settings/urlLinks
+    React.useEffect(() => {
+        const checkDbAndLoadUrls = () => {
+            if (!window.db) {
+                setTimeout(checkDbAndLoadUrls, 100);
+                return;
+            }
+
+            const urlLinksDocRef = doc(window.db, 'settings', 'urlLinks');
+
+            const unsubscribe = onSnapshot(urlLinksDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    setTournamentRulesUrl(data.tournamentRulesUrl || '');
+                    setTournamentReglementUrl(data.tournamentReglementUrl || '');
+                } else {
+                    setTournamentRulesUrl('');
+                    setTournamentReglementUrl('');
+                }
+            }, (error) => {
+                console.error("Chyba pri načítaní URL adries:", error);
+                setTournamentRulesUrl('');
+                setTournamentReglementUrl('');
+            });
+
+            return unsubscribe;
+        };
+
+        const unsubscribePromise = checkDbAndLoadUrls();
+
+        return () => {
+            if (unsubscribePromise && typeof unsubscribePromise === 'function') {
+                unsubscribePromise();
+            }
+        };
+    }, []);
+
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
         if (!dateString) return '';
         try {
             const date = new Date(dateString);
-            // Pre istotu skontrolujeme, či je dátum platný po parsovaní
             if (isNaN(date.getTime())) {
-                return ''; // Ak je neplatný, vrátime prázdny reťazec
+                return '';
             }
             return date.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' });
         } catch (e) {
             console.error("Chyba pri formátovaní dátumu:", e);
-            return ''; // V prípade chyby formátovania
+            return '';
         }
     };
 
     // Pomocná funkcia pre zobrazenie adresy v jednom riadku
     const formatAddress = (address) => {
         if (!address || Object.values(address).every(val => !val)) {
-            return ''; // Ak je adresa prázdna, vrátiť prázdny reťazec
+            return '';
         }
         const parts = [];
         if (address.street) parts.push(address.street);
@@ -212,7 +243,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             return 'dátum a čas príchodu';
         }
         
-        // Skontrolujeme, či je arrivalDateTime platný Date objekt
         if (!(arrivalDateTime instanceof Date) || isNaN(arrivalDateTime.getTime())) {
             return 'dátum a čas príchodu';
         }
@@ -237,7 +267,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
             return React.createElement('p', null, 'Žiadne tímy neboli pridané.');
         }
 
-        // ZMENA: Filter pre kľúče, aby sa spracovávali len kategórie (objekty, ktoré sú polia alebo sa očakávajú ako polia)
         return Object.keys(teams).filter(categoryName => Array.isArray(teams[categoryName])).map(categoryName => {
             const teamsInCategory = teams[categoryName];
             if (!teamsInCategory || teamsInCategory.length === 0) {
@@ -268,11 +297,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             React.createElement('strong', null, `celkom: ${totalTshirtQuantity} ks`)
                           );
 
-
-                    // Detaily ubytovania
                     const accommodationDetails = team.accommodation?.type || 'Bez ubytovania';
 
-                    // Detaily dopravy
                     let arrivalDetails = team.arrival?.type || 'Nezadaný';
                     if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && team.arrival?.time) {
                         arrivalDetails += ` (čas príchodu: ${team.arrival.time} hod.)`;
@@ -283,7 +309,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         arrivalDetails += ` (šoféri: ${driversInfo.join(', ')})`;
                     }
 
-                    // Detaily balíčka
                     let packageDetailsHtml = null;
                     if (team.packageId && team.packageDetails) {
                         const pkg = team.packageDetails;
@@ -358,15 +383,13 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         );
                     }
 
-                    // Zozbieranie všetkých osôb do jedného poľa pre tabuľku
                     const allParticipants = [];
 
-                    // Pridanie hráčov
                     (team.playerDetails || []).forEach(player => {
                         allParticipants.push({
                             type: 'Hráč',
-                            jerseyNumberColor1: player.jerseyNumberColor1 || '', // NOVINKA
-                            jerseyNumberColor2: player.jerseyNumberColor2 || '', // NOVINKA
+                            jerseyNumberColor1: player.jerseyNumberColor1 || '',
+                            jerseyNumberColor2: player.jerseyNumberColor2 || '',
                             firstName: player.firstName || '',
                             lastName: player.lastName || '',
                             dateOfBirth: formatDate(player.dateOfBirth),
@@ -388,7 +411,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         });
                     });
 
-                    // Pridanie mužských členov realizačného tímu
                     (team.menTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (muž)',
@@ -402,7 +424,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         });
                     });
 
-                    // NOVINKA: Pridanie mužských šoférov
                     (team.driverDetailsMale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (muž)',
@@ -416,7 +437,6 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         });
                     });
                     
-                    // NOVINKA: Pridanie ženských šoférov
                     (team.driverDetailsFemale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (žena)',
@@ -453,15 +473,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                                
                         React.createElement('p', { className: 'text-sm text-gray-700 mb-4' }, `Počet hráčov: ${team.players || 0}, členovia realizačného tímu (ženy): ${team.womenTeamMembers || 0}, členovia realizačného tímu (muži): ${team.menTeamMembers || 0}, šoféri (ženy): ${team.arrival?.drivers?.female || 0}, šoféri (muži): ${team.arrival?.drivers?.male || 0}`),
                         
-                        // Zobrazenie tabuľky pre všetkých účastníkov
                         allParticipants.length > 0 ? (
                             React.createElement('div', { className: 'w-full overflow-x-auto box-border' },
                                 React.createElement('table', { className: 'bg-white border border-gray-300 rounded-lg shadow-sm w-max' },
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 text-sm leading-normal' },
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Osoba'),
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color1 || 'farba 1'})`), // NOVINKA
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color2 || 'farba 2'})`), // NOVINKA
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color1 || 'farba 1'})`),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color2 || 'farba 2'})`),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'),
@@ -473,8 +492,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         allParticipants.map((participant, pIdx) => (
                                             React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type),
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor1), // NOVINKA
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor2), // NOVINKA
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor1),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor2),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth),
@@ -508,9 +527,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
 
     // Handler pre skutočné odoslanie formulára po potvrdení v modálnom okne
     const handleConfirmSubmit = () => {
-        // Tu sa zavolá pôvodná funkcia handleSubmit, ktorá dokončí registráciu
-        handleSubmit(teamsDataFromPage4, globalNote); // ZMENA: Odovzdávame teamsDataFromPage4 a globalNote
-        handleCloseConfirmation(); // Zatvorí modál po odoslaní
+        handleSubmit(teamsDataFromPage4, globalNote);
+        handleCloseConfirmation();
     };
 
     // Kontrola, či sú všetky checkboxy zaškrtnuté
@@ -521,12 +539,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         null,
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
         
-        // Modálne okno potvrdenia e-mailu
         React.createElement(EmailConfirmationModal, {
             show: showEmailConfirmationModal,
             onClose: handleCloseConfirmation,
             onConfirm: handleConfirmSubmit,
-            userEmail: formData.email, // E-mailová adresa z formData
+            userEmail: formData.email,
             loading: loading,
         }),
 
@@ -577,15 +594,14 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 formatTeamsData(teamsDataFromPage4)
             ),
 
-            // NOVINKA: Zobrazenie globálnej poznámky
-            globalNote && globalNote.trim() !== '' && React.createElement( // Podmienka, aby sa zobrazilo len ak globalNote nie je prázdny
+            globalNote && globalNote.trim() !== '' && React.createElement(
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
                 React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Poznámka'),
                 React.createElement('p', { className: 'whitespace-pre-wrap' }, globalNote)
             ),
 
-            // NOVINKA: Sekcia so súhlasmi
+            // Sekcia so súhlasmi
             React.createElement(
                 'div',
                 { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
@@ -608,7 +624,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     )
                 ),
 
-                // Checkbox pre reglement
+                // Checkbox pre reglement - s klikateľným odkazom
                 React.createElement(
                     'div',
                     { className: 'flex items-center mb-3' },
@@ -621,11 +637,21 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         disabled: loading,
                     }),
                     React.createElement('label', { htmlFor: 'reglement-checkbox', className: 'ml-2 block text-gray-900' },
-                        'Súhlasím s reglementom turnaja.'
+                        'Súhlasím s ',
+                        tournamentReglementUrl
+                            ? React.createElement('a', {
+                                href: tournamentReglementUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                className: 'text-blue-600 underline hover:text-blue-800',
+                                onClick: (e) => e.stopPropagation()
+                            }, 'reglementom turnaja')
+                            : 'reglementom turnaja',
+                        '.'
                     )
                 ),
 
-                // Checkbox pre pravidlá
+                // Checkbox pre pravidlá - s klikateľným odkazom
                 React.createElement(
                     'div',
                     { className: 'flex items-center mb-3' },
@@ -638,7 +664,17 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         disabled: loading,
                     }),
                     React.createElement('label', { htmlFor: 'rules-checkbox', className: 'ml-2 block text-gray-900' },
-                        'Súhlasím s pravidlami turnaja.'
+                        'Súhlasím s ',
+                        tournamentRulesUrl
+                            ? React.createElement('a', {
+                                href: tournamentRulesUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                className: 'text-blue-600 underline hover:text-blue-800',
+                                onClick: (e) => e.stopPropagation()
+                            }, 'pravidlami turnaja')
+                            : 'pravidlami turnaja',
+                        '.'
                     )
                 ),
 
@@ -670,7 +706,7 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4, currentGlobalNote: globalNote }), // NOVINKA: Odovzdanie globalNote
+                        onClick: () => handlePrev({ currentFormData: formData, currentTeamsDataFromPage4: teamsDataFromPage4, currentGlobalNote: globalNote }),
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
                     },
@@ -680,20 +716,19 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     'button',
                     {
                         type: 'button',
-                        onClick: handleShowConfirmation, // Teraz voláme funkciu na zobrazenie potvrdzovacieho modálu
-                        // Dynamické triedy pre tlačidlo "Registrovať"
+                        onClick: handleShowConfirmation,
                         className: `font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${
-                            loading || !areAllCheckboxesChecked // Zablokované, ak loading alebo niektorý checkbox nie je zaškrtnutý
-                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zablokovaný stav
-                                : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
+                            loading || !areAllCheckboxesChecked
+                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                                : 'bg-green-500 hover:bg-green-700 text-white'
                         }`,
-                        disabled: loading || !areAllCheckboxesChecked, // Zablokované, ak loading alebo niektorý checkbox nie je zaškrtnutý
-                        style: { cursor: (loading || !areAllCheckboxesChecked) ? 'not-allowed' : 'pointer' } // Ikona myši
+                        disabled: loading || !areAllCheckboxesChecked,
+                        style: { cursor: (loading || !areAllCheckboxesChecked) ? 'not-allowed' : 'pointer' }
                     },
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
-                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // ZMENA: text-green-500 na text-blue-500
+                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
                             React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
