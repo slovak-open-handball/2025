@@ -1322,7 +1322,7 @@ function App() {
   const now = new Date();
 
 
-  const mainContainerWidthClass = (page === 6 || page === 7) ? 'w-full' : 'max-w-md';
+  const mainContainerWidthClass = (page === 6) ? 'w-full' : 'max-w-md';
 
   React.useEffect(() => {
     window.scrollTo({
@@ -1333,7 +1333,7 @@ function App() {
 
   return React.createElement(
     'div',
-    { className: `min-h-screen flex flex-col justify-start bg-gray-100 ${(page === 6 || page === 7) ? 'items-stretch p-0' : 'items-center p-4'}` },
+    { className: `min-h-screen flex flex-col justify-start bg-gray-100 ${(page === 6) ? 'items-stretch p-0' : 'items-center p-4'}` },
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     !settingsLoaded || !isAuthReady ? (
@@ -1437,7 +1437,7 @@ function App() {
         React.createElement(
           'div',
           { className: `bg-white rounded-lg shadow-md w-full ${mainContainerWidthClass} ${
-              (page === 6 || page === 7) ? 'p-4 sm:p-6' : 'p-8'
+              (page === 6) ? 'p-4 sm:p-6' : 'p-8'
           }` },
           page === 1 ?
             React.createElement(Page1Form, {
