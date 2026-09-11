@@ -12152,7 +12152,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                        breakStartTime: block.startTime,
                                                                                                                        breakEndTime: block.endTime,
                                                                                                                        breakDuration: block.duration,
-                                                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                                                       availableMatches: matches.filter(m => !m.hallId)
                                                                                                                    });
                                                                                                                    setIsAssignToBreakModalOpen(true);
                                                                                                                },
@@ -12687,7 +12687,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                    breakStartTime: block.startTime,
                                                                                                                    breakEndTime: block.endTime,
                                                                                                                    breakDuration: block.duration,
-                                                                                                                   availableMatches: filteredUnassignedMatches
+                                                                                                                   availableMatches: matches.filter(m => !m.hallId)
                                                                                                                });
                                                                                                                setIsAssignToBreakModalOpen(true);
                                                                                                            },
@@ -12786,7 +12786,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                            breakStartTime: endTimeStr,
                                                                                                            breakEndTime: breakEndTimeStr,
                                                                                                            breakDuration: 0,
-                                                                                                           availableMatches: filteredUnassignedMatches
+                                                                                                           availableMatches: matches.filter(m => !m.hallId)
                                                                                                        });
                                                                                                        setIsAssignToBreakModalOpen(true);
                                                                                                    }
@@ -12838,7 +12838,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                                breakStartTime: endTimeStr,
                                                                                                                breakEndTime: breakEndTimeStr,
                                                                                                                breakDuration: 0,
-                                                                                                               availableMatches: filteredUnassignedMatches
+                                                                                                               availableMatches: matches.filter(m => !m.hallId)
                                                                                                            });
                                                                                                            setIsAssignToBreakModalOpen(true);
                                                                                                        },
@@ -12943,7 +12943,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                    breakStartTime: displayStartTime,
                                                                                    breakEndTime: '23:59',
                                                                                    breakDuration: 0,
-                                                                                   availableMatches: filteredUnassignedMatches
+                                                                                   availableMatches: matches.filter(m => !m.hallId)
                                                                                });
                                                                                setIsAssignToBreakModalOpen(true);
                                                                            }
@@ -13002,7 +13002,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                        breakStartTime: displayStartTime,
                                                                                        breakEndTime: '23:59',
                                                                                        breakDuration: 0,
-                                                                                       availableMatches: filteredUnassignedMatches
+                                                                                       availableMatches: matches.filter(m => !m.hallId)
                                                                                    });
                                                                                    setIsAssignToBreakModalOpen(true);
                                                                                },
