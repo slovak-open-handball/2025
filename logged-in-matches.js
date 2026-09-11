@@ -2291,6 +2291,13 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             }
 
             // ===== KONTROLA NADSTAVBOVÝCH SKUPÍN =====
+            // OPRAVA: Berie do úvahy IBA súvisiace zápasy v ROVNAKEJ HALE.
+            // Súvisiace zápasy v INÝCH halách neblokujú voľný čas v tejto hale.
+            // Logika:
+            // 1. Súvisiaci zápas v skoršom dni = OK (neblokuje)
+            // 2. Súvisiaci zápas v neskoršom dni = OK pre aktuálny deň (neblokuje, len určuje poradie)
+            // 3. Súvisiaci zápas v ROVNAKOM dni v ROVNAKEJ hale = MUSÍ skončiť PRED voľným časom
+            // 4. Súvisiaci zápas v ROVNAKOM dni v INEJ hale = NEBLOKUJE (môže bežať paralelne)
             if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -2299,7 +2306,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 if (isAdvancedGroup && allMatches) {
                     const currentDateStr = date;
                     
-                    // Získame súvisiace zápasy v rovnakej nadstavbovej skupine
+                    // ===== 1. KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
+                    // Získame VŠETKY súvisiace zápasy v rovnakej nadstavbovej skupine (bez ohľadu na halu)
                     const relatedMatches = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.groupName === match.groupName &&
@@ -2307,45 +2315,51 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         m.scheduledTime
                     );
                     
-                    const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                    const breakStartMinutes = breakHours * 60 + breakMinutes;
-                    const matchDuration = getMatchDuration(match.categoryName);
-                    const breakEndMinutes = breakStartMinutes + matchDuration;
+                    // ===== 1a. KONTROLA DÁTUMOVEJ LOGIKY (všetky haly) =====
+                    // Súvisiaci zápas v neskoršom dni = OK pre aktuálny deň (aktuálny je pred ním)
+                    // Súvisiaci zápas v skoršom dni = OK (aktuálny je po ňom)
+                    // Problém by bol len vtedy, ak by existoval súvisiaci zápas v ROVNAKOM dni v ROVNAKEJ HALE,
+                    // čo riešime nižšie.
+                    
+                    // ===== 1b. NAJNOVŠÍ KONIEC SÚVISIACICH ZÁPASOV V ROVNAKEJ HALE A DNI =====
+                    let latestSameHallEnd = 0;
                     
                     for (const relMatch of relatedMatches) {
+                        // Zaujímajú nás IBA zápasy v ROVNAKEJ HALE
+                        if (relMatch.hallId !== hallId) continue;
+                        
                         const relDate = relMatch.scheduledTime.toDate();
                         const relDateStr = getLocalDateStr(relDate);
                         
-                        if (relDateStr === currentDateStr) {
-                            const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                            let relDuration = 0;
-                            let relBreak = 5;
-                            if (relCategory) {
-                                const periods = relCategory.periods || 2;
-                                const periodDuration = relCategory.periodDuration || 20;
-                                const breakDuration = relCategory.breakDuration || 2;
-                                relDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                relBreak = relCategory.matchBreak || 5;
-                            }
-                            const relStartMinutes = relDate.getHours() * 60 + relDate.getMinutes();
-                            const relEndWithBreak = relStartMinutes + relDuration + relBreak;
-                            
-                            // Súvisiaci zápas musí skončiť PRED začiatkom voľného času
-                            if (relEndWithBreak > breakStartMinutes) {
-                                return false;
-                            }
-                        } else if (relDateStr > currentDateStr) {
-                            // Súvisiaci zápas je neskôr - aktuálny zápas musí byť PRED
-                            return false;
+                        if (relDateStr !== currentDateStr) continue;
+                        
+                        const relCategory = categories.find(c => c.name === relMatch.categoryName);
+                        let relDuration = 0;
+                        let relBreak = 5;
+                        if (relCategory) {
+                            const periods = relCategory.periods || 2;
+                            const periodDuration = relCategory.periodDuration || 20;
+                            const breakDuration = relCategory.breakDuration || 2;
+                            relDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                            relBreak = relCategory.matchBreak || 5;
+                        }
+                        const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
+                        
+                        if (relEndMinutes > latestSameHallEnd) {
+                            latestSameHallEnd = relEndMinutes;
                         }
                     }
                     
-                    // Skontrolujeme aj základné skupiny (podradené)
-                    const basicGroupMatches = allMatches.filter(m => 
+                    // ===== 2. KONTROLA SÚVISIACICH ZÁPASOV V ZÁKLADNÝCH SKUPINÁCH V ROVNAKEJ HALE A DNI =====
+                    // Základné skupiny tiež hrajú rolu pre nadstavbové - tímy, ktoré postúpili, musia mať
+                    // odohraté zápasy v základných skupinách PRED zápasmi v nadstavbovej skupine
+                    // (ale len ak sú v tej istej hale - v inej hale môžu bežať paralelne).
+                    const basicGroupMatchesInSameHall = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.id !== match.id &&
                         m.scheduledTime &&
-                        m.groupName && m.groupName.startsWith('skupina ')
+                        m.groupName && m.groupName.startsWith('skupina ') &&
+                        m.hallId === hallId
                     );
                     
                     const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
@@ -2370,7 +2384,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     if (targetLetters.size > 0) {
                         for (const letter of targetLetters) {
                             const groupName = `skupina ${letter}`;
-                            const basicMatches = basicGroupMatches.filter(m => m.groupName === groupName);
+                            const basicMatches = basicGroupMatchesInSameHall.filter(m => m.groupName === groupName);
                             
                             for (const basicMatch of basicMatches) {
                                 const basicDate = basicMatch.scheduledTime.toDate();
@@ -2387,17 +2401,34 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                         basicDuration = (periodDuration + breakDuration) * periods - breakDuration;
                                         basicBreak = basicCategory.matchBreak || 5;
                                     }
-                                    const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
-                                    const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
+                                    const basicEndMinutes = basicDate.getHours() * 60 + basicDate.getMinutes() + basicDuration + basicBreak;
                                     
-                                    // Základný zápas musí skončiť PRED začiatkom voľného času
-                                    if (basicEndWithBreak > breakStartMinutes) {
-                                        return false;
+                                    if (basicEndMinutes > latestSameHallEnd) {
+                                        latestSameHallEnd = basicEndMinutes;
                                     }
                                 }
                             }
                         }
                     }
+                    
+                    // ===== 3. KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI SÚVISIACICH ZÁPASOV V TEJTO HALE =====
+                    const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
+                    const breakStartMinutes = breakHours * 60 + breakMinutes;
+                    
+                    // Ak je voľný čas PRED najnovším koncom súvisiacich zápasov v tejto hale,
+                    // zápas nemôže byť priradený do tohto voľného času
+                    if (latestSameHallEnd > 0 && breakStartMinutes < latestSameHallEnd) {
+                        return false;
+                    }
+                    
+                    // ===== 4. KONTROLA DÁTUMOVEJ LOGIKY PRE CELÝ DEŇ (všetky haly) =====
+                    // Ak existuje súvisiaci zápas v NESKORŠOM dni, aktuálny zápas musí byť PRED ním.
+                    // To je OK pre aktuálny deň (vybraný deň je pred neskorším dňom).
+                    // Ale ak by niektorý súvisiaci zápas bol v neskoršom dni a zároveň 
+                    // aktuálny deň by bol neskôr ako tento neskorší deň, bol by to konflikt.
+                    // (Toto nemôže nastať, lebo currentDateStr < neskorší deň z definície.)
+                    
+                    // Ak existuje súvisiaci zápas v SKORŠOM dni, je to OK - aktuálny je po ňom.
                 }
             }
 
