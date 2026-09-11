@@ -7488,72 +7488,17 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     );
 };
 
-const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime, nextMatchTime, matchBreak }) => {
+const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime, nextMatchTime, matchBreak, matchDuration }) => {
     const [breakPosition, setBreakPosition] = useState('after');
     const [breakDuration, setBreakDuration] = useState(5);
-    const [newTime, setNewTime] = useState('');
     const [durationError, setDurationError] = useState('');
 
-    // ===== AUTOMATICKÉ PREDVYPLNENIE DĹŽKY MEDZERY =====
-    // Ak máme nextMatchTime (čas nasledujúceho zápasu), vypočítame maximálnu možnú medzeru
+    // ===== NASTAVENIE DĹŽKY MEDZERY NA TRVANIE ZÁPASU =====
     useEffect(() => {
-        if (isOpen && currentTime && nextMatchTime) {
-            const [currentHours, currentMinutes] = currentTime.split(':').map(Number);
-            const [nextHours, nextMinutes] = nextMatchTime.split(':').map(Number);
-            
-            const currentTotalMinutes = currentHours * 60 + currentMinutes;
-            const nextTotalMinutes = nextHours * 60 + nextMinutes;
-            
-            // Medzera medzi zápasmi = čas nasledujúceho - (čas aktuálneho + dĺžka zápasu)
-            // matchBreak je už zahrnutý v nextMatchTime (predpokladáme, že nextMatchTime je čas začiatku nasledujúceho zápasu)
-            const gap = nextTotalMinutes - currentTotalMinutes;
-            
-            if (gap > 0 && gap <= 180) {
-                setBreakDuration(gap);
-            } else if (gap > 180) {
-                setBreakDuration(180);
-            }
+        if (isOpen && matchDuration && matchDuration > 0) {
+            setBreakDuration(matchDuration);
         }
-    }, [isOpen, currentTime, nextMatchTime, matchBreak]);
-
-    // ===== VÝPOČET NOVÉHO ČASU =====
-    useEffect(() => {
-        if (isOpen && match && currentTime) {
-            calculateNewTime();
-        }
-    }, [isOpen, match, currentTime, breakPosition, breakDuration, nextMatchTime]);
-
-    const calculateNewTime = () => {
-        if (!currentTime || breakDuration <= 0) {
-            setNewTime('');
-            return;
-        }
-
-        const [hours, minutes] = currentTime.split(':').map(Number);
-        const currentMinutes = hours * 60 + minutes;
-        
-        let newMinutes;
-        if (breakPosition === 'before') {
-            // Medzera pred zápasom - posunieme čas zápasu dopredu
-            newMinutes = currentMinutes + breakDuration;
-        } else {
-            // Medzera za zápasom - nový zápas bude o breakDuration neskôr
-            newMinutes = currentMinutes + breakDuration;
-        }
-        
-        if (newMinutes < 0) {
-            setDurationError('Čas nemôže byť záporný');
-            setNewTime('');
-        } else if (newMinutes >= 24 * 60) {
-            setDurationError('Čas nemôže presiahnuť 24:00');
-            setNewTime('');
-        } else {
-            setDurationError('');
-            const newHours = Math.floor(newMinutes / 60).toString().padStart(2, '0');
-            const newMins = (newMinutes % 60).toString().padStart(2, '0');
-            setNewTime(`${newHours}:${newMins}`);
-        }
-    };
+    }, [isOpen, matchDuration]);
 
     const handleDurationChange = (e) => {
         const value = parseInt(e.target.value);
@@ -7584,14 +7529,13 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
         if (!isOpen) {
             setBreakPosition('after');
             setBreakDuration(5);
-            setNewTime('');
             setDurationError('');
         }
     }, [isOpen]);
 
     if (!isOpen || !match) return null;
 
-    const isValid = breakDuration > 0 && !durationError && newTime;
+    const isValid = breakDuration > 0 && !durationError;
 
     // ===== ZOBRAZENIE INFORMÁCIE O NASLEDUJÚCOM ZÁPASE =====
     const hasNextMatch = nextMatchTime && nextMatchTime !== '';
@@ -7659,10 +7603,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                                 const [currentHours, currentMinutes] = currentTime.split(':').map(Number);
                                 const [nextHours, nextMinutes] = nextMatchTime.split(':').map(Number);
                                 const gap = (nextHours * 60 + nextMinutes) - (currentHours * 60 + currentMinutes);
-                                const matchDuration = (() => {
-                                    // Toto by malo byť odovzdané ako prop, ale pre istotu vypočítame
-                                    return 0;
-                                })();
                                 return `Voľný čas: ${gap} minút`;
                             })()
                         )
@@ -7754,8 +7694,7 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                             onConfirm({
                                 matchId: match.id,
                                 position: breakPosition,
-                                duration: breakDuration,
-                                newTime: newTime
+                                duration: breakDuration
                             });
                             onClose();
                         },
@@ -10619,7 +10558,15 @@ const AddMatchesApp = ({ userProfileData }) => {
             date: selectedMatchForBreak?.scheduledTime ? formatDateForDisplay(selectedMatchForBreak.scheduledTime) : '',
             currentTime: selectedMatchCurrentTime,
             nextMatchTime: selectedMatchNextTime,
-            matchBreak: selectedMatchForBreak ? (categories.find(c => c.name === selectedMatchForBreak.categoryName)?.matchBreak || 5) : 5
+            matchBreak: selectedMatchForBreak ? (categories.find(c => c.name === selectedMatchForBreak.categoryName)?.matchBreak || 5) : 5,
+            matchDuration: selectedMatchForBreak ? (() => {
+                const category = categories.find(c => c.name === selectedMatchForBreak.categoryName);
+                if (!category) return 45;
+                const periods = category.periods || 2;
+                const periodDuration = category.periodDuration || 20;
+                const breakDuration = category.breakDuration || 2;
+                return (periodDuration + breakDuration) * periods - breakDuration;
+            })() : 45
         }),
         React.createElement(GenerationTypeModal, {
             isOpen: isGenerationTypeModalOpen,
