@@ -4987,45 +4987,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         return null;
     };
-    
-    const getTeamNameByIdentifierForEffect = (identifier) => {
-        if (!identifier) return 'Neznámy tím';
-        
-        const parts = identifier.split(' ');
-        if (parts.length < 2) return identifier;
-        
-        const groupAndOrder = parts.pop();
-        const category = parts.join(' ');
-        
-        let groupName = '';
-        let order = '';
-        
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupName = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        if (!order) {
-            order = '?';
-            groupName = groupAndOrder;
-        }
-        
-        if (window.__teamManagerData?.allTeams) {
-            const groupNameWithPrefix = `skupina ${groupName}`;
-            const team = window.__teamManagerData.allTeams.find(t => 
-                t.category === category && 
-                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
-                t.order?.toString() === order
-            );
-            if (team) return team.teamName;
-        }
-        
-        return `${category} ${groupName}${order}`;
-    };
 
     // ===== OPRAVENÝ useEffect PRE VÝPOČET SUGGESTED TIME S LOGMI =====
     useEffect(() => {
