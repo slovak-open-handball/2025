@@ -1335,7 +1335,7 @@ function App() {
     'div',
     { className: `min-h-screen flex flex-col justify-start bg-gray-100 ${
         page === 6 ? 'items-stretch p-0' : 'items-center p-4'
-    }` }
+    }` },
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     !settingsLoaded || !isAuthReady ? (
