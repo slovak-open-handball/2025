@@ -5447,9 +5447,6 @@ function AllRegistrationsApp() {
                       const existingMember = currentMemberArray[memberArrayIndex];
                       const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
                   
-                      // ============================================================
-                      // DEFINÍCIA privateArrayName PRE TENTO BLOK
-                      // ============================================================
                       let privateArrayName = memberArrayPath;
                       if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
                       else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
@@ -5457,15 +5454,7 @@ function AllRegistrationsApp() {
                       else if (memberArrayPath === 'driverDetailsMale') privateArrayName = 'driversMale';
                       else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
                   
-                      // ============================================================
-                      // DOPLNÍME PÔVODNÉ PRIVATE DÁTA (dateOfBirth, address)
-                      // do originalMemberFromDoc, aby porovnanie v notifikáciách fungovalo správne
-                      // ============================================================
                       const originalPrivateMember = privateData.persons?.[teamKey]?.[privateArrayName]?.[memberArrayIndex] || {};
-                      originalMemberFromDoc.dateOfBirth = originalPrivateMember.dateOfBirth || '';
-                      originalMemberFromDoc.address = originalPrivateMember.address || {
-                          street: '', houseNumber: '', city: '', postalCode: '', country: ''
-                      };
                   
                       if (updatedDataFromModal.firstName !== undefined) {
                           existingMember.firstName = updatedDataFromModal.firstName;
