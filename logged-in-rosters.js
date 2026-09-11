@@ -461,6 +461,7 @@ function MemberDetailsModal({
     const [lastName, setLastName] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
     const [jerseyNumber, setJerseyNumber] = useState('');
+    const [jerseyNumber2, setJerseyNumber2] = useState('');
     const [registrationNumber, setRegistrationNumber] = useState('');
     const [street, setStreet] = useState('');
     const [houseNumber, setHouseNumber] = useState('');
@@ -604,6 +605,7 @@ function MemberDetailsModal({
                     setFirstName(memberData.firstName || '');
                     setLastName(memberData.lastName || '');
                     setJerseyNumber(memberData.jerseyNumber || '');
+                    setJerseyNumber2(memberData.jerseyNumber2 || '');
                     setRegistrationNumber(memberData.registrationNumber || '');
                     
                     let foundPrivateData = false;
@@ -690,6 +692,7 @@ function MemberDetailsModal({
                     setLastName('');
                     setDateOfBirth('');
                     setJerseyNumber('');
+                    setJerseyNumber2('');
                     setRegistrationNumber('');
                     setStreet('');
                     setHouseNumber('');
@@ -728,6 +731,7 @@ function MemberDetailsModal({
             dateOfBirth,
             ...(memberType === 'player' && { 
                 jerseyNumber: parseInt(jerseyNumber, 10) || null,
+                jerseyNumber2: parseInt(jerseyNumber2, 10) || null,
                 registrationNumber: registrationNumber?.trim() || null 
             }),
         };
@@ -822,15 +826,31 @@ function MemberDetailsModal({
                     dateOfBirthError && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, dateOfBirthError)
                 ),
                 (memberType === 'player') && React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'jerseyNumber', className: 'block text-sm font-medium text-gray-700' }, 'Číslo dresu'),
-                    React.createElement('input', { 
-                        type: 'number', 
-                        id: 'jerseyNumber', 
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2', 
-                        value: jerseyNumber, 
-                        onChange: (e) => setJerseyNumber(e.target.value), 
-                        disabled: isButtonDisabled 
-                    })
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Čísla dresov'),
+                    React.createElement('div', { className: 'flex gap-3 mt-1' },
+                        React.createElement('div', { className: 'flex-1' },
+                            React.createElement('input', {
+                                type: 'number',
+                                id: 'jerseyNumber',
+                                className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: jerseyNumber,
+                                onChange: (e) => setJerseyNumber(e.target.value),
+                                disabled: isButtonDisabled,
+                                placeholder: 'Číslo dresu 1'
+                            })
+                        ),
+                        React.createElement('div', { className: 'flex-1' },
+                            React.createElement('input', {
+                                type: 'number',
+                                id: 'jerseyNumber2',
+                                className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                value: jerseyNumber2,
+                                onChange: (e) => setJerseyNumber2(e.target.value),
+                                disabled: isButtonDisabled,
+                                placeholder: 'Číslo dresu 2'
+                            })
+                        )
+                    )
                 ),
                 (memberType === 'player') && React.createElement('div', null,
                     React.createElement('label', { 
@@ -2224,12 +2244,13 @@ function RostersApp() {
                                                         firstName: player.firstName || '',
                                                         lastName: player.lastName || '',
                                                         jerseyNumber: player.jerseyNumber || null,
+                                                        jerseyNumber2: player.jerseyNumber2 || null,
                                                         registrationNumber: player.registrationNumber || null,
                                                         // Ďalšie polia, ktoré nie sú zakázané
                                                         ...Object.fromEntries(
                                                             Object.entries(player)
                                                                 .filter(([key]) => 
-                                                                    !['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 
+                                                                    !['firstName', 'lastName', 'jerseyNumber', 'jerseyNumber2', 'registrationNumber', 
                                                                       'dateOfBirth', 'address', '_privateData'].includes(key)
                                                                 )
                                                         ),
@@ -2483,6 +2504,7 @@ function RostersApp() {
                     firstName: player.firstName || '',
                     lastName: player.lastName || '',
                     jerseyNumber: player.jerseyNumber || null,
+                    jerseyNumber2: player.jerseyNumber2 || null,
                     registrationNumber: player.registrationNumber || null,
                     // Súkromné dáta oddelene
                     _dateOfBirth: player._dateOfBirth || '',
@@ -3015,6 +3037,9 @@ function RostersApp() {
         if (newMemberDetails.jerseyNumber !== undefined && newMemberDetails.jerseyNumber !== null) {
             memberForUsers.jerseyNumber = newMemberDetails.jerseyNumber;
         }
+        if (newMemberDetails.jerseyNumber2 !== undefined && newMemberDetails.jerseyNumber2 !== null) {
+            memberForUsers.jerseyNumber2 = newMemberDetails.jerseyNumber2;
+        }
         if (newMemberDetails.registrationNumber !== undefined && newMemberDetails.registrationNumber !== null) {
             memberForUsers.registrationNumber = newMemberDetails.registrationNumber;
         }
@@ -3115,7 +3140,10 @@ function RostersApp() {
                     changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}`);
                 }
                 if (newMemberDetails.jerseyNumber && memberTypeToAdd === 'player') {
-                    changes.push(`Číslo dresu: ${newMemberDetails.jerseyNumber}`);
+                    changes.push(`Číslo dresu 1: ${newMemberDetails.jerseyNumber}`);
+                }
+                if (newMemberDetails.jerseyNumber2 && memberTypeToAdd === 'player') {
+                    changes.push(`Číslo dresu 2: ${newMemberDetails.jerseyNumber2}`);
                 }
                 if (newMemberDetails.registrationNumber && memberTypeToAdd === 'player') {
                     changes.push(`Registračné číslo: ${newMemberDetails.registrationNumber}`);
@@ -3389,6 +3417,11 @@ function RostersApp() {
         } else if (originalMemberData.jerseyNumber !== undefined && originalMemberData.jerseyNumber !== null) {
             memberForUsers.jerseyNumber = originalMemberData.jerseyNumber;
         }
+        if (updatedMemberDetails.jerseyNumber2 !== undefined && updatedMemberDetails.jerseyNumber2 !== null) {
+            memberForUsers.jerseyNumber2 = updatedMemberDetails.jerseyNumber2;
+        } else if (originalMemberData.jerseyNumber2 !== undefined && originalMemberData.jerseyNumber2 !== null) {
+            memberForUsers.jerseyNumber2 = originalMemberData.jerseyNumber2;
+        }
         if (updatedMemberDetails.registrationNumber !== undefined && updatedMemberDetails.registrationNumber !== null) {
             memberForUsers.registrationNumber = updatedMemberDetails.registrationNumber;
         } else if (originalMemberData.registrationNumber !== undefined && originalMemberData.registrationNumber !== null) {
@@ -3396,7 +3429,7 @@ function RostersApp() {
         }
         // Pridáme ďalšie povolené polia (okrem zakázaných)
         for (const key in originalMemberData) {
-            if (!['firstName', 'lastName', 'jerseyNumber', 'registrationNumber', 'dateOfBirth', 'address', '_privateData', '_dateOfBirth', '_address'].includes(key)) {
+            if (!['firstName', 'lastName', 'jerseyNumber', 'jerseyNumber2', 'registrationNumber', 'dateOfBirth', 'address', '_privateData', '_dateOfBirth', '_address'].includes(key)) {
                 memberForUsers[key] = originalMemberData[key];
             }
         }
@@ -3441,18 +3474,20 @@ function RostersApp() {
     
             // === 3. NOTIFIKÁCIA ===
             const changes = getChangesForNotification(
-                { 
+                {
                     firstName: originalMemberData.firstName, 
                     lastName: originalMemberData.lastName,
                     jerseyNumber: originalMemberData.jerseyNumber,
+                    jerseyNumber2: originalMemberData.jerseyNumber2,
                     registrationNumber: originalMemberData.registrationNumber,
                     dateOfBirth: originalDateOfBirth,
                     address: originalAddress
                 },
-                { 
+                {
                     firstName: memberForUsers.firstName,
                     lastName: memberForUsers.lastName,
                     jerseyNumber: memberForUsers.jerseyNumber,
+                    jerseyNumber2: memberForUsers.jerseyNumber2,
                     registrationNumber: memberForUsers.registrationNumber,
                     dateOfBirth: memberForPrivate.dateOfBirth,
                     address: memberForPrivate.address
@@ -3777,7 +3812,8 @@ function RostersApp() {
                                 [
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Akcie'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu 1'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu 2'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Dátum narodenia'),
@@ -3845,6 +3881,7 @@ function RostersApp() {
                     
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.type || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber || '-'),
+                                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' }, member.jerseyNumber2 || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.firstName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-800' }, member.lastName || '-'),
                                     React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap text-sm text-gray-600' },
