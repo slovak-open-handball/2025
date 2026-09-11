@@ -8718,7 +8718,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     }
                     
                     const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
-                    const filteredMatches = hallMatchesForDay.filtered || [];
+                    const filteredMatches = hallMatchesForDay?.filtered || [];
+                    const matchesCount = hallMatchesForDay?.allMatches?.length || 0;
                     
                     if (isFilterActive) {
                         if (filteredMatches.length > 0) {
@@ -9383,7 +9384,9 @@ const AddMatchesApp = ({ userProfileData }) => {
     };    
     
     const getMatchesForHallAndDay = (hallId, date) => {
-        if (!matches || matches.length === 0) return [];
+        if (!matches || matches.length === 0) {
+            return { filtered: [], allMatches: [] };
+        }
     
         const dateStr = getLocalDateStr(date);
     
@@ -11638,8 +11641,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    const dateStr = dayCard.dateStr;
 
                                                    const hallDayData = getMatchesForHallAndDay(hall.id, date);
-                                                   const hallMatches = hallDayData.filtered; 
-                                                   const allMatchesForDay = hallDayData.allMatches; 
+                                                   const hallMatches = hallDayData?.filtered || []; 
+                                                   const allMatchesForDay = hallDayData?.allMatches || []; 
                                                        
                                                    const matchesCount = hallMatches.length;
                                                    const isEmpty = matchesCount === 0;                                                   
