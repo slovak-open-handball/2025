@@ -2112,8 +2112,8 @@ const AssignMatchToBreakModal = ({
     // ===== KONTROLA, ČI JE ZÁPAS VHODNÝ PRE DANÝ VOĽNÝ ČAS =====
     // Táto funkcia používa IDENTICKÚ logiku ako AssignMatchModal
     // pre kontrolu pavúkovej chronológie a zápasov o umiestnenie.
-    // Pre nadstavbové skupiny kontroluje IBA súvisiace zápasy v rovnakej hale a dni,
-    // NIE základné skupiny (tie sa kontrolujú až pri samotnom priradení).
+    // Pre nadstavbové skupiny sa kontrola vykonáva až pri samotnom priradení
+    // (v AssignMatchModal), tu iba zobrazujeme zápasy, ktoré sa zmestia do voľného času.
     const isMatchEligibleForBreak = (match, existingMatchesInHallAndDay) => {
         const matchDuration = getMatchDuration(match.categoryName);
         
@@ -2132,7 +2132,6 @@ const AssignMatchToBreakModal = ({
         const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
         const breakStartMinutes = breakHours * 60 + breakMinutes;
         const breakEndMinutes = breakStartMinutes + matchDuration;
-        const matchBreak = categories.find(c => c.name === match?.categoryName)?.matchBreak || 5;
         
         for (const existingMatch of existingMatchesInHallAndDay) {
             if (!existingMatch.scheduledTime) continue;
@@ -2389,62 +2388,11 @@ const AssignMatchToBreakModal = ({
             }
         }
 
-        // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN =====
-        // DÔLEŽITÉ: Pre modálne okno "Priradiť zápas do voľného času" kontrolujeme
-        // IBA súvisiace zápasy v ROVNAKEJ NADSTAVBOVEJ SKUPINE v ROVNAKEJ HALE a DNI.
-        // NEKONTROLUJEME základné skupiny (B, C, ...), pretože tie môžu byť naplánované
-        // až neskôr a používateľ chce práve teraz priradiť tento zápas do voľného času.
-        if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
-            const categoryGroups = groupsByCategory[match.categoryId] || [];
-            const currentGroup = categoryGroups.find(g => g.name === match.groupName);
-            const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
-            
-            if (isAdvancedGroup && allMatches) {
-                const currentDateStr = date;
-                
-                // ===== 6b. KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
-                // v ROVNAKEJ HALE a DNI
-                const relatedMatches = allMatches.filter(m => 
-                    m.categoryId === match.categoryId &&
-                    m.groupName === match.groupName &&
-                    m.id !== match.id &&
-                    m.scheduledTime
-                );
-                
-                let latestSameHallEnd = 0;
-                
-                for (const relMatch of relatedMatches) {
-                    if (relMatch.hallId !== hallId) continue;
-                    
-                    const relDate = relMatch.scheduledTime.toDate();
-                    const relDateStr = getLocalDateStr(relDate);
-                    
-                    if (relDateStr !== currentDateStr) continue;
-                    
-                    const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                    let relDuration = 0;
-                    let relBreak = 5;
-                    if (relCategory) {
-                        const periods = relCategory.periods || 2;
-                        const periodDuration = relCategory.periodDuration || 20;
-                        const breakDurationValue = relCategory.breakDuration || 2;
-                        relDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
-                        relBreak = relCategory.matchBreak || 5;
-                    }
-                    const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
-                    
-                    if (relEndMinutes > latestSameHallEnd) {
-                        latestSameHallEnd = relEndMinutes;
-                    }
-                }
-                
-                // Ak je voľný čas PRED najnovším koncom súvisiacich zápasov v tej istej hale,
-                // zápas nemôže byť priradený do tohto voľného času
-                if (latestSameHallEnd > 0 && breakStartMinutes < latestSameHallEnd) {
-                    return false;
-                }
-            }
-        }
+        // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN - ODSTRÁNENÁ =====
+        // Kontrola nadstavbových skupín sa vykonáva až pri samotnom priradení
+        // v AssignMatchModal (useEffect na kontrolu konfliktov).
+        // Tu v zozname zobrazujeme všetky zápasy, ktoré sa zmestia do voľného času
+        // a nekolidujú s existujúcimi zápasmi v hale.
 
         return true;
     };
