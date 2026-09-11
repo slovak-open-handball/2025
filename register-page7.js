@@ -365,7 +365,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.playerDetails || []).forEach(player => {
                         allParticipants.push({
                             type: 'Hráč',
-                            jerseyNumber: player.jerseyNumber || '',
+                            jerseyNumberColor1: player.jerseyNumberColor1 || '', // NOVINKA
+                            jerseyNumberColor2: player.jerseyNumberColor2 || '', // NOVINKA
                             firstName: player.firstName || '',
                             lastName: player.lastName || '',
                             dateOfBirth: formatDate(player.dateOfBirth),
