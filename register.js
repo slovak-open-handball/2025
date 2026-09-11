@@ -1322,7 +1322,7 @@ function App() {
   const now = new Date();
 
 
-  const mainContainerWidthClass = (page === 6 || page === 7) ? 'max-w-6xl' : 'max-w-md';
+  const mainContainerWidthClass = (page === 6 || page === 7) ? 'max-w-7xl' : 'max-w-md';
 
   React.useEffect(() => {
     window.scrollTo({
@@ -1436,7 +1436,9 @@ function App() {
       ) : (
         React.createElement(
           'div',
-          { className: `bg-white p-8 rounded-lg shadow-md w-full ${mainContainerWidthClass}` },
+          { className: `bg-white rounded-lg shadow-md w-full ${mainContainerWidthClass} ${
+              (page === 6 || page === 7) ? 'p-4 sm:p-6' : 'p-8'
+          }` },
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
