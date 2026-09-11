@@ -45,7 +45,15 @@ const formatDateToDDMMYYYY = (dateString) => {
 export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, numberOfPlayersLimit, numberOfTeamMembersLimit, dataEditDeadline, setNotificationMessage, setNotificationType, onSaveAndPrev, notificationType, availableCategoriesMap, globalNote, setGlobalNote }) { // Pridaná globalNote a setGlobalNote
     const [localTeamDetails, setLocalTeamDetails] = React.useState({});
     // Nový stav pre chyby hráčov
-    const [playerErrors, setPlayerErrors] = React.useState({}); // { [categoryName]: { [teamIndex]: { [playerIndex]: { jerseyNumber: 'error', combination: 'error', registrationNumber: 'error', dateOfBirth: 'error' } } } }
+    const [playerErrors, setPlayerErrors] = React.useState({});
+    const GRID_PLAYERS_WITH_ACCOMMODATION = '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr) minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)';
+    const GRID_PLAYERS_NO_ACCOMMODATION = '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr)';
+
+    const GRID_MEMBERS_WITH_ACCOMMODATION = 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)';
+    const GRID_MEMBERS_NO_ACCOMMODATION = 'minmax(120px,1fr) minmax(120px,1fr) 150px';
+
+    const GRID_DRIVERS_WITH_ACCOMMODATION = 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)';
+    const GRID_DRIVERS_NO_ACCOMMODATION = 'minmax(120px,1fr) minmax(120px,1fr) 150px';    
 
     // Helper pre notifikácie
     const dispatchAppNotification = React.useCallback((message, type = 'info') => {
@@ -733,15 +741,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                     
-                                        // HLAVIČKA
+                                                                                // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
-                                                            ? '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr) minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                            : '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr)'
+                                                            ? GRID_PLAYERS_WITH_ACCOMMODATION
+                                                            : GRID_PLAYERS_NO_ACCOMMODATION
                                                     }
                                                 },
                                                     React.createElement('div', null,
@@ -807,8 +815,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
-                                                                ? '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr) minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                                : '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr)'
+                                                                ? GRID_PLAYERS_WITH_ACCOMMODATION
+                                                                : GRID_PLAYERS_NO_ACCOMMODATION
                                                         }
                                                     },
                                                         // Farba 1
@@ -998,8 +1006,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
-                                                            ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                            : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                            ? GRID_MEMBERS_WITH_ACCOMMODATION
+                                                            : GRID_MEMBERS_NO_ACCOMMODATION
                                                     }
                                                 },
                                                     React.createElement('div', null,
@@ -1047,8 +1055,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
-                                                                ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                                : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                                ? GRID_MEMBERS_WITH_ACCOMMODATION
+                                                                : GRID_MEMBERS_NO_ACCOMMODATION
                                                         }
                                                     },
                                                         React.createElement('div', null,
@@ -1160,15 +1168,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (muži)'),
                                     
-                                        // HLAVIČKA
+                                                                                // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
-                                                            ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                            : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                            ? GRID_MEMBERS_WITH_ACCOMMODATION
+                                                            : GRID_MEMBERS_NO_ACCOMMODATION
                                                     }
                                                 },
                                                     React.createElement('div', null,
@@ -1211,13 +1219,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `man-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
-                                                    React.createElement('div', {
+                                                React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
-                                                                ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                                : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                                ? GRID_MEMBERS_WITH_ACCOMMODATION
+                                                                : GRID_MEMBERS_NO_ACCOMMODATION
                                                         }
                                                     },
                                                         React.createElement('div', null,
@@ -1329,15 +1336,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
                                     
-                                        // HLAVIČKA
+                                                                                // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
-                                                            ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                            : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                            ? GRID_DRIVERS_WITH_ACCOMMODATION
+                                                            : GRID_DRIVERS_NO_ACCOMMODATION
                                                     }
                                                 },
                                                     React.createElement('div', null,
@@ -1380,13 +1387,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
-                                                    React.createElement('div', {
+                                                React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
-                                                                ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                                : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                                ? GRID_DRIVERS_WITH_ACCOMMODATION
+                                                                : GRID_DRIVERS_NO_ACCOMMODATION
                                                         }
                                                     },
                                                         React.createElement('div', null,
@@ -1498,15 +1504,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
                                     
-                                        // HLAVIČKA
+                                                                                // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
-                                                            ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                            : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                            ? GRID_DRIVERS_WITH_ACCOMMODATION
+                                                            : GRID_DRIVERS_NO_ACCOMMODATION
                                                     }
                                                 },
                                                     React.createElement('div', null,
@@ -1549,13 +1555,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
-                                                    React.createElement('div', {
+                                                React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
-                                                                ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
-                                                                : 'minmax(120px,1fr) minmax(120px,1fr) 150px'
+                                                                ? GRID_DRIVERS_WITH_ACCOMMODATION
+                                                                : GRID_DRIVERS_NO_ACCOMMODATION
                                                         }
                                                     },
                                                         React.createElement('div', null,
