@@ -646,7 +646,7 @@ function MemberDetailsModal({
     
         // Nastavenie chýb pre číslo dresu 1
         if (isJersey1Duplicate) {
-            setJerseyNumberError('Hráč s týmto číslom dresu 1 už v tíme existuje.');
+            setJerseyNumberError('Hráč s týmto číslom 1. dresu už v tíme existuje.');
             setIsJerseyNumberUnique(false);
         } else {
             setJerseyNumberError('');
@@ -655,7 +655,7 @@ function MemberDetailsModal({
     
         // Nastavenie chýb pre číslo dresu 2
         if (isJersey2Duplicate) {
-            setJerseyNumber2Error('Hráč s týmto číslom dresu 2 už v tíme existuje.');
+            setJerseyNumber2Error('Hráč s týmto číslom 2. dresu už v tíme existuje.');
             setIsJerseyNumber2Unique(false);
         } else {
             setJerseyNumber2Error('');
