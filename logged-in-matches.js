@@ -2111,8 +2111,9 @@ const AssignMatchToBreakModal = ({
 
     // ===== KONTROLA, ČI JE ZÁPAS VHODNÝ PRE DANÝ VOĽNÝ ČAS =====
     // Táto funkcia používa IDENTICKÚ logiku ako AssignMatchModal
-    // pre kontrolu nadstavbových skupín, základných skupín, pavúkovej chronológie
-    // a zápasov o umiestnenie.
+    // pre kontrolu pavúkovej chronológie a zápasov o umiestnenie.
+    // Pre nadstavbové skupiny kontroluje IBA súvisiace zápasy v rovnakej hale a dni,
+    // NIE základné skupiny (tie sa kontrolujú až pri samotnom priradení).
     const isMatchEligibleForBreak = (match, existingMatchesInHallAndDay) => {
         const matchDuration = getMatchDuration(match.categoryName);
         
@@ -2389,10 +2390,10 @@ const AssignMatchToBreakModal = ({
         }
 
         // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN =====
-        // TOTO JE KĽÚČOVÁ ČASŤ - IDENTICKÁ logika ako v AssignMatchModal
-        // Kontroluje:
-        // 1. Základné skupiny (B, C, ...) - ak sú v NESKORŠOM dni, blokujú CELÝ DEŇ
-        // 2. Súvisiace zápasy v rovnakej nadstavbovej skupine v ROVNAKEJ HALE a DNI
+        // DÔLEŽITÉ: Pre modálne okno "Priradiť zápas do voľného času" kontrolujeme
+        // IBA súvisiace zápasy v ROVNAKEJ NADSTAVBOVEJ SKUPINE v ROVNAKEJ HALE a DNI.
+        // NEKONTROLUJEME základné skupiny (B, C, ...), pretože tie môžu byť naplánované
+        // až neskôr a používateľ chce práve teraz priradiť tento zápas do voľného času.
         if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
             const categoryGroups = groupsByCategory[match.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -2400,86 +2401,6 @@ const AssignMatchToBreakModal = ({
             
             if (isAdvancedGroup && allMatches) {
                 const currentDateStr = date;
-                
-                const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
-                const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
-                
-                const extractGroupLetter = (teamName) => {
-                    if (!teamName) return null;
-                    const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
-                    if (matchResult) {
-                        return matchResult[2];
-                    }
-                    return null;
-                };
-                
-                const homeLetter = extractGroupLetter(homeTeamName);
-                const awayLetter = extractGroupLetter(awayTeamName);
-                
-                const targetLetters = new Set();
-                if (homeLetter) targetLetters.add(homeLetter);
-                if (awayLetter) targetLetters.add(awayLetter);
-                
-                // ===== 6a. KONTROLA ZÁKLADNÝCH SKUPÍN (B, C, ...) =====
-                if (targetLetters.size > 0) {
-                    const basicGroupMatches = allMatches.filter(m => 
-                        m.categoryId === match.categoryId &&
-                        m.id !== match.id &&
-                        m.scheduledTime &&
-                        m.groupName && m.groupName.startsWith('skupina ')
-                    );
-                    
-                    let latestEndInSameDay = 0;
-                    let hasFutureMatchConflict = false;
-                    
-                    for (const letter of targetLetters) {
-                        const groupName = `skupina ${letter}`;
-                        const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
-                        
-                        for (const basicMatch of matchesInGroup) {
-                            const basicDate = basicMatch.scheduledTime.toDate();
-                            const basicDateStr = getLocalDateStr(basicDate);
-                            const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
-                            
-                            // Ak je základný zápas v NESKORŠOM dni, blokujeme
-                            if (basicDateStr > currentDateStr) {
-                                hasFutureMatchConflict = true;
-                                break;
-                            }
-                            
-                            // Ak je základný zápas v ROVNAKOM dni, kontrolujeme čas
-                            if (basicDateStr === currentDateStr) {
-                                const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
-                                let basicDuration = 0;
-                                let basicBreak = 5;
-                                if (basicCategory) {
-                                    const periods = basicCategory.periods || 2;
-                                    const periodDuration = basicCategory.periodDuration || 20;
-                                    const breakDurationValue = basicCategory.breakDuration || 2;
-                                    basicDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
-                                    basicBreak = basicCategory.matchBreak || 5;
-                                }
-                                const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
-                                
-                                if (basicEndWithBreak > latestEndInSameDay) {
-                                    latestEndInSameDay = basicEndWithBreak;
-                                }
-                            }
-                        }
-                        
-                        if (hasFutureMatchConflict) break;
-                    }
-                    
-                    if (hasFutureMatchConflict) {
-                        return false;
-                    }
-                    
-                    // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
-                    // zápas nemôže byť priradený do tohto voľného času
-                    if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
-                        return false;
-                    }
-                }
                 
                 // ===== 6b. KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
                 // v ROVNAKEJ HALE a DNI
