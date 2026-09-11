@@ -2109,14 +2109,429 @@ const AssignMatchToBreakModal = ({
         return true;
     };
 
-    // Hlavná funkcia na filtrovanie zápasov - rovnaká logika ako v AssignMatchModal
+    // ===== KONTROLA, ČI JE ZÁPAS VHODNÝ PRE DANÝ VOĽNÝ ČAS =====
+    // Táto funkcia vracia true, ak zápas MÔŽE byť priradený do voľného času
+    // Nekontroluje striktne všetky chronologické väzby, ale umožňuje priradenie
+    // zápasov z nadstavbových skupín, ktoré ešte nemajú naplánované súvisiace zápasy
+    const isMatchEligibleForBreak = (match, existingMatchesInHallAndDay) => {
+        const matchDuration = getMatchDuration(match.categoryName);
+        
+        // ===== 1. KONTROLA, ČI SA ZÁPAS ZMESTÍ DO VOĽNÉHO ČASU =====
+        if (breakDuration > 0 && matchDuration > breakDuration) {
+            return false;
+        }
+
+        // ===== 2. KONTROLA, ČI ZÁPAS NIE JE UŽ V TEJTO HALE A DNI =====
+        const isAlreadyInHall = existingMatchesInHallAndDay.some(m => m.id === match.id);
+        if (isAlreadyInHall) {
+            return false;
+        }
+
+        // ===== 3. KONTROLA PREKRÝVANIA S EXISTUJÚCIMI ZÁPASMI V ROVNAKEJ HALE =====
+        const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
+        const breakStartMinutes = breakHours * 60 + breakMinutes;
+        const breakEndMinutes = breakStartMinutes + matchDuration;
+        
+        for (const existingMatch of existingMatchesInHallAndDay) {
+            if (!existingMatch.scheduledTime) continue;
+            
+            const existingDate = existingMatch.scheduledTime.toDate();
+            const existingStartMinutes = existingDate.getHours() * 60 + existingDate.getMinutes();
+            
+            const existingCategory = categories.find(c => c.name === existingMatch.categoryName);
+            let existingDuration = 0;
+            let existingMatchBreak = 5;
+            if (existingCategory) {
+                const periods = existingCategory.periods || 2;
+                const periodDuration = existingCategory.periodDuration || 20;
+                const breakDurationValue = existingCategory.breakDuration || 2;
+                existingDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                existingMatchBreak = existingCategory.matchBreak || 5;
+            }
+            const existingEndWithBreak = existingStartMinutes + existingDuration + existingMatchBreak;
+            
+            // Kontrola prekryvu
+            if (breakStartMinutes < existingEndWithBreak && breakEndMinutes > existingStartMinutes) {
+                return false;
+            }
+        }
+
+        // ===== 4. KONTROLA PAVÚKOVEJ CHRONOLÓGIE =====
+        // Pre pavúkové zápasy kontrolujeme, či podradené zápasy už boli odohrané
+        // a či nadradené zápasy ešte len budú
+        if (match.matchType && !match.isPlacementMatch && allMatches) {
+            const levelOrder = {
+                'šestnásťfinále': 1,
+                'osemfinále': 2,
+                'štvrťfinále': 3,
+                'semifinále': 4,
+                'finále': 5,
+                'o 3. miesto': 5
+            };
+            
+            const getMatchLevel = (matchType) => {
+                if (!matchType) return 0;
+                for (const [key, value] of Object.entries(levelOrder)) {
+                    if (matchType.startsWith(key)) {
+                        return value;
+                    }
+                }
+                return 0;
+            };
+            
+            const currentLevel = getMatchLevel(match.matchType);
+            const currentDateStr = date;
+            
+            const spiderMatches = allMatches.filter(m => 
+                m.categoryId === match.categoryId && 
+                m.id !== match.id &&
+                m.matchType && 
+                !m.isPlacementMatch &&
+                m.scheduledTime
+            );
+            
+            // Kontrola podradených zápasov (musia byť PRED)
+            if (currentLevel > 1) {
+                const childMatches = spiderMatches.filter(m => getMatchLevel(m.matchType) < currentLevel);
+                for (const childMatch of childMatches) {
+                    const childDate = childMatch.scheduledTime.toDate();
+                    const childDateStr = getLocalDateStr(childDate);
+                    
+                    // Podradený zápas v neskoršom dni - chyba
+                    if (childDateStr > currentDateStr) {
+                        return false;
+                    }
+                    
+                    // Rovnaký deň - podradený zápas musí skončiť PRED voľným časom
+                    if (childDateStr === currentDateStr) {
+                        const childCategory = categories.find(c => c.name === childMatch.categoryName);
+                        let childDuration = 0;
+                        let childBreak = 5;
+                        if (childCategory) {
+                            const periods = childCategory.periods || 2;
+                            const periodDuration = childCategory.periodDuration || 20;
+                            const breakDurationValue = childCategory.breakDuration || 2;
+                            childDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                            childBreak = childCategory.matchBreak || 5;
+                        }
+                        const childStartMinutes = childDate.getHours() * 60 + childDate.getMinutes();
+                        const childEndWithBreak = childStartMinutes + childDuration + childBreak;
+                        
+                        // Podradený zápas musí skončiť PRED začiatkom voľného času
+                        if (childEndWithBreak > breakStartMinutes) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            // Kontrola nadradených zápasov (musia byť PO)
+            if (currentLevel < 5) {
+                const parentMatches = spiderMatches.filter(m => getMatchLevel(m.matchType) > currentLevel);
+                for (const parentMatch of parentMatches) {
+                    const parentDate = parentMatch.scheduledTime.toDate();
+                    const parentDateStr = getLocalDateStr(parentDate);
+                    
+                    // Nadradený zápas v skoršom dni - chyba
+                    if (parentDateStr < currentDateStr) {
+                        return false;
+                    }
+                    
+                    // Rovnaký deň - nadradený zápas musí začať PO skončení voľného času
+                    if (parentDateStr === currentDateStr) {
+                        const parentStartMinutes = parentDate.getHours() * 60 + parentDate.getMinutes();
+                        const breakEndWithMatch = breakStartMinutes + matchDuration;
+                        
+                        // Aktuálny zápas (voľný čas) musí skončiť PRED nadradeným zápasom
+                        if (breakEndWithMatch > parentStartMinutes) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== 5. KONTROLA ZÁPASOV O UMIESTNENIE =====
+        if (match.isPlacementMatch && allMatches) {
+            const currentDateStr = date;
+            
+            const relatedMatches = allMatches.filter(m => 
+                m.categoryId === match.categoryId && 
+                m.id !== match.id &&
+                m.scheduledTime
+            );
+            
+            // Pre zápasy o umiestnenie (okrem o 3. miesto)
+            if (match.placementRank && match.placementRank !== 3) {
+                const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                
+                const extractGroupFromTeamName = (teamName) => {
+                    if (!teamName) return null;
+                    const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
+                    if (matchResult) {
+                        return `skupina ${matchResult[2]}`;
+                    }
+                    return null;
+                };
+                
+                const homeGroup = extractGroupFromTeamName(homeTeamName);
+                const awayGroup = extractGroupFromTeamName(awayTeamName);
+                
+                const targetGroups = new Set();
+                if (homeGroup) targetGroups.add(homeGroup);
+                if (awayGroup) targetGroups.add(awayGroup);
+                
+                if (targetGroups.size > 0) {
+                    const groupRelated = relatedMatches.filter(m => 
+                        m.groupName && targetGroups.has(m.groupName)
+                    );
+                    
+                    for (const relMatch of groupRelated) {
+                        const relDate = relMatch.scheduledTime.toDate();
+                        const relDateStr = getLocalDateStr(relDate);
+                        
+                        if (relDateStr === currentDateStr) {
+                            const relCategory = categories.find(c => c.name === relMatch.categoryName);
+                            let relDuration = 0;
+                            let relBreak = 5;
+                            if (relCategory) {
+                                const periods = relCategory.periods || 2;
+                                const periodDuration = relCategory.periodDuration || 20;
+                                const breakDurationValue = relCategory.breakDuration || 2;
+                                relDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                                relBreak = relCategory.matchBreak || 5;
+                            }
+                            const relStartMinutes = relDate.getHours() * 60 + relDate.getMinutes();
+                            const relEndWithBreak = relStartMinutes + relDuration + relBreak;
+                            
+                            // Súvisiaci zápas musí skončiť PRED začiatkom voľného času
+                            if (relEndWithBreak > breakStartMinutes) {
+                                return false;
+                            }
+                        } else if (relDateStr > currentDateStr) {
+                            // Súvisiaci zápas je neskôr - chyba
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            // Pre zápas o 3. miesto
+            if (match.placementRank === 3) {
+                const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                
+                const extractMatchRef = (teamName) => {
+                    if (!teamName) return null;
+                    const patterns = [
+                        { regex: /WSF(\d{2})/, type: 'semifinále' },
+                        { regex: /LSF(\d{2})/, type: 'semifinále' }
+                    ];
+                    for (const pattern of patterns) {
+                        const matchResult = teamName.match(pattern.regex);
+                        if (matchResult) {
+                            return {
+                                prefix: pattern.type,
+                                number: parseInt(matchResult[1], 10),
+                                fullMatch: matchResult[0]
+                            };
+                        }
+                    }
+                    return null;
+                };
+                
+                const homeRef = extractMatchRef(homeTeamName);
+                const awayRef = extractMatchRef(awayTeamName);
+                
+                const matchRefs = [];
+                if (homeRef) matchRefs.push(homeRef);
+                if (awayRef) matchRefs.push(awayRef);
+                
+                for (const ref of matchRefs) {
+                    const matchType = `semifinále ${ref.number}`;
+                    const semiMatch = allMatches.find(m => 
+                        m.categoryId === match.categoryId && 
+                        m.matchType === matchType &&
+                        m.scheduledTime
+                    );
+                    
+                    if (semiMatch) {
+                        const semiDate = semiMatch.scheduledTime.toDate();
+                        const semiDateStr = getLocalDateStr(semiDate);
+                        
+                        if (semiDateStr === currentDateStr) {
+                            const semiCategory = categories.find(c => c.name === semiMatch.categoryName);
+                            let semiDuration = 0;
+                            let semiBreak = 5;
+                            if (semiCategory) {
+                                const periods = semiCategory.periods || 2;
+                                const periodDuration = semiCategory.periodDuration || 20;
+                                const breakDurationValue = semiCategory.breakDuration || 2;
+                                semiDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                                semiBreak = semiCategory.matchBreak || 5;
+                            }
+                            const semiStartMinutes = semiDate.getHours() * 60 + semiDate.getMinutes();
+                            const semiEndWithBreak = semiStartMinutes + semiDuration + semiBreak;
+                            
+                            // Semifinále musí skončiť PRED začiatkom voľného času
+                            if (semiEndWithBreak > breakStartMinutes) {
+                                return false;
+                            }
+                        } else if (semiDateStr > currentDateStr) {
+                            // Semifinále je neskôr - chyba
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN =====
+        // DÔLEŽITÉ: Pre zápasy z nadstavbových skupín, ktoré EŠTE NIE SÚ naplánované,
+        // kontrolujeme iba to, či súvisiace zápasy zo ZÁKLADNÝCH skupín už boli odohrané.
+        // Ak ešte nie sú naplánované, zápas MÔŽE byť priradený (používateľ ho chce naplánovať).
+        if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
+            const categoryGroups = groupsByCategory[match.categoryId] || [];
+            const currentGroup = categoryGroups.find(g => g.name === match.groupName);
+            const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
+            
+            if (isAdvancedGroup && allMatches) {
+                const currentDateStr = date;
+                
+                const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                
+                const extractGroupLetter = (teamName) => {
+                    if (!teamName) return null;
+                    const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
+                    if (matchResult) {
+                        return matchResult[2];
+                    }
+                    return null;
+                };
+                
+                const homeLetter = extractGroupLetter(homeTeamName);
+                const awayLetter = extractGroupLetter(awayTeamName);
+                
+                const targetLetters = new Set();
+                if (homeLetter) targetLetters.add(homeLetter);
+                if (awayLetter) targetLetters.add(awayLetter);
+                
+                if (targetLetters.size > 0) {
+                    const basicGroupMatches = allMatches.filter(m => 
+                        m.categoryId === match.categoryId &&
+                        m.id !== match.id &&
+                        m.scheduledTime &&
+                        m.groupName && m.groupName.startsWith('skupina ')
+                    );
+                    
+                    let latestEndInSameDay = 0;
+                    let hasFutureMatchConflict = false;
+                    
+                    for (const letter of targetLetters) {
+                        const groupName = `skupina ${letter}`;
+                        const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
+                        
+                        for (const basicMatch of matchesInGroup) {
+                            const basicDate = basicMatch.scheduledTime.toDate();
+                            const basicDateStr = getLocalDateStr(basicDate);
+                            const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
+                            
+                            // Ak je základný zápas v NESKORŠOM dni, blokujeme
+                            if (basicDateStr > currentDateStr) {
+                                hasFutureMatchConflict = true;
+                                break;
+                            }
+                            
+                            // Ak je základný zápas v ROVNAKOM dni, kontrolujeme čas
+                            if (basicDateStr === currentDateStr) {
+                                const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
+                                let basicDuration = 0;
+                                let basicBreak = 5;
+                                if (basicCategory) {
+                                    const periods = basicCategory.periods || 2;
+                                    const periodDuration = basicCategory.periodDuration || 20;
+                                    const breakDurationValue = basicCategory.breakDuration || 2;
+                                    basicDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                                    basicBreak = basicCategory.matchBreak || 5;
+                                }
+                                const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
+                                
+                                if (basicEndWithBreak > latestEndInSameDay) {
+                                    latestEndInSameDay = basicEndWithBreak;
+                                }
+                            }
+                        }
+                        
+                        if (hasFutureMatchConflict) break;
+                    }
+                    
+                    if (hasFutureMatchConflict) {
+                        return false;
+                    }
+                    
+                    // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
+                    // zápas nemôže byť priradený do tohto voľného času
+                    if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
+                        return false;
+                    }
+                }
+                
+                // Kontrola súvisiacich zápasov v rovnakej nadstavbovej skupine
+                const relatedMatches = allMatches.filter(m => 
+                    m.categoryId === match.categoryId &&
+                    m.groupName === match.groupName &&
+                    m.id !== match.id &&
+                    m.scheduledTime
+                );
+                
+                let latestSameHallEnd = 0;
+                
+                for (const relMatch of relatedMatches) {
+                    if (relMatch.hallId !== hallId) continue;
+                    
+                    const relDate = relMatch.scheduledTime.toDate();
+                    const relDateStr = getLocalDateStr(relDate);
+                    
+                    if (relDateStr !== currentDateStr) continue;
+                    
+                    const relCategory = categories.find(c => c.name === relMatch.categoryName);
+                    let relDuration = 0;
+                    let relBreak = 5;
+                    if (relCategory) {
+                        const periods = relCategory.periods || 2;
+                        const periodDuration = relCategory.periodDuration || 20;
+                        const breakDurationValue = relCategory.breakDuration || 2;
+                        relDuration = (periodDuration + breakDurationValue) * periods - breakDurationValue;
+                        relBreak = relCategory.matchBreak || 5;
+                    }
+                    const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
+                    
+                    if (relEndMinutes > latestSameHallEnd) {
+                        latestSameHallEnd = relEndMinutes;
+                    }
+                }
+                
+                // Ak je voľný čas PRED najnovším koncom súvisiacich zápasov v tej istej hale,
+                // zápas nemôže byť priradený do tohto voľného času
+                if (latestSameHallEnd > 0 && breakStartMinutes < latestSameHallEnd) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
+    // Hlavná funkcia na filtrovanie zápasov
     const filterMatchesByConditions = () => {
         if (!availableMatches || availableMatches.length === 0) {
             setFilteredByConditions([]);
             return;
         }
 
-        // Získame existujúce zápasy v tejto hale a dni
+        // Získame existujúce zápasy v tejto hale a dni (okrem aktuálne vybraného)
         const existingMatchesInHallAndDay = allMatches?.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
@@ -2128,431 +2543,9 @@ const AssignMatchToBreakModal = ({
             return matchDateStr === date;
         }) || [];
 
-        const breakDurationMinutes = breakDuration || 0;
-        
+        // Filtrujeme zápasy - používame miernejšiu kontrolu
         const filtered = availableMatches.filter(match => {
-            // Kontrola, či zápas nie je už priradený v tejto hale a dni
-            const isAlreadyInHall = existingMatchesInHallAndDay.some(m => m.id === match.id);
-            if (isAlreadyInHall) return false;
-
-            // Získanie dĺžky zápasu
-            const matchDuration = getMatchDuration(match.categoryName);
-            
-            // Kontrola, či sa zápas zmestí do voľného času
-            if (breakDurationMinutes > 0 && matchDuration > breakDurationMinutes) {
-                return false;
-            }
-
-            // ===== KONTROLA PAVÚKOVEJ CHRONOLÓGIE =====
-            if (match.matchType && !match.isPlacementMatch && allMatches) {
-                const levelOrder = {
-                    'šestnásťfinále': 1,
-                    'osemfinále': 2,
-                    'štvrťfinále': 3,
-                    'semifinále': 4,
-                    'finále': 5,
-                    'o 3. miesto': 5
-                };
-                
-                const getMatchLevel = (matchType) => {
-                    if (!matchType) return 0;
-                    for (const [key, value] of Object.entries(levelOrder)) {
-                        if (matchType.startsWith(key)) {
-                            return value;
-                        }
-                    }
-                    return 0;
-                };
-                
-                const currentLevel = getMatchLevel(match.matchType);
-                const currentDateStr = date;
-                
-                // Získame všetky pavúkové zápasy v tej istej kategórii okrem aktuálneho
-                const spiderMatches = allMatches.filter(m => 
-                    m.categoryId === match.categoryId && 
-                    m.id !== match.id &&
-                    m.matchType && 
-                    !m.isPlacementMatch &&
-                    m.scheduledTime
-                );
-                
-                // Kontrola podradených zápasov (musia byť PRED)
-                if (currentLevel > 1) {
-                    const childMatches = spiderMatches.filter(m => getMatchLevel(m.matchType) < currentLevel);
-                    for (const childMatch of childMatches) {
-                        const childDate = childMatch.scheduledTime.toDate();
-                        const childDateStr = getLocalDateStr(childDate);
-                        
-                        // Podradený zápas v neskoršom dni - chyba
-                        if (childDateStr > currentDateStr) {
-                            return false;
-                        }
-                        
-                        // Rovnaký deň - podradený zápas musí skončiť PRED voľným časom
-                        if (childDateStr === currentDateStr) {
-                            const childCategory = categories.find(c => c.name === childMatch.categoryName);
-                            let childDuration = 0;
-                            let childBreak = 5;
-                            if (childCategory) {
-                                const periods = childCategory.periods || 2;
-                                const periodDuration = childCategory.periodDuration || 20;
-                                const breakDuration = childCategory.breakDuration || 2;
-                                childDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                childBreak = childCategory.matchBreak || 5;
-                            }
-                            const childStartMinutes = childDate.getHours() * 60 + childDate.getMinutes();
-                            const childEndWithBreak = childStartMinutes + childDuration + childBreak;
-                            
-                            const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                            const breakStartMinutes = breakHours * 60 + breakMinutes;
-                            
-                            // Podradený zápas musí skončiť PRED začiatkom voľného času
-                            if (childEndWithBreak > breakStartMinutes) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-                
-                // Kontrola nadradených zápasov (musia byť PO)
-                if (currentLevel < 5) {
-                    const parentMatches = spiderMatches.filter(m => getMatchLevel(m.matchType) > currentLevel);
-                    for (const parentMatch of parentMatches) {
-                        const parentDate = parentMatch.scheduledTime.toDate();
-                        const parentDateStr = getLocalDateStr(parentDate);
-                        
-                        // Nadradený zápas v skoršom dni - chyba
-                        if (parentDateStr < currentDateStr) {
-                            return false;
-                        }
-                        
-                        // Rovnaký deň - nadradený zápas musí začať PO skončení voľného času
-                        if (parentDateStr === currentDateStr) {
-                            const parentStartMinutes = parentDate.getHours() * 60 + parentDate.getMinutes();
-                            
-                            const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                            const breakStartMinutes = breakHours * 60 + breakMinutes;
-                            const breakEndMinutes = breakStartMinutes + matchDuration;
-                            
-                            // Aktuálny zápas (voľný čas) musí skončiť PRED nadradeným zápasom
-                            if (breakEndMinutes > parentStartMinutes) {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ===== KONTROLA ZÁPASOV O UMIESTNENIE =====
-            if (match.isPlacementMatch && allMatches) {
-                const currentDateStr = date;
-                
-                const relatedMatches = allMatches.filter(m => 
-                    m.categoryId === match.categoryId && 
-                    m.id !== match.id &&
-                    m.scheduledTime
-                );
-                
-                // Pre zápasy o umiestnenie (okrem o 3. miesto)
-                if (match.placementRank && match.placementRank !== 3) {
-                    const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
-                    const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
-                    
-                    const extractGroupFromTeamName = (teamName) => {
-                        if (!teamName) return null;
-                        const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
-                        if (matchResult) {
-                            return `skupina ${matchResult[2]}`;
-                        }
-                        return null;
-                    };
-                    
-                    const homeGroup = extractGroupFromTeamName(homeTeamName);
-                    const awayGroup = extractGroupFromTeamName(awayTeamName);
-                    
-                    const targetGroups = new Set();
-                    if (homeGroup) targetGroups.add(homeGroup);
-                    if (awayGroup) targetGroups.add(awayGroup);
-                    
-                    if (targetGroups.size > 0) {
-                        const groupRelated = relatedMatches.filter(m => 
-                            m.groupName && targetGroups.has(m.groupName)
-                        );
-                        
-                        const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                        const breakStartMinutes = breakHours * 60 + breakMinutes;
-                        const matchDuration = getMatchDuration(match.categoryName);
-                        const breakEndMinutes = breakStartMinutes + matchDuration;
-                        
-                        for (const relMatch of groupRelated) {
-                            const relDate = relMatch.scheduledTime.toDate();
-                            const relDateStr = getLocalDateStr(relDate);
-                            
-                            if (relDateStr === currentDateStr) {
-                                const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                                let relDuration = 0;
-                                let relBreak = 5;
-                                if (relCategory) {
-                                    const periods = relCategory.periods || 2;
-                                    const periodDuration = relCategory.periodDuration || 20;
-                                    const breakDuration = relCategory.breakDuration || 2;
-                                    relDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                    relBreak = relCategory.matchBreak || 5;
-                                }
-                                const relStartMinutes = relDate.getHours() * 60 + relDate.getMinutes();
-                                const relEndWithBreak = relStartMinutes + relDuration + relBreak;
-                                
-                                // Súvisiaci zápas musí skončiť PRED začiatkom voľného času
-                                if (relEndWithBreak > breakStartMinutes) {
-                                    return false;
-                                }
-                            } else if (relDateStr > currentDateStr) {
-                                // Súvisiaci zápas je neskôr - chyba
-                                return false;
-                            }
-                        }
-                    }
-                }
-                
-                // Pre zápas o 3. miesto
-                if (match.placementRank === 3) {
-                    const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
-                    const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
-                    
-                    const extractMatchRef = (teamName) => {
-                        if (!teamName) return null;
-                        const patterns = [
-                            { regex: /WSF(\d{2})/, type: 'semifinále' },
-                            { regex: /LSF(\d{2})/, type: 'semifinále' }
-                        ];
-                        for (const pattern of patterns) {
-                            const matchResult = teamName.match(pattern.regex);
-                            if (matchResult) {
-                                return {
-                                    prefix: pattern.type,
-                                    number: parseInt(matchResult[1], 10),
-                                    fullMatch: matchResult[0]
-                                };
-                            }
-                        }
-                        return null;
-                    };
-                    
-                    const homeRef = extractMatchRef(homeTeamName);
-                    const awayRef = extractMatchRef(awayTeamName);
-                    
-                    const matchRefs = [];
-                    if (homeRef) matchRefs.push(homeRef);
-                    if (awayRef) matchRefs.push(awayRef);
-                    
-                    const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                    const breakStartMinutes = breakHours * 60 + breakMinutes;
-                    const matchDuration = getMatchDuration(match.categoryName);
-                    const breakEndMinutes = breakStartMinutes + matchDuration;
-                    
-                    for (const ref of matchRefs) {
-                        const matchType = `semifinále ${ref.number}`;
-                        const semiMatch = allMatches.find(m => 
-                            m.categoryId === match.categoryId && 
-                            m.matchType === matchType &&
-                            m.scheduledTime
-                        );
-                        
-                        if (semiMatch) {
-                            const semiDate = semiMatch.scheduledTime.toDate();
-                            const semiDateStr = getLocalDateStr(semiDate);
-                            
-                            if (semiDateStr === currentDateStr) {
-                                const semiCategory = categories.find(c => c.name === semiMatch.categoryName);
-                                let semiDuration = 0;
-                                let semiBreak = 5;
-                                if (semiCategory) {
-                                    const periods = semiCategory.periods || 2;
-                                    const periodDuration = semiCategory.periodDuration || 20;
-                                    const breakDuration = semiCategory.breakDuration || 2;
-                                    semiDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                    semiBreak = semiCategory.matchBreak || 5;
-                                }
-                                const semiStartMinutes = semiDate.getHours() * 60 + semiDate.getMinutes();
-                                const semiEndWithBreak = semiStartMinutes + semiDuration + semiBreak;
-                                
-                                // Semifinále musí skončiť PRED začiatkom voľného času
-                                if (semiEndWithBreak > breakStartMinutes) {
-                                    return false;
-                                }
-                            } else if (semiDateStr > currentDateStr) {
-                                // Semifinále je neskôr - chyba
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ===== KONTROLA NADSTAVBOVÝCH SKUPÍN =====
-            if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
-                const categoryGroups = groupsByCategory[match.categoryId] || [];
-                const currentGroup = categoryGroups.find(g => g.name === match.groupName);
-                const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
-                
-                if (isAdvancedGroup && allMatches) {
-                    const currentDateStr = date;
-                    
-                    const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
-                    const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
-                    
-                    const extractGroupLetter = (teamName) => {
-                        if (!teamName) return null;
-                        const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
-                        if (matchResult) {
-                            return matchResult[2];
-                        }
-                        return null;
-                    };
-                    
-                    const homeLetter = extractGroupLetter(homeTeamName);
-                    const awayLetter = extractGroupLetter(awayTeamName);
-                    
-                    const targetLetters = new Set();
-                    if (homeLetter) targetLetters.add(homeLetter);
-                    if (awayLetter) targetLetters.add(awayLetter);
-                    
-                    if (targetLetters.size > 0) {
-                        const basicGroupMatches = allMatches.filter(m => 
-                            m.categoryId === match.categoryId &&
-                            m.id !== match.id &&
-                            m.scheduledTime &&
-                            m.groupName && m.groupName.startsWith('skupina ')
-                        );
-                        
-                        let latestEndInSameDay = 0;
-                        let hasFutureMatchConflict = false;
-                        
-                        for (const letter of targetLetters) {
-                            const groupName = `skupina ${letter}`;
-                            const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
-                            
-                            for (const basicMatch of matchesInGroup) {
-                                const basicDate = basicMatch.scheduledTime.toDate();
-                                const basicDateStr = getLocalDateStr(basicDate);
-                                const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
-                                
-                                if (basicDateStr > currentDateStr) {
-                                    hasFutureMatchConflict = true;
-                                    break;
-                                }
-                                
-                                if (basicDateStr === currentDateStr) {
-                                    const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
-                                    let basicDuration = 0;
-                                    let basicBreak = 5;
-                                    if (basicCategory) {
-                                        const periods = basicCategory.periods || 2;
-                                        const periodDuration = basicCategory.periodDuration || 20;
-                                        const breakDuration = basicCategory.breakDuration || 2;
-                                        basicDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                        basicBreak = basicCategory.matchBreak || 5;
-                                    }
-                                    const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
-                                    
-                                    if (basicEndWithBreak > latestEndInSameDay) {
-                                        latestEndInSameDay = basicEndWithBreak;
-                                    }
-                                }
-                            }
-                            
-                            if (hasFutureMatchConflict) break;
-                        }
-                        
-                        if (hasFutureMatchConflict) {
-                            return false;
-                        }
-                        
-                        const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                        const breakStartMinutes = breakHours * 60 + breakMinutes;
-                        
-                        if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
-                            return false;
-                        }
-                    }
-                    
-                    // Kontrola súvisiacich zápasov v rovnakej nadstavbovej skupine
-                    const relatedMatches = allMatches.filter(m => 
-                        m.categoryId === match.categoryId &&
-                        m.groupName === match.groupName &&
-                        m.id !== match.id &&
-                        m.scheduledTime
-                    );
-                    
-                    let latestSameHallEnd = 0;
-                    
-                    for (const relMatch of relatedMatches) {
-                        if (relMatch.hallId !== hallId) continue;
-                        
-                        const relDate = relMatch.scheduledTime.toDate();
-                        const relDateStr = getLocalDateStr(relDate);
-                        
-                        if (relDateStr !== currentDateStr) continue;
-                        
-                        const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                        let relDuration = 0;
-                        let relBreak = 5;
-                        if (relCategory) {
-                            const periods = relCategory.periods || 2;
-                            const periodDuration = relCategory.periodDuration || 20;
-                            const breakDuration = relCategory.breakDuration || 2;
-                            relDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                            relBreak = relCategory.matchBreak || 5;
-                        }
-                        const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
-                        
-                        if (relEndMinutes > latestSameHallEnd) {
-                            latestSameHallEnd = relEndMinutes;
-                        }
-                    }
-                    
-                    const [breakHours2, breakMinutes2] = breakStartTime.split(':').map(Number);
-                    const breakStartMinutes2 = breakHours2 * 60 + breakMinutes2;
-                    
-                    if (latestSameHallEnd > 0 && breakStartMinutes2 < latestSameHallEnd) {
-                        return false;
-                    }
-                }
-            }
-
-            // ===== KONTROLA ZÁPASOV V ROVNAKEJ HALE =====
-            for (const existingMatch of existingMatchesInHallAndDay) {
-                if (!existingMatch.scheduledTime) continue;
-                
-                const existingDate = existingMatch.scheduledTime.toDate();
-                const existingHours = existingDate.getHours();
-                const existingMinutes = existingDate.getMinutes();
-                const existingStartMinutes = existingHours * 60 + existingMinutes;
-                
-                const existingCategory = categories.find(c => c.name === existingMatch.categoryName);
-                let existingDuration = 0;
-                let existingMatchBreak = 5;
-                if (existingCategory) {
-                    const periods = existingCategory.periods || 2;
-                    const periodDuration = existingCategory.periodDuration || 20;
-                    const breakDuration = existingCategory.breakDuration || 2;
-                    existingDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                    existingMatchBreak = existingCategory.matchBreak || 5;
-                }
-                const existingEndWithBreak = existingStartMinutes + existingDuration + existingMatchBreak;
-                
-                const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
-                const breakStartMinutes = breakHours * 60 + breakMinutes;
-                const matchDuration = getMatchDuration(match.categoryName);
-                const breakEndMinutes = breakStartMinutes + matchDuration;
-                
-                // Kontrola prekryvu
-                if (breakStartMinutes < existingEndWithBreak && breakEndMinutes > existingStartMinutes) {
-                    return false;
-                }
-            }
-
-            return true;
+            return isMatchEligibleForBreak(match, existingMatchesInHallAndDay);
         });
 
         setFilteredByConditions(filtered);
@@ -2991,7 +2984,6 @@ const AssignMatchToBreakModal = ({
                     }
 
                     const matchDurationValue = getMatchDuration(match.categoryName);
-                    const fitsInBreak = breakDuration === 0 || matchDurationValue <= breakDuration;
 
                     return React.createElement(
                         'div',
@@ -3001,9 +2993,8 @@ const AssignMatchToBreakModal = ({
                                 selectedMatchId === match.id
                                     ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                            } ${!fitsInBreak ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`,
-                            onClick: () => fitsInBreak && setSelectedMatchId(match.id),
-                            style: !fitsInBreak ? { cursor: 'not-allowed' } : {}
+                            }`,
+                            onClick: () => setSelectedMatchId(match.id)
                         },
                         React.createElement(
                             'div', 
