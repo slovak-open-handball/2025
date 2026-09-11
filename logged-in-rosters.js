@@ -644,7 +644,7 @@ function MemberDetailsModal({
             }
         });
     
-        // Nastavenie chýb pre číslo dresu 1
+        // Nastavenie chýb pre Číslo 1. dresu
         if (isJersey1Duplicate) {
             setJerseyNumberError('Hráč s týmto číslom 1. dresu už v tíme existuje.');
             setIsJerseyNumberUnique(false);
@@ -653,7 +653,7 @@ function MemberDetailsModal({
             setIsJerseyNumberUnique(true);
         }
     
-        // Nastavenie chýb pre číslo dresu 2
+        // Nastavenie chýb pre Číslo 2. dresu
         if (isJersey2Duplicate) {
             setJerseyNumber2Error('Hráč s týmto číslom 2. dresu už v tíme existuje.');
             setIsJerseyNumber2Unique(false);
@@ -952,7 +952,7 @@ function MemberDetailsModal({
                                 value: jerseyNumber,
                                 onChange: handleJerseyNumberChange,
                                 disabled: isButtonDisabled,
-                                placeholder: 'Číslo dresu 1'
+                                placeholder: 'Číslo 1. dresu'
                             }),
                             jerseyNumberError && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, jerseyNumberError)
                         ),
@@ -968,7 +968,7 @@ function MemberDetailsModal({
                                 value: jerseyNumber2,
                                 onChange: handleJerseyNumber2Change,
                                 disabled: isButtonDisabled,
-                                placeholder: 'Číslo dresu 2'
+                                placeholder: 'Číslo 2. dresu'
                             }),
                             jerseyNumber2Error && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, jerseyNumber2Error)
                         )
@@ -3262,10 +3262,10 @@ function RostersApp() {
                     changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}`);
                 }
                 if (newMemberDetails.jerseyNumber && memberTypeToAdd === 'player') {
-                    changes.push(`Číslo dresu 1: ${newMemberDetails.jerseyNumber}`);
+                    changes.push(`Číslo 1. dresu: ${newMemberDetails.jerseyNumber}`);
                 }
                 if (newMemberDetails.jerseyNumber2 && memberTypeToAdd === 'player') {
-                    changes.push(`Číslo dresu 2: ${newMemberDetails.jerseyNumber2}`);
+                    changes.push(`Číslo 2. dresu: ${newMemberDetails.jerseyNumber2}`);
                 }
                 if (newMemberDetails.registrationNumber && memberTypeToAdd === 'player') {
                     changes.push(`Registračné číslo: ${newMemberDetails.registrationNumber}`);
@@ -3934,8 +3934,8 @@ function RostersApp() {
                                 [
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Akcie'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Typ člena'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu 1'),
-                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo dresu 2'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo 1. dresu'),
+                                  React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Číslo 2. dresu'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Meno'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Priezvisko'),
                                   React.createElement('th', { className: 'py-3 px-4 border-b-2 border-gray-200 whitespace-nowrap' }, 'Dátum narodenia'),
