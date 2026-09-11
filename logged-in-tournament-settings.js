@@ -119,10 +119,10 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         changes.push(`Úprava balíčka: ${originalPackage.name}`);
 
         if (originalPackage.name !== newPackage.name) {
-          changes.push(`Názov: '${originalPackage.name}' -> '${newPackage.name}'`);
+          changes.push(`Názov: z '${originalPackage.name}' na '${newPackage.name}'`);
         }
         if (originalPackage.price !== newPackage.price) {
-          changes.push(`Cena: ${originalPackage.price}€ -> ${newPackage.price}€`);
+          changes.push(`Cena: z '${originalPackage.price}€' na '${newPackage.price}€'`);
         }
 
         // Kontrola zmien v ubytovaní
@@ -210,7 +210,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
           changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
         }
       } else if (notificationData.type === 'createUrlLink') {
-        changesContent = `Vytvorenie nového URL odkazu: '${notificationData.data.label}' -> ${notificationData.data.url}`;
+        changesContent = `Vytvorenie nového URL odkazu: '''${notificationData.data.label} ${notificationData.data.url}'`;
       } else if (notificationData.type === 'editUrlLink') {
         const originalLabel = notificationData.data.originalLabel || '';
         const originalUrl = notificationData.data.originalUrl || '';
@@ -220,10 +220,10 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         const changes = [];
         changes.push(`Úprava URL odkazu: '${originalLabel}'`);
         if (originalLabel !== newLabel) {
-          changes.push(`Názov: '${originalLabel}' -> '${newLabel}'`);
+          changes.push(`Názov: z '${originalLabel}' na '${newLabel}'`);
         }
         if (originalUrl !== newUrl) {
-          changes.push(`URL: '${originalUrl}' -> '${newUrl}'`);
+          changes.push(`URL: z '${originalUrl}' na '${newUrl}'`);
         }
         changesContent = changes;
       } else if (notificationData.type === 'deleteUrlLink') {
