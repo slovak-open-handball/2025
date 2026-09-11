@@ -12,7 +12,9 @@ export function UrlLinkSettings({
     const [newLink, setNewLink] = React.useState({ label: '', url: '' });
     const [loading, setLoading] = React.useState(true);
 
-    // Načítanie odkazov z Firestore (kolekcia 'settings', dokument 'urlLinks')
+    const originalLinksRef = React.useRef([]);
+
+    // Načítanie odkazov z Firestore
     React.useEffect(() => {
         if (!db) return;
 
@@ -20,9 +22,12 @@ export function UrlLinkSettings({
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                setLinks(Array.isArray(data.links) ? data.links : []);
+                const loadedLinks = Array.isArray(data.links) ? data.links : [];
+                setLinks(loadedLinks);
+                originalLinksRef.current = JSON.parse(JSON.stringify(loadedLinks));
             } else {
                 setLinks([]);
+                originalLinksRef.current = [];
             }
             setLoading(false);
         }, (error) => {
@@ -49,17 +54,19 @@ export function UrlLinkSettings({
         }
     };
 
-    // Pridanie nového odkazu
     const handleAddLink = () => {
         if (!newLink.label.trim() || !newLink.url.trim()) {
             showNotification('Názov a URL adresa sú povinné.', 'error');
             return;
         }
 
+        const newLabel = newLink.label.trim();
+        const newUrl = newLink.url.trim();
+
         const updatedLinks = [...links, {
             id: Date.now().toString(),
-            label: newLink.label.trim(),
-            url: newLink.url.trim()
+            label: newLabel,
+            url: newUrl
         }];
 
         setLinks(updatedLinks);
@@ -70,8 +77,8 @@ export function UrlLinkSettings({
             sendAdminNotification({
                 type: 'createUrlLink',
                 data: {
-                    label: newLink.label.trim(),
-                    url: newLink.url.trim()
+                    label: newLabel,
+                    url: newUrl
                 }
             });
         }
@@ -103,20 +110,63 @@ export function UrlLinkSettings({
         setLinks(updatedLinks);
     };
 
-    // Uloženie zmien po úprave
     const handleSaveEdits = () => {
+        const originalLinks = originalLinksRef.current;
+
+        // Detekcia zmien
+        const changes = [];
+
+        links.forEach(link => {
+            const original = originalLinks.find(o => o.id === link.id);
+            if (!original) {
+                // Toto by nemalo nastať, lebo nové odkazy sa pridávajú cez handleAddLink
+                return;
+            }
+            if (original.label !== link.label || original.url !== link.url) {
+                changes.push({
+                    label: link.label,
+                    originalLabel: original.label,
+                    originalUrl: original.url,
+                    newLabel: link.label,
+                    newUrl: link.url
+                });
+            }
+        });
+
+        // Detekcia zmazaných odkazov (ak by sa mazali inak ako cez handleDeleteLink)
+        const deleted = originalLinks.filter(o => !links.find(l => l.id === o.id));
+
         saveLinks(links);
 
+        // Pošleme notifikácie
         if (sendAdminNotification) {
-            sendAdminNotification({
-                type: 'editUrlLink',
-                data: {
-                    originalLabel: '',
-                    newLabel: 'Hromadná úprava odkazov',
-                    newUrl: ''
-                }
+            // Zmazané
+            deleted.forEach(d => {
+                sendAdminNotification({
+                    type: 'deleteUrlLink',
+                    data: {
+                        deletedLabel: d.label,
+                        deletedUrl: d.url
+                    }
+                });
+            });
+
+            // Upravené
+            changes.forEach(c => {
+                sendAdminNotification({
+                    type: 'editUrlLink',
+                    data: {
+                        originalLabel: c.originalLabel,
+                        originalUrl: c.originalUrl,
+                        newLabel: c.newLabel,
+                        newUrl: c.newUrl
+                    }
+                });
             });
         }
+
+        // Aktualizujeme referenciu
+        originalLinksRef.current = JSON.parse(JSON.stringify(links));
     };
 
     if (loading) {
