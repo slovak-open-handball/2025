@@ -5446,40 +5446,25 @@ function AllRegistrationsApp() {
                       
                       const existingMember = currentMemberArray[memberArrayIndex];
                       const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
-                      
+                  
+                      // ============================================================
+                      // OPRAVA: DOPLNÍME PÔVODNÉ PRIVATE DÁTA (dateOfBirth, address)
+                      // do originalMemberFromDoc, aby porovnanie v notifikáciách fungovalo správne
+                      // ============================================================
+                      let privateArrayNameForOriginal;
+                      if (memberArrayPath === 'playerDetails') privateArrayNameForOriginal = 'players';
+                      else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayNameForOriginal = 'womenTeamMembers';
+                      else if (memberArrayPath === 'menTeamMemberDetails') privateArrayNameForOriginal = 'menTeamMembers';
+                      else if (memberArrayPath === 'driverDetailsMale') privateArrayNameForOriginal = 'driversMale';
+                      else if (memberArrayPath === 'driverDetailsFemale') privateArrayNameForOriginal = 'driversFemale';
+                  
+                      const originalPrivateMember = privateData.persons?.[teamKey]?.[privateArrayNameForOriginal]?.[memberArrayIndex] || {};
+                      originalMemberFromDoc.dateOfBirth = originalPrivateMember.dateOfBirth || '';
+                      originalMemberFromDoc.address = originalPrivateMember.address || {
+                          street: '', houseNumber: '', city: '', postalCode: '', country: ''
+                      };
+
                       if (updatedDataFromModal.firstName !== undefined) {
-                          existingMember.firstName = updatedDataFromModal.firstName;
-                      }
-                      if (updatedDataFromModal.lastName !== undefined) {
-                          existingMember.lastName = updatedDataFromModal.lastName;
-                      }
-                      if (updatedDataFromModal.jerseyNumber !== undefined) {
-                          existingMember.jerseyNumber = updatedDataFromModal.jerseyNumber;
-                      }
-                      if (updatedDataFromModal.jerseyNumber2 !== undefined) {
-                          existingMember.jerseyNumber2 = updatedDataFromModal.jerseyNumber2;
-                      }
-                      if (updatedDataFromModal.registrationNumber !== undefined) {
-                          existingMember.registrationNumber = updatedDataFromModal.registrationNumber;
-                      }
-                      if (updatedDataFromModal.isRegistered !== undefined) {
-                          existingMember.isRegistered = updatedDataFromModal.isRegistered;
-                      }
-                      
-                      let privateArrayName = memberArrayPath;
-                      if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
-                      else if (memberArrayPath === 'womenTeamMemberDetails') privateArrayName = 'womenTeamMembers';
-                      else if (memberArrayPath === 'menTeamMemberDetails') privateArrayName = 'menTeamMembers';
-                      else if (memberArrayPath === 'driverDetailsMale') privateArrayName = 'driversMale';
-                      else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
-                      
-                      if (!privateData.persons[teamKey][privateArrayName]) {
-                          privateData.persons[teamKey][privateArrayName] = [];
-                    }
-                    
-                    const existingPrivateMember = privateData.persons[teamKey][privateArrayName][memberArrayIndex] || {};
-                    
-                    if (updatedDataFromModal.dateOfBirth !== undefined) {
                         privateData.persons[teamKey][privateArrayName][memberArrayIndex] = {
                             ...existingPrivateMember,
                             dateOfBirth: updatedDataFromModal.dateOfBirth
