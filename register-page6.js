@@ -70,26 +70,28 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
                             jerseyNumber: '',
+                            jerseyNumberColor1: '', // NOVINKA
+                            jerseyNumberColor2: '', // NOVINKA
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
                             isRegistered: false,
                             registrationNumber: '',
-                            address: { // Vždy zabezpečiť existenciu objektu adresy s predvolenými hodnotami
+                            address: {
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
                             },
-                            ...existingPlayer, // Prepíše predvolené hodnoty existujúcimi dátami hráča
-                            address: { // Hlboké zlúčenie adresy pre zabezpečenie všetkých podpolí
+                            ...existingPlayer,
+                            address: {
                                 street: '',
                                 houseNumber: '',
                                 city: '',
                                 postalCode: '',
                                 country: '',
-                                ...(existingPlayer.address || {}) // Prepíše predvolené hodnoty adresy existujúcimi dátami adresy
+                                ...(existingPlayer.address || {})
                             }
                         };
                     });
@@ -179,29 +181,50 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const newPlayerErrorsForTeam = {}; // Chyby pre aktuálny tím
         let teamHasErrors = false;
 
-        // Validácia čísla dresu
-        const jerseyNumbers = new Set();
-        const jerseyNumberErrors = new Set();
+        // Validácia čísla dresu – farba 1
+        const jerseyNumbersColor1 = new Set();
+        const jerseyNumberErrorsColor1 = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            const jersey = player.jerseyNumber.trim();
-
+            const jersey = (player.jerseyNumberColor1 || '').trim();
+        
             if (jersey !== '') {
-                if (jerseyNumbers.has(jersey)) {
-                    jerseyNumberErrors.add(jersey);
+                if (jerseyNumbersColor1.has(jersey)) {
+                    jerseyNumberErrorsColor1.add(jersey);
                     teamHasErrors = true;
                 } else {
-                    jerseyNumbers.add(jersey);
+                    jerseyNumbersColor1.add(jersey);
                 }
             }
         }
-
-        // Nastav chybové správy pre čísla dresu
+        
+        // Validácia čísla dresu – farba 2
+        const jerseyNumbersColor2 = new Set();
+        const jerseyNumberErrorsColor2 = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            if (jerseyNumberErrors.has(player.jerseyNumber.trim())) {
+            const jersey = (player.jerseyNumberColor2 || '').trim();
+        
+            if (jersey !== '') {
+                if (jerseyNumbersColor2.has(jersey)) {
+                    jerseyNumberErrorsColor2.add(jersey);
+                    teamHasErrors = true;
+                } else {
+                    jerseyNumbersColor2.add(jersey);
+                }
+            }
+        }
+        
+        // Nastav chybové správy pre čísla dresu – farba 1
+        for (let i = 0; i < currentTeamPlayers.length; i++) {
+            const player = currentTeamPlayers[i];
+            if (jerseyNumberErrorsColor1.has((player.jerseyNumberColor1 || '').trim())) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].jerseyNumber = 'Duplicitné číslo dresu v tíme.';
+                newPlayerErrorsForTeam[i].jerseyNumberColor1 = 'Duplicitné číslo dresu (farba 1) v tíme.';
+            }
+            if (jerseyNumberErrorsColor2.has((player.jerseyNumberColor2 || '').trim())) {
+                if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
+                newPlayerErrorsForTeam[i].jerseyNumberColor2 = 'Duplicitné číslo dresu (farba 2) v tíme.';
             }
         }
 
@@ -521,10 +544,11 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
                     // Kontrolujeme všetky typy chýb
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || 
-                        playerErrors[categoryName][teamIndex][playerIndex].combination || 
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor1 ||
+                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor2 ||
+                        playerErrors[categoryName][teamIndex][playerIndex].combination ||
                         playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
-                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth // Pridaná kontrola pre chybu dátumu narodenia
+                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth
                     ) {
                         hasAnyPlayerErrors = true;
                         break;
@@ -551,10 +575,11 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
                     // Kontrolujeme všetky typy chýb
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber || 
-                        playerErrors[categoryName][teamIndex][playerIndex].combination || 
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor1 ||
+                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor2 ||
+                        playerErrors[categoryName][teamIndex][playerIndex].combination ||
                         playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
-                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth // Pridaná kontrola pre chybu dátumu narodenia
+                        playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth
                     ) {
                         return false;
                     }
@@ -692,23 +717,51 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         return React.createElement('div', { key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`, className: 'mb-4 p-3 bg-gray-100 rounded-md shadow-sm' },
                                             React.createElement('p', { className: 'font-medium text-gray-800 mb-2' }, `Hráč ${playerIndex + 1}`),
                                             React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
-                                                React.createElement('div', { className: 'w-24' },
-                                                    React.createElement('label', { htmlFor: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Číslo dresu'),
-                                                    React.createElement('input', {
-                                                        type: 'text',
-                                                        id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`.trim(),
-                                                        value: player.jerseyNumber || '',
-                                                        onChange: (e) => {
-                                                            const value = e.target.value.replace(/[^0-9]/g, '');
-                                                            handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
-                                                        },
-                                                        disabled: loading,
-                                                        placeholder: 'Číslo'
-                                                    }),
-                                                    playerSpecificErrors.jerseyNumber ?
-                                                        React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
-                                                        React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                React.createElement('div', { className: 'flex gap-2' },
+                                                    // Farba 1
+                                                    React.createElement('div', { className: 'w-24' },
+                                                        React.createElement('label', {
+                                                            htmlFor: `jerseyNumberColor1-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'block text-gray-700 text-sm font-bold mb-1'
+                                                        }, `Číslo dresu (${team.jerseyColors?.color1 || 'farba 1'})`),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `jerseyNumberColor1-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumberColor1 ? 'border-red-500' : ''}`.trim(),
+                                                            value: player.jerseyNumberColor1 || '',
+                                                            onChange: (e) => {
+                                                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                                                handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumberColor1', value);
+                                                            },
+                                                            disabled: loading,
+                                                            placeholder: 'Číslo'
+                                                        }),
+                                                        playerSpecificErrors.jerseyNumberColor1 ?
+                                                            React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumberColor1) :
+                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    ),
+                                                    // Farba 2
+                                                    React.createElement('div', { className: 'w-24' },
+                                                        React.createElement('label', {
+                                                            htmlFor: `jerseyNumberColor2-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: 'block text-gray-700 text-sm font-bold mb-1'
+                                                        }, `Číslo dresu (${team.jerseyColors?.color2 || 'farba 2'})`),
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            id: `jerseyNumberColor2-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                            className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumberColor2 ? 'border-red-500' : ''}`.trim(),
+                                                            value: player.jerseyNumberColor2 || '',
+                                                            onChange: (e) => {
+                                                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                                                handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumberColor2', value);
+                                                            },
+                                                            disabled: loading,
+                                                            placeholder: 'Číslo'
+                                                        }),
+                                                        playerSpecificErrors.jerseyNumberColor2 ?
+                                                            React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumberColor2) :
+                                                            React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
+                                                    )
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                     React.createElement('label', { htmlFor: `firstName-player-${categoryName}-${teamIndex}-${playerIndex}`, className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Meno'),
