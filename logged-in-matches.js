@@ -3483,6 +3483,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     // ===== OPRAVENÁ FUNKCIA PRE VÝPOČET NAVRHOVANÉHO ČASU S PAVÚKOM S LOGMI =====
     const calculateFirstAvailableTimeWithSpider = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, currentMatch, categories, groupsByCategory) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
+
+        const currentDateStr = date;
         
         console.log(`🔍 [calculateFirstAvailableTimeWithSpider] Vstupné parametre:`, {
             hallId,
