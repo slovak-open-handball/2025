@@ -702,11 +702,12 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         const counts = new Map();
         if (team && team.playerDetails) {
             team.playerDetails.forEach(player => {
-                const jerseyNum = player.jerseyNumber;
-                if (jerseyNum && jerseyNum.toString().trim() !== '') {
-                    const key = jerseyNum.toString().trim();
-                    counts.set(key, (counts.get(key) || 0) + 1);
-                }
+                [player.jerseyNumber, player.jerseyNumber2].forEach(jerseyNum => {
+                    if (jerseyNum && jerseyNum.toString().trim() !== '') {
+                        const key = jerseyNum.toString().trim();
+                        counts.set(key, (counts.get(key) || 0) + 1);
+                    }
+                });
             });
         }
         return counts;
@@ -1075,7 +1076,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Meno'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Priezvisko'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Dátum narodenia'),
-                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu 1'),
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu 2'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Ubytovanie'),
@@ -1143,6 +1145,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                             member._dateOfBirth ? formatDateToDMMYYYY(member._dateOfBirth) : '-'
                         ),
                         React.createElement('td', { className: jerseyNumberCellClass }, member.jerseyNumber || '-'),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber2 || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
                             member.registrationNumber || '-'
                         ),
@@ -2555,7 +2558,7 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                 ];
                 if (isPlayer) {
                     memberFieldsOrder = [
-                        'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'registrationNumber',
+                        'firstName', 'lastName', 'dateOfBirth', 'jerseyNumber', 'jerseyNumber2', 'registrationNumber',
                         'address.street', 'address.houseNumber', 'address.postalCode', 'address.city', 'address.country'
                     ];
                 }
@@ -2595,6 +2598,51 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                         };
                     }
             
+                    // Špeciálne spracovanie pre dvojicu jerseyNumber a jerseyNumber2 - obe v jednom riadku
+                    if (path === 'jerseyNumber') {
+                        const jersey1Value = getNestedValue(localEditedData, 'jerseyNumber') || '';
+                        const jersey2Value = getNestedValue(localEditedData, 'jerseyNumber2') || '';
+                        
+                        memberElements.push(React.createElement(
+                            'div',
+                            { key: 'jerseyNumbers', className: 'mb-4' },
+                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Čísla dresov'),
+                            React.createElement('div', { className: 'flex gap-3' },
+                                React.createElement('div', { className: 'flex-1' },
+                                    React.createElement('input', {
+                                        ref: el => inputRefs.current['jerseyNumber'] = el,
+                                        type: 'text',
+                                        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2',
+                                        value: jersey1Value,
+                                        onChange: (e) => handleNumericInput(e, 'jerseyNumber'),
+                                        inputMode: 'numeric',
+                                        pattern: '[0-9]*',
+                                        maxLength: 3,
+                                        placeholder: 'Číslo dresu 1'
+                                    })
+                                ),
+                                React.createElement('div', { className: 'flex-1' },
+                                    React.createElement('input', {
+                                        ref: el => inputRefs.current['jerseyNumber2'] = el,
+                                        type: 'text',
+                                        className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-white p-2',
+                                        value: jersey2Value,
+                                        onChange: (e) => handleNumericInput(e, 'jerseyNumber2'),
+                                        inputMode: 'numeric',
+                                        pattern: '[0-9]*',
+                                        maxLength: 3,
+                                        placeholder: 'Číslo dresu 2'
+                                    })
+                                )
+                            )
+                        ));
+                        return;
+                    }
+                    if (path === 'jerseyNumber2') {
+                        // Preskočíme, lebo už bolo vykreslené spolu s jerseyNumber
+                        return;
+                    }
+                    
                     memberElements.push(React.createElement(
                         'div',
                         { key: path, className: 'mb-4' },
