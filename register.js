@@ -1333,7 +1333,7 @@ function App() {
 
   return React.createElement(
     'div',
-    { className: `min-h-screen flex flex-col items-center justify-start bg-gray-100 ${(page === 6 || page === 7) ? 'p-0' : 'p-4'}` },
+    { className: `min-h-screen flex flex-col justify-start bg-gray-100 ${(page === 6 || page === 7) ? 'items-stretch p-0' : 'items-center p-4'}` },
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     !settingsLoaded || !isAuthReady ? (
