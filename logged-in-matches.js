@@ -7495,12 +7495,14 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
     const [durationError, setDurationError] = useState('');
     const [multiplierError, setMultiplierError] = useState('');
 
-    // ===== NASTAVENIE DĹŽKY MEDZERY NA TRVANIE ZÁPASU =====
+    // ===== NASTAVENIE DĹŽKY MEDZERY NA TRVANIE ZÁPASU + PRESTÁVKU =====
     useEffect(() => {
         if (isOpen && matchDuration && matchDuration > 0) {
-            setBreakDuration(matchDuration);
+            const matchBreakValue = matchBreak || 5;
+            const totalValue = matchDuration + matchBreakValue;
+            setBreakDuration(totalValue);
         }
-    }, [isOpen, matchDuration]);
+    }, [isOpen, matchDuration, matchBreak]);
 
     const handleDurationChange = (e) => {
         const value = parseInt(e.target.value);
@@ -7703,11 +7705,13 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 React.createElement(
                     'p',
                     { className: 'text-xs text-gray-500 mt-1' },
-                    'Rozsah: 1 - 180 minút'
+                    matchDuration > 0 && matchBreak > 0 
+                        ? `Predvolená hodnota: ${matchDuration} min (zápas) + ${matchBreak} min (prestávka) = ${matchDuration + matchBreak} min`
+                        : 'Rozsah: 1 - 180 minút'
                 )
             ),
 
-            // ===== NOVÝ INPUTBOX PRE POČET OPAKOVANÍ =====
+            // ===== INPUTBOX PRE POČET OPAKOVANÍ =====
             React.createElement(
                 'div',
                 { className: 'mb-4' },
