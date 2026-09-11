@@ -4956,12 +4956,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
                 if (currentGroup?.type === 'nadstavbová skupina') {
-                    console.log(`📈 [AssignMatchModal] Pokus získať čas z nadstavbovej skupiny`);
-                    timeFromRelated = getTimeFromAdvancedGroupRelatedMatches(match, allMatches, categories, selectedHallId, selectedDate, hallStartTime);
-                    if (timeFromRelated) {
-                        timeSource = 'advanced';
-                        console.log(`📈 [AssignMatchModal] Čas z nadstavbovej skupiny: ${timeFromRelated}`);
-                    }
+                    console.log(`📈 [AssignMatchModal] Nadstavbová skupina - čas sa vypočíta cez calculateFirstAvailableTimeWithSpider (prvý voľný čas po minStartTimeForMatch)`);
                 }
             }
             
