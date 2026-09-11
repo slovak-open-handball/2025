@@ -7736,20 +7736,6 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                     'Rozsah: 1 - 180 minút'
                 )
             ),
-
-            // ===== ZOBRAZENIE VYPOČÍTANÉHO NOVÉHO ČASU =====
-            newTime && React.createElement(
-                'div',
-                { className: 'mb-4 p-3 bg-green-50 rounded-lg border border-green-200' },
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center gap-2' },
-                    React.createElement('i', { className: 'fa-solid fa-clock text-green-600' }),
-                    React.createElement('span', { className: 'text-sm font-medium text-green-700' }, 'Nový čas zápasu: '),
-                    React.createElement('span', { className: 'text-lg font-bold text-green-800' }, newTime)
-                )
-            ),
-
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
