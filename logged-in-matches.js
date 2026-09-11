@@ -2132,7 +2132,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                             
                             const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                             const breakStartMinutes = breakHours * 60 + breakMinutes;
-                            const breakEndMinutes = breakStartMinutes + matchDuration + 5; // +5 min prestávka
+                            const breakEndMinutes = breakStartMinutes + matchDuration;
                             
                             // Aktuálny zápas (voľný čas) musí skončiť PRED nadradeným zápasom
                             if (breakEndMinutes > parentStartMinutes) {
@@ -2183,7 +2183,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                         const breakStartMinutes = breakHours * 60 + breakMinutes;
                         const matchDuration = getMatchDuration(match.categoryName);
-                        const breakEndMinutes = breakStartMinutes + matchDuration + 5;
+                        const breakEndMinutes = breakStartMinutes + matchDuration;
                         
                         for (const relMatch of groupRelated) {
                             const relDate = relMatch.scheduledTime.toDate();
@@ -2249,7 +2249,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                     const breakStartMinutes = breakHours * 60 + breakMinutes;
                     const matchDuration = getMatchDuration(match.categoryName);
-                    const breakEndMinutes = breakStartMinutes + matchDuration + 5;
+                    const breakEndMinutes = breakStartMinutes + matchDuration;
                     
                     for (const ref of matchRefs) {
                         const matchType = `semifinále ${ref.number}`;
@@ -2310,7 +2310,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                     const breakStartMinutes = breakHours * 60 + breakMinutes;
                     const matchDuration = getMatchDuration(match.categoryName);
-                    const breakEndMinutes = breakStartMinutes + matchDuration + 5;
+                    const breakEndMinutes = breakStartMinutes + matchDuration;
                     
                     for (const relMatch of relatedMatches) {
                         const relDate = relMatch.scheduledTime.toDate();
@@ -2426,7 +2426,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                 const breakStartMinutes = breakHours * 60 + breakMinutes;
                 const matchDuration = getMatchDuration(match.categoryName);
-                const breakEndMinutes = breakStartMinutes + matchDuration + 5;
+                const breakEndMinutes = breakStartMinutes + matchDuration;
                 
                 // Kontrola prekryvu
                 if (breakStartMinutes < existingEndWithBreak && breakEndMinutes > existingStartMinutes) {
@@ -4572,7 +4572,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         console.log(`🏆 [getTimeFromPlacementRelatedMatches] Najneskorší koniec súvisiacich zápasov: ${latestRelatedEnd}min (${relatedEndTimeStr})`);
         
         // Pridáme malú rezervu (5 minút) - BEZ ZAOKRÚHĽOVANIA
-        let suggestedMinutes = latestRelatedEnd + 5;
+        let suggestedMinutes = latestRelatedEnd;
         
         // Kontrola, či nepresahuje koniec dňa
         if (suggestedMinutes >= 24 * 60) {
@@ -4761,7 +4761,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         let startFromMinutes = hallStartMinutesTotal;
         
         if (latestSameHallEnd > 0) {
-            startFromMinutes = Math.max(startFromMinutes, latestSameHallEnd + 5);
+            startFromMinutes = Math.max(startFromMinutes, latestSameHallEnd);
         }
         
         // ===== 5. NÁJDENIE VOĽNÉHO ČASU V TEJTO HALE =====
@@ -4947,7 +4947,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         }, earlierSameDay[0]);
                         
                         const latestDate = latestEarlier.scheduledTime.toDate();
-                        const latestEndMinutes = latestDate.getHours() * 60 + latestDate.getMinutes() + matchDur + 5;
+                        const latestEndMinutes = latestDate.getHours() * 60 + latestDate.getMinutes() + matchDur;
                         
                         if (currentStartMinutes < latestEndMinutes) {
                             occupiedIntervals.push({
@@ -4974,7 +4974,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         const earliestDate = earliestLater.scheduledTime.toDate();
                         const earliestStartMinutes = earliestDate.getHours() * 60 + earliestDate.getMinutes();
                         
-                        const currentEndWithBreak = currentStartMinutes + matchDur + 5;
+                        const currentEndWithBreak = currentStartMinutes + matchDur;
                         
                         if (currentEndWithBreak > earliestStartMinutes) {
                             occupiedIntervals.push({
