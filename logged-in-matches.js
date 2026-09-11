@@ -7491,7 +7491,9 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
 const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime, nextMatchTime, matchBreak, matchDuration }) => {
     const [breakPosition, setBreakPosition] = useState('after');
     const [breakDuration, setBreakDuration] = useState(5);
+    const [multiplier, setMultiplier] = useState(1);
     const [durationError, setDurationError] = useState('');
+    const [multiplierError, setMultiplierError] = useState('');
 
     // ===== NASTAVENIE DĹŽKY MEDZERY NA TRVANIE ZÁPASU =====
     useEffect(() => {
@@ -7525,17 +7527,45 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
         setBreakDuration(value);
     };
 
+    const handleMultiplierChange = (e) => {
+        const value = parseInt(e.target.value);
+        
+        if (e.target.value === '') {
+            setMultiplier(1);
+            setMultiplierError('Zadajte počet opakovaní');
+            return;
+        }
+        
+        if (isNaN(value)) {
+            setMultiplierError('Zadajte platné číslo');
+            return;
+        }
+        
+        if (value < 1) {
+            setMultiplierError('Minimálny počet je 1');
+        } else if (value > 20) {
+            setMultiplierError('Maximálny počet je 20');
+        } else {
+            setMultiplierError('');
+        }
+        
+        setMultiplier(value);
+    };
+
     useEffect(() => {
         if (!isOpen) {
             setBreakPosition('after');
             setBreakDuration(5);
+            setMultiplier(1);
             setDurationError('');
+            setMultiplierError('');
         }
     }, [isOpen]);
 
     if (!isOpen || !match) return null;
 
-    const isValid = breakDuration > 0 && !durationError;
+    const totalDuration = breakDuration * multiplier;
+    const isValid = breakDuration > 0 && multiplier >= 1 && !durationError && !multiplierError;
 
     // ===== ZOBRAZENIE INFORMÁCIE O NASLEDUJÚCOM ZÁPASE =====
     const hasNextMatch = nextMatchTime && nextMatchTime !== '';
@@ -7676,6 +7706,53 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                     'Rozsah: 1 - 180 minút'
                 )
             ),
+
+            // ===== NOVÝ INPUTBOX PRE POČET OPAKOVANÍ =====
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Koľkokrát sa má hodnota pridať:'
+                ),
+                React.createElement('input', {
+                    type: 'number',
+                    value: multiplier,
+                    onChange: handleMultiplierChange,
+                    min: '1',
+                    max: '20',
+                    step: '1',
+                    className: `w-full px-3 py-2 border ${multiplierError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                    placeholder: 'Zadajte počet opakovaní'
+                }),
+                multiplierError && React.createElement(
+                    'p',
+                    { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    multiplierError
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1' },
+                    'Rozsah: 1 - 20 opakovaní'
+                )
+            ),
+
+            // ===== SÚHRN VÝSLEDNEJ MEDZERY =====
+            isValid && React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-2 text-sm text-blue-700' },
+                    React.createElement('i', { className: 'fa-solid fa-calculator' }),
+                    React.createElement('span', { className: 'font-medium' }, 'Výsledná medzera:'),
+                    React.createElement('span', { className: 'font-bold' }, `${totalDuration} minút`),
+                    React.createElement('span', { className: 'text-xs text-blue-600' },
+                        `(${breakDuration} min × ${multiplier})`
+                    )
+                )
+            ),
+
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -7694,7 +7771,7 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                             onConfirm({
                                 matchId: match.id,
                                 position: breakPosition,
-                                duration: breakDuration
+                                duration: totalDuration
                             });
                             onClose();
                         },
