@@ -2110,9 +2110,9 @@ const AssignMatchToBreakModal = ({
     };
 
     // ===== KONTROLA, ČI JE ZÁPAS VHODNÝ PRE DANÝ VOĽNÝ ČAS =====
-    // Táto funkcia vracia true, ak zápas MÔŽE byť priradený do voľného času
-    // Nekontroluje striktne všetky chronologické väzby, ale umožňuje priradenie
-    // zápasov z nadstavbových skupín, ktoré ešte nemajú naplánované súvisiace zápasy
+    // Táto funkcia používa IDENTICKÚ logiku ako AssignMatchModal
+    // pre kontrolu nadstavbových skupín, základných skupín, pavúkovej chronológie
+    // a zápasov o umiestnenie.
     const isMatchEligibleForBreak = (match, existingMatchesInHallAndDay) => {
         const matchDuration = getMatchDuration(match.categoryName);
         
@@ -2131,6 +2131,7 @@ const AssignMatchToBreakModal = ({
         const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
         const breakStartMinutes = breakHours * 60 + breakMinutes;
         const breakEndMinutes = breakStartMinutes + matchDuration;
+        const matchBreak = categories.find(c => c.name === match?.categoryName)?.matchBreak || 5;
         
         for (const existingMatch of existingMatchesInHallAndDay) {
             if (!existingMatch.scheduledTime) continue;
@@ -2157,8 +2158,7 @@ const AssignMatchToBreakModal = ({
         }
 
         // ===== 4. KONTROLA PAVÚKOVEJ CHRONOLÓGIE =====
-        // Pre pavúkové zápasy kontrolujeme, či podradené zápasy už boli odohrané
-        // a či nadradené zápasy ešte len budú
+        // Rovnaká logika ako v AssignMatchModal
         if (match.matchType && !match.isPlacementMatch && allMatches) {
             const levelOrder = {
                 'šestnásťfinále': 1,
@@ -2252,6 +2252,7 @@ const AssignMatchToBreakModal = ({
         }
 
         // ===== 5. KONTROLA ZÁPASOV O UMIESTNENIE =====
+        // Rovnaká logika ako v AssignMatchModal
         if (match.isPlacementMatch && allMatches) {
             const currentDateStr = date;
             
@@ -2388,9 +2389,10 @@ const AssignMatchToBreakModal = ({
         }
 
         // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN =====
-        // DÔLEŽITÉ: Pre zápasy z nadstavbových skupín, ktoré EŠTE NIE SÚ naplánované,
-        // kontrolujeme iba to, či súvisiace zápasy zo ZÁKLADNÝCH skupín už boli odohrané.
-        // Ak ešte nie sú naplánované, zápas MÔŽE byť priradený (používateľ ho chce naplánovať).
+        // TOTO JE KĽÚČOVÁ ČASŤ - IDENTICKÁ logika ako v AssignMatchModal
+        // Kontroluje:
+        // 1. Základné skupiny (B, C, ...) - ak sú v NESKORŠOM dni, blokujú CELÝ DEŇ
+        // 2. Súvisiace zápasy v rovnakej nadstavbovej skupine v ROVNAKEJ HALE a DNI
         if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
             const categoryGroups = groupsByCategory[match.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -2418,6 +2420,7 @@ const AssignMatchToBreakModal = ({
                 if (homeLetter) targetLetters.add(homeLetter);
                 if (awayLetter) targetLetters.add(awayLetter);
                 
+                // ===== 6a. KONTROLA ZÁKLADNÝCH SKUPÍN (B, C, ...) =====
                 if (targetLetters.size > 0) {
                     const basicGroupMatches = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
@@ -2478,7 +2481,8 @@ const AssignMatchToBreakModal = ({
                     }
                 }
                 
-                // Kontrola súvisiacich zápasov v rovnakej nadstavbovej skupine
+                // ===== 6b. KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
+                // v ROVNAKEJ HALE a DNI
                 const relatedMatches = allMatches.filter(m => 
                     m.categoryId === match.categoryId &&
                     m.groupName === match.groupName &&
@@ -2543,7 +2547,7 @@ const AssignMatchToBreakModal = ({
             return matchDateStr === date;
         }) || [];
 
-        // Filtrujeme zápasy - používame miernejšiu kontrolu
+        // Filtrujeme zápasy
         const filtered = availableMatches.filter(match => {
             return isMatchEligibleForBreak(match, existingMatchesInHallAndDay);
         });
