@@ -729,8 +729,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
     
                                     playersCount > 0 && React.createElement(
-                                        'div',
-                                        null,
+                                        'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                     
                                         // HLAVIČKA – používa grid s rovnakou mriežkou ako riadky hráčov
@@ -983,8 +982,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     ),
                                         
                                     womenMembersCount > 0 && React.createElement(
-                                        'div',
-                                        null,
+                                        'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
                                     
                                         // HLAVIČKA – grid s rovnakou mriežkou ako riadky
@@ -1148,8 +1146,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     ),
                                                                             
                                     menMembersCount > 0 && React.createElement(
-                                        'div',
-                                        null,
+                                        'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (muži)'),
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
@@ -1311,8 +1308,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     ),
                                                                             
                                     driversMaleCount > 0 && React.createElement(
-                                        'div',
-                                        null,
+                                        'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
@@ -1474,8 +1470,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     ),
                                                                             
                                     driversFemaleCount > 0 && React.createElement(
-                                        'div',
-                                        null,
+                                        'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
