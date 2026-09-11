@@ -1993,28 +1993,130 @@ const getTeamNameByIdentifierForEffect = (identifier) => {
     return `${category} ${groupName}${order}`;
 };
 
-const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, accommodations, teamAccommodations, allMatches, groupsByCategory, blockedBreaks, sportHalls }) => {
+const AssignMatchToBreakModal = ({ 
+    isOpen, 
+    onClose, 
+    onConfirm, 
+    availableMatches, 
+    breakStartTime, 
+    breakEndTime, 
+    breakDuration, 
+    hallId, 
+    date, 
+    categories, 
+    displayMode, 
+    getTeamDisplayText, 
+    accommodations, 
+    teamAccommodations, 
+    allMatches, 
+    groupsByCategory, 
+    blockedBreaks, 
+    sportHalls 
+}) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredByConditions, setFilteredByConditions] = useState([]);
 
-    useEffect(() => {
-        if (isOpen) {
-            setSelectedMatchId('');
-            setSearchTerm('');
-            // Filtrovanie zápasov pri otvorení modálu
-            filterMatchesByConditions();
+    // Pomocná funkcia na získanie názvu tímu podľa identifikátora
+    const getTeamNameByIdentifierForEffect = (identifier) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return identifier;
+        
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupName = '';
+        let order = '';
+        
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupName = groupAndOrder.substring(0, i);
+                break;
+            }
         }
-    }, [isOpen]);
+        
+        if (!order) {
+            order = '?';
+            groupName = groupAndOrder;
+        }
+        
+        if (window.__teamManagerData?.allTeams) {
+            const groupNameWithPrefix = `skupina ${groupName}`;
+            const team = window.__teamManagerData.allTeams.find(t => 
+                t.category === category && 
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            if (team) return team.teamName;
+        }
+        
+        return `${category} ${groupName}${order}`;
+    };
 
-    // ===== FUNKCIA NA FILTROVANIE ZÁPASOV PODĽA PODMIENOK =====
+    // Pomocná funkcia na získanie dĺžky zápasu
+    const getMatchDuration = (categoryName) => {
+        const category = categories?.find(c => c.name === categoryName);
+        if (!category) return 0;
+        const periods = category.periods || 2;
+        const periodDuration = category.periodDuration || 20;
+        const breakDuration = category.breakDuration || 2;
+        return (periodDuration + breakDuration) * periods - breakDuration;
+    };
+
+    // Pomocná funkcia na získanie času z minút
+    const formatTimeFromMinutes = (minutes) => {
+        const hours = Math.floor(minutes / 60).toString().padStart(2, '0');
+        const mins = (minutes % 60).toString().padStart(2, '0');
+        return `${hours}:${mins}`;
+    };
+
+    // Pomocná funkcia na kontrolu voľného časového slotu
+    const isTimeSlotFreeInHall = (startMinutes, hallId, date, totalDuration, existingMatches) => {
+        if (!hallId || !date) return true;
+        
+        const endMinutes = startMinutes + totalDuration;
+        
+        for (const match of existingMatches) {
+            if (!match.scheduledTime) continue;
+            
+            const matchDate = match.scheduledTime.toDate();
+            const matchDateStr = getLocalDateStr(matchDate);
+            if (matchDateStr !== date) continue;
+            
+            const matchStartMinutes = matchDate.getHours() * 60 + matchDate.getMinutes();
+            
+            const matchCategory = categories.find(c => c.name === match.categoryName);
+            let matchDuration = 0;
+            let matchBreak = 5;
+            if (matchCategory) {
+                const periods = matchCategory.periods || 2;
+                const periodDuration = matchCategory.periodDuration || 20;
+                const breakDuration = matchCategory.breakDuration || 2;
+                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                matchBreak = matchCategory.matchBreak || 5;
+            }
+            const matchEndWithBreak = matchStartMinutes + matchDuration + matchBreak;
+            
+            if (startMinutes < matchEndWithBreak && endMinutes > matchStartMinutes) {
+                return false;
+            }
+        }
+        
+        return true;
+    };
+
+    // Hlavná funkcia na filtrovanie zápasov - rovnaká logika ako v AssignMatchModal
     const filterMatchesByConditions = () => {
         if (!availableMatches || availableMatches.length === 0) {
             setFilteredByConditions([]);
             return;
         }
 
-        // Získame všetky zápasy, ktoré už sú v tejto hale a dni (pre kontrolu konfliktov)
+        // Získame existujúce zápasy v tejto hale a dni
         const existingMatchesInHallAndDay = allMatches?.filter(m => 
             m.hallId === hallId && 
             m.scheduledTime &&
@@ -2026,10 +2128,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             return matchDateStr === date;
         }) || [];
 
-        // Získame dĺžku voľného času
         const breakDurationMinutes = breakDuration || 0;
         
-        // Filtrujeme zápasy
         const filtered = availableMatches.filter(match => {
             // Kontrola, či zápas nie je už priradený v tejto hale a dni
             const isAlreadyInHall = existingMatchesInHallAndDay.some(m => m.id === match.id);
@@ -2147,14 +2247,13 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             if (match.isPlacementMatch && allMatches) {
                 const currentDateStr = date;
                 
-                // Získame súvisiace zápasy pre placement match
                 const relatedMatches = allMatches.filter(m => 
                     m.categoryId === match.categoryId && 
                     m.id !== match.id &&
                     m.scheduledTime
                 );
                 
-                // Pre zápasy o umiestnenie (okrem o 3. miesto) - používame skupiny
+                // Pre zápasy o umiestnenie (okrem o 3. miesto)
                 if (match.placementRank && match.placementRank !== 3) {
                     const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
                     const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
@@ -2291,12 +2390,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             }
 
             // ===== KONTROLA NADSTAVBOVÝCH SKUPÍN =====
-            // OPRAVA: Berie do úvahy zápasy zo ZÁKLADNÝCH SKUPÍN, z ktorých tímy postúpili.
-            // Tieto zápasy sa MUSIA odohrať PRED zápasmi v nadstavbovej skupine.
-            // Logika:
-            // 1. Extrahujeme písmená základných skupín z NÁZVOV TÍMOV (napr. "U12 CH B1" -> skupina B)
-            // 2. Nájdeme všetky zápasy v týchto základných skupinách
-            // 3. Skontrolujeme, či všetky tieto zápasy už boli odohrané pred voľným časom
             if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -2305,7 +2398,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 if (isAdvancedGroup && allMatches) {
                     const currentDateStr = date;
                     
-                    // ===== ZÍSKAME ZÁKLADNÉ SKUPINY (B, C, ...) Z NÁZVOV TÍMOV =====
                     const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
                     const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
                     
@@ -2326,7 +2418,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     if (awayLetter) targetLetters.add(awayLetter);
                     
                     if (targetLetters.size > 0) {
-                        // ===== ZÍSKAME VŠETKY ZÁPASY V ZÁKLADNÝCH SKUPINÁCH (VŠETKY HALY, VŠETKY DNI) =====
                         const basicGroupMatches = allMatches.filter(m => 
                             m.categoryId === match.categoryId &&
                             m.id !== match.id &&
@@ -2346,15 +2437,11 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                                 const basicDateStr = getLocalDateStr(basicDate);
                                 const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
                                 
-                                // ===== KONTROLA DÁTUMOVEJ LOGIKY =====
-                                // Ak je základný zápas v NESKORŠOM dni ako voľný čas → CHYBA
-                                // Základný zápas sa musí odohrať PRED zápasom v nadstavbovej skupine
                                 if (basicDateStr > currentDateStr) {
                                     hasFutureMatchConflict = true;
                                     break;
                                 }
                                 
-                                // Ak je základný zápas v ROVNAKOM dni → zarátať jeho koniec
                                 if (basicDateStr === currentDateStr) {
                                     const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
                                     let basicDuration = 0;
@@ -2377,23 +2464,19 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                             if (hasFutureMatchConflict) break;
                         }
                         
-                        // Ak existuje základný zápas v neskoršom dni, zápas nemôže byť priradený
                         if (hasFutureMatchConflict) {
                             return false;
                         }
                         
-                        // ===== KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI ZÁKLADNÝCH ZÁPASOV V ROVNAKOM DNI =====
                         const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
                         const breakStartMinutes = breakHours * 60 + breakMinutes;
                         
-                        // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
-                        // zápas nemôže byť priradený do tohto voľného času
                         if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
                             return false;
                         }
                     }
                     
-                    // ===== PÔVODNÁ KONTROLA PRE SÚVISIACE ZÁPASY V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
+                    // Kontrola súvisiacich zápasov v rovnakej nadstavbovej skupine
                     const relatedMatches = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.groupName === match.groupName &&
@@ -2428,7 +2511,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         }
                     }
                     
-                    // ===== KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI SÚVISIACICH ZÁPASOV V TEJTO HALE =====
                     const [breakHours2, breakMinutes2] = breakStartTime.split(':').map(Number);
                     const breakStartMinutes2 = breakHours2 * 60 + breakMinutes2;
                     
@@ -2439,7 +2521,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             }
 
             // ===== KONTROLA ZÁPASOV V ROVNAKEJ HALE =====
-            // Ak už existuje zápas v tej istej hale v rovnakom čase, preskočíme
             for (const existingMatch of existingMatchesInHallAndDay) {
                 if (!existingMatch.scheduledTime) continue;
                 
@@ -2477,18 +2558,25 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         setFilteredByConditions(filtered);
     };
 
-    // Znovu filtrovať pri zmene dostupných zápasov
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedMatchId('');
+            setSearchTerm('');
+            filterMatchesByConditions();
+        }
+    }, [isOpen]);
+
+    // Znovu filtrovať pri zmene dostupných zápasov alebo závislostí
     useEffect(() => {
         if (isOpen) {
             filterMatchesByConditions();
         }
-    }, [availableMatches, isOpen, hallId, date, breakStartTime, breakDuration, allMatches]);
+    }, [availableMatches, isOpen, hallId, date, breakStartTime, breakDuration, allMatches, categories, groupsByCategory]);
 
     if (!isOpen) return null;
 
     const hallName = sportHalls?.find(h => h.id === hallId)?.name || 'Neznáma hala';
 
-    // Formátovanie dátumu
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr) return '';
         const [year, month, day] = dateStr.split('-').map(Number);
@@ -2551,7 +2639,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         const actualTeamName = teamDisplayName || teamIdentifier;
     
         if (!window.__allUsersCache) {
-            console.warn('getTotalMembersCountSync: window.__allUsersCache nie je k dispozícii');
             return 0;
         }
     
@@ -2633,21 +2720,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return str.includes(teamQuery);
     };
 
-    const matchContainsTeam = (matchStrings, teamQuery) => {
-        const teamLower = teamQuery.toLowerCase();
-        
-        if (stringContainsTeam(matchStrings.homeName, teamLower)) return true;
-        if (stringContainsTeam(matchStrings.awayName, teamLower)) return true;
-        
-        if (stringContainsTeam(matchStrings.homeId, teamLower)) return true;
-        if (stringContainsTeam(matchStrings.awayId, teamLower)) return true;
-        
-        if (stringContainsTeam(matchStrings.homePureId, teamLower)) return true;
-        if (stringContainsTeam(matchStrings.awayPureId, teamLower)) return true;
-        
-        return false;
-    };
-
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase();
         const team2Lower = team2.toLowerCase();
@@ -2659,11 +2731,9 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         if (stringContainsTeam(matchStrings.homeName, team2Lower) || stringContainsTeam(matchStrings.awayName, team2Lower)) foundTeam2 = true;
         
         if (!foundTeam1 && (stringContainsTeam(matchStrings.homeId, team1Lower) || stringContainsTeam(matchStrings.awayId, team1Lower))) foundTeam1 = true;
-        
         if (!foundTeam2 && (stringContainsTeam(matchStrings.homeId, team2Lower) || stringContainsTeam(matchStrings.awayId, team2Lower))) foundTeam2 = true;
         
         if (!foundTeam1 && (stringContainsTeam(matchStrings.homePureId, team1Lower) || stringContainsTeam(matchStrings.awayPureId, team1Lower))) foundTeam1 = true;
-        
         if (!foundTeam2 && (stringContainsTeam(matchStrings.homePureId, team2Lower) || stringContainsTeam(matchStrings.awayPureId, team2Lower))) foundTeam2 = true;
         
         return foundTeam1 && foundTeam2;
@@ -2687,7 +2757,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
         return false;
     };
 
-    // Použijeme filteredByConditions namiesto availableMatches pre vyhľadávanie
     const searchFilteredMatches = filteredByConditions.filter(match => {
         const searchLower = searchTerm.toLowerCase();
         
@@ -2767,15 +2836,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
             return '#ffff00';
         }
         return '#f3f4f6';
-    };
-
-    const getMatchDuration = (categoryName) => {
-        const category = categories?.find(c => c.name === categoryName);
-        if (!category) return 0;
-        const periods = category.periods || 2;
-        const periodDuration = category.periodDuration || 20;
-        const breakDuration = category.breakDuration || 2;
-        return (periodDuration + breakDuration) * periods - breakDuration;
     };
 
     return React.createElement(
@@ -2931,8 +2991,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     }
 
                     const matchDurationValue = getMatchDuration(match.categoryName);
-
-                    // Kontrola, či sa zápas zmestí do voľného času
                     const fitsInBreak = breakDuration === 0 || matchDurationValue <= breakDuration;
 
                     return React.createElement(
