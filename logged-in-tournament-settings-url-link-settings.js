@@ -9,7 +9,7 @@ export function UrlLinkSettings({
     sendAdminNotification,
 }) {
     const [links, setLinks] = React.useState([]);
-    const [newLink, setNewLink] = React.useState({ label: '', url: '', description: '' });
+    const [newLink, setNewLink] = React.useState({ label: '', url: '' });
     const [loading, setLoading] = React.useState(true);
 
     // Načítanie odkazov z Firestore (kolekcia 'settings', dokument 'urlLinks')
@@ -59,20 +59,40 @@ export function UrlLinkSettings({
         const updatedLinks = [...links, {
             id: Date.now().toString(),
             label: newLink.label.trim(),
-            url: newLink.url.trim(),
-            description: newLink.description.trim()
+            url: newLink.url.trim()
         }];
 
         setLinks(updatedLinks);
-        setNewLink({ label: '', url: '', description: '' });
+        setNewLink({ label: '', url: '' });
         saveLinks(updatedLinks);
+
+        if (sendAdminNotification) {
+            sendAdminNotification({
+                type: 'createUrlLink',
+                data: {
+                    label: newLink.label.trim(),
+                    url: newLink.url.trim()
+                }
+            });
+        }
     };
 
     // Zmazanie odkazu
     const handleDeleteLink = (id) => {
+        const linkToDelete = links.find(l => l.id === id);
         const updatedLinks = links.filter(l => l.id !== id);
         setLinks(updatedLinks);
         saveLinks(updatedLinks);
+
+        if (sendAdminNotification && linkToDelete) {
+            sendAdminNotification({
+                type: 'deleteUrlLink',
+                data: {
+                    deletedLabel: linkToDelete.label,
+                    deletedUrl: linkToDelete.url
+                }
+            });
+        }
     };
 
     // Úprava odkazu
@@ -86,6 +106,17 @@ export function UrlLinkSettings({
     // Uloženie zmien po úprave
     const handleSaveEdits = () => {
         saveLinks(links);
+
+        if (sendAdminNotification) {
+            sendAdminNotification({
+                type: 'editUrlLink',
+                data: {
+                    originalLabel: '',
+                    newLabel: 'Hromadná úprava odkazov',
+                    newUrl: ''
+                }
+            });
+        }
     };
 
     if (loading) {
@@ -126,19 +157,6 @@ export function UrlLinkSettings({
                     onChange: (e) => setNewLink({ ...newLink, url: e.target.value }),
                     className: 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500',
                     placeholder: 'https://...'
-                })
-            ),
-
-            React.createElement(
-                'div',
-                null,
-                React.createElement('label', { className: 'block text-sm font-bold text-gray-700 mb-1' }, 'Popis (nepovinné)'),
-                React.createElement('textarea', {
-                    value: newLink.description,
-                    onChange: (e) => setNewLink({ ...newLink, description: e.target.value }),
-                    className: 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500',
-                    rows: 2,
-                    placeholder: 'Krátky popis odkazu...'
                 })
             ),
 
@@ -193,13 +211,6 @@ export function UrlLinkSettings({
                             onChange: (e) => handleEditLink(link.id, 'url', e.target.value),
                             className: 'w-full px-3 py-2 border rounded-lg',
                             placeholder: 'https://...'
-                        }),
-                        React.createElement('textarea', {
-                            value: link.description || '',
-                            onChange: (e) => handleEditLink(link.id, 'description', e.target.value),
-                            className: 'w-full px-3 py-2 border rounded-lg',
-                            rows: 2,
-                            placeholder: 'Popis...'
                         })
                     )
                 )
