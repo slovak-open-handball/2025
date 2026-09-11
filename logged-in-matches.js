@@ -6065,7 +6065,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime, allMatches, blockedBreaks, match, categories, groupsByCategory]);
 
     // ===== UPRAVENÁ ČASŤ V AssignMatchModal - KONTROLA CHRONOLÓGIE PAVÚKA =====
-    // Táto časť sa vkladá do useEffect, ktorý kontroluje konflikty (približne riadok 2540)
     
     useEffect(() => {
         if (selectedTime && matchDuration > 0 && match) {
@@ -6330,6 +6329,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
+            // ===== KONTROLA NADSTAVBOVÝCH SKUPÍN - ZÁKLADNÉ SKUPINY (B, C, ...) =====
             if (match && match.groupName && groupsByCategory) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -6435,6 +6435,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     c.type === 'placement_same_day_conflict'
                 );
                 
+                const basicGroupConflicts = allConflicts.filter(c => 
+                    c.type === 'basic_group_after' ||
+                    c.type === 'basic_group_same_day'
+                );
+                
                 const specialConflicts = allConflicts.filter(c => c.type === 'special_match_earlier_than_related');
                 const advancedConflicts = allConflicts.filter(c => 
                     c.type === 'advanced_group_earlier_day' || 
@@ -6448,6 +6453,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     setTimeError(messages.join('; '));
                 } else if (placementConflicts.length > 0) {
                     const messages = placementConflicts.map(c => c._displayName);
+                    setTimeError(messages.join('; '));
+                } else if (basicGroupConflicts.length > 0) {
+                    const messages = basicGroupConflicts.map(c => c._displayName);
                     setTimeError(messages.join('; '));
                 } else if (specialConflicts.length > 0) {
                     const messages = specialConflicts.map(c => c._displayName);
@@ -6474,7 +6482,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     !timeError.includes('Tento zápas (pavúk/umiestnenie) je naplánovaný po všetkých') &&
                     !timeError.includes('Podradený zápas') &&
                     !timeError.includes('Nadradený zápas') &&
-                    !timeError.includes('Zápas o umiestnenie')) {
+                    !timeError.includes('Zápas o umiestnenie') &&
+                    !timeError.includes('Základný zápas')) {
                     setTimeError('');
                 }
             }
