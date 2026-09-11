@@ -78,8 +78,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         const existingPlayer = team.playerDetails?.[i] || {};
                         return {
                             jerseyNumber: '',
-                            jerseyNumberColor1: '',
-                            jerseyNumberColor2: '',
+                            jerseyNumber2: '',
                             firstName: '',
                             lastName: '',
                             dateOfBirth: '',
@@ -190,7 +189,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const jerseyNumberErrorsColor1 = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            const jersey = (player.jerseyNumberColor1 || '').trim();
+            const jersey = (player.jerseyNumber || '').trim();
             if (jersey !== '') {
                 if (!jerseyNumbersColor1.has(jersey)) {
                     jerseyNumbersColor1.set(jersey, []);
@@ -209,7 +208,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         const jerseyNumberErrorsColor2 = new Set();
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            const jersey = (player.jerseyNumberColor2 || '').trim();
+            const jersey = (player.jerseyNumber2 || '').trim();
             if (jersey !== '') {
                 if (!jerseyNumbersColor2.has(jersey)) {
                     jerseyNumbersColor2.set(jersey, []);
@@ -226,15 +225,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            const jerseyColor1 = (player.jerseyNumberColor1 || '').trim();
-            const jerseyColor2 = (player.jerseyNumberColor2 || '').trim();
+            const jerseyColor1 = (player.jerseyNumber || '').trim();
+            const jerseyColor2 = (player.jerseyNumber2 || '').trim();
             if (jerseyColor1 !== '' && jerseyNumberErrorsColor1.has(jerseyColor1)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].jerseyNumberColor1 = 'Duplicitné číslo dresu (farba 1) v tíme.';
+                newPlayerErrorsForTeam[i].jerseyNumber = 'Duplicitné číslo dresu (farba 1) v tíme.';
             }
             if (jerseyColor2 !== '' && jerseyNumberErrorsColor2.has(jerseyColor2)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
-                newPlayerErrorsForTeam[i].jerseyNumberColor2 = 'Duplicitné číslo dresu (farba 2) v tíme.';
+                newPlayerErrorsForTeam[i].jerseyNumber2 = 'Duplicitné číslo dresu (farba 2) v tíme.';
             }
         }
 
@@ -404,7 +403,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
             }
             if (!newDetails[categoryName][teamIndex].playerDetails[playerIndex]) {
                 newDetails[categoryName][teamIndex].playerDetails[playerIndex] = {
-                    jerseyNumber: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
+                    jerseyNumber: '', jerseyNumber2: '', firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 };
             }
@@ -510,8 +509,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor1 ||
-                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor2 ||
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber ||
+                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber2 ||
                         playerErrors[categoryName][teamIndex][playerIndex].combination ||
                         playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
                         playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth
@@ -539,8 +538,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         for (const categoryName in playerErrors) {
             for (const teamIndex in playerErrors[categoryName]) {
                 for (const playerIndex in playerErrors[categoryName][teamIndex]) {
-                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor1 ||
-                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumberColor2 ||
+                    if (playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber ||
+                        playerErrors[categoryName][teamIndex][playerIndex].jerseyNumber2 ||
                         playerErrors[categoryName][teamIndex][playerIndex].combination ||
                         playerErrors[categoryName][teamIndex][playerIndex].registrationNumber ||
                         playerErrors[categoryName][teamIndex][playerIndex].dateOfBirth
@@ -758,36 +757,36 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                             React.createElement('div', null,
                                                                 React.createElement('input', {
                                                                     type: 'text',
-                                                                    id: `jerseyNumberColor1-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                    className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumberColor1 ? 'border-red-500' : ''}`.trim(),
-                                                                    value: player.jerseyNumberColor1 || '',
+                                                                    id: `jerseyNumber-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                                    className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber ? 'border-red-500' : ''}`.trim(),
+                                                                    value: player.jerseyNumber || '',
                                                                     onChange: (e) => {
                                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                                        handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumberColor1', value);
+                                                                        handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber', value);
                                                                     },
                                                                     disabled: loading,
                                                                     placeholder: 'Číslo'
                                                                 }),
-                                                                playerSpecificErrors.jerseyNumberColor1 ?
-                                                                    React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumberColor1) :
+                                                                playerSpecificErrors.jerseyNumber ?
+                                                                    React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber) :
                                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                             ),
                                                             // Farba 2
                                                             React.createElement('div', null,
                                                                 React.createElement('input', {
                                                                     type: 'text',
-                                                                    id: `jerseyNumberColor2-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                                    className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumberColor2 ? 'border-red-500' : ''}`.trim(),
-                                                                    value: player.jerseyNumberColor2 || '',
+                                                                    id: `jerseyNumber2-${categoryName}-${teamIndex}-${playerIndex}`,
+                                                                    className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${playerSpecificErrors.jerseyNumber2 ? 'border-red-500' : ''}`.trim(),
+                                                                    value: player.jerseyNumber2 || '',
                                                                     onChange: (e) => {
                                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                                        handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumberColor2', value);
+                                                                        handlePlayerDetailChange(categoryName, teamIndex, playerIndex, 'jerseyNumber2', value);
                                                                     },
                                                                     disabled: loading,
                                                                     placeholder: 'Číslo'
                                                                 }),
-                                                                playerSpecificErrors.jerseyNumberColor2 ?
-                                                                    React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumberColor2) :
+                                                                playerSpecificErrors.jerseyNumber2 ?
+                                                                    React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, playerSpecificErrors.jerseyNumber2) :
                                                                     React.createElement('p', { className: 'text-xs italic mt-1 opacity-0' }, '\u00A0')
                                                             ),
                                                             // Meno
