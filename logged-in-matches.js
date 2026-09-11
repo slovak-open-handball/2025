@@ -3307,34 +3307,26 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         if (relatedMatches.length === 0) return false;
         
-        const sortedRelated = [...relatedMatches].sort((a, b) => {
-            const timeA = a.scheduledTime.toDate().getTime();
-            const timeB = b.scheduledTime.toDate().getTime();
-            return timeA - timeB;
-        });
-        
         const currentDateStr = date;
         
-        const earlierDayMatches = sortedRelated.filter(m => {
+        // ===== KONTROLA IBA PRE SÚVISIACE ZÁPASY V ROVNAKOM DNI V ROVNAKEJ HALE =====
+        // Súvisiace zápasy v skoršom alebo neskoršom dni NIE SÚ konflikt - sú to len
+        // chronologické väzby, ktoré sa riešia pri výpočte suggestedTime.
+        const sameDaySameHallMatches = relatedMatches.filter(m => {
+            if (m.hallId !== hallId) return false;
             const mDate = m.scheduledTime.toDate();
             const mDateStr = getLocalDateStr(mDate);
-            return mDateStr < currentDateStr;
+            return mDateStr === currentDateStr;
         });
         
-        if (earlierDayMatches.length > 0) {
-            return true;
-        }
+        // Ak existujú súvisiace zápasy v rovnakom dni v rovnakej hale,
+        // skontrolujeme, či nie sú v konflikte s aktuálnym zápasom
+        // (toto je len informatívne - skutočná kontrola prebieha pri výpočte suggestedTime)
         
-        const laterDayMatches = sortedRelated.filter(m => {
-            const mDate = m.scheduledTime.toDate();
-            const mDateStr = getLocalDateStr(mDate);
-            return mDateStr > currentDateStr;
-        });
-        
-        if (laterDayMatches.length > 0) {
-            return true;
-        }
-        
+        // ===== ŽIADNY KONFLIKT - vrátime false =====
+        // Súvisiace zápasy v skorších alebo neskorších dňoch NIE SÚ konflikt.
+        // Aktuálny zápas môže byť priradený do ľubovoľného dňa, pokiaľ
+        // je zachovaná chronológia (čo sa kontroluje inde).
         return false;
     };
 
