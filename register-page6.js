@@ -1219,7 +1219,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `man-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', {
+                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                    React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
@@ -1336,7 +1337,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
                                     
-                                                                                // HLAVIČKA
+                                        // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
                                             React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
                                                 React.createElement('div', {
@@ -1387,7 +1388,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', {
+                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                    React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
@@ -1499,55 +1501,6 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         })
                                     ),
                                     
-                                    // ===================== ŠOFÉRI – ŽENY =====================
-                                    driversFemaleCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
-                                        React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
-                                    
-                                                                                // HLAVIČKA
-                                        React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
-                                                React.createElement('div', {
-                                                    className: 'grid items-end gap-x-4 gap-y-2 w-max',
-                                                    style: {
-                                                        gridTemplateColumns: hasAccommodation
-                                                            ? GRID_DRIVERS_WITH_ACCOMMODATION
-                                                            : GRID_DRIVERS_NO_ACCOMMODATION
-                                                    }
-                                                },
-                                                    React.createElement('div', null,
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Meno')
-                                                    ),
-                                                    React.createElement('div', null,
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
-                                                    ),
-                                                    React.createElement('div', null,
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
-                                                    ),
-                                                    hasAccommodation && React.createElement(React.Fragment, null,
-                                                        React.createElement('div', null,
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
-                                                        ),
-                                                        React.createElement('div', null,
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
-                                                        ),
-                                                        React.createElement('div', null,
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
-                                                        ),
-                                                        React.createElement('div', null,
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
-                                                        ),
-                                                        React.createElement('div', null,
-                                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Štát')
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    
                                         // RIADKY ŠOFÉROV ŽIEN
                                         Array.from({ length: driversFemaleCount }).map((_, driverIndex) => {
                                             const driver = team.driverDetailsFemale?.[driverIndex] || {};
@@ -1555,7 +1508,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', {
+                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                    React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
                                                             gridTemplateColumns: hasAccommodation
