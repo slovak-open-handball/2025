@@ -637,8 +637,8 @@ function App() {
                 packageDetails: existingTeamData.packageDetails || null,
                 playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
                     jerseyNumber: '',
-                    jerseyNumberColor1: '', // NOVINKA
-                    jerseyNumberColor2: '', // NOVINKA
+                    jerseyNumber: '',
+                    jerseyNumber2: '',
                     firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
                 })),
