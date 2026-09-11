@@ -5229,8 +5229,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 return;
             }
             
-            // ===== ŽIADNY VOĽNÝ ČAS NEBOL NÁJDENÝ =====
             console.log(`❌ [AssignMatchModal] Žiadny voľný čas nebol nájdený`);
+
+            setSuggestedTime(null);
             
             let advancedGroupInfo = '';
             if (match && match.groupName && groupsByCategory) {
@@ -5956,7 +5957,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
                     }
                     
-                                        // ===== OPRAVA: Používame calculateFirstAvailableTimeWithSpider namiesto calculateFirstAvailableTime =====
+                    // ===== OPRAVA: Používame calculateFirstAvailableTimeWithSpider namiesto calculateFirstAvailableTime =====
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTimeWithSpider(
                             selectedHallId,
