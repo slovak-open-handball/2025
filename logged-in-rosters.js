@@ -475,6 +475,12 @@ function MemberDetailsModal({
     const [regNumberError, setRegNumberError] = useState('');
     const [isRegNumberUnique, setIsRegNumberUnique] = useState(true);
 
+    // NOVÉ: Chyby pre čísla dresov
+    const [jerseyNumberError, setJerseyNumberError] = useState('');
+    const [isJerseyNumberUnique, setIsJerseyNumberUnique] = useState(true);
+    const [jerseyNumber2Error, setJerseyNumber2Error] = useState('');
+    const [isJerseyNumber2Unique, setIsJerseyNumber2Unique] = useState(true);
+
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
     const showAddressFields = teamAccommodationType !== 'bez ubytovania';
     const isButtonDisabled = isEditMode ? isRosterEditDeadlinePassed : isDataEditDeadlinePassed;
@@ -584,6 +590,69 @@ function MemberDetailsModal({
         return true;
     };
 
+    // NOVÉ: Validácia duplicitných čísel dresov
+    const checkJerseyNumberDuplicate = (jerseyNum, jerseyNum2) => {
+        if (memberType !== 'player') {
+            setJerseyNumberError('');
+            setIsJerseyNumberUnique(true);
+            setJerseyNumber2Error('');
+            setIsJerseyNumber2Unique(true);
+            return true;
+        }
+
+        const existingPlayers = currentTeam?.playerDetails || [];
+        let isJersey1Duplicate = false;
+        let isJersey2Duplicate = false;
+
+        const currentPlayerIdentifier = isEditMode ? {
+            firstName: memberData?.firstName,
+            lastName: memberData?.lastName,
+            dateOfBirth: memberData?._dateOfBirth || memberData?.dateOfBirth
+        } : null;
+
+        existingPlayers.forEach(player => {
+            // Preskočíme aktuálne upravovaného hráča
+            if (isEditMode && currentPlayerIdentifier) {
+                if (
+                    player.firstName === currentPlayerIdentifier.firstName &&
+                    player.lastName === currentPlayerIdentifier.lastName &&
+                    (player._dateOfBirth || player.dateOfBirth) === currentPlayerIdentifier.dateOfBirth
+                ) {
+                    return;
+                }
+            }
+
+            // Kontrola čísla dresu 1
+            if (jerseyNum && player.jerseyNumber === parseInt(jerseyNum, 10)) {
+                isJersey1Duplicate = true;
+            }
+            // Kontrola čísla dresu 2
+            if (jerseyNum2 && player.jerseyNumber2 === parseInt(jerseyNum2, 10)) {
+                isJersey2Duplicate = true;
+            }
+        });
+
+        // Nastavenie chýb pre číslo dresu 1
+        if (isJersey1Duplicate) {
+            setJerseyNumberError('Hráč s týmto číslom dresu 1 už v tíme existuje.');
+            setIsJerseyNumberUnique(false);
+        } else {
+            setJerseyNumberError('');
+            setIsJerseyNumberUnique(true);
+        }
+
+        // Nastavenie chýb pre číslo dresu 2
+        if (isJersey2Duplicate) {
+            setJerseyNumber2Error('Hráč s týmto číslom dresu 2 už v tíme existuje.');
+            setIsJerseyNumber2Unique(false);
+        } else {
+            setJerseyNumber2Error('');
+            setIsJerseyNumber2Unique(true);
+        }
+
+        return !isJersey1Duplicate && !isJersey2Duplicate;
+    };
+
     const handleDateOfBirthChange = (e) => {
         const newDate = e.target.value;
         setDateOfBirth(newDate);
@@ -596,6 +665,19 @@ function MemberDetailsModal({
         const value = e.target.value;
         setRegistrationNumber(value);
         checkRegistrationDuplicate(value);
+    };
+
+    // NOVÉ: Handlery pre zmenu čísel dresov
+    const handleJerseyNumberChange = (e) => {
+        const value = e.target.value;
+        setJerseyNumber(value);
+        checkJerseyNumberDuplicate(value, jerseyNumber2);
+    };
+
+    const handleJerseyNumber2Change = (e) => {
+        const value = e.target.value;
+        setJerseyNumber2(value);
+        checkJerseyNumberDuplicate(jerseyNumber, value);
     };
 
     useEffect(() => {
@@ -684,8 +766,14 @@ function MemberDetailsModal({
                         }
                     }
                     
-                    if (memberType === 'player' && memberData.registrationNumber) {
-                        checkRegistrationDuplicate(memberData.registrationNumber);
+                    if (memberType === 'player') {
+                        if (memberData.registrationNumber) {
+                            checkRegistrationDuplicate(memberData.registrationNumber);
+                        }
+                        // NOVÉ: Validácia čísel dresov pri načítaní
+                        if (memberData.jerseyNumber || memberData.jerseyNumber2) {
+                            checkJerseyNumberDuplicate(memberData.jerseyNumber, memberData.jerseyNumber2);
+                        }
                     }
                 } else {
                     setFirstName('');
@@ -701,6 +789,11 @@ function MemberDetailsModal({
                     setCountry('');
                     setRegNumberError('');
                     setIsRegNumberUnique(true);
+                    // NOVÉ: Reset chýb čísel dresov
+                    setJerseyNumberError('');
+                    setIsJerseyNumberUnique(true);
+                    setJerseyNumber2Error('');
+                    setIsJerseyNumber2Unique(true);
                 }
             }
         };
@@ -719,6 +812,10 @@ function MemberDetailsModal({
                 canSubmit = false;
             }
             if (!checkRegistrationDuplicate(registrationNumber)) {
+                canSubmit = false;
+            }
+            // NOVÉ: Validácia čísel dresov pri odoslaní
+            if (!checkJerseyNumberDuplicate(jerseyNumber, jerseyNumber2)) {
                 canSubmit = false;
             }
         }
@@ -750,10 +847,13 @@ function MemberDetailsModal({
         onClose();
     };
 
+    // NOVÉ: Rozšírená podmienka pre deaktiváciu tlačidla
     const isSubmitDisabled = 
         isButtonDisabled || 
         !isDateOfBirthValid ||
-        (memberType === 'player' && !isRegNumberUnique);
+        (memberType === 'player' && !isRegNumberUnique) ||
+        (memberType === 'player' && !isJerseyNumberUnique) ||
+        (memberType === 'player' && !isJerseyNumber2Unique);
 
     const buttonClasses = `px-4 py-2 rounded-md transition-colors ${
         isSubmitDisabled ? 'bg-white text-current border border-current' : 'text-white'
@@ -832,23 +932,33 @@ function MemberDetailsModal({
                             React.createElement('input', {
                                 type: 'number',
                                 id: 'jerseyNumber',
-                                className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                className: `block w-full border rounded-md shadow-sm p-2 transition-colors ${
+                                    jerseyNumberError
+                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                }`,
                                 value: jerseyNumber,
-                                onChange: (e) => setJerseyNumber(e.target.value),
+                                onChange: handleJerseyNumberChange,
                                 disabled: isButtonDisabled,
                                 placeholder: 'Číslo dresu 1'
-                            })
+                            }),
+                            jerseyNumberError && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, jerseyNumberError)
                         ),
                         React.createElement('div', { className: 'flex-1' },
                             React.createElement('input', {
                                 type: 'number',
                                 id: 'jerseyNumber2',
-                                className: 'block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                                className: `block w-full border rounded-md shadow-sm p-2 transition-colors ${
+                                    jerseyNumber2Error
+                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                                }`,
                                 value: jerseyNumber2,
-                                onChange: (e) => setJerseyNumber2(e.target.value),
+                                onChange: handleJerseyNumber2Change,
                                 disabled: isButtonDisabled,
                                 placeholder: 'Číslo dresu 2'
-                            })
+                            }),
+                            jerseyNumber2Error && React.createElement('p', { className: 'mt-1 text-sm text-red-600' }, jerseyNumber2Error)
                         )
                     )
                 ),
