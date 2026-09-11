@@ -1440,7 +1440,7 @@ function App() {
           'div',
           { className: `bg-white rounded-lg shadow-md w-full ${mainContainerWidthClass} ${
               page === 6 ? 'p-4 sm:p-6' : 'p-8'
-          }` }
+          }` },
           page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
