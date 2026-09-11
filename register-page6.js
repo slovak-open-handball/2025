@@ -725,15 +725,15 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
     
                                 return React.createElement(
                                     'div',
-                                    { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
-                                    React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
+                                    { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 py-4 rounded-lg mb-4 space-y-2' },
+                                    React.createElement('p', { className: 'font-semibold text-blue-800 mb-4 px-4' }, `Tím: ${team.teamName}`),
     
                                     playersCount > 0 && React.createElement(
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                     
                                         // HLAVIČKA – používa grid s rovnakou mriežkou ako riadky hráčov
-                                        React.createElement('div', { className: 'mb-2 p-3 pr-7 bg-gray-200 rounded-md shadow-sm' },
+                                        React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 shadow-sm' },
                                             React.createElement('div', {
                                                 className: 'grid items-end gap-x-4 gap-y-2',
                                                 style: {
@@ -797,7 +797,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                             return React.createElement('div', {
                                                 key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`,
-                                                className: 'mb-2 p-3 pr-7 bg-gray-100 rounded-md shadow-sm'
+                                                className: 'mb-2 p-4 bg-gray-100 shadow-sm'
                                             },
                                                 React.createElement('div', {
                                                     className: 'grid items-start gap-x-4 gap-y-2',
@@ -986,7 +986,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
                                     
                                         // HLAVIČKA – grid s rovnakou mriežkou ako riadky
-                                        React.createElement('div', { className: 'mb-2 p-3 pr-7 bg-gray-200 rounded-md shadow-sm' },
+                                        React.createElement('div', { className: 'mb-2 p-4 bg-gray-200 shadow-sm' },
                                             React.createElement('div', {
                                                 className: 'grid items-end gap-x-4 gap-y-2',
                                                 style: {
@@ -1032,7 +1032,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             const member = team.womenTeamMemberDetails?.[memberIndex] || {};
                                             return React.createElement('div', {
                                                 key: `woman-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
-                                                className: 'mb-2 p-3 pr-7 bg-gray-100 rounded-md shadow-sm'
+                                                className: 'mb-2 p-4 bg-gray-100 shadow-sm'
                                             },
                                                 React.createElement('div', {
                                                     className: 'grid items-start gap-x-4 gap-y-2',
@@ -1149,7 +1149,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (muži)'),
                                     
-                                        React.createElement('div', { className: 'mb-2 p-3 pr-7 bg-gray-200 rounded-md shadow-sm' },
+                                        React.createElement('div', { className: 'mb-2 p-4 bg-gray-200 shadow-sm' },
                                             React.createElement('div', {
                                                 className: 'grid items-end gap-x-4 gap-y-2',
                                                 style: {
@@ -1194,7 +1194,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             const member = team.menTeamMemberDetails?.[memberIndex] || {};
                                             return React.createElement('div', {
                                                 key: `man-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
-                                                className: 'mb-2 p-3 pr-7 bg-gray-100 rounded-md shadow-sm'
+                                                className: 'mb-2 p-4 bg-gray-100 shadow-sm'
                                             },
                                                 React.createElement('div', {
                                                     className: 'grid items-start gap-x-4 gap-y-2',
@@ -1311,7 +1311,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
                                     
-                                        React.createElement('div', { className: 'mb-2 p-3 pr-7 bg-gray-200 rounded-md shadow-sm' },
+                                        React.createElement('div', { className: 'mb-2 p-4 bg-gray-200 shadow-sm' },
                                             React.createElement('div', {
                                                 className: 'grid items-end gap-x-4 gap-y-2',
                                                 style: {
@@ -1356,7 +1356,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             const driver = team.driverDetailsMale?.[driverIndex] || {};
                                             return React.createElement('div', {
                                                 key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
-                                                className: 'mb-2 p-3 pr-7 bg-gray-100 rounded-md shadow-sm'
+                                                className: 'mb-2 p-4 bg-gray-100 shadow-sm'
                                             },
                                                 React.createElement('div', {
                                                     className: 'grid items-start gap-x-4 gap-y-2',
@@ -1473,7 +1473,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         'div', { className: 'overflow-x-auto' },
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
                                     
-                                        React.createElement('div', { className: 'mb-2 p-3 pr-7 bg-gray-200 rounded-md shadow-sm' },
+                                        React.createElement('div', { className: 'mb-2 p-4 bg-gray-200 shadow-sm' },
                                             React.createElement('div', {
                                                 className: 'grid items-end gap-x-4 gap-y-2',
                                                 style: {
@@ -1518,7 +1518,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                             const driver = team.driverDetailsFemale?.[driverIndex] || {};
                                             return React.createElement('div', {
                                                 key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
-                                                className: 'mb-2 p-3 pr-7 bg-gray-100 rounded-md shadow-sm'
+                                                className: 'mb-2 p-4 bg-gray-100 shadow-sm'
                                             },
                                                 React.createElement('div', {
                                                     className: 'grid items-start gap-x-4 gap-y-2',
