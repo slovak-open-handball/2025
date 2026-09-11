@@ -209,6 +209,12 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         } else {
           changesContent = ['Žiadne zmeny viditeľnosti stránok neboli vykonané.'];
         }
+      } else if (notificationData.type === 'createUrlLink') {
+        changesContent = `Vytvorenie nového URL odkazu: '${notificationData.data.label}' -> ${notificationData.data.url}`;
+      } else if (notificationData.type === 'editUrlLink') {
+        changesContent = `Úprava URL odkazu z: '${notificationData.data.originalLabel}' na '${notificationData.data.newLabel}' (${notificationData.data.newUrl})`;
+      } else if (notificationData.type === 'deleteUrlLink') {
+        changesContent = `Zmazanie URL odkazu: '${notificationData.data.deletedLabel}' (${notificationData.data.deletedUrl})`;
       }
 
       await addDoc(notificationsCollectionRef, {
@@ -279,6 +285,7 @@ import { PackageSettings } from './logged-in-tournament-settings-package-setting
 import { CategorySettings } from './logged-in-tournament-settings-category-settings.js';
 import { TableSettings } from './logged-in-tournament-settings-table-settings.js';
 import { PagesSettings } from './logged-in-tournament-settings-pages-settings.js';
+import { UrlLinkSettings } from './logged-in-tournament-settings-url-link-settings.js';
 
 function TournamentSettingsApp() {
   const app = initializeApp(window.firebaseConfig);
@@ -316,6 +323,7 @@ function TournamentSettingsApp() {
     { id: 'categories', title: 'Nastavenia kategórií', component: CategorySettings },
     { id: 'table', title: 'Nastavenia tabuľky/zápasov', component: TableSettings }, 
     { id: 'pages', title: 'Nastavenia webových stránok', component: PagesSettings },
+    { id: 'url-links', title: 'Nastavenia odkazov na URL', component: UrlLinkSettings },
   ];
 
   // Funkcia na aktualizáciu URL hashu - HIERARCHICKÝ FORMÁT
