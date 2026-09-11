@@ -388,8 +388,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.playerDetails || []).forEach(player => {
                         allParticipants.push({
                             type: 'Hráč',
-                            jerseyNumberColor1: player.jerseyNumberColor1 || '',
-                            jerseyNumberColor2: player.jerseyNumberColor2 || '',
+                            jerseyNumber: player.jerseyNumber || '',
+                            jerseyNumber2: player.jerseyNumber2 || '',
                             firstName: player.firstName || '',
                             lastName: player.lastName || '',
                             dateOfBirth: formatDate(player.dateOfBirth),
@@ -401,8 +401,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.womenTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (žena)',
-                            jerseyNumberColor1: '',
-                            jerseyNumberColor2: '',
+                            jerseyNumber: '',
+                            jerseyNumber2: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
@@ -414,8 +414,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.menTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (muž)',
-                            jerseyNumberColor1: '',
-                            jerseyNumberColor2: '',
+                            jerseyNumber: '',
+                            jerseyNumber2: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
@@ -427,8 +427,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.driverDetailsMale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (muž)',
-                            jerseyNumberColor1: '',
-                            jerseyNumberColor2: '',
+                            jerseyNumber: '',
+                            jerseyNumber2: '',
                             firstName: driver.firstName || '',
                             lastName: driver.lastName || '',
                             dateOfBirth: formatDate(driver.dateOfBirth),
@@ -440,8 +440,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.driverDetailsFemale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (žena)',
-                            jerseyNumberColor1: '',
-                            jerseyNumberColor2: '',
+                            jerseyNumber: '',
+                            jerseyNumber2: '',
                             firstName: driver.firstName || '',
                             lastName: driver.lastName || '',
                             dateOfBirth: formatDate(driver.dateOfBirth),
@@ -492,8 +492,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         allParticipants.map((participant, pIdx) => (
                                             React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type),
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor1),
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor2),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber2),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth),
