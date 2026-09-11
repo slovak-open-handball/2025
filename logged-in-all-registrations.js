@@ -5446,6 +5446,10 @@ function AllRegistrationsApp() {
                       
                       const existingMember = currentMemberArray[memberArrayIndex];
                       const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
+                      originalMemberFromDoc.dateOfBirth = originalPrivateMember.dateOfBirth || '';
+                      originalMemberFromDoc.address = originalPrivateMember.address || {
+                          street: '', houseNumber: '', city: '', postalCode: '', country: ''
+                      };
                   
                       // ============================================================
                       // OPRAVA: DOPLNÍME PÔVODNÉ PRIVATE DÁTA (dateOfBirth, address)
