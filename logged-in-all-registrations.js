@@ -5446,6 +5446,7 @@ function AllRegistrationsApp() {
                       
                       const existingMember = currentMemberArray[memberArrayIndex];
                       const originalMemberFromDoc = JSON.parse(JSON.stringify(teamsInCategory[teamIndex][memberArrayPath]?.[memberArrayIndex] || {}));
+                      
                   
                       let privateArrayName = memberArrayPath;
                       if (memberArrayPath === 'playerDetails') privateArrayName = 'players';
@@ -5455,6 +5456,8 @@ function AllRegistrationsApp() {
                       else if (memberArrayPath === 'driverDetailsFemale') privateArrayName = 'driversFemale';
                   
                       const originalPrivateMember = privateData.persons?.[teamKey]?.[privateArrayName]?.[memberArrayIndex] || {};
+                      originalMemberFromDoc.dateOfBirth = originalPrivateMember.dateOfBirth || '';
+                      originalMemberFromDoc.address = originalPrivateMember.address || { street: '', houseNumber: '', city: '', postalCode: '', country: '' };
                   
                       if (updatedDataFromModal.firstName !== undefined) {
                           existingMember.firstName = updatedDataFromModal.firstName;
