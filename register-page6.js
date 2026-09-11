@@ -182,47 +182,63 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
         let teamHasErrors = false;
 
         // Validácia čísla dresu – farba 1
-        const jerseyNumbersColor1 = new Set();
-        const jerseyNumberErrorsColor1 = new Set();
+        const jerseyNumbersColor1 = new Map(); // Map: hodnota -> pole indexov hráčov
+        const jerseyNumberErrorsColor1 = new Set(); // Množina duplicitných hodnôt (farba 1)
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
             const jersey = (player.jerseyNumberColor1 || '').trim();
         
             if (jersey !== '') {
-                if (jerseyNumbersColor1.has(jersey)) {
-                    jerseyNumberErrorsColor1.add(jersey);
-                    teamHasErrors = true;
-                } else {
-                    jerseyNumbersColor1.add(jersey);
+                if (!jerseyNumbersColor1.has(jersey)) {
+                    jerseyNumbersColor1.set(jersey, []);
                 }
+                jerseyNumbersColor1.get(jersey).push(i);
             }
         }
+        // Nájdi duplicity vo farbe 1
+        jerseyNumbersColor1.forEach((indices, jersey) => {
+            if (indices.length > 1) {
+                jerseyNumberErrorsColor1.add(jersey);
+                teamHasErrors = true;
+            }
+        });
         
         // Validácia čísla dresu – farba 2
-        const jerseyNumbersColor2 = new Set();
-        const jerseyNumberErrorsColor2 = new Set();
+        const jerseyNumbersColor2 = new Map(); // Map: hodnota -> pole indexov hráčov
+        const jerseyNumberErrorsColor2 = new Set(); // Množina duplicitných hodnôt (farba 2)
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
             const jersey = (player.jerseyNumberColor2 || '').trim();
         
             if (jersey !== '') {
-                if (jerseyNumbersColor2.has(jersey)) {
-                    jerseyNumberErrorsColor2.add(jersey);
-                    teamHasErrors = true;
-                } else {
-                    jerseyNumbersColor2.add(jersey);
+                if (!jerseyNumbersColor2.has(jersey)) {
+                    jerseyNumbersColor2.set(jersey, []);
                 }
+                jerseyNumbersColor2.get(jersey).push(i);
             }
         }
+        // Nájdi duplicity vo farbe 2
+        jerseyNumbersColor2.forEach((indices, jersey) => {
+            if (indices.length > 1) {
+                jerseyNumberErrorsColor2.add(jersey);
+                teamHasErrors = true;
+            }
+        });
         
-        // Nastav chybové správy pre čísla dresu – farba 1
+        // Nastav chybové správy pre čísla dresu – farba 1 a farba 2 (nezávisle)
         for (let i = 0; i < currentTeamPlayers.length; i++) {
             const player = currentTeamPlayers[i];
-            if (jerseyNumberErrorsColor1.has((player.jerseyNumberColor1 || '').trim())) {
+            const jerseyColor1 = (player.jerseyNumberColor1 || '').trim();
+            const jerseyColor2 = (player.jerseyNumberColor2 || '').trim();
+        
+            // Farba 1
+            if (jerseyColor1 !== '' && jerseyNumberErrorsColor1.has(jerseyColor1)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].jerseyNumberColor1 = 'Duplicitné číslo dresu (farba 1) v tíme.';
             }
-            if (jerseyNumberErrorsColor2.has((player.jerseyNumberColor2 || '').trim())) {
+        
+            // Farba 2
+            if (jerseyColor2 !== '' && jerseyNumberErrorsColor2.has(jerseyColor2)) {
                 if (!newPlayerErrorsForTeam[i]) newPlayerErrorsForTeam[i] = {};
                 newPlayerErrorsForTeam[i].jerseyNumberColor2 = 'Duplicitné číslo dresu (farba 2) v tíme.';
             }
