@@ -743,7 +743,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                            React.createElement('div', { className: 'p-4 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
@@ -810,7 +810,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `player-input-${categoryName}-${teamIndex}-${playerIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                React.createElement('div', { className: 'p-4 shadow-sm' },
                                                     React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
@@ -1001,7 +1001,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                            React.createElement('div', { className: 'p-4 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
@@ -1050,7 +1050,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `woman-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                React.createElement('div', { className: 'p-4 shadow-sm' },
                                                     React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
@@ -1170,7 +1170,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                            React.createElement('div', { className: 'p-4 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
@@ -1219,7 +1219,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `man-member-input-${categoryName}-${teamIndex}-${memberIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                React.createElement('div', { className: 'p-4 shadow-sm' },
                                                     React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
@@ -1339,7 +1339,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                            React.createElement('div', { className: 'p-4 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
@@ -1388,7 +1388,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `male-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                React.createElement('div', { className: 'p-4 shadow-sm' },
                                                     React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
@@ -1508,7 +1508,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
 
                                         // HLAVIČKA
                                         React.createElement('div', { className: 'inline-block min-w-full mb-2' },
-                                            React.createElement('div', { className: 'p-4 bg-gray-200 shadow-sm' },
+                                            React.createElement('div', { className: 'p-4 shadow-sm' },
                                                 React.createElement('div', {
                                                     className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                     style: {
@@ -1557,7 +1557,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 key: `female-driver-input-${categoryName}-${teamIndex}-${driverIndex}`,
                                                 className: 'inline-block min-w-full mb-2'
                                             },
-                                                React.createElement('div', { className: 'p-4 bg-gray-100 shadow-sm' },
+                                                React.createElement('div', { className: 'p-4 shadow-sm' },
                                                     React.createElement('div', {
                                                         className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                         style: {
@@ -1698,7 +1698,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                         {
                             type: 'button',
                             onClick: handleSaveAndPrev,
-                            className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+                            className: 'hover:text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                             disabled: loading,
                         },
                         'Späť'
