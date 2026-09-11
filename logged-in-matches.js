@@ -2382,11 +2382,29 @@ const AssignMatchToBreakModal = ({
             const currentGroup = categoryGroups.find(g => g.name === match.groupName);
             const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
             
+            console.log(`🔍 [isMatchEligibleForBreak] Kontrola nadstavbovej skupiny pre zápas ${match.id}:`, {
+                matchId: match.id,
+                groupName: match.groupName,
+                isAdvancedGroup: isAdvancedGroup,
+                breakStartTime: breakStartTime,
+                breakStartMinutes: breakStartMinutes,
+                breakDuration: breakDuration,
+                matchDuration: matchDuration,
+                categoryId: match.categoryId
+            });
+            
             if (isAdvancedGroup && allMatches) {
                 const currentDateStr = date;
                 
                 const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
                 const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                
+                console.log(`🔍 [isMatchEligibleForBreak] Názvy tímov:`, {
+                    homeTeamName,
+                    awayTeamName,
+                    homeTeamIdentifier: match.homeTeamIdentifier,
+                    awayTeamIdentifier: match.awayTeamIdentifier
+                });
                 
                 const extractGroupLetter = (teamName) => {
                     if (!teamName) return null;
@@ -2400,9 +2418,16 @@ const AssignMatchToBreakModal = ({
                 const homeLetter = extractGroupLetter(homeTeamName);
                 const awayLetter = extractGroupLetter(awayTeamName);
                 
+                console.log(`🔍 [isMatchEligibleForBreak] Extrahované písmená skupín:`, {
+                    homeLetter,
+                    awayLetter
+                });
+                
                 const targetLetters = new Set();
                 if (homeLetter) targetLetters.add(homeLetter);
                 if (awayLetter) targetLetters.add(awayLetter);
+                
+                console.log(`🔍 [isMatchEligibleForBreak] Cieľové písmená skupín:`, Array.from(targetLetters));
                 
                 if (targetLetters.size > 0) {
                     // ===== ZÍSKAME VŠETKY ZÁPASY V ZÁKLADNÝCH SKUPINÁCH (VŠETKY HALY, VŠETKY DNI) =====
@@ -2414,22 +2439,35 @@ const AssignMatchToBreakModal = ({
                         m.groupName && m.groupName.startsWith('skupina ')
                     );
                     
+                    console.log(`🔍 [isMatchEligibleForBreak] Počet základných zápasov v kategórii: ${basicGroupMatches.length}`);
+                    
                     let latestEndInSameDay = 0;
                     let hasFutureMatchConflict = false;
+                    let latestEndMatchInfo = null;
                     
                     for (const letter of targetLetters) {
                         const groupName = `skupina ${letter}`;
                         const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
+                        
+                        console.log(`🔍 [isMatchEligibleForBreak] Skupina ${groupName}: ${matchesInGroup.length} zápasov`);
                         
                         for (const basicMatch of matchesInGroup) {
                             const basicDate = basicMatch.scheduledTime.toDate();
                             const basicDateStr = getLocalDateStr(basicDate);
                             const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
                             
+                            console.log(`🔍 [isMatchEligibleForBreak] Základný zápas ${basicMatch.id}:`, {
+                                groupName: basicMatch.groupName,
+                                dateStr: basicDateStr,
+                                startMinutes: basicStartMinutes,
+                                currentDateStr: currentDateStr
+                            });
+                            
                             // ===== KONTROLA DÁTUMOVEJ LOGIKY =====
                             // Ak je základný zápas v NESKORŠOM dni → BLOKUJ CELÝ DEŇ
                             // (rovnaká logika ako v calculateFirstAvailableTimeWithSpider)
                             if (basicDateStr > currentDateStr) {
+                                console.log(`❌ [isMatchEligibleForBreak] Základný zápas ${basicMatch.id} je v NESKORŠOM dni (${basicDateStr} > ${currentDateStr}) - BLOKUJEM`);
                                 hasFutureMatchConflict = true;
                                 break;
                             }
@@ -2448,8 +2486,16 @@ const AssignMatchToBreakModal = ({
                                 }
                                 const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
                                 
+                                console.log(`🔍 [isMatchEligibleForBreak] Základný zápas ${basicMatch.id} končí o ${basicEndWithBreak}min (zápas: ${basicDuration}min + prestávka: ${basicBreak}min)`);
+                                
                                 if (basicEndWithBreak > latestEndInSameDay) {
                                     latestEndInSameDay = basicEndWithBreak;
+                                    latestEndMatchInfo = {
+                                        id: basicMatch.id,
+                                        groupName: basicMatch.groupName,
+                                        endMinutes: basicEndWithBreak,
+                                        endTime: formatTimeFromMinutes(basicEndWithBreak)
+                                    };
                                 }
                             }
                         }
@@ -2459,15 +2505,29 @@ const AssignMatchToBreakModal = ({
                     
                     // Ak existuje základný zápas v neskoršom dni, zápas nemôže byť priradený
                     if (hasFutureMatchConflict) {
+                        console.log(`❌ [isMatchEligibleForBreak] Existuje základný zápas v neskoršom dni - zápas NEMÔŽE byť priradený`);
                         return false;
                     }
                     
+                    console.log(`🔍 [isMatchEligibleForBreak] Najnovší koniec základných zápasov v rovnakom dni: ${latestEndInSameDay}min (${latestEndMatchInfo?.endTime || 'žiadny'})`);
+                    console.log(`🔍 [isMatchEligibleForBreak] breakStartMinutes: ${breakStartMinutes}min (${breakStartTime})`);
+                    
                     // ===== KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI ZÁKLADNÝCH ZÁPASOV V ROVNAKOM DNI =====
+                    // OPRAVA: Táto kontrola bola príliš reštriktívna. 
                     // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
-                    // zápas nemôže byť priradený do tohto voľného času
+                    // zápas nemôže byť priradený do tohto voľného času - ALE LEN AK JE TO SKUTOČNE KONFLIKT.
+                    // 
+                    // POZNÁMKA: Toto je zámerná kontrola - nadstavbová skupina musí byť PO základných zápasoch.
+                    // Ak je voľný čas pred koncom základných zápasov, zápas sa nezobrazí.
+                    // To je SPRÁVNE správanie, ale môže to byť mätúce, ak používateľ nevidí dôvod.
                     if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
+                        console.log(`❌ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} (${breakStartMinutes}min) je PRED koncom základných zápasov (${latestEndInSameDay}min) - BLOKUJEM`);
+                        console.log(`   Dôvod: Nadstavbová skupina musí byť odohraná PO základných zápasoch.`);
+                        console.log(`   Najneskorší základný zápas: ${latestEndMatchInfo?.groupName} končí o ${latestEndMatchInfo?.endTime}`);
                         return false;
                     }
+                    
+                    console.log(`✅ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} je PO základných zápasoch - POKRAČUJEM`);
                 }
                 
                 // ===== KONTROLA SÚVISIACICH ZÁPASOV V ROVNAKEJ NADSTAVBOVEJ SKUPINE =====
@@ -2478,6 +2538,8 @@ const AssignMatchToBreakModal = ({
                     m.id !== match.id &&
                     m.scheduledTime
                 );
+                
+                console.log(`🔍 [isMatchEligibleForBreak] Súvisiace zápasy v nadstavbovej skupine ${match.groupName}: ${relatedMatches.length}`);
                 
                 let latestSameHallEnd = 0;
                 
@@ -2501,6 +2563,8 @@ const AssignMatchToBreakModal = ({
                     }
                     const relEndMinutes = relDate.getHours() * 60 + relDate.getMinutes() + relDuration + relBreak;
                     
+                    console.log(`🔍 [isMatchEligibleForBreak] Súvisiaci zápas ${relMatch.id} v rovnakej hale končí o ${relEndMinutes}min`);
+                    
                     if (relEndMinutes > latestSameHallEnd) {
                         latestSameHallEnd = relEndMinutes;
                     }
@@ -2509,10 +2573,13 @@ const AssignMatchToBreakModal = ({
                 // Ak je voľný čas PRED najnovším koncom súvisiacich zápasov v tej istej hale,
                 // zápas nemôže byť priradený do tohto voľného času
                 if (latestSameHallEnd > 0 && breakStartMinutes < latestSameHallEnd) {
+                    console.log(`❌ [isMatchEligibleForBreak] Voľný čas ${breakStartTime} (${breakStartMinutes}min) je PRED koncom súvisiacich zápasov v tej istej hale (${latestSameHallEnd}min) - BLOKUJEM`);
                     return false;
                 }
+                
+                console.log(`✅ [isMatchEligibleForBreak] Všetky kontroly pre nadstavbovú skupinu prešli - ZÁPAS JE VHODNÝ`);
             }
-        }
+        }        
 
         return true;
     };
