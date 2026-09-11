@@ -952,10 +952,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
                                                     ),
                                                     React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné číslo')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto/obec')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
@@ -1105,10 +1107,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
                                                     ),
                                                     React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné číslo')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto/obec')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
@@ -1253,10 +1257,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
                                                     ),
                                                     React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné číslo')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto/obec')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
@@ -1401,10 +1407,12 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
                                                     ),
                                                     React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné číslo')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'číslo')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto/obec')
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto'),
+                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'obec')
                                                     ),
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
                                                         React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
