@@ -3618,7 +3618,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             childBreak = childCategory.matchBreak || 5;
                         }
                         const childEndWithBreak = childStartMinutes + childDuration + childBreak;
-                        occupiedIntervals.push({ start: 0, end: childEndWithBreak, type: 'spider_child_same_day' });
+                        occupiedIntervals.push({ 
+                            start: childStartMinutes, 
+                            end: childEndWithBreak, 
+                            type: 'spider_child_same_day' 
+                        });
                     }
                 }
             }
@@ -3663,7 +3667,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 const homeGroup = extractGroupFromTeamName(homeTeamName);
                 const awayGroup = extractGroupFromTeamName(awayTeamName);
-                const targetGroups = new Set();
+                const targetGroups = new Set();                
+                let minStartTimeForMatch = hallStartMinutes;                
                 if (homeGroup) targetGroups.add(homeGroup);
                 if (awayGroup) targetGroups.add(awayGroup);
                 
@@ -3689,8 +3694,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             if (relEndWithBreak > latestEnd) latestEnd = relEndWithBreak;
                         }
                     }
-                    if (isBlocked) occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'placement_related_after' });
-                    else if (latestEnd > 0) occupiedIntervals.push({ start: 0, end: latestEnd, type: 'placement_related_same_day' });
+                    if (isBlocked) {
+                        occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'placement_related_after' });
+                    } else if (latestEnd > 0) {
+                        minStartTimeForMatch = Math.max(minStartTimeForMatch, latestEnd);
+                    }
                 }
             }
             
@@ -3732,8 +3740,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         }
                     }
                 }
-                if (isBlocked) occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'placement_semi_after' });
-                else if (latestEnd > 0) occupiedIntervals.push({ start: 0, end: latestEnd, type: 'placement_semi_same_day' });
+                if (isBlocked) {
+                    occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'placement_semi_after' });
+                } else if (latestEnd > 0) {
+                    minStartTimeForMatch = Math.max(minStartTimeForMatch, latestEnd);
+                }
             }
         }
         
@@ -3790,8 +3801,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         }
                         if (isBlocked) break;
                     }
-                    if (isBlocked) occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'basic_group_after' });
-                    else if (latestEnd > 0) occupiedIntervals.push({ start: 0, end: latestEnd, type: 'basic_group_same_day' });
+                    if (isBlocked) {
+                        occupiedIntervals.push({ start: 0, end: 24 * 60, type: 'basic_group_after' });
+                    } else if (latestEnd > 0) {
+                        minStartTimeForMatch = Math.max(minStartTimeForMatch, latestEnd);
+                    }
                 }
             }
         }
@@ -3832,7 +3846,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         console.log(`⏰ [calculateFirstAvailableTimeWithSpider] Začiatok hľadania od: ${hallStartMinutes}min (${hallStartTimeStr})`);
         
         // Systematické hľadanie prvého voľného okna
-        let candidateTime = hallStartMinutes;
+        let candidateTime = minStartTimeForMatch; 
         
         for (const interval of mergedIntervals) {
             // Ak je kandidát pred začiatkom intervalu, skontrolujeme, či sa zápas zmestí pred interval
