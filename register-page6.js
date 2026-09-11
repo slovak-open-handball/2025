@@ -730,7 +730,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
     
                                     // ===================== HRÁČI =====================
                                     playersCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
+                                        'div', null, 
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                     
                                         // HLAVIČKA
@@ -988,7 +988,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                     // ===================== ŽENY – REALIZAČNÝ TÍM =====================
                                     womenMembersCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
+                                        'div', null, 
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (ženy)'),
                                     
                                         // HLAVIČKA
@@ -1157,7 +1157,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                     // ===================== MUŽI – REALIZAČNÝ TÍM =====================
                                     menMembersCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
+                                        'div', null, 
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily členov realizačného tímu (muži)'),
                                     
                                         // HLAVIČKA
@@ -1326,7 +1326,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                     // ===================== ŠOFÉRI – MUŽI =====================
                                     driversMaleCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
+                                        'div', null, 
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (muži)'),
                                     
                                         // HLAVIČKA
@@ -1495,7 +1495,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                     // ===================== ŠOFÉRI – ŽENY =====================
                                     driversFemaleCount > 0 && React.createElement(
-                                        'div', { className: 'overflow-x-auto' },
+                                        'div', null, 
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700 mt-4' }, 'Detaily šoférov (ženy)'),
                                     
                                         // HLAVIČKA
