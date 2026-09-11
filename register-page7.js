@@ -408,25 +408,25 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             type: 'Šofér (muž)',
                             jerseyNumberColor1: '',
                             jerseyNumberColor2: '',
-                            firstName: member.firstName || '',
-                            lastName: member.lastName || '',
-                            dateOfBirth: formatDate(member.dateOfBirth),
+                            firstName: driver.firstName || '',
+                            lastName: driver.lastName || '',
+                            dateOfBirth: formatDate(driver.dateOfBirth),
                             registrationNumber: '',
-                            address: formatAddress(member.address)
+                            address: formatAddress(driver.address)
                         });
                     });
-
+                    
                     // NOVINKA: Pridanie ženských šoférov
                     (team.driverDetailsFemale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (žena)',
                             jerseyNumberColor1: '',
                             jerseyNumberColor2: '',
-                            firstName: member.firstName || '',
-                            lastName: member.lastName || '',
-                            dateOfBirth: formatDate(member.dateOfBirth),
+                            firstName: driver.firstName || '',
+                            lastName: driver.lastName || '',
+                            dateOfBirth: formatDate(driver.dateOfBirth),
                             registrationNumber: '',
-                            address: formatAddress(member.address)
+                            address: formatAddress(driver.address)
                         });
                     });
 
