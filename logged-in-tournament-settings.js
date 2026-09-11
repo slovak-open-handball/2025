@@ -212,7 +212,20 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'createUrlLink') {
         changesContent = `Vytvorenie nového URL odkazu: '${notificationData.data.label}' -> ${notificationData.data.url}`;
       } else if (notificationData.type === 'editUrlLink') {
-        changesContent = `Úprava URL odkazu z: '${notificationData.data.originalLabel}' na '${notificationData.data.newLabel}' (${notificationData.data.newUrl})`;
+        const originalLabel = notificationData.data.originalLabel || '';
+        const originalUrl = notificationData.data.originalUrl || '';
+        const newLabel = notificationData.data.newLabel || '';
+        const newUrl = notificationData.data.newUrl || '';
+
+        const changes = [];
+        changes.push(`Úprava URL odkazu: '${originalLabel}'`);
+        if (originalLabel !== newLabel) {
+          changes.push(`Názov: '${originalLabel}' -> '${newLabel}'`);
+        }
+        if (originalUrl !== newUrl) {
+          changes.push(`URL: '${originalUrl}' -> '${newUrl}'`);
+        }
+        changesContent = changes;
       } else if (notificationData.type === 'deleteUrlLink') {
         changesContent = `Zmazanie URL odkazu: '${notificationData.data.deletedLabel}' (${notificationData.data.deletedUrl})`;
       }
