@@ -637,7 +637,6 @@ function App() {
                 packageDetails: existingTeamData.packageDetails || null,
                 playerDetails: existingTeamData.playerDetails || Array.from({ length: parseInt(existingTeamData.players, 10) || 0 }).map(() => ({
                     jerseyNumber: '',
-                    jerseyNumber: '',
                     jerseyNumber2: '',
                     firstName: '', lastName: '', dateOfBirth: '', isRegistered: false, registrationNumber: '',
                     address: { street: '', houseNumber: '', city: '', postalCode: '', country: '' }
