@@ -718,47 +718,31 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         React.createElement('h4', { className: 'text-lg font-bold mb-2 text-gray-700' }, 'Detaily hráčov'),
                                         
                                         // HLAVIČKA – zobrazí sa len raz, ak je aspoň jeden hráč
-                                        React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
-                                            React.createElement('div', { className: 'flex flex-wrap items-end gap-x-4 gap-y-2' },
-                                                React.createElement('div', { className: 'w-24' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, `Číslo dresu (${team.jerseyColors?.color1 || 'farba 1'})`)
-                                                ),
-                                                React.createElement('div', { className: 'w-24' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, `Číslo dresu (${team.jerseyColors?.color2 || 'farba 2'})`)
-                                                ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Meno')
-                                                ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
-                                                ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum narodenia')
-                                                ),
-                                                React.createElement('div', { className: 'flex-initial w-auto flex flex-col' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Registrovaný vo zväze')
-                                                ),
-                                                React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Číslo registrácie')
-                                                ),
-                                                hasAccommodation && React.createElement(React.Fragment, null,
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Ulica')
-                                                    ),
-                                                    React.createElement('div', { className: 'w-24' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Popisné číslo')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Mesto/obec')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'PSČ')
-                                                    ),
-                                                    React.createElement('div', { className: 'flex-1 min-w-[120px]' },
-                                                        React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Štát')
-                                                    )
-                                                )
-                                            )
+                                        React.createElement('div', { className: 'w-24' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Číslo dresu'),
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, `(${team.jerseyColors?.color1 || 'farba 1'})`)
+                                        ),
+                                        React.createElement('div', { className: 'w-24' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Číslo dresu'),
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, `(${team.jerseyColors?.color2 || 'farba 2'})`)
+                                        ),
+                                        React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Meno')
+                                        ),
+                                        React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
+                                        ),
+                                        React.createElement('div', { className: 'flex-1 min-w-[150px]' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
+                                        ),
+                                        React.createElement('div', { className: 'flex-initial w-auto flex flex-col' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Registrovaný'),
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'vo zväze')
+                                        ),
+                                        React.createElement('div', { className: 'flex-1 min-w-[120px]' },
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Číslo'),
+                                            React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'registrácie')
                                         ),
                                         
                                         // JEDNOTLIVÍ HRÁČI – každý v jednom riadku, bez labelov
@@ -960,7 +944,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum narodenia')
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
                                                 ),
                                                 hasAccommodation && React.createElement(React.Fragment, null,
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
@@ -1112,7 +1097,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum narodenia')
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
                                                 ),
                                                 hasAccommodation && React.createElement(React.Fragment, null,
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
@@ -1259,7 +1245,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum narodenia')
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
                                                 ),
                                                 hasAccommodation && React.createElement(React.Fragment, null,
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
@@ -1406,7 +1393,8 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                     React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Priezvisko')
                                                 ),
                                                 React.createElement('div', { className: 'flex-1 min-w-[150px]' },
-                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum narodenia')
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'Dátum'),
+                                                    React.createElement('span', { className: 'block text-gray-700 text-sm font-bold' }, 'narodenia')
                                                 ),
                                                 hasAccommodation && React.createElement(React.Fragment, null,
                                                     React.createElement('div', { className: 'flex-1 min-w-[120px]' },
