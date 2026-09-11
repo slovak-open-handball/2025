@@ -17,12 +17,28 @@ export function UrlLinkSettings({
         tournamentReglementUrl: ''
     });
 
+    const hasUnsavedChangesRef = React.useRef(false);
+
+    // Sledovanie neuložených zmien
+    React.useEffect(() => {
+        const hasChanges =
+            tournamentRulesUrl !== originalValuesRef.current.tournamentRulesUrl ||
+            tournamentReglementUrl !== originalValuesRef.current.tournamentReglementUrl;
+        hasUnsavedChangesRef.current = hasChanges;
+    }, [tournamentRulesUrl, tournamentReglementUrl]);
+
     // Načítanie URL adries z Firestore
     React.useEffect(() => {
         if (!db) return;
 
         const docRef = doc(collection(db, 'settings'), 'urlLinks');
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
+            // Ak má používateľ neuložené zmeny, neprepisuj inputy
+            if (hasUnsavedChangesRef.current) {
+                console.log("[UrlLinkSettings] onSnapshot ignorovaný – používateľ má neuložené zmeny");
+                return;
+            }
+
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 const loadedRules = data.tournamentRulesUrl || '';
@@ -70,6 +86,10 @@ export function UrlLinkSettings({
             return;
         }
 
+        // Uložíme si pôvodné hodnoty PRE zápisom, aby sme vedeli, čo sa zmenilo
+        const originalRules = originalValuesRef.current.tournamentRulesUrl || '';
+        const originalReglement = originalValuesRef.current.tournamentReglementUrl || '';
+
         try {
             const docRef = doc(collection(db, 'settings'), 'urlLinks');
             await setDoc(docRef, {
@@ -80,14 +100,11 @@ export function UrlLinkSettings({
 
             console.log("[UrlLinkSettings] Uložené do Firestore.");
             console.log("[UrlLinkSettings] sendAdminNotification je:", typeof sendAdminNotification);
-            console.log("[UrlLinkSettings] Pôvodné hodnoty:", originalValuesRef.current);
+            console.log("[UrlLinkSettings] Pôvodné hodnoty:", { originalRules, originalReglement });
             console.log("[UrlLinkSettings] Nové hodnoty:", { trimmedRules, trimmedReglement });
 
             // Notifikácie pre administrátorov
             if (sendAdminNotification) {
-                const originalRules = originalValuesRef.current.tournamentRulesUrl || '';
-                const originalReglement = originalValuesRef.current.tournamentReglementUrl || '';
-
                 // --- PRAVIDLÁ TURNAJA ---
                 if (originalRules !== trimmedRules) {
                     const isNewRules = originalRules === '' && trimmedRules !== '';
@@ -151,7 +168,7 @@ export function UrlLinkSettings({
                 console.warn("[UrlLinkSettings] sendAdminNotification nie je k dispozícii!");
             }
 
-            // Aktualizujeme pôvodné hodnoty
+            // Aktualizujeme pôvodné hodnoty – PO úspešnom uložení
             originalValuesRef.current = {
                 tournamentRulesUrl: trimmedRules,
                 tournamentReglementUrl: trimmedReglement
