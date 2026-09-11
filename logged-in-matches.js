@@ -7488,17 +7488,40 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     );
 };
 
-const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime }) => {
+const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime, nextMatchTime, matchBreak }) => {
     const [breakPosition, setBreakPosition] = useState('after');
     const [breakDuration, setBreakDuration] = useState(5);
     const [newTime, setNewTime] = useState('');
     const [durationError, setDurationError] = useState('');
 
+    // ===== AUTOMATICKÉ PREDVYPLNENIE DĹŽKY MEDZERY =====
+    // Ak máme nextMatchTime (čas nasledujúceho zápasu), vypočítame maximálnu možnú medzeru
+    useEffect(() => {
+        if (isOpen && currentTime && nextMatchTime) {
+            const [currentHours, currentMinutes] = currentTime.split(':').map(Number);
+            const [nextHours, nextMinutes] = nextMatchTime.split(':').map(Number);
+            
+            const currentTotalMinutes = currentHours * 60 + currentMinutes;
+            const nextTotalMinutes = nextHours * 60 + nextMinutes;
+            
+            // Medzera medzi zápasmi = čas nasledujúceho - (čas aktuálneho + dĺžka zápasu)
+            // matchBreak je už zahrnutý v nextMatchTime (predpokladáme, že nextMatchTime je čas začiatku nasledujúceho zápasu)
+            const gap = nextTotalMinutes - currentTotalMinutes;
+            
+            if (gap > 0 && gap <= 180) {
+                setBreakDuration(gap);
+            } else if (gap > 180) {
+                setBreakDuration(180);
+            }
+        }
+    }, [isOpen, currentTime, nextMatchTime, matchBreak]);
+
+    // ===== VÝPOČET NOVÉHO ČASU =====
     useEffect(() => {
         if (isOpen && match && currentTime) {
             calculateNewTime();
         }
-    }, [isOpen, match, currentTime, breakPosition, breakDuration]);
+    }, [isOpen, match, currentTime, breakPosition, breakDuration, nextMatchTime]);
 
     const calculateNewTime = () => {
         if (!currentTime || breakDuration <= 0) {
@@ -7511,8 +7534,10 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
         
         let newMinutes;
         if (breakPosition === 'before') {
-            newMinutes = currentMinutes - breakDuration;
+            // Medzera pred zápasom - posunieme čas zápasu dopredu
+            newMinutes = currentMinutes + breakDuration;
         } else {
+            // Medzera za zápasom - nový zápas bude o breakDuration neskôr
             newMinutes = currentMinutes + breakDuration;
         }
         
@@ -7568,6 +7593,9 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
 
     const isValid = breakDuration > 0 && !durationError && newTime;
 
+    // ===== ZOBRAZENIE INFORMÁCIE O NASLEDUJÚCOM ZÁPASE =====
+    const hasNextMatch = nextMatchTime && nextMatchTime !== '';
+
     return React.createElement(
         'div',
         {
@@ -7603,6 +7631,42 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 ),
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-1' },
                     `Aktuálny čas: ${currentTime}`
+                ),
+                hasNextMatch && React.createElement(
+                    'p',
+                    { className: 'text-xs text-blue-600 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right mr-1' }),
+                    `Nasledujúci zápas začína o: ${nextMatchTime}`
+                )
+            ),
+
+            // ===== INFORMÁCIA O VOĽNOM ČASE =====
+            hasNextMatch && React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-green-50 rounded-lg border border-green-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-start gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-info-circle text-green-600 mt-0.5' }),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-green-700' },
+                        React.createElement('p', { className: 'font-medium' }, 'Voľný čas medzi zápasmi'),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs mt-1' },
+                            (() => {
+                                const [currentHours, currentMinutes] = currentTime.split(':').map(Number);
+                                const [nextHours, nextMinutes] = nextMatchTime.split(':').map(Number);
+                                const gap = (nextHours * 60 + nextMinutes) - (currentHours * 60 + currentMinutes);
+                                const matchDuration = (() => {
+                                    // Toto by malo byť odovzdané ako prop, ale pre istotu vypočítame
+                                    return 0;
+                                })();
+                                return `Voľný čas: ${gap} minút`;
+                            })()
+                        )
+                    )
                 )
             ),
 
@@ -7672,6 +7736,20 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                     'Rozsah: 1 - 180 minút'
                 )
             ),
+
+            // ===== ZOBRAZENIE VYPOČÍTANÉHO NOVÉHO ČASU =====
+            newTime && React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-green-50 rounded-lg border border-green-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-clock text-green-600' }),
+                    React.createElement('span', { className: 'text-sm font-medium text-green-700' }, 'Nový čas zápasu: '),
+                    React.createElement('span', { className: 'text-lg font-bold text-green-800' }, newTime)
+                )
+            ),
+
             React.createElement(
                 'div',
                 { className: 'flex justify-end gap-3' },
@@ -7757,6 +7835,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedMatchForBreak, setSelectedMatchForBreak] = useState(null);
     const [selectedMatchCurrentTime, setSelectedMatchCurrentTime] = useState('');
     const [selectedBreakForDelete, setSelectedBreakForDelete] = useState(null);
+    const [selectedMatchNextTime, setSelectedMatchNextTime] = useState('');    
 
     const [isAssignToBreakModalOpen, setIsAssignToBreakModalOpen] = useState(false);
     const [selectedBreakForAssign, setSelectedBreakForAssign] = useState(null);
@@ -7783,7 +7862,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [maxDayCardHeight, setMaxDayCardHeight] = useState(0);
     const [maxHeightsByDate, setMaxHeightsByDate] = useState({});
     const [heightsCalculated, setHeightsCalculated] = useState(false);
-    const [hasCompletedMatch, setHasCompletedMatch] = useState(false);
+    const [hasCompletedMatch, setHasCompletedMatch] = useState(false);    
 
     const isFilterActive = selectedCategoriesFilter.length > 0 || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
 
@@ -10546,12 +10625,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setIsBreakModalOpen(false);
                 setSelectedMatchForBreak(null);
                 setSelectedMatchCurrentTime('');
+                setSelectedMatchNextTime('');
             },
             onConfirm: handleAddBreak,
             match: selectedMatchForBreak,
             hallName: selectedMatchForBreak ? sportHalls.find(h => h.id === selectedMatchForBreak.hallId)?.name : '',
             date: selectedMatchForBreak?.scheduledTime ? formatDateForDisplay(selectedMatchForBreak.scheduledTime) : '',
-            currentTime: selectedMatchCurrentTime
+            currentTime: selectedMatchCurrentTime,
+            nextMatchTime: selectedMatchNextTime,
+            matchBreak: selectedMatchForBreak ? (categories.find(c => c.name === selectedMatchForBreak.categoryName)?.matchBreak || 5) : 5
         }),
         React.createElement(GenerationTypeModal, {
             isOpen: isGenerationTypeModalOpen,
@@ -12466,6 +12548,46 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                e.stopPropagation();
                                                                                                setSelectedMatchForBreak(match);
                                                                                                setSelectedMatchCurrentTime(matchTime);
+                                                                                               
+                                                                                               // ===== VÝPOČET ČASU NASLEDUJÚCEHO ZÁPASU =====
+                                                                                               // Nájdeme všetky zápasy v tej istej hale a dni, zoradíme ich a nájdeme nasledujúci
+                                                                                               const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
+                                                                                               if (matchDate) {
+                                                                                                   const dateStr = getLocalDateStr(matchDate);
+                                                                                                   const allMatchesInHallAndDay = matches
+                                                                                                       .filter(m => 
+                                                                                                           m.hallId === match.hallId && 
+                                                                                                           m.scheduledTime &&
+                                                                                                           m.id !== match.id
+                                                                                                       )
+                                                                                                       .map(m => ({
+                                                                                                           ...m,
+                                                                                                           scheduledTimeObj: m.scheduledTime.toDate()
+                                                                                                       }))
+                                                                                                       .filter(m => {
+                                                                                                           const mDateStr = getLocalDateStr(m.scheduledTimeObj);
+                                                                                                           return mDateStr === dateStr;
+                                                                                                       })
+                                                                                                       .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
+                                                                                                   
+                                                                                                   // Nájdeme nasledujúci zápas po aktuálnom
+                                                                                                   const currentMatchTime = matchDate.getHours() * 60 + matchDate.getMinutes();
+                                                                                                   const nextMatch = allMatchesInHallAndDay.find(m => {
+                                                                                                       const mTime = m.scheduledTimeObj.getHours() * 60 + m.scheduledTimeObj.getMinutes();
+                                                                                                       return mTime > currentMatchTime;
+                                                                                                   });
+                                                                                                   
+                                                                                                   if (nextMatch) {
+                                                                                                       const nextHours = nextMatch.scheduledTimeObj.getHours().toString().padStart(2, '0');
+                                                                                                       const nextMinutes = nextMatch.scheduledTimeObj.getMinutes().toString().padStart(2, '0');
+                                                                                                       setSelectedMatchNextTime(`${nextHours}:${nextMinutes}`);
+                                                                                                   } else {
+                                                                                                       setSelectedMatchNextTime('');
+                                                                                                   }
+                                                                                               } else {
+                                                                                                   setSelectedMatchNextTime('');
+                                                                                               }
+                                                                                               
                                                                                                setIsBreakModalOpen(true);
                                                                                            },
                                                                                            title: 'Pridať medzeru pred/za zápas'
