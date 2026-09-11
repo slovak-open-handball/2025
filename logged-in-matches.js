@@ -5094,6 +5094,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     // ===== OPRAVENÝ useEffect PRE VÝPOČET SUGGESTED TIME S LOGMI =====
     useEffect(() => {
         if (selectedHallId && selectedDate && match && matchDuration > 0 && hallStartTime) {
+            setSuggestedTime(null);
             console.log(`🔍 [AssignMatchModal] Výpočet suggestedTime pre zápas:`, {
                 matchId: match.id,
                 matchType: match.matchType,
@@ -5318,9 +5319,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setTimeError(`V tento deň nie je žiadny voľný čas pre tento zápas.${advancedGroupInfo}${spiderConflictInfo}${placementConflictInfo} Skúste iný deň alebo halu.`);
             setSuggestedTime(null);
             
+        } else {
+            // Ak chýbajú vstupné podmienky, vymaž suggestedTime
+            setSuggestedTime(null);
         }
     }, [selectedHallId, selectedDate, hallStartTime, match, matchDuration, allMatches, categories, groupsByCategory, blockedBreaks, existingMatches, relatedMatches]);
-
     useEffect(() => {
         if (isOpen && match) {
             // Kontrola, či ide o pavúkový zápas (matchType existuje)
@@ -5934,7 +5937,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
                     }
                     
-                    // ===== OPRAVA: Používame calculateFirstAvailableTimeWithSpider namiesto calculateFirstAvailableTime =====
+                                        // ===== OPRAVA: Používame calculateFirstAvailableTimeWithSpider namiesto calculateFirstAvailableTime =====
                     if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
                         const firstAvailable = calculateFirstAvailableTimeWithSpider(
                             selectedHallId,
@@ -5994,7 +5997,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                                 return timeA - timeB;
                                             });
                                             
-                                            const currentDateObj = getLocalDateFromStr(selectedDate);
                                             const earlierDayMatches = sortedRelated.filter(m => {
                                                 const mDate = m.scheduledTime.toDate();
                                                 const mDateStr = getLocalDateStr(mDate);
@@ -6046,8 +6048,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setSuggestedTime(null);
                             }
                         }
-                    }
-                    
+                    } else {
+                        setSuggestedTime(null);
+                    }                    
                 } catch (error) {
                     console.error('Chyba pri načítaní času začiatku haly:', error);
                     setHallStartTime(null);
@@ -6422,6 +6425,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setOverlappingMatches(allConflicts);
             
             if (allConflicts.length > 0) {
+                setSuggestedTime(null);
                 // Prioritizácia chýb: najprv pavúková chronológia, potom umiestnenie, potom ostatné
                 const spiderConflicts = allConflicts.filter(c => 
                     c.type === 'spider_child_after_parent' || 
@@ -6673,6 +6677,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setSelectedHallId(e.target.value);
                                 setSelectedTime('');
                                 setSuggestedTime(null);
+                                setTimeError(''); 
                                 if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                                     setTimeError('');
                                 }
@@ -6702,6 +6707,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 setSelectedDate(e.target.value);
                                 setSelectedTime('');
                                 setSuggestedTime(null);
+                                setTimeError(''); 
                                 if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                                     setTimeError('');
                                 }
@@ -6913,7 +6919,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             min: hallStartTime || undefined
                         }),
                         
-                        suggestedTime && !selectedTime && !timeError?.includes('pavúk/umiestnenie') && !timeError?.includes('PO súvisiacich') && React.createElement(
+                        suggestedTime && !selectedTime && !timeError && React.createElement(
                             'button',
                             {
                                 onClick: handleApplySuggestedTime,
