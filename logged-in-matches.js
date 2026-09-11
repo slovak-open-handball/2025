@@ -3518,6 +3518,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         
         const [startHours, startMinutes] = hallStartTimeStr.split(':').map(Number);
         const hallStartMinutes = startHours * 60 + startMinutes;
+
+        let minStartTimeForMatch = hallStartMinutes;
         
         // Zoznam všetkých blokovaných intervalov (v minútach od začiatku dňa)
         const occupiedIntervals = [];
@@ -3667,8 +3669,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 
                 const homeGroup = extractGroupFromTeamName(homeTeamName);
                 const awayGroup = extractGroupFromTeamName(awayTeamName);
-                const targetGroups = new Set();                
-                let minStartTimeForMatch = hallStartMinutes;                
+                const targetGroups = new Set();
                 if (homeGroup) targetGroups.add(homeGroup);
                 if (awayGroup) targetGroups.add(awayGroup);
                 
