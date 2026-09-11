@@ -1322,7 +1322,7 @@ function App() {
   const now = new Date();
 
 
-  const mainContainerWidthClass = (page === 6 || page === 7) ? 'max-w-7xl' : 'max-w-md';
+  const mainContainerWidthClass = (page === 6 || page === 7) ? 'w-full' : 'max-w-md';
 
   React.useEffect(() => {
     window.scrollTo({
