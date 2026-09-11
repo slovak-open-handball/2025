@@ -375,11 +375,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         });
                     });
 
-                    // Pridanie ženských členov realizačného tímu
                     (team.womenTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (žena)',
-                            jerseyNumber: '',
+                            jerseyNumberColor1: '',
+                            jerseyNumberColor2: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
@@ -392,7 +392,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.menTeamMemberDetails || []).forEach(member => {
                         allParticipants.push({
                             type: 'Realizačný tím (muž)',
-                            jerseyNumber: '',
+                            jerseyNumberColor1: '',
+                            jerseyNumberColor2: '',
                             firstName: member.firstName || '',
                             lastName: member.lastName || '',
                             dateOfBirth: formatDate(member.dateOfBirth),
@@ -405,12 +406,13 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.driverDetailsMale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (muž)',
-                            jerseyNumber: '',
-                            firstName: driver.firstName || '',
-                            lastName: driver.lastName || '',
-                            dateOfBirth: formatDate(driver.dateOfBirth),
+                            jerseyNumberColor1: '',
+                            jerseyNumberColor2: '',
+                            firstName: member.firstName || '',
+                            lastName: member.lastName || '',
+                            dateOfBirth: formatDate(member.dateOfBirth),
                             registrationNumber: '',
-                            address: formatAddress(driver.address)
+                            address: formatAddress(member.address)
                         });
                     });
 
@@ -418,12 +420,13 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                     (team.driverDetailsFemale || []).forEach(driver => {
                         allParticipants.push({
                             type: 'Šofér (žena)',
-                            jerseyNumber: '',
-                            firstName: driver.firstName || '',
-                            lastName: driver.lastName || '',
-                            dateOfBirth: formatDate(driver.dateOfBirth),
+                            jerseyNumberColor1: '',
+                            jerseyNumberColor2: '',
+                            firstName: member.firstName || '',
+                            lastName: member.lastName || '',
+                            dateOfBirth: formatDate(member.dateOfBirth),
                             registrationNumber: '',
-                            address: formatAddress(driver.address)
+                            address: formatAddress(member.address)
                         });
                     });
 
@@ -457,7 +460,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                     React.createElement('thead', null,
                                         React.createElement('tr', { className: 'bg-gray-200 text-gray-700 text-sm leading-normal' },
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '100px', whiteSpace: 'nowrap' } }, 'Osoba'),
-                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, 'Číslo dresu'),
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color1 || 'farba 1'})`), // NOVINKA
+                                            React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '80px', whiteSpace: 'nowrap' } }, `Číslo dresu (${team.jerseyColors?.color2 || 'farba 2'})`), // NOVINKA
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Meno'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Priezvisko'),
                                             React.createElement('th', { className: 'py-3 px-2 text-left', style: { minWidth: '120px', whiteSpace: 'nowrap' } }, 'Dátum narodenia'),
@@ -469,7 +473,8 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                                         allParticipants.map((participant, pIdx) => (
                                             React.createElement('tr', { key: pIdx, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.type),
-                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumber),
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor1), // NOVINKA
+                                                React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.jerseyNumberColor2), // NOVINKA
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.firstName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.lastName),
                                                 React.createElement('td', { className: 'py-2 px-2 text-left', style: { whiteSpace: 'nowrap', minHeight: '36px' } }, participant.dateOfBirth),
