@@ -3483,8 +3483,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     // ===== OPRAVENÁ FUNKCIA PRE VÝPOČET NAVRHOVANÉHO ČASU S PAVÚKOM S LOGMI =====
     const calculateFirstAvailableTimeWithSpider = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks, allMatches, currentMatch, categories, groupsByCategory) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
-
-        const currentDateStr = date;
         
         console.log(`🔍 [calculateFirstAvailableTimeWithSpider] Vstupné parametre:`, {
             hallId,
@@ -3903,7 +3901,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         //   * Ak sa hrajú v NESKORŠOM DNI → tiež blokujú (aktuálny zápas musí byť pred nimi)
         if (currentMatch && currentMatch.groupName && groupsByCategory) {
             console.log(`📈 [calculateFirstAvailableTimeWithSpider] Spracúvam nadstavbovú skupinu: ${currentMatch.groupName}`);
-            
+
+            const currentDateStr = date; 
             const categoryGroups = groupsByCategory[currentMatch.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === currentMatch.groupName);
             const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
