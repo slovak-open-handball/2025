@@ -2373,8 +2373,10 @@ const AssignMatchToBreakModal = ({
         }
 
         // ===== 6. KONTROLA NADSTAVBOVÝCH SKUPÍN - ZÁKLADNÉ SKUPINY (B, C, ...) =====
-        // TOTO JE KĽÚČOVÁ ČASŤ - kontroluje, či súvisiace zápasy zo ZÁKLADNÝCH skupín
-        // už boli odohrané PRED daným voľným časom. Rovnaká logika ako v calculateFirstAvailableTimeWithSpider.
+        // TOTO JE KĽÚČOVÁ ČASŤ - IDENTICKÁ LOGIKA ako v calculateFirstAvailableTimeWithSpider
+        // (časť 4 - NADSTAVBOVÉ SKUPINY (ZÁKLADNÉ SKUPINY))
+        // Kontroluje, či súvisiace zápasy zo ZÁKLADNÝCH skupín už boli odohrané
+        // PRED daným voľným časom.
         if (match.groupName && groupsByCategory && groupsByCategory[match.categoryId]) {
             const categoryGroups = groupsByCategory[match.categoryId] || [];
             const currentGroup = categoryGroups.find(g => g.name === match.groupName);
@@ -2403,7 +2405,8 @@ const AssignMatchToBreakModal = ({
                 if (awayLetter) targetLetters.add(awayLetter);
                 
                 if (targetLetters.size > 0) {
-                    // Získame všetky zápasy v základných skupinách (všetky haly, všetky dni)
+                    // ===== ZÍSKAME VŠETKY ZÁPASY V ZÁKLADNÝCH SKUPINÁCH (VŠETKY HALY, VŠETKY DNI) =====
+                    // Rovnaká logika ako v calculateFirstAvailableTimeWithSpider
                     const basicGroupMatches = allMatches.filter(m => 
                         m.categoryId === match.categoryId &&
                         m.id !== match.id &&
@@ -2423,13 +2426,15 @@ const AssignMatchToBreakModal = ({
                             const basicDateStr = getLocalDateStr(basicDate);
                             const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
                             
-                            // Ak je základný zápas v NESKORŠOM dni, blokujeme
+                            // ===== KONTROLA DÁTUMOVEJ LOGIKY =====
+                            // Ak je základný zápas v NESKORŠOM dni → BLOKUJ CELÝ DEŇ
+                            // (rovnaká logika ako v calculateFirstAvailableTimeWithSpider)
                             if (basicDateStr > currentDateStr) {
                                 hasFutureMatchConflict = true;
                                 break;
                             }
                             
-                            // Ak je základný zápas v ROVNAKOM dni, kontrolujeme čas
+                            // Ak je základný zápas v ROVNAKOM dni → zarátať jeho koniec
                             if (basicDateStr === currentDateStr) {
                                 const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
                                 let basicDuration = 0;
@@ -2457,6 +2462,7 @@ const AssignMatchToBreakModal = ({
                         return false;
                     }
                     
+                    // ===== KONTROLA, ČI VOĽNÝ ČAS JE PO NAJNOVŠOM KONCI ZÁKLADNÝCH ZÁPASOV V ROVNAKOM DNI =====
                     // Ak je voľný čas PRED najnovším koncom základných zápasov v rovnakom dni,
                     // zápas nemôže byť priradený do tohto voľného času
                     if (latestEndInSameDay > 0 && breakStartMinutes < latestEndInSameDay) {
