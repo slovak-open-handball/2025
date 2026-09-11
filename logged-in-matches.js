@@ -6330,14 +6330,91 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
-            // ===== PÔVODNÁ KONTROLA PRE NADSTAVBOVÉ SKUPINY =====
             if (match && match.groupName && groupsByCategory) {
                 const categoryGroups = groupsByCategory[match.categoryId] || [];
                 const currentGroup = categoryGroups.find(g => g.name === match.groupName);
                 const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
                 
                 if (isAdvancedGroup) {
-                    // ... pôvodný kód pre nadstavbové skupiny ...
+                    // ===== ZÍSKAME ZÁKLADNÉ SKUPINY (B, C, ...) Z NÁZVOV TÍMOV =====
+                    const homeTeamName = getTeamNameByIdentifierForEffect(match.homeTeamIdentifier);
+                    const awayTeamName = getTeamNameByIdentifierForEffect(match.awayTeamIdentifier);
+                    
+                    const extractGroupLetter = (teamName) => {
+                        if (!teamName) return null;
+                        const matchResult = teamName.match(/\s(\d+)([A-Z])$/);
+                        if (matchResult) {
+                            return matchResult[2];
+                        }
+                        return null;
+                    };
+                    
+                    const homeLetter = extractGroupLetter(homeTeamName);
+                    const awayLetter = extractGroupLetter(awayTeamName);
+                    
+                    const targetLetters = new Set();
+                    if (homeLetter) targetLetters.add(homeLetter);
+                    if (awayLetter) targetLetters.add(awayLetter);
+                    
+                    if (targetLetters.size > 0) {
+                        // ===== ZÍSKAME VŠETKY ZÁPASY V ZÁKLADNÝCH SKUPINÁCH (VŠETKY HALY, VŠETKY DNI) =====
+                        const basicGroupMatches = allMatches.filter(m => 
+                            m.categoryId === match.categoryId &&
+                            m.id !== match.id &&
+                            m.scheduledTime &&
+                            m.groupName && m.groupName.startsWith('skupina ')
+                        );
+                        
+                        for (const letter of targetLetters) {
+                            const groupName = `skupina ${letter}`;
+                            const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
+                            
+                            for (const basicMatch of matchesInGroup) {
+                                const basicDate = basicMatch.scheduledTime.toDate();
+                                const basicDateStr = getLocalDateStr(basicDate);
+                                const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
+                                
+                                // ===== KONTROLA DÁTUMOVEJ LOGIKY =====
+                                // Ak je základný zápas v NESKORŠOM dni ako aktuálny zápas → CHYBA
+                                if (basicDateStr > selectedDateStr) {
+                                    const formattedDate = basicDate.toLocaleDateString('sk-SK', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                    });
+                                    allConflicts.push({
+                                        type: 'basic_group_after',
+                                        _displayName: `Základný zápas (${basicMatch.groupName}) je naplánovaný na ${formattedDate}, musí byť odohraný PRED týmto zápasom`
+                                    });
+                                    continue;
+                                }
+                                
+                                // Ak je základný zápas v ROVNAKOM dni → musí skončiť PRED začiatkom aktuálneho
+                                if (basicDateStr === selectedDateStr) {
+                                    const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
+                                    let basicDuration = 0;
+                                    let basicBreak = 5;
+                                    if (basicCategory) {
+                                        const periods = basicCategory.periods || 2;
+                                        const periodDuration = basicCategory.periodDuration || 20;
+                                        const breakDuration = basicCategory.breakDuration || 2;
+                                        basicDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                        basicBreak = basicCategory.matchBreak || 5;
+                                    }
+                                    const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
+                                    
+                                    // Aktuálny zápas musí začať PO skončení základného zápasu
+                                    if (newStartMinutes < basicEndWithBreak) {
+                                        const formattedTime = `${basicDate.getHours().toString().padStart(2, '0')}:${basicDate.getMinutes().toString().padStart(2, '0')}`;
+                                        allConflicts.push({
+                                            type: 'basic_group_same_day',
+                                            _displayName: `Základný zápas (${basicMatch.groupName}) o ${formattedTime} musí skončiť PRED začiatkom tohto zápasu`
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
