@@ -4044,6 +4044,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         // ===== 6. ZORADENIE OCCUPIED INTERVALS =====
         occupiedIntervals.sort((a, b) => a.start - b.start);
         
+        // ===== KONTROLA: AK JE CELÝ DEŇ ZABLOKOVANÝ, VRÁŤ NULL =====
+        // Ak existuje blokujúci interval 0-1440 (celý deň), nie je možné nájsť voľný čas
+        const hasFullDayBlock = occupiedIntervals.some(interval => 
+            interval.start === 0 && interval.end === 24 * 60
+        );
+        
+        if (hasFullDayBlock) {
+            console.log(`❌ [calculateFirstAvailableTimeWithSpider] Celý deň je zablokovaný - vracam null`);
+            return null;
+        }
+        
         console.log(`📊 [calculateFirstAvailableTimeWithSpider] Celkový počet zablokovaných intervalov: ${occupiedIntervals.length}`);
         console.log(`📊 [calculateFirstAvailableTimeWithSpider] Zablokované intervaly:`, 
             occupiedIntervals.map(i => ({ start: i.start, end: i.end, type: i.type }))
@@ -4110,6 +4121,18 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         
         if (foundTime !== null) {
+            // ===== KONTROLA, ČI NÁJDENÝ ČAS NEPRESAHUJE KONIEC DŇA =====
+            if (foundTime >= 24 * 60) {
+                console.log(`❌ [calculateFirstAvailableTimeWithSpider] Nájdený čas ${foundTime}min presahuje koniec dňa - vracam null`);
+                return null;
+            }
+            
+            // ===== KONTROLA, ČI SA ZÁPAS ZMESTÍ DO ZVYŠKU DŇA =====
+            if (foundTime + totalDuration > 24 * 60) {
+                console.log(`❌ [calculateFirstAvailableTimeWithSpider] Zápas (${totalDuration}min) sa nezmestí do zvyšku dňa od ${foundTime}min - vracam null`);
+                return null;
+            }
+            
             const hours = Math.floor(foundTime / 60).toString().padStart(2, '0');
             const minutes = (foundTime % 60).toString().padStart(2, '0');
             const result = `${hours}:${minutes}`;
@@ -4376,6 +4399,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
             }
             
+            if (foundTime >= 24 * 60) {
+                console.log(`🕷️ [getTimeFromSpiderRelatedMatches] Nájdený čas ${foundTime}min presahuje koniec dňa - vracam null`);
+                return null;
+            }
+            
+            if (foundTime + totalDuration > 24 * 60) {
+                console.log(`🕷️ [getTimeFromSpiderRelatedMatches] Zápas (${totalDuration}min) sa nezmestí do zvyšku dňa od ${foundTime}min - vracam null`);
+                return null;
+            }
+            
             const hours = Math.floor(foundTime / 60).toString().padStart(2, '0');
             const mins = (foundTime % 60).toString().padStart(2, '0');
             const result = `${hours}:${mins}`;
@@ -4624,6 +4657,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         
         if (foundTime !== null) {
+            // ===== KONTROLA, ČI NÁJDENÝ ČAS NEPRESAHUJE KONIEC DŇA =====
+            if (foundTime >= 24 * 60) {
+                console.log(`🏆 [getTimeFromPlacementRelatedMatches] Nájdený čas ${foundTime}min presahuje koniec dňa - vracam null`);
+                return null;
+            }
+            
+            if (foundTime + totalDuration > 24 * 60) {
+                console.log(`🏆 [getTimeFromPlacementRelatedMatches] Zápas (${totalDuration}min) sa nezmestí do zvyšku dňa od ${foundTime}min - vracam null`);
+                return null;
+            }
+            
             const hours = Math.floor(foundTime / 60).toString().padStart(2, '0');
             const mins = (foundTime % 60).toString().padStart(2, '0');
             const result = `${hours}:${mins}`;
@@ -4825,6 +4869,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         
         if (foundTime !== null) {
+            // ===== KONTROLA, ČI NÁJDENÝ ČAS NEPRESAHUJE KONIEC DŇA =====
+            if (foundTime >= 24 * 60) {
+                console.log(`📈 [getTimeFromAdvancedGroupRelatedMatches] Nájdený čas ${foundTime}min presahuje koniec dňa - vracam null`);
+                return null;
+            }
+            
+            if (foundTime + totalDuration > 24 * 60) {
+                console.log(`📈 [getTimeFromAdvancedGroupRelatedMatches] Zápas (${totalDuration}min) sa nezmestí do zvyšku dňa od ${foundTime}min - vracam null`);
+                return null;
+            }
+            
             const hours = Math.floor(foundTime / 60).toString().padStart(2, '0');
             const mins = (foundTime % 60).toString().padStart(2, '0');
             return `${hours}:${mins}`;
@@ -5089,6 +5144,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         const firstAvailableMinutes = findNextAvailableTime(hallStartMinutes);
         
         if (firstAvailableMinutes !== null) {
+            // ===== KONTROLA, ČI NÁJDENÝ ČAS NEPRESAHUJE KONIEC DŇA =====
+            if (firstAvailableMinutes >= 24 * 60) {
+                return null;
+            }
+            
             const hours = Math.floor(firstAvailableMinutes / 60).toString().padStart(2, '0');
             const minutes = (firstAvailableMinutes % 60).toString().padStart(2, '0');
             return `${hours}:${minutes}`;
@@ -5973,8 +6033,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         );
                         
                         if (firstAvailable && firstAvailable !== '24:00') {
+                            console.log(`✅ [AssignMatchModal] Nájdený voľný čas: ${firstAvailable}`);
                             setSuggestedTime(firstAvailable);
-                            if (timeError && timeError.includes('voľný čas')) {
+                            if (timeError && !timeError.includes('nie je nastavený čas začiatku')) {
                                 setTimeError('');
                             }
                         } else {
