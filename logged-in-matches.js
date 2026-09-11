@@ -3892,6 +3892,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
         
         // ===== 4. NADSTAVBOVÉ SKUPINY =====
+        // LOGIKA:
+        // - Súvisiace zápasy v NADSTAVBOVEJ skupine F sa NESMÚ brať do úvahy (neblokujú).
+        // - Základné skupiny B a C (odkiaľ tímy postúpili) SA MAJÚ BRAŤ DO ÚVAHY VŽDY:
+        //   * Ak sa hrajú v ROVNAKEJ HALE a ROVNAKOM DNI → blokujú čas (musia skončiť PRED)
+        //   * Ak sa hrajú v INEJ HALE → tiež blokujú (musia skončiť PRED)
+        //   * Ak sa hrajú v SKORŠOM DNI → tiež blokujú (musia byť chronologicky pred)
+        //   * Ak sa hrajú v NESKORŠOM DNI → tiež blokujú (aktuálny zápas musí byť pred nimi)
         if (currentMatch && currentMatch.groupName && groupsByCategory) {
             console.log(`📈 [calculateFirstAvailableTimeWithSpider] Spracúvam nadstavbovú skupinu: ${currentMatch.groupName}`);
             
@@ -3900,85 +3907,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const isAdvancedGroup = currentGroup?.type === 'nadstavbová skupina';
             
             if (isAdvancedGroup) {
-                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Je to nadstavbová skupina`);
+                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Je to nadstavbová skupina - SÚVISIACE ZÁPASY V NADSTAVBOVEJ SKUPINE SA NEBERÚ DO ÚVAHY`);
                 
-                const currentDateStr = date;
-                
-                // Získame súvisiace zápasy v rovnakej nadstavbovej skupine
-                const relatedMatches = allMatches.filter(m => 
-                    m.categoryId === currentMatch.categoryId &&
-                    m.groupName === currentMatch.groupName &&
-                    m.id !== currentMatch.id &&
-                    m.scheduledTime
-                );
-                
-                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Počet zápasov v rovnakej nadstavbovej skupine: ${relatedMatches.length}`);
-                
-                let latestEnd = 0;
-                
-                // Skontrolujeme zápasy v rovnakej nadstavbovej skupine
-                for (const relMatch of relatedMatches) {
-                    const relDate = relMatch.scheduledTime.toDate();
-                    const relDateStr = getLocalDateStr(relDate);
-                    const relStartMinutes = relDate.getHours() * 60 + relDate.getMinutes();
-                    
-                    console.log(`📈 [calculateFirstAvailableTimeWithSpider] Súvisiaci zápas v nadstavbovej skupine: ${relMatch.homeTeamIdentifier} vs ${relMatch.awayTeamIdentifier}, deň: ${relDateStr}, čas: ${relStartMinutes}min`);
-                    
-                    if (relDateStr === currentDateStr) {
-                        const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                        let relDuration = 0;
-                        let relBreak = 5;
-                        if (relCategory) {
-                            const periods = relCategory.periods || 2;
-                            const periodDuration = relCategory.periodDuration || 20;
-                            const breakDuration = relCategory.breakDuration || 2;
-                            relDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                            relBreak = relCategory.matchBreak || 5;
-                        }
-                        const relEndWithBreak = relStartMinutes + relDuration + relBreak;
-                        console.log(`📈 [calculateFirstAvailableTimeWithSpider] Súvisiaci zápas končí o ${relEndWithBreak}min`);
-                        
-                        if (relEndWithBreak > latestEnd) {
-                            latestEnd = relEndWithBreak;
-                        }
-                    } else if (relDateStr > currentDateStr) {
-                        // Súvisiaci zápas je neskôr - aktuálny zápas musí byť PRED
-                        console.log(`📈 [calculateFirstAvailableTimeWithSpider] ⚠️ Súvisiaci zápas je neskôr - blokujem celý deň!`);
-                        occupiedIntervals.push({
-                            start: 0,
-                            end: 24 * 60,
-                            type: 'advanced_related_after',
-                            id: relMatch.id,
-                            _message: `Súvisiaci zápas nadstavbovej skupiny je neskôr - musí byť PO`
-                        });
-                    } else if (relDateStr < currentDateStr) {
-                        // Súvisiaci zápas je skôr - to je v poriadku, ale musí byť dostatočne skôr
-                        const relCategory = categories.find(c => c.name === relMatch.categoryName);
-                        let relDuration = 0;
-                        let relBreak = 5;
-                        if (relCategory) {
-                            const periods = relCategory.periods || 2;
-                            const periodDuration = relCategory.periodDuration || 20;
-                            const breakDuration = relCategory.breakDuration || 2;
-                            relDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                            relBreak = relCategory.matchBreak || 5;
-                        }
-                        const relEndWithBreak = relStartMinutes + relDuration + relBreak;
-                        if (relEndWithBreak > latestEnd) {
-                            latestEnd = relEndWithBreak;
-                        }
-                    }
-                }
-                
-                // Skontrolujeme aj základné skupiny (podradené)
-                const basicGroupMatches = allMatches.filter(m => 
-                    m.categoryId === currentMatch.categoryId &&
-                    m.id !== currentMatch.id &&
-                    m.scheduledTime &&
-                    m.groupName && m.groupName.startsWith('skupina ')
-                );
-                
-                // Extrahujeme písmená skupín z aktuálneho zápasu
+                // ===== ZÍSKAME ZÁKLADNÉ SKUPINY (B, C, ...) =====
+                // Extrahujeme písmená skupín z NÁZVU TÍMU (nie z identifikátora)
                 const homeTeamName = getTeamNameByIdentifierForEffect(currentMatch.homeTeamIdentifier);
                 const awayTeamName = getTeamNameByIdentifierForEffect(currentMatch.awayTeamIdentifier);
                 
@@ -3994,57 +3926,93 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 const homeLetter = extractGroupLetter(homeTeamName);
                 const awayLetter = extractGroupLetter(awayTeamName);
                 
-                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Písmeno skupiny domácich: ${homeLetter}, hostí: ${awayLetter}`);
+                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Písmeno základnej skupiny domácich: ${homeLetter}, hostí: ${awayLetter}`);
                 
                 const targetLetters = new Set();
                 if (homeLetter) targetLetters.add(homeLetter);
                 if (awayLetter) targetLetters.add(awayLetter);
                 
-                if (targetLetters.size > 0) {
+                if (targetLetters.size === 0) {
+                    console.log(`📈 [calculateFirstAvailableTimeWithSpider] Žiadne základné skupiny na kontrolu - neblokujem`);
+                } else {
+                    // ===== ZÍSKAME VŠETKY ZÁPASY V ZÁKLADNÝCH SKUPINÁCH (VŠETKY HALY, VŠETKY DNI) =====
+                    const basicGroupMatches = allMatches.filter(m => 
+                        m.categoryId === currentMatch.categoryId &&
+                        m.id !== currentMatch.id &&
+                        m.scheduledTime &&
+                        m.groupName && m.groupName.startsWith('skupina ')
+                    );
+                    
+                    console.log(`📈 [calculateFirstAvailableTimeWithSpider] Celkový počet základných zápasov v kategórii: ${basicGroupMatches.length}`);
+                    
+                    let latestEnd = 0;
+                    
                     for (const letter of targetLetters) {
                         const groupName = `skupina ${letter}`;
-                        const basicMatches = basicGroupMatches.filter(m => m.groupName === groupName);
+                        const matchesInGroup = basicGroupMatches.filter(m => m.groupName === groupName);
                         
-                        console.log(`📈 [calculateFirstAvailableTimeWithSpider] Počet základných zápasov v skupine ${groupName}: ${basicMatches.length}`);
+                        console.log(`📈 [calculateFirstAvailableTimeWithSpider] Počet základných zápasov v skupine ${groupName}: ${matchesInGroup.length}`);
                         
-                        for (const basicMatch of basicMatches) {
+                        for (const basicMatch of matchesInGroup) {
                             const basicDate = basicMatch.scheduledTime.toDate();
                             const basicDateStr = getLocalDateStr(basicDate);
                             const basicStartMinutes = basicDate.getHours() * 60 + basicDate.getMinutes();
+                            const basicHallName = sportHalls?.find(h => h.id === basicMatch.hallId)?.name || basicMatch.hallId;
                             
-                            console.log(`📈 [calculateFirstAvailableTimeWithSpider] Základný zápas: ${basicMatch.homeTeamIdentifier} vs ${basicMatch.awayTeamIdentifier}, deň: ${basicDateStr}, čas: ${basicStartMinutes}min`);
+                            console.log(`📈 [calculateFirstAvailableTimeWithSpider] Základný zápas: ${basicMatch.homeTeamIdentifier} vs ${basicMatch.awayTeamIdentifier}, deň: ${basicDateStr}, čas: ${basicStartMinutes}min, hala: ${basicHallName}`);
                             
+                            // ===== KONTROLA DÁTUMOVEJ LOGIKY =====
+                            // Ak je základný zápas v NESKORŠOM dni ako aktuálny zápas → CHYBA, aktuálny musí byť pred ním
+                            if (basicDateStr > currentDateStr) {
+                                console.log(`📈 [calculateFirstAvailableTimeWithSpider] ⚠️ Základný zápas je v NESKORŠOM dni (${basicDateStr}) ako aktuálny (${currentDateStr}) - BLOKUJEM CELÝ DEŇ!`);
+                                occupiedIntervals.push({
+                                    start: 0,
+                                    end: 24 * 60,
+                                    type: 'basic_group_after',
+                                    id: basicMatch.id,
+                                    _message: `Základný zápas (${basicMatch.groupName}) je v neskoršom dni - aktuálny musí byť PRED ním`
+                                });
+                                continue;
+                            }
+                            
+                            // Ak je základný zápas v SKORŠOM dni → OK (aktuálny je po ňom), ale musíme zarátať jeho koniec
+                            // Ak je základný zápas v ROVNAKOM dni → zarátať jeho koniec (bez ohľadu na halu)
+                            
+                            const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
+                            let basicDuration = 0;
+                            let basicBreak = 5;
+                            if (basicCategory) {
+                                const periods = basicCategory.periods || 2;
+                                const periodDuration = basicCategory.periodDuration || 20;
+                                const breakDuration = basicCategory.breakDuration || 2;
+                                basicDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                basicBreak = basicCategory.matchBreak || 5;
+                            }
+                            const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
+                            
+                            // ===== KONTROLA: Ak je základný zápas v ROVNAKOM dni v akejkoľvek hale =====
                             if (basicDateStr === currentDateStr) {
-                                const basicCategory = categories.find(c => c.name === basicMatch.categoryName);
-                                let basicDuration = 0;
-                                let basicBreak = 5;
-                                if (basicCategory) {
-                                    const periods = basicCategory.periods || 2;
-                                    const periodDuration = basicCategory.periodDuration || 20;
-                                    const breakDuration = basicCategory.breakDuration || 2;
-                                    basicDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                    basicBreak = basicCategory.matchBreak || 5;
-                                }
-                                const basicEndWithBreak = basicStartMinutes + basicDuration + basicBreak;
-                                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Základný zápas končí o ${basicEndWithBreak}min`);
-                                
+                                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Základný zápas v ROVNAKOM dni končí o ${basicEndWithBreak}min - blokujem čas PRED ním`);
                                 if (basicEndWithBreak > latestEnd) {
                                     latestEnd = basicEndWithBreak;
                                 }
+                            } else if (basicDateStr < currentDateStr) {
+                                // Skorší deň - OK, len logujeme
+                                console.log(`📈 [calculateFirstAvailableTimeWithSpider] Základný zápas v skoršom dni (${basicDateStr}) - OK, je pred aktuálnym`);
                             }
                         }
                     }
-                }
-                
-                // Zablokujeme čas PRED skončením všetkých súvisiacich zápasov
-                if (latestEnd > 0) {
-                    console.log(`📈 [calculateFirstAvailableTimeWithSpider] Najneskorší koniec súvisiacich zápasov: ${latestEnd}min - blokujem čas PRED ním`);
-                    occupiedIntervals.push({
-                        start: 0,
-                        end: latestEnd,
-                        type: 'advanced_related_same_day',
-                        _message: `Súvisiace zápasy musia skončiť PRED`
-                    });
+                    
+                    // Zablokujeme čas PRED skončením všetkých základných zápasov v ROVNAKOM dni
+                    if (latestEnd > 0) {
+                        console.log(`📈 [calculateFirstAvailableTimeWithSpider] Najneskorší koniec základných zápasov v ROVNAKOM dni: ${latestEnd}min - blokujem čas PRED ním`);
+                        occupiedIntervals.push({
+                            start: 0,
+                            end: latestEnd,
+                            type: 'basic_group_same_day',
+                            _message: `Základné zápasy v rovnakom dni musia skončiť PRED`
+                        });
+                    }
                 }
             }
         }
