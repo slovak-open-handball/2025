@@ -78,34 +78,77 @@ export function UrlLinkSettings({
                 updatedAt: Timestamp.fromDate(new Date())
             }, { merge: true });
 
+            console.log("[UrlLinkSettings] Uložené do Firestore.");
+            console.log("[UrlLinkSettings] sendAdminNotification je:", typeof sendAdminNotification);
+            console.log("[UrlLinkSettings] Pôvodné hodnoty:", originalValuesRef.current);
+            console.log("[UrlLinkSettings] Nové hodnoty:", { trimmedRules, trimmedReglement });
+
             // Notifikácie pre administrátorov
             if (sendAdminNotification) {
-                const originalRules = originalValuesRef.current.tournamentRulesUrl;
-                const originalReglement = originalValuesRef.current.tournamentReglementUrl;
+                const originalRules = originalValuesRef.current.tournamentRulesUrl || '';
+                const originalReglement = originalValuesRef.current.tournamentReglementUrl || '';
 
+                // --- PRAVIDLÁ TURNAJA ---
                 if (originalRules !== trimmedRules) {
-                    sendAdminNotification({
-                        type: 'editUrlLink',
-                        data: {
-                            originalLabel: 'Pravidlá turnaja',
-                            originalUrl: originalRules,
-                            newLabel: 'Pravidlá turnaja',
-                            newUrl: trimmedRules
+                    const isNewRules = originalRules === '' && trimmedRules !== '';
+                    console.log(`[UrlLinkSettings] Zmena Pravidiel turnaja: '${originalRules}' -> '${trimmedRules}' (typ: ${isNewRules ? 'create' : 'edit'})`);
+
+                    try {
+                        if (isNewRules) {
+                            sendAdminNotification({
+                                type: 'createUrlLink',
+                                data: {
+                                    label: 'Pravidlá turnaja',
+                                    url: trimmedRules
+                                }
+                            });
+                        } else {
+                            sendAdminNotification({
+                                type: 'editUrlLink',
+                                data: {
+                                    originalLabel: 'Pravidlá turnaja',
+                                    originalUrl: originalRules,
+                                    newLabel: 'Pravidlá turnaja',
+                                    newUrl: trimmedRules
+                                }
+                            });
                         }
-                    });
+                    } catch (notifError) {
+                        console.error("[UrlLinkSettings] Chyba pri odosielaní notifikácie (Pravidlá):", notifError);
+                    }
                 }
 
+                // --- REGLEMENT TURNAJA ---
                 if (originalReglement !== trimmedReglement) {
-                    sendAdminNotification({
-                        type: 'editUrlLink',
-                        data: {
-                            originalLabel: 'Reglement turnaja',
-                            originalUrl: originalReglement,
-                            newLabel: 'Reglement turnaja',
-                            newUrl: trimmedReglement
+                    const isNewReglement = originalReglement === '' && trimmedReglement !== '';
+                    console.log(`[UrlLinkSettings] Zmena Reglementu turnaja: '${originalReglement}' -> '${trimmedReglement}' (typ: ${isNewReglement ? 'create' : 'edit'})`);
+
+                    try {
+                        if (isNewReglement) {
+                            sendAdminNotification({
+                                type: 'createUrlLink',
+                                data: {
+                                    label: 'Reglement turnaja',
+                                    url: trimmedReglement
+                                }
+                            });
+                        } else {
+                            sendAdminNotification({
+                                type: 'editUrlLink',
+                                data: {
+                                    originalLabel: 'Reglement turnaja',
+                                    originalUrl: originalReglement,
+                                    newLabel: 'Reglement turnaja',
+                                    newUrl: trimmedReglement
+                                }
+                            });
                         }
-                    });
+                    } catch (notifError) {
+                        console.error("[UrlLinkSettings] Chyba pri odosielaní notifikácie (Reglement):", notifError);
+                    }
                 }
+            } else {
+                console.warn("[UrlLinkSettings] sendAdminNotification nie je k dispozícii!");
             }
 
             // Aktualizujeme pôvodné hodnoty
@@ -116,6 +159,7 @@ export function UrlLinkSettings({
 
             showNotification('URL adresy boli úspešne uložené.', 'success');
         } catch (error) {
+            console.error("[UrlLinkSettings] Chyba pri ukladaní:", error);
             showNotification(`Chyba pri ukladaní URL adries: ${error.message}`, 'error');
         }
     };
