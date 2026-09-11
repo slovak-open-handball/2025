@@ -735,7 +735,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         // HLAVIČKA – používa grid s rovnakou mriežkou ako riadky hráčov
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
                                             React.createElement('div', {
-                                                className: 'grid items-end gap-x-4 gap-y-2',
+                                                className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                 style: {
                                                     gridTemplateColumns: hasAccommodation
                                                         ? '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr) minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -800,7 +800,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 className: 'mb-2 p-3 bg-gray-100 rounded-md shadow-sm'
                                             },
                                                 React.createElement('div', {
-                                                    className: 'grid items-start gap-x-4 gap-y-2',
+                                                    className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
                                                             ? '96px 96px minmax(120px,1fr) minmax(120px,1fr) 150px auto minmax(120px,1fr) minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -988,7 +988,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                         // HLAVIČKA – grid s rovnakou mriežkou ako riadky
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
                                             React.createElement('div', {
-                                                className: 'grid items-end gap-x-4 gap-y-2',
+                                                className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                 style: {
                                                     gridTemplateColumns: hasAccommodation
                                                         ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1035,7 +1035,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 className: 'mb-2 p-3 bg-gray-100 rounded-md shadow-sm'
                                             },
                                                 React.createElement('div', {
-                                                    className: 'grid items-start gap-x-4 gap-y-2',
+                                                    className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
                                                             ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1151,7 +1151,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
                                             React.createElement('div', {
-                                                className: 'grid items-end gap-x-4 gap-y-2',
+                                                className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                 style: {
                                                     gridTemplateColumns: hasAccommodation
                                                         ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1197,7 +1197,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 className: 'mb-2 p-3 bg-gray-100 rounded-md shadow-sm'
                                             },
                                                 React.createElement('div', {
-                                                    className: 'grid items-start gap-x-4 gap-y-2',
+                                                    className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
                                                             ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1313,7 +1313,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
                                             React.createElement('div', {
-                                                className: 'grid items-end gap-x-4 gap-y-2',
+                                                className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                 style: {
                                                     gridTemplateColumns: hasAccommodation
                                                         ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1359,7 +1359,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 className: 'mb-2 p-3 bg-gray-100 rounded-md shadow-sm'
                                             },
                                                 React.createElement('div', {
-                                                    className: 'grid items-start gap-x-4 gap-y-2',
+                                                    className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
                                                             ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1475,7 +1475,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                     
                                         React.createElement('div', { className: 'mb-2 p-3 bg-gray-200 rounded-md shadow-sm' },
                                             React.createElement('div', {
-                                                className: 'grid items-end gap-x-4 gap-y-2',
+                                                className: 'grid items-end gap-x-4 gap-y-2 w-max',
                                                 style: {
                                                     gridTemplateColumns: hasAccommodation
                                                         ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
@@ -1521,7 +1521,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
                                                 className: 'mb-2 p-3 bg-gray-100 rounded-md shadow-sm'
                                             },
                                                 React.createElement('div', {
-                                                    className: 'grid items-start gap-x-4 gap-y-2',
+                                                    className: 'grid items-start gap-x-4 gap-y-2 w-max',
                                                     style: {
                                                         gridTemplateColumns: hasAccommodation
                                                             ? 'minmax(120px,1fr) minmax(120px,1fr) 150px minmax(120px,1fr) 96px minmax(120px,1fr) minmax(120px,1fr) minmax(120px,1fr)'
