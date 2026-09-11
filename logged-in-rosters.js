@@ -590,7 +590,6 @@ function MemberDetailsModal({
         return true;
     };
 
-    // NOVÉ: Validácia duplicitných čísel dresov
     const checkJerseyNumberDuplicate = (jerseyNum, jerseyNum2) => {
         if (memberType !== 'player') {
             setJerseyNumberError('');
@@ -599,17 +598,27 @@ function MemberDetailsModal({
             setIsJerseyNumber2Unique(true);
             return true;
         }
-
+    
         const existingPlayers = currentTeam?.playerDetails || [];
         let isJersey1Duplicate = false;
         let isJersey2Duplicate = false;
-
+    
         const currentPlayerIdentifier = isEditMode ? {
             firstName: memberData?.firstName,
             lastName: memberData?.lastName,
             dateOfBirth: memberData?._dateOfBirth || memberData?.dateOfBirth
         } : null;
-
+    
+        // Pomocná funkcia na parsovanie čísla dresu
+        const parseJersey = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            const num = parseInt(val, 10);
+            return isNaN(num) ? null : num;
+        };
+    
+        const newJersey1 = parseJersey(jerseyNum);
+        const newJersey2 = parseJersey(jerseyNum2);
+    
         existingPlayers.forEach(player => {
             // Preskočíme aktuálne upravovaného hráča
             if (isEditMode && currentPlayerIdentifier) {
@@ -621,17 +630,20 @@ function MemberDetailsModal({
                     return;
                 }
             }
-
+    
+            const existingJersey1 = parseJersey(player.jerseyNumber);
+            const existingJersey2 = parseJersey(player.jerseyNumber2);
+    
             // Kontrola čísla dresu 1
-            if (jerseyNum && player.jerseyNumber === parseInt(jerseyNum, 10)) {
+            if (newJersey1 !== null && existingJersey1 !== null && existingJersey1 === newJersey1) {
                 isJersey1Duplicate = true;
             }
             // Kontrola čísla dresu 2
-            if (jerseyNum2 && player.jerseyNumber2 === parseInt(jerseyNum2, 10)) {
+            if (newJersey2 !== null && existingJersey2 !== null && existingJersey2 === newJersey2) {
                 isJersey2Duplicate = true;
             }
         });
-
+    
         // Nastavenie chýb pre číslo dresu 1
         if (isJersey1Duplicate) {
             setJerseyNumberError('Hráč s týmto číslom dresu 1 už v tíme existuje.');
@@ -640,7 +652,7 @@ function MemberDetailsModal({
             setJerseyNumberError('');
             setIsJerseyNumberUnique(true);
         }
-
+    
         // Nastavenie chýb pre číslo dresu 2
         if (isJersey2Duplicate) {
             setJerseyNumber2Error('Hráč s týmto číslom dresu 2 už v tíme existuje.');
@@ -649,7 +661,7 @@ function MemberDetailsModal({
             setJerseyNumber2Error('');
             setIsJerseyNumber2Unique(true);
         }
-
+    
         return !isJersey1Duplicate && !isJersey2Duplicate;
     };
 
