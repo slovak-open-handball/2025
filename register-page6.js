@@ -1473,7 +1473,7 @@ export function Page6Form({ handlePrev, handleSubmit, loading, teamsDataFromPage
     
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between mt-6' },
+                    { className: 'flex justify-between mt-6 pb-8' }, 
                     React.createElement(
                         'button',
                         {
