@@ -3028,6 +3028,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     });
 
+    React.useEffect(() => {
+        setHomeTeamMappedName(homeTeamDisplay);
+        setAwayTeamMappedName(awayTeamDisplay);
+    }, [match.id]);
+
     // 🔥 AKONÁHLE SA NAČÍTA SÚPISKA TÍMU, NASTAVÍME isMappingReady = true
     React.useEffect(() => {
         // Ak už je true, netreba nič robiť
@@ -4716,6 +4721,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             'div',
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
             React.createElement(TeamMembersList, {
+                key: `${match.id}-home`,
                 teamName: homeTeamDisplay,
                 categoryName: categoryDisplayName,
                 teamType: 'home',
@@ -4726,6 +4732,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 blueCardSuspensions: blueCardSuspensions
             }),
             React.createElement(TeamMembersList, {
+                key: `${match.id}-away`,
                 teamName: awayTeamDisplay,
                 categoryName: categoryDisplayName,
                 teamType: 'away',
@@ -5261,7 +5268,7 @@ const MatchesHallApp = () => {
         
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [allMatchesList, showingDetail, selectedMatch]);
+    }, [allMatchesList, showingDetail]);
 
     useEffect(() => {
         if (!window.db) return;        
@@ -5386,6 +5393,7 @@ const MatchesHallApp = () => {
 
     if (showingDetail && selectedMatch) {
         return React.createElement(MatchDetailView, {
+            key: selectedMatch.id,
             match: selectedMatch,
             teamNames: teamNames,
             onBack: handleBackToList,
