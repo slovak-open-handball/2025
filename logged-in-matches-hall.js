@@ -3062,33 +3062,44 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     continue;
                 }
                 
-                // Vyriešime názvy tímov v zápase (rovnakým spôsobom ako resolvedTeamName)
-                let homeName = matchData.homeTeamIdentifier;
-                let awayName = matchData.awayTeamIdentifier;
+                // Získame skutočné názvy tímov z match objektu (NIE identifikátory)
+                let homeTeamName = matchData.homeTeamName || matchData.homeTeamIdentifier;
+                let awayTeamName = matchData.awayTeamName || matchData.awayTeamIdentifier;
                 
-                if (homeName && matchCategoryName && homeName.includes(matchCategoryName)) {
+                // Vždy mapujeme názvy tímov cez matchTracker, ak obsahujú názov kategórie
+                if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(homeName);
-                            if (mapped) homeName = mapped;
-                        } catch (e) {}
+                            const mapped = await window.matchTracker.getTeamNameByDisplayId(homeTeamName);
+                            if (mapped && mapped !== homeTeamName) {
+                                homeTeamName = mapped;
+                            }
+                        } catch (e) {
+                            console.error(`Chyba pri mapovaní domáceho tímu ${homeTeamName}:`, e);
+                        }
                     }
                 }
                 
-                if (awayName && matchCategoryName && awayName.includes(matchCategoryName)) {
+                if (awayTeamName && matchCategoryName && awayTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(awayName);
-                            if (mapped) awayName = mapped;
-                        } catch (e) {}
+                            const mapped = await window.matchTracker.getTeamNameByDisplayId(awayTeamName);
+                            if (mapped && mapped !== awayTeamName) {
+                                awayTeamName = mapped;
+                            }
+                        } catch (e) {
+                            console.error(`Chyba pri mapovaní hosťujúceho tímu ${awayTeamName}:`, e);
+                        }
                     }
                 }
                 
-                // Zápas patrí tímu, ak sa niektorý z vyriešených názvov zhoduje s resolvedTeamName
-                if (homeName === resolvedTeamName || awayName === resolvedTeamName) {
+                // Zápas patrí tímu, ak sa niektorý z namapovaných názvov zhoduje s resolvedTeamName
+                if (homeTeamName === resolvedTeamName || awayTeamName === resolvedTeamName) {
                     teamMatches.push({
                         id: doc.id,
                         ...matchData,
+                        homeTeamName,  // uložíme aj namapované názvy
+                        awayTeamName,
                         scheduledTimeDate: matchData.scheduledTime?.toDate()
                     });
                 }
