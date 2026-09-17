@@ -3031,37 +3031,50 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const categoryNameForMatch = match?.categoryName || 
             (match?.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
-        let pollCount = 0;
-        const maxPolls = 60; // 60 * 500ms = 30 sekúnd
+            // 🔥 POLLING: Skúsime, či getTeamNameByDisplayId už funguje
+            // Namiesto testovania match.homeTeamIdentifier použijeme __teamNameMapping alebo iný indikátor
+            let pollCount = 0;
+            const maxPolls = 60; // 60 * 500ms = 30 sekúnd
         
-        const pollInterval = setInterval(() => {
+            const pollInterval = setInterval(() => {
             pollCount++;
             
             let mappingWorks = false;
             try {
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                    // Test 1: Skúsime namapovať testovací identifikátor
-                    if (testIdentifier && categoryNameForMatch && testIdentifier.includes(categoryNameForMatch)) {
-                        const mapped = window.matchTracker.getTeamNameByDisplayId(testIdentifier);
-                        if (mapped && mapped !== testIdentifier && mapped !== 'null' && mapped !== null) {
-                            mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: mapovanie funguje! "${testIdentifier}" -> "${mapped}"`);
-                        }
+                // Test 1: Skúsime window.teamNameReplacer.isMappingReady()
+                if (window.teamNameReplacer?.isMappingReady?.() === true) {
+                    mappingWorks = true;
+                    console.log(`[BlueCard] ✅ Polling #${pollCount}: teamNameReplacer.isMappingReady() = true`);
+                }
+                
+                // Test 2: Skúsime __teamNameMapping
+                if (!mappingWorks) {
+                    if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+                        mappingWorks = true;
+                        console.log(`[BlueCard] ✅ Polling #${pollCount}: __teamNameMapping má ${Object.keys(window.__teamNameMapping).length} záznamov`);
                     }
+                }
+                
+                // Test 3: Skúsime reálne namapovať AKÝKOĽVEK identifikátor, ktorý má formát "Kategória X"
+                // Napr. "U12 CH 4D" alebo podobne. Skúsime postupne niekoľko možností.
+                if (!mappingWorks && window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    // Vezmeme match.homeTeamIdentifier alebo awayTeamIdentifier a skúsime, či vráti NIEČO iné
+                    // ako vstup (aj keď neobsahuje categoryName, môže vrátiť namapovaný názov)
+                    const testIds = [
+                        match?.homeTeamIdentifier,
+                        match?.awayTeamIdentifier,
+                        match?.homeTeamName,
+                        match?.awayTeamName
+                    ].filter(Boolean);
                     
-                    // Test 2: Skúsime window.teamNameReplacer.isMappingReady()
-                    if (!mappingWorks) {
-                        if (window.teamNameReplacer?.isMappingReady?.() === true) {
+                    for (const testId of testIds) {
+                        // Ak testId obsahuje medzeru a číslo+písmeno, je to pravdepodobne "Kategória X"
+                        // Skúsime namapovať
+                        const mapped = window.matchTracker.getTeamNameByDisplayId(testId);
+                        if (mapped && mapped !== testId && mapped !== 'null' && mapped !== null) {
                             mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: teamNameReplacer.isMappingReady() = true`);
-                        }
-                    }
-                    
-                    // Test 3: Skúsime __teamNameMapping
-                    if (!mappingWorks) {
-                        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-                            mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: __teamNameMapping má ${Object.keys(window.__teamNameMapping).length} záznamov`);
+                            console.log(`[BlueCard] ✅ Polling #${pollCount}: mapovanie funguje! "${testId}" -> "${mapped}"`);
+                            break;
                         }
                     }
                 }
