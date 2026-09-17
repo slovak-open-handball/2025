@@ -124,6 +124,45 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
+const resolveTeamNameViaTeamManager = async (teamIdentifier, categoryName) => {
+    if (!teamIdentifier) return teamIdentifier;
+    
+    let intermediateName = teamIdentifier;
+    
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        try {
+            const syncResult = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+            if (syncResult && syncResult !== teamIdentifier) {
+                intermediateName = syncResult;
+            }
+        } catch (e) {
+        }
+    }
+    
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        const shouldTryMatchTracker = 
+            !categoryName || 
+            intermediateName.includes(categoryName) || 
+            intermediateName !== teamIdentifier;
+        
+        if (shouldTryMatchTracker) {
+            try {
+                const asyncResult = await window.matchTracker.getTeamNameByDisplayId(intermediateName);
+                if (asyncResult && asyncResult !== intermediateName && asyncResult !== 'null') {
+                    return asyncResult;
+                }
+            } catch (e) {
+            }
+        }
+    }
+    
+    if (intermediateName !== teamIdentifier) {
+        return intermediateName;
+    }
+    
+    return teamIdentifier;
+};
+
 const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNames) => {
     if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
         return;
@@ -147,7 +186,7 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
             
             if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                 try {
-                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                     if (newName && newName !== currentDisplayName && newName !== updatedNames[match.homeTeamIdentifier]) {
                         updatedNames[match.homeTeamIdentifier] = newName;
                         needsUpdate = true;
@@ -162,7 +201,7 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
             
             if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                 try {
-                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                     if (newName && newName !== currentDisplayName && newName !== updatedNames[match.awayTeamIdentifier]) {
                         updatedNames[match.awayTeamIdentifier] = newName;
                         needsUpdate = true;
@@ -3332,7 +3371,7 @@ const MatchesHallApp = () => {
                 
                 if (currentDisplayName && (currentDisplayName.includes(categoryName) || currentDisplayName === match.homeTeamIdentifier)) {
                     try {
-                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                         if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
                             names[match.homeTeamIdentifier] = newName;
                             needsUpdate = true;
@@ -3349,7 +3388,7 @@ const MatchesHallApp = () => {
                 
                 if (currentDisplayName && (currentDisplayName.includes(categoryName) || currentDisplayName === match.awayTeamIdentifier)) {
                     try {
-                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                         if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
                             names[match.awayTeamIdentifier] = newName;
                             needsUpdate = true;
@@ -3703,7 +3742,7 @@ const MatchesHallApp = () => {
                 
                 if (currentDisplayName && (currentDisplayName.includes(categoryName) || currentDisplayName === match.homeTeamIdentifier)) {
                     try {
-                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                         if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
                             names[match.homeTeamIdentifier] = newName;
                             needsUpdate = true;
@@ -3720,7 +3759,7 @@ const MatchesHallApp = () => {
                 
                 if (currentDisplayName && (currentDisplayName.includes(categoryName) || currentDisplayName === match.awayTeamIdentifier)) {
                     try {
-                        const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                        const newName = await resolveTeamNameViaTeamManager(currentDisplayName, categoryName);
                         if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
                             names[match.awayTeamIdentifier] = newName;
                             needsUpdate = true;
