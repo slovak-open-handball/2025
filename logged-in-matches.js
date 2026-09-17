@@ -1636,6 +1636,37 @@ const AssignMatchToBreakModal = ({
         return category?.drawColor || '#f3f4f6';
     };
 
+    // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
+    const getTeamsWithBackToBackMatches = () => {
+        const teamsInConflict = new Set();
+        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        const matchesByDate = {};
+        allMatches.forEach(match => {
+            if (!match.scheduledTime) return;
+            let dateStr;
+            try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
+            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
+            matchesByDate[dateStr].push(match);
+        });
+        Object.keys(matchesByDate).forEach(dateStr => {
+            const dayMatches = matchesByDate[dateStr]
+                .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
+                .sort((a, b) => a._time - b._time);
+            for (let i = 0; i < dayMatches.length - 1; i++) {
+                const current = dayMatches[i];
+                const next = dayMatches[i + 1];
+                const currentTeams = [current.homeTeamIdentifier, current.awayTeamIdentifier];
+                const nextTeams = [next.homeTeamIdentifier, next.awayTeamIdentifier];
+                currentTeams.forEach(team => {
+                    if (nextTeams.includes(team)) teamsInConflict.add(team);
+                });
+            }
+        });
+        return teamsInConflict;
+    };
+    
+    const backToBackTeams = getTeamsWithBackToBackMatches();
+
     return React.createElement(
         'div',
         {
@@ -1744,13 +1775,19 @@ const AssignMatchToBreakModal = ({
                             { className: 'grid items-start text-xs', style: { gridTemplateColumns: displayMode === 'both' ? '200px 10px 200px 10px 50px 30px 60px' : '200px 200px 10px 50px 30px 60px', width: '100%' } },
                             React.createElement(
                                 'div',
-                                { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                {
+                                    className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
+                                    style: {
+                                        textAlign: 'center',
+                                        backgroundColor: backToBackTeams.has(match.homeTeamIdentifier) ? '#dc2626' : 'transparent'
+                                    }
+                                },
                                 React.createElement(
                                     'span',
                                     {
                                         className: 'font-medium truncate block w-full',
                                         style: {
-                                            color: backToBackTeams.has(match.homeTeamIdentifier) ? '#dc2626' : '#000000',
+                                            color: '#000000',
                                             fontWeight: backToBackTeams.has(match.homeTeamIdentifier) ? 'bold' : undefined
                                         },
                                         title: displayMode === 'both' ? homeName : homeDisplay
@@ -1761,13 +1798,19 @@ const AssignMatchToBreakModal = ({
                             React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' } }, React.createElement('span', null, '0')),
                             React.createElement(
                                 'div',
-                                { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                {
+                                    className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
+                                    style: {
+                                        textAlign: 'center',
+                                        backgroundColor: backToBackTeams.has(match.awayTeamIdentifier) ? '#dc2626' : 'transparent'
+                                    }
+                                },
                                 React.createElement(
                                     'span',
                                     {
                                         className: 'font-medium truncate block w-full',
                                         style: {
-                                            color: backToBackTeams.has(match.awayTeamIdentifier) ? '#dc2626' : '#000000',
+                                            color: '#000000',
                                             fontWeight: backToBackTeams.has(match.awayTeamIdentifier) ? 'bold' : undefined
                                         },
                                         title: displayMode === 'both' ? awayName : awayDisplay
