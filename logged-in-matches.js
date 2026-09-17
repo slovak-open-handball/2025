@@ -78,7 +78,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 // ===== GENEROVANIE ZÁPASOV – zjednodušené, bez transferFromBasicGroup =====
-const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
+const generateMatchesForGroup = (teams, withRepetitions, categoryName, skipSameGroupLetter = false) => {
     const matches = [];
     
     const teamIdentifiers = teams.map(t => {
@@ -99,10 +99,27 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
         };
     });
     
+    // Pomocná funkcia – vráti písmeno skupiny z identifikátora (napr. "A2" → "A")
+    const getGroupLetter = (identifier) => {
+        if (!identifier) return '';
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return '';
+        const lastPart = parts[parts.length - 1];
+        // Zoberieme všetko pred prvým číslom
+        const match = lastPart.match(/^([a-zA-Z]+)/);
+        return match ? match[1].toUpperCase() : '';
+    };
+    
     if (withRepetitions) {
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = 0; j < teamIdentifiers.length; j++) {
                 if (i !== j) {
+                    // Ak skipSameGroupLetter a obe skupiny majú rovnaké písmeno → preskočiť
+                    if (skipSameGroupLetter) {
+                        const letterI = getGroupLetter(teamIdentifiers[i].identifier);
+                        const letterJ = getGroupLetter(teamIdentifiers[j].identifier);
+                        if (letterI && letterJ && letterI === letterJ) continue;
+                    }
                     matches.push({
                         homeTeamIdentifier: teamIdentifiers[i].identifier,
                         awayTeamIdentifier: teamIdentifiers[j].identifier,
@@ -113,6 +130,12 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
     } else {
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
+                // Ak skipSameGroupLetter a obe skupiny majú rovnaké písmeno → preskočiť
+                if (skipSameGroupLetter) {
+                    const letterI = getGroupLetter(teamIdentifiers[i].identifier);
+                    const letterJ = getGroupLetter(teamIdentifiers[j].identifier);
+                    if (letterI && letterJ && letterI === letterJ) continue;
+                }
                 matches.push({
                     homeTeamIdentifier: teamIdentifiers[i].identifier,
                     awayTeamIdentifier: teamIdentifiers[j].identifier,
@@ -3984,7 +4007,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (groupName) {
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
                 if (teamsInGroup.length < 2) { window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error'); setGenerationInProgress(false); return; }
-                const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name);
+                
+                // Zistíme, či ide o nadstavbovú skupinu a či kategória má zapnuté prenášanie bodov
+                const isNadstavbova = typeof groupName === 'string' && groupName.toLowerCase().includes('nadstavb');
+                const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
+                
+                const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
                 const matchesWithInfo = groupMatches.map((match, index) => ({
                     homeTeamIdentifier: match.homeTeamIdentifier,
                     awayTeamIdentifier: match.awayTeamIdentifier,
@@ -4002,7 +4030,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                     if (teamsInGroup.length >= 2) {
-                        const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name);
+                        // Zistíme, či ide o nadstavbovú skupinu a či kategória má zapnuté prenášanie bodov
+                        const isNadstavbova = typeof group.name === 'string' && group.name.toLowerCase().includes('nadstavb');
+                        const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
+                        
+                        const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
                         const matchesWithInfo = groupMatches.map((match, index) => ({
                             homeTeamIdentifier: match.homeTeamIdentifier,
                             awayTeamIdentifier: match.awayTeamIdentifier,
