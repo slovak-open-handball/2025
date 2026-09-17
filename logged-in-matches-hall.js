@@ -3022,44 +3022,98 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-    const loadTeamMatches = async (teamIdentifier) => {
+        const loadTeamMatches = async (teamIdentifier, categoryName) => {
         if (!window.db || !teamIdentifier) return [];
         
         try {
+            // Vyriešime skutočný názov tímu
+            let resolvedTeamName = teamIdentifier;
+            if (categoryName && teamIdentifier.includes(categoryName)) {
+                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    try {
+                        const mapped = await window.matchTracker.getTeamNameByDisplayId(teamIdentifier);
+                        if (mapped && mapped !== teamIdentifier) {
+                            resolvedTeamName = mapped;
+                        }
+                    } catch (err) {
+                        console.error(`Chyba pri mapovaní názvu tímu ${teamIdentifier}:`, err);
+                    }
+                }
+            }
+            
             const matchesRef = collection(window.db, 'matches');
             const matchesSnapshot = await getDocs(matchesRef);
             const teamMatches = [];
             
-            matchesSnapshot.forEach((doc) => {
+            for (const doc of matchesSnapshot.docs) {
                 const matchData = doc.data();
-                if ((matchData.homeTeamIdentifier === teamIdentifier || matchData.awayTeamIdentifier === teamIdentifier) &&
-                    matchData.scheduledTime) {
+                if (!matchData.scheduledTime) continue;
+                
+                // Zistíme kategóriu zápasu
+                let matchCategoryName = matchData.categoryName;
+                if (!matchCategoryName && matchData.categoryId && window.categoriesData) {
+                    matchCategoryName = window.categoriesData[matchData.categoryId];
+                }
+                
+                // Musí ísť o rovnakú kategóriu
+                if (categoryName && matchCategoryName && matchCategoryName !== categoryName) {
+                    continue;
+                }
+                
+                // Vyriešime názvy tímov v zápase
+                let homeName = matchData.homeTeamIdentifier;
+                let awayName = matchData.awayTeamIdentifier;
+                
+                if (homeName && matchCategoryName && homeName.includes(matchCategoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            const mapped = await window.matchTracker.getTeamNameByDisplayId(homeName);
+                            if (mapped) homeName = mapped;
+                        } catch (e) {}
+                    }
+                }
+                
+                if (awayName && matchCategoryName && awayName.includes(matchCategoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            const mapped = await window.matchTracker.getTeamNameByDisplayId(awayName);
+                            if (mapped) awayName = mapped;
+                        } catch (e) {}
+                    }
+                }
+                
+                // Zápas patrí tímu, ak sa niektorý z názvov zhoduje s resolvedTeamName
+                if (homeName === resolvedTeamName || awayName === resolvedTeamName) {
                     teamMatches.push({
                         id: doc.id,
                         ...matchData,
                         scheduledTimeDate: matchData.scheduledTime?.toDate()
                     });
                 }
-            });
+            }
             
             teamMatches.sort((a, b) => {
                 const timeA = a.scheduledTimeDate?.getTime() || 0;
                 const timeB = b.scheduledTimeDate?.getTime() || 0;
                 return timeA - timeB;
-            });            
+            });
+            
             return teamMatches;
         } catch (err) {
             console.error('Chyba pri načítaní zápasov tímu:', err);
             return [];
         }
-    };    
+    };  
 
     const calculateBlueCardSuspensions = async () => {
         if (!window.db || !match.id) return;
     
         try {
-            const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier);
-            const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier);
+            const categoryNameForMatch = match.categoryName || 
+                (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+            
+            const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier, categoryNameForMatch);
+            const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier, categoryNameForMatch);
         
             await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
         } catch (err) {
@@ -3525,7 +3579,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         return { homeGoals, awayGoals };
     };
 
-    React.useEffect(() => {
+        React.useEffect(() => {
         if (!window.db || !match.id) return;        
         
         const eventsRef = collection(window.db, 'matchEvents');
@@ -3533,8 +3587,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         const unsubscribe = onSnapshot(q, async (snapshot) => {            
             if (match.homeTeamIdentifier && match.awayTeamIdentifier) {
-                const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier);
-                const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier);                
+                const categoryNameForMatch = match.categoryName || 
+                    (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+                
+                const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier, categoryNameForMatch);
+                const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier, categoryNameForMatch);                
                 const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                 const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);                
                 await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
