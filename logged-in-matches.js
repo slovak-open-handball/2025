@@ -1636,20 +1636,23 @@ const AssignMatchToBreakModal = ({
         return category?.drawColor || '#f3f4f6';
     };
 
-    // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
-        const matchesByDate = {};
+    
+        // Kľúč: hallId + dateStr
+    vconst matchesByHallAndDate = {};
         matches.forEach(match => {
-            if (!match.scheduledTime) return;
+            if (!match.scheduledTime || !match.hallId) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
-            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
-            matchesByDate[dateStr].push(match);
+            const key = `${match.hallId}_${dateStr}`;
+            if (!matchesByHallAndDate[key]) matchesByHallAndDate[key] = [];
+            matchesByHallAndDate[key].push(match);
         });
-        Object.keys(matchesByDate).forEach(dateStr => {
-            const dayMatches = matchesByDate[dateStr]
+        
+        Object.keys(matchesByHallAndDate).forEach(key => {
+            const dayMatches = matchesByHallAndDate[key]
                 .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
                 .sort((a, b) => a._time - b._time);
             for (let i = 0; i < dayMatches.length - 1; i++) {
@@ -3005,20 +3008,23 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
-        const matchesByDate = {};
+    
+        // Kľúč: hallId + dateStr
+        const matchesByHallAndDate = {};
         matches.forEach(match => {
-            if (!match.scheduledTime) return;
+            if (!match.scheduledTime || !match.hallId) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
-            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
-            matchesByDate[dateStr].push(match);
+            const key = `${match.hallId}_${dateStr}`;
+            if (!matchesByHallAndDate[key]) matchesByHallAndDate[key] = [];
+            matchesByHallAndDate[key].push(match);
         });
-        Object.keys(matchesByDate).forEach(dateStr => {
-            const dayMatches = matchesByDate[dateStr]
+    
+        Object.keys(matchesByHallAndDate).forEach(key => {
+            const dayMatches = matchesByHallAndDate[key]
                 .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
                 .sort((a, b) => a._time - b._time);
             for (let i = 0; i < dayMatches.length - 1; i++) {
