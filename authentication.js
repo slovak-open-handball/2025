@@ -133,7 +133,8 @@ const roleAccess = {
     ],
     club: [
         'logged-in-my-data.html',
-        'logged-in-rosters.html'
+        'logged-in-rosters.html',
+        'logged-in-teams.html',
     ],
     volunteer: [
         'logged-in-my-data.html'
