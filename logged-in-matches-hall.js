@@ -3120,7 +3120,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             
             for (const doc of matchesSnapshot.docs) {
                 const matchData = doc.data();
-                if (!matchData.scheduledTime) continue;
                 
                 let matchCategoryName = matchData.categoryName;
                 if (!matchCategoryName && matchData.categoryId && window.categoriesData) {
