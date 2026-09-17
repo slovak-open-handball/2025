@@ -3045,7 +3045,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        if (!matches || matches.length === 0) return teamsInConflict;
     
         // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
@@ -3066,7 +3066,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
