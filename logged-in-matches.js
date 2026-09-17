@@ -1637,13 +1637,12 @@ const AssignMatchToBreakModal = ({
     };
 
     const getTeamsWithBackToBackMatches = () => {
-        const teamsInConflict = new Set();
-        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        const conflictMatchIds = new Set();
+        if (!matches || matches.length === 0) return conflictMatchIds;
     
-        // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
-            if (!category) return 30 + 5; // fallback: 30 min zápas + 5 min prestávka
+            if (!category) return 30 + 5;
             const periods = category.periods || 2;
             const periodDuration = category.periodDuration || 20;
             const breakDuration = category.breakDuration || 2;
@@ -1652,14 +1651,11 @@ const AssignMatchToBreakModal = ({
             return matchDuration + matchBreak;
         };
     
-        // Koeficient: koľkokrát môže byť medzi zápasmi "zápas + prestávka" iného tímu
-        // K = 1 → prísne back-to-back (druhý zápas začína hneď po skončení prvého + prestávka)
-        // K = 2 → miernejšie (povolí jednu "medzeru" veľkosti jedného zápasu)
         const K = 1;
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
@@ -1680,29 +1676,30 @@ const AssignMatchToBreakModal = ({
                 });
             });
     
-            // Pre každý tím skontroluj, či má dva zápasy v priebehu "jedného zápasu + prestávky"
+            // Pre každý tím nájdi konfliktné PÁRY zápasov
             Object.keys(teamMatchTimes).forEach(team => {
                 const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
                 for (let i = 0; i < times.length - 1; i++) {
                     const current = times[i];
                     const next = times[i + 1];
                     const gapMinutes = (next.time - current.time) / 60000;
-    
-                    // Maximálna povolená medzera = dĺžka PREDCHÁDZAJÚCEHO zápasu + jeho prestávka, krát K
-                    // (alebo môžeš použiť max z oboch zápasov, ak chceš byť miernejší)
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        teamsInConflict.add(team);
+                        // Zvýrazníme OBA zápasy konfliktného páru
+                        conflictMatchIds.add(current.match.id);
+                        conflictMatchIds.add(next.match.id);
+                        // Ak chceš zvýrazniť len druhý zápas, zakomentuj riadok vyššie
+                        // a ponechaj iba: conflictMatchIds.add(next.match.id);
                         break;
                     }
                 }
             });
         });
     
-        return teamsInConflict;
+        return conflictMatchIds;
     };
-
+    
     const backToBackTeams = getTeamsWithBackToBackMatches();    
 
     return React.createElement(
@@ -3044,13 +3041,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
 
     const getTeamsWithBackToBackMatches = () => {
-        const teamsInConflict = new Set();
-        if (!matches || matches.length === 0) return teamsInConflict;
+        const conflictMatchIds = new Set();
+        if (!matches || matches.length === 0) return conflictMatchIds;
     
-        // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
-            if (!category) return 30 + 5; // fallback: 30 min zápas + 5 min prestávka
+            if (!category) return 30 + 5;
             const periods = category.periods || 2;
             const periodDuration = category.periodDuration || 20;
             const breakDuration = category.breakDuration || 2;
@@ -3059,9 +3055,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             return matchDuration + matchBreak;
         };
     
-        // Koeficient: koľkokrát môže byť medzi zápasmi "zápas + prestávka" iného tímu
-        // K = 1 → prísne back-to-back (druhý zápas začína hneď po skončení prvého + prestávka)
-        // K = 2 → miernejšie (povolí jednu "medzeru" veľkosti jedného zápasu)
         const K = 1;
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
@@ -3087,27 +3080,28 @@ const AddMatchesApp = ({ userProfileData }) => {
                 });
             });
     
-            // Pre každý tím skontroluj, či má dva zápasy v priebehu "jedného zápasu + prestávky"
+            // Pre každý tím nájdi konfliktné PÁRY zápasov
             Object.keys(teamMatchTimes).forEach(team => {
                 const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
                 for (let i = 0; i < times.length - 1; i++) {
                     const current = times[i];
                     const next = times[i + 1];
                     const gapMinutes = (next.time - current.time) / 60000;
-    
-                    // Maximálna povolená medzera = dĺžka PREDCHÁDZAJÚCEHO zápasu + jeho prestávka, krát K
-                    // (alebo môžeš použiť max z oboch zápasov, ak chceš byť miernejší)
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        teamsInConflict.add(team);
+                        // Zvýrazníme OBA zápasy konfliktného páru
+                        conflictMatchIds.add(current.match.id);
+                        conflictMatchIds.add(next.match.id);
+                        // Ak chceš zvýrazniť len druhý zápas, zakomentuj riadok vyššie
+                        // a ponechaj iba: conflictMatchIds.add(next.match.id);
                         break;
                     }
                 }
             });
         });
     
-        return teamsInConflict;
+        return conflictMatchIds;
     };
     
     const backToBackTeams = getTeamsWithBackToBackMatches();
