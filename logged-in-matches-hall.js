@@ -3067,6 +3067,27 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
+    const resolveTeamNameForMatch = async (teamIdentifier, categoryName, fallbackName) => {
+        if (!teamIdentifier) return fallbackName;
+        
+        let currentDisplayName = fallbackName;
+        
+        if (categoryName && currentDisplayName && currentDisplayName.includes(categoryName)) {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mappedName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    if (mappedName && mappedName !== currentDisplayName) {
+                        return mappedName;
+                    }
+                } catch (err) {
+                    console.error(`Chyba pri mapovaní názvu tímu ${currentDisplayName}:`, err);
+                }
+            }
+        }
+        
+        return currentDisplayName;
+    };
+
     const calculateBlueCardSuspensionsRealTime = async (homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal) => {
         if (!window.db || !match.id) return;
         
@@ -3081,13 +3102,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const currentMatchIndexHome = homeTeamMatches.findIndex(m => m.id === match.id);
             const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
             
+            const categoryNameForMatch = match.categoryName || 
+                (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        
             if (currentMatchIndexHome !== -1) {
+                const resolvedHomeTeamName = await resolveTeamNameForMatch(
+                    match.homeTeamIdentifier,
+                    categoryNameForMatch,
+                    homeTeamDisplayLocal
+                );
+                
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
-                    
+                
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === homeTeamDisplayLocal);
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedHomeTeamName);
                         
                         if (foundTeam) {
                             const allMembers = [];
@@ -3181,13 +3211,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             if (currentMatchIndexAway !== -1) {
+                const resolvedAwayTeamName = await resolveTeamNameForMatch(
+                    match.awayTeamIdentifier,
+                    categoryNameForMatch,
+                    awayTeamDisplayLocal
+                );
+                
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === awayTeamDisplayLocal);
-                        
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedAwayTeamName);                        
                         if (foundTeam) {
                             const allMembers = [];
                             
