@@ -17,11 +17,11 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
-            overflow-x: hidden; /* Skryje horizontálny posuvník pre celú stránku */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
             background-color: #f3f4f6;
         }
         /* Štýly pre modálne okná */
@@ -37,7 +37,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-
         }
         .modal-content {
             background-color: #fefefe;
@@ -45,63 +44,44 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px; /* Upravené na širšie */
+            max-width: 500px;
             width: 90%;
             position: relative;
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 0; /* Len ako východisková hodnota, bude riadené menu-spacer */
+            margin-left: 0;
             flex-grow: 1;
-            display: flex; /* Dôležité pre správne rozloženie menu-spacer a content-wrapper */
-            align-items: flex-start; /* Zarovnanie obsahu na začiatok vertikálne */
-            transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
-            overflow-y: auto; /* Zabezpečíme rolovanie, ak je obsah dlhší ako výška */
+            display: flex;
+            align-items: flex-start;
+            transition: margin-left 0.3s ease-in-out;
+            overflow-y: auto;
 
-            /* Na menších obrazovkách necháme margin-left na 0, ľavé menu sa prekrýva alebo je skryté */
             @media (max-width: 768px) {
                 margin-left: 0 !important;
             }
         }
 
-        /* Štýly pre React root, ktorý slúži ako kontajner pre React aplikáciu */
+        /* Štýly pre React root - šírka je teraz definovaná Tailwind triedami priamo v HTML */
         #root {
-            box-sizing: border-box; /* Započítanie paddingu do šírky */
-            margin-left: auto; /* Centrovanie v rámci .content-wrapper */
-            margin-right: auto; /* Centrovanie v rámci .content-wrapper */
-            flex-grow: 1; /* Umožní elementu rásť */
-            flex-shrink: 1; /* Umožní elementu zmenšovať sa */
-            min-width: 0; /* Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
+            box-sizing: border-box;
+            flex-grow: 1;
+            flex-shrink: 1;
+            min-width: 0;
             
-            /* Na mobilných zariadeniach odstránime maximálnu šírku, aby sa prispôsobilo */
             @media (max-width: 768px) {
                 max-width: 100%;
             }
         }
 
-        /* Styling pre obalový div obsahu, ktorý zabezpečí symetrické okraje a centrovanie */
+        /* Obalový div obsahu - bez paddingu, ten rieši #root */
         .content-wrapper {
-            flex-grow: 1; /* Zaberá všetok dostupný priestor po menu-spacer */
-            flex-shrink: 1; /* Umožňuje zmenšenie, ak je to potrebné */
-            min-width: 0; /* Umožňuje zmenšenie pod jeho obsahovú šírku */
+            flex-grow: 1;
+            flex-shrink: 1;
+            min-width: 0;
             display: flex;
-            justify-content: center; /* Centrovanie #root vo vnútri tohto wrapperu */
-            align-items: flex-start; /* Zarovnanie #root na začiatok vertikálne */
-
-            padding-top: 2rem; /* pt-8 */
-            padding-bottom: 2rem; /* pb-8 */
-            padding-left: 1rem; /* px-4 */
-            padding-right: 1rem; /* px-4 */
-            
-            /* Responzívne paddingy */
-            @media (min-width: 640px) { /* sm: */
-                padding-left: 1.5rem; /* sm:px-6 */
-                padding-right: 1.5rem; /* sm:px-6 */
-            }
-            @media (min-width: 1024px) { /* lg: */
-                padding-left: 2rem; /* lg:px-8 */
-                padding-right: 2rem; /* lg:px-8 */
-            }
+            justify-content: center;
+            align-items: flex-start;
         }
 
         /* Štýly pre plávajúce tlačidlo */
@@ -109,7 +89,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #34D399; /* Zelená */
+            background-color: #34D399;
             color: white;
             border-radius: 50%;
             width: 60px;
@@ -124,7 +104,7 @@
             z-index: 30;
         }
         .fab-button:hover {
-            background-color: #10B981; /* Tmavšia zelená */
+            background-color: #10B981;
         }
         #header-placeholder {
             position: fixed;
@@ -137,25 +117,19 @@
             white-space: nowrap;
         }
     </style>
-
-
-
-
-
-
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
-    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+    <main id="main-content-area" class="flex-grow flex">
         <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
         <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
 
-        <!-- Obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
+        <!-- Obalový div pre obsah -->
         <div class="content-wrapper">
-            <div id="root">
+            <div id="root" class="flex-grow container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
                 <!-- Načítavací indikátor vnútri #root -->
                 <div class="flex justify-center pt-16">
                     <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
@@ -174,7 +148,7 @@
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
     
-    <!-- Načítanie hlavného skriptu pre túto stránku (RostersApp) -->
+    <!-- Načítanie hlavného skriptu pre túto stránku (TeamsOverviewApp) -->
     <script type="module" src="logged-in-teams.js"></script>
 
     <script type="text/javascript">
@@ -187,13 +161,13 @@
         };
 
         const checkReadyAndRender = () => {
-            if (window.isGlobalAuthReady && typeof window.RostersApp !== 'undefined') {
+            if (window.isGlobalAuthReady && typeof window.TeamsOverviewApp !== 'undefined') {
                 try {
                     // Pred samotným vykreslením Reactu skryjeme loader
                     window.hideGlobalLoader();
 
                     const root = ReactDOM.createRoot(document.getElementById('root'));
-                    root.render(React.createElement(window.RostersApp, null));
+                    root.render(React.createElement(window.TeamsOverviewApp, { userProfileData: window.globalUserProfileData || null }));
                 } catch (error) {
                 }
             } else {
