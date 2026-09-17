@@ -962,12 +962,6 @@ const TeamsOverviewApp = (props) => {
     const [updateTrigger, setUpdateTrigger] = useState(0);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
-    const [isRostersVisible, setIsRostersVisible] = useState(
-        window.pagesVisibility && 
-        window.pagesVisibility['rosters'] && 
-        window.pagesVisibility['rosters'].visible === true
-    );
-
     const [isMatchesVisible, setIsMatchesVisible] = useState(
         window.pagesVisibility && 
         window.pagesVisibility['matches'] && 
@@ -1001,25 +995,11 @@ const TeamsOverviewApp = (props) => {
     useEffect(() => {
         if (!window.db) return;
 
-        const updateRostersVisibility = () => {
-            const visible = window.pagesVisibility && 
-                           window.pagesVisibility['rosters'] && 
-                           window.pagesVisibility['rosters'].visible === true;
-            setIsRostersVisible(visible);
-        };
-
-        updateRostersVisibility();
-
         const pagesRef = collection(window.db, 'pages');
         const unsubscribe = onSnapshot(pagesRef, (snapshot) => {
-            let rostersVisible = false;
             let matchesVisible = false;
             
             snapshot.forEach((doc) => {
-                if (doc.id === 'rosters') {
-                    const data = doc.data();
-                    rostersVisible = data.visible === true;
-                }
                 if (doc.id === 'matches') {
                     const data = doc.data();
                     matchesVisible = data.visible === true;
@@ -1027,10 +1007,8 @@ const TeamsOverviewApp = (props) => {
             });
             
             if (!window.pagesVisibility) window.pagesVisibility = {};
-            window.pagesVisibility['rosters'] = { visible: rostersVisible };
             window.pagesVisibility['matches'] = { visible: matchesVisible };
             
-            setIsRostersVisible(rostersVisible);
             setIsMatchesVisible(matchesVisible);
         }, (error) => {
         });
@@ -1770,10 +1748,6 @@ const TeamsOverviewApp = (props) => {
         const hasCategoryInUrl = !!categoryFromUrl;
         
         if (!hasCategoryInUrl) {
-            return null;
-        }
-        
-        if (!isRostersVisible) {
             return null;
         }
         
