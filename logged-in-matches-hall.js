@@ -3253,66 +3253,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             console.log(`[BlueCard] awayTeamDisplayLocal="${awayTeamDisplayLocal}"`);
             console.log(`[BlueCard] homeTeamMatches IDs:`, homeTeamMatches.map(m => `${m.id}(${m.groupName})`));
             console.log(`[BlueCard] awayTeamMatches IDs:`, awayTeamMatches.map(m => `${m.id}(${m.groupName})`));
-            
-            // 🔥 KĽÚČOVÉ: Ak aktuálny zápas nie je v homeTeamMatches/awayTeamMatches,
-            // musíme ho tam pridať manuálne, aby sme správne vypočítali currentMatchIndex.
-            // Potrebujeme zistiť, či aktuálny zápas patrí domácemu alebo hosťujúcemu tímu.
-            const currentMatchInHome = homeTeamMatches.find(m => m.id === match.id);
-            const currentMatchInAway = awayTeamMatches.find(m => m.id === match.id);
-            
-            if (!currentMatchInHome && !currentMatchInAway) {
-                console.log(`[BlueCard] ⚠️ Aktuálny zápas ${match.id} NIE JE v homeTeamMatches ani awayTeamMatches!`);
-                console.log(`[BlueCard] 🔧 Pridávam aktuálny zápas manuálne...`);
-                
-                // 🔥 POUŽÍVAME LEN homeTeamName / awayTeamName (NIE homeTeamIdentifier / awayTeamIdentifier)
-                const currentHomeName = match.homeTeamName;
-                const currentAwayName = match.awayTeamName;
-                
-                console.log(`[BlueCard] 🔧 currentHomeName="${currentHomeName}", currentAwayName="${currentAwayName}"`);
-                console.log(`[BlueCard] 🔧 homeTeamDisplayLocal="${homeTeamDisplayLocal}", awayTeamDisplayLocal="${awayTeamDisplayLocal}"`);
-                
-                // Aktuálny zápas pridáme do toho poľa, kam patrí
-                const currentMatchObj = {
-                    id: match.id,
-                    ...match,
-                    homeTeamName: currentHomeName,
-                    awayTeamName: currentAwayName,
-                    scheduledTimeDate: match.scheduledTime?.toDate()
-                };
-                
-                if (currentHomeName === homeTeamDisplayLocal) {
-                    homeTeamMatches.push(currentMatchObj);
-                    console.log(`[BlueCard] 🔧 Pridaný do homeTeamMatches (domáci tím)`);
-                } else if (currentAwayName === homeTeamDisplayLocal) {
-                    homeTeamMatches.push(currentMatchObj);
-                    console.log(`[BlueCard] 🔧 Pridaný do homeTeamMatches (hosťujúci tím pre tohto hráča)`);
-                }
-                
-                if (currentHomeName === awayTeamDisplayLocal) {
-                    awayTeamMatches.push(currentMatchObj);
-                    console.log(`[BlueCard] 🔧 Pridaný do awayTeamMatches (domáci tím)`);
-                } else if (currentAwayName === awayTeamDisplayLocal) {
-                    awayTeamMatches.push(currentMatchObj);
-                    console.log(`[BlueCard] 🔧 Pridaný do awayTeamMatches (hosťujúci tím)`);
-                }
-                
-                // Zoradíme znova podľa času
-                homeTeamMatches.sort((a, b) => {
-                    const timeA = a.scheduledTimeDate?.getTime() || 0;
-                    const timeB = b.scheduledTimeDate?.getTime() || 0;
-                    return timeA - timeB;
-                });
-                
-                awayTeamMatches.sort((a, b) => {
-                    const timeA = a.scheduledTimeDate?.getTime() || 0;
-                    const timeB = b.scheduledTimeDate?.getTime() || 0;
-                    return timeA - timeB;
-                });
-                
-                console.log(`[BlueCard] 🔧 Po pridaní: homeTeamMatches IDs:`, homeTeamMatches.map(m => `${m.id}(${m.groupName})`));
-                console.log(`[BlueCard] 🔧 Po pridaní: awayTeamMatches IDs:`, awayTeamMatches.map(m => `${m.id}(${m.groupName})`));
-            }
-            
+                        
             const eventsRef = collection(window.db, 'matchEvents');
             const eventsSnapshot = await getDocs(eventsRef);
             
