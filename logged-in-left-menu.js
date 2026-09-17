@@ -68,6 +68,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
     const matchesLink = document.getElementById('matches-link');
     const matchesHallLink = document.getElementById('matches-hall-link');
     const cateringLink = document.getElementById('catering-link');
+    const teamsLink = document.getElementById('teams-link');
 
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) return;
 
@@ -188,7 +189,8 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||
                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
-                (href === 'logged-in-catering.html' && currentPath.includes('catering'));
+                (href === 'logged-in-catering.html' && currentPath.includes('catering')) ||
+                (href === 'logged-in-teams.html' && currentPath.includes('teams'));
 
             if (isActive) {
                 link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
@@ -266,6 +268,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         matchesLink?.classList.add('hidden');
         matchesHallLink?.classList.add('hidden');
         cateringLink?.classList.add('hidden');
+        teamsLink?.classList.add('hidden');
 
         // Zobrazíme linky podľa role
         if (userProfileData.role === 'admin') {
@@ -293,6 +296,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             
             // Ostatné linky pre club
             teamRostersLink?.classList.remove('hidden');
+            teamsLink?.classList.remove('hidden'); // <-- TÍMY VIDITEĽNÉ LEN PRE CLUB
         } else if (userProfileData.role === 'hall') {
             matchesHallLink?.classList.remove('hidden');
         }
