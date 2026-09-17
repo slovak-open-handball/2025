@@ -4551,9 +4551,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         color: '#000000',
                                                         fontWeight: match.homeTeamInConflict ? 'bold' : undefined
                                                     },
-                                                    title: homeDisplay.name
+                                                    title: homeTeamDisplay.name
                                                 },
-                                                homeDisplay.name
+                                                homeTeamDisplay.name
                                             )
                                         ),
                                         React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${homeMemberCount || 0}` }, React.createElement('span', null, homeMemberCount || 0)),
@@ -4574,9 +4574,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         color: '#000000',
                                                         fontWeight: match.awayTeamInConflict ? 'bold' : undefined
                                                     },
-                                                    title: awayDisplay.name
+                                                    title: awayTeamDisplay.name
                                                 },
-                                                awayDisplay.name
+                                                awayTeamDisplay.name
                                             )
                                         ),
                                         React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${awayMemberCount || 0}` }, React.createElement('span', null, awayMemberCount || 0)),
