@@ -1639,9 +1639,9 @@ const AssignMatchToBreakModal = ({
     // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        if (!matches || matches.length === 0) return teamsInConflict;
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
@@ -1664,8 +1664,8 @@ const AssignMatchToBreakModal = ({
         });
         return teamsInConflict;
     };
-    
-    const backToBackTeams = getTeamsWithBackToBackMatches();
+
+    const backToBackTeams = getTeamsWithBackToBackMatches();    
 
     return React.createElement(
         'div',
@@ -3008,9 +3008,9 @@ const AddMatchesApp = ({ userProfileData }) => {
     // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        if (!matches || matches.length === 0) return teamsInConflict;
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
@@ -3035,7 +3035,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
     
     const backToBackTeams = getTeamsWithBackToBackMatches();
-
+    
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
             if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) return false;
