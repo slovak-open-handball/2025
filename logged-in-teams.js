@@ -1496,3 +1496,5 @@ if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefine
         userProfileData: window.globalUserProfileData || null 
     }));
 }
+
+window.TeamsOverviewApp = TeamsOverviewApp;
