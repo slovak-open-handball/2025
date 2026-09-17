@@ -5178,11 +5178,14 @@ const MatchesHallApp = () => {
             }
         }
         
-        if (needsUpdate) {
-            setTeamNames(prev => ({ ...prev, ...names }));
-        } else {
-            setTeamNames(names);
-        }
+        // 🔥 VŽDY nastavíme nové teamNames, aby sa spustil re-render
+        setTeamNames(prev => {
+            const merged = { ...prev, ...names };
+            // Ak sa nič nezmenilo, vrátime prev (aby sa nespustil zbytočný re-render)
+            // Ale ak sú tam nové kľúče, vrátime merged
+            const hasNewKeys = Object.keys(names).some(k => !prev[k]);
+            return hasNewKeys ? merged : prev;
+        });
     };
 
     const loadMatches = async (hallId) => {
