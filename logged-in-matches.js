@@ -3731,7 +3731,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         console.log('=== getMatchesForHallAndDay ===');
         console.log('hallId:', hallId, '| date:', dateStr);
-        console.log('backToBackTeams (celý Set):', Array.from(backToBackTeams));
+        console.log('backToBackMatchIds (celý Set):', Array.from(backToBackMatchIds));
         console.log('allHallDayMatches count:', allHallDayMatches.length);
         console.log('allHallDayMatches:', allHallDayMatches.map(m => ({
             id: m.id,
