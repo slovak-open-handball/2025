@@ -1368,12 +1368,14 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-// ===== ASSIGN MATCH TO BREAK MODAL – s upraveným vyhľadávaním =====
+// ===== ASSIGN MATCH TO BREAK MODAL – s počtami členov a farbami ubytovania =====
 const AssignMatchToBreakModal = ({ 
     isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, 
     breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, 
     allMatches, groupsByCategory, blockedBreaks, sportHalls,
-    selectedCategoriesFilter = []
+    selectedCategoriesFilter = [],
+    accommodations = [],
+    teamAccommodations = new Map()
 }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -1386,6 +1388,55 @@ const AssignMatchToBreakModal = ({
         const periodDuration = category.periodDuration || 20;
         const breakDuration = category.breakDuration || 2;
         return (periodDuration + breakDuration) * periods - breakDuration;
+    };
+
+    // ===== POMOCNÁ FUNKCIA: počet členov tímu =====
+    const getTotalMembersCount = (teamIdentifier, matchCategoryName) => {
+        if (!teamIdentifier) return 0;
+        let teamDisplayName = null;
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try { teamDisplayName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier); } catch (e) {}
+        }
+        const actualTeamName = teamDisplayName || teamIdentifier;
+        if (!window.__allUsersCache) return 0;
+        for (const user of window.__allUsersCache) {
+            if (!user.teams) continue;
+            for (const [category, teamsArray] of Object.entries(user.teams)) {
+                if (!Array.isArray(teamsArray)) continue;
+                const team = teamsArray.find(t => 
+                    t.teamName === actualTeamName && 
+                    (category === matchCategoryName || t._category === matchCategoryName || t.category === matchCategoryName)
+                );
+                if (team) {
+                    const playersCount = team.playerDetails?.length || 0;
+                    const womenTeamMembersCount = team.womenTeamMemberDetails?.length || 0;
+                    const menTeamMembersCount = team.menTeamMemberDetails?.length || 0;
+                    const womenDriversCount = team.driverDetailsFemale?.length || 0;
+                    const menDriversCount = team.driverDetailsMale?.length || 0;
+                    return playersCount + womenTeamMembersCount + menTeamMembersCount + womenDriversCount + menDriversCount;
+                }
+            }
+        }
+        return 0;
+    };
+
+    // ===== POMOCNÁ FUNKCIA: farba tímu podľa ubytovania =====
+    const getTeamColor = (teamIdentifier, matchCategoryName) => {
+        const accommodationsMap = window.__teamAccommodationsMap || teamAccommodations || new Map();
+        const accommodationName = accommodationsMap.get(teamIdentifier);
+        const teamName = getTeamDisplayText ? 
+            (typeof getTeamDisplayText(teamIdentifier) === 'object' ? getTeamDisplayText(teamIdentifier).name : getTeamDisplayText(teamIdentifier)) 
+            : teamIdentifier;
+        
+        // Ak tímu chýba ubytovanie (a nie je to len názov kategórie), zvýrazni žlto
+        if (!accommodationName && !teamName.includes(matchCategoryName)) {
+            return '#ffff00';
+        }
+        if (accommodationName) {
+            const accommodation = accommodations.find(a => a.name === accommodationName);
+            if (accommodation) return accommodation.headerColor;
+        }
+        return '#f3f4f6';
     };
 
     const isMatchEligibleForBreak = (match, existingMatchesInHallAndDay) => {
@@ -1428,7 +1479,6 @@ const AssignMatchToBreakModal = ({
             return getLocalDateStr(matchDate) === date;
         }) || [];
         
-        // ===== APLIKOVANIE FILTRA KATEGÓRIÍ =====
         let matchesToFilter = availableMatches;
         if (selectedCategoriesFilter && selectedCategoriesFilter.length > 0) {
             matchesToFilter = availableMatches.filter(match => 
@@ -1460,69 +1510,41 @@ const AssignMatchToBreakModal = ({
         return formatDateWithDay(new Date(year, month - 1, day));
     })() : '';
 
-    // ===== POMOCNÉ FUNKCIE PRE VYHĽADÁVANIE =====
-
-    // Extrahuje "čistý identifikátor" z tímu (napr. "A2" z "Kategória A2")
     const extractPureId = (identifier) => {
         if (!identifier) return '';
         const parts = identifier.split(' ');
         return parts.length >= 2 ? parts[parts.length - 1] : identifier;
     };
 
-    // Rozdelí vyhľadávací reťazec na dva tímy podľa "="
     const extractTeamsFromSearch = (search) => {
         const trimmedSearch = search.trim();
         const equalIndex = trimmedSearch.indexOf('=');
-        
-        if (equalIndex === -1) {
-            return { team1: null, team2: null };
-        }
-        
+        if (equalIndex === -1) return { team1: null, team2: null };
         const team1Raw = trimmedSearch.substring(0, equalIndex).trim();
         const team2Raw = trimmedSearch.substring(equalIndex + 1).trim();
-        
-        if (!team1Raw || !team2Raw) {
-            return { team1: null, team2: null };
-        }
-        
+        if (!team1Raw || !team2Raw) return { team1: null, team2: null };
         return { team1: team1Raw, team2: team2Raw };
     };
 
-    // ===== KĽÚČOVÁ FUNKCIA: Normalizácia druhého tímu =====
-    // Ak je team2 len číslo (napr. "3"), doplní sa písmeno skupiny z team1 (napr. "A" -> "A3")
-    // Ak je team2 vo formáte "A3", ponechá sa tak ako je.
     const normalizeSecondTeam = (team1, team2) => {
         if (!team1 || !team2) return team2;
-        
         const team2Trimmed = team2.trim();
-        
-        // Ak team2 už obsahuje písmeno (napr. "A3", "B5"), ponecháme ho
-        if (/[a-zA-Z]/.test(team2Trimmed)) {
-            return team2Trimmed;
-        }
-        
-        // Ak team2 je len číslo (napr. "3"), extrahujeme písmeno z team1
+        if (/[a-zA-Z]/.test(team2Trimmed)) return team2Trimmed;
         const team1Match = team1.match(/([a-zA-Z]+)\s*\d+$/);
         if (team1Match) {
             const groupLetter = team1Match[1];
             return `${groupLetter}${team2Trimmed}`;
         }
-        
-        // Ak sa nepodarilo extrahovať písmeno, vrátime team2 ako je
         return team2Trimmed;
     };
 
-    // Získa porovnateľné reťazce pre zápas (názvy, ID, čisté ID)
     const getComparableStrings = (match) => {
         const homeDisplay = getTeamDisplayText ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier;
         const awayDisplay = getTeamDisplayText ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier;
-        
         const homeName = typeof homeDisplay === 'object' ? homeDisplay.name : homeDisplay;
         const awayName = typeof awayDisplay === 'object' ? awayDisplay.name : awayDisplay;
-        
         const homePureId = extractPureId(match.homeTeamIdentifier);
         const awayPureId = extractPureId(match.awayTeamIdentifier);
-        
         return {
             homeName: (homeName || '').toLowerCase(),
             awayName: (awayName || '').toLowerCase(),
@@ -1533,84 +1555,60 @@ const AssignMatchToBreakModal = ({
         };
     };
 
-    // Skontroluje, či reťazec obsahuje hľadaný tím
     const stringContainsTeam = (str, teamQuery) => {
         if (!str || !teamQuery) return false;
         return str.includes(teamQuery.toLowerCase());
     };
 
-    // ===== KĽÚČOVÁ FUNKCIA: Kontrola, či zápas obsahuje OBA tímy =====
     const matchContainsBothTeams = (matchStrings, team1, team2) => {
         const team1Lower = team1.toLowerCase().trim();
         const team2Lower = team2.toLowerCase().trim();
-        
-        // Extrahujeme čisté ID z team1 a team2 (napr. "A2")
         const team1PureId = extractPureId(team1).toLowerCase();
         const team2PureId = extractPureId(team2).toLowerCase();
         
-        // Skontrolujeme, či jeden z týmov v zápase zodpovedá team1
         const homeMatchesTeam1 = 
             matchStrings.homePureId === team1PureId ||
             matchStrings.homePureId.endsWith(team1PureId) ||
             matchStrings.homeName.includes(team1Lower) ||
             matchStrings.homeId.includes(team1Lower);
-        
         const awayMatchesTeam1 = 
             matchStrings.awayPureId === team1PureId ||
             matchStrings.awayPureId.endsWith(team1PureId) ||
             matchStrings.awayName.includes(team1Lower) ||
             matchStrings.awayId.includes(team1Lower);
-        
-        // Skontrolujeme, či jeden z týmov v zápase zodpovedá team2
         const homeMatchesTeam2 = 
             matchStrings.homePureId === team2PureId ||
             matchStrings.homePureId.endsWith(team2PureId) ||
             matchStrings.homeName.includes(team2Lower) ||
             matchStrings.homeId.includes(team2Lower);
-        
         const awayMatchesTeam2 = 
             matchStrings.awayPureId === team2PureId ||
             matchStrings.awayPureId.endsWith(team2PureId) ||
             matchStrings.awayName.includes(team2Lower) ||
             matchStrings.awayId.includes(team2Lower);
         
-        // Musí platiť: (home je team1 A away je team2) ALEBO (away je team1 A home je team2)
         const case1 = homeMatchesTeam1 && awayMatchesTeam2;
         const case2 = awayMatchesTeam1 && homeMatchesTeam2;
-        
         return case1 || case2;
     };
 
-    // ===== HLAVNÁ LOGIKA VYHĽADÁVANIA =====
     const matchSearch = (match, searchLower, matchStrings) => {
         const { team1, team2 } = extractTeamsFromSearch(searchLower);
-        
         if (team1 && team2) {
-            // Normalizujeme druhý tím (napr. "3" -> "A3" podľa team1)
             const normalizedTeam2 = normalizeSecondTeam(team1, team2);
-            
             return matchContainsBothTeams(matchStrings, team1, normalizedTeam2);
         }
-        
-        // Hľadanie jedného tímu
         if (stringContainsTeam(matchStrings.homeName, searchLower) || stringContainsTeam(matchStrings.awayName, searchLower)) return true;
         if (stringContainsTeam(matchStrings.homeId, searchLower) || stringContainsTeam(matchStrings.awayId, searchLower)) return true;
         if (stringContainsTeam(matchStrings.homePureId, searchLower) || stringContainsTeam(matchStrings.awayPureId, searchLower)) return true;
-        
-        // Hľadanie podľa kategórie
         if (match.categoryName && stringContainsTeam(match.categoryName.toLowerCase(), searchLower)) return true;
-        
         return false;
     };
 
-    // ===== HLAVNÉ FILTROVANIE =====
     const searchFilteredMatches = filteredByConditions.filter(match => {
         const searchLower = searchTerm.toLowerCase().trim();
-        
         if (!searchLower) return true;
-        
         const matchStrings = getComparableStrings(match);
-        
         return matchSearch(match, searchLower, matchStrings);
     });
 
@@ -1651,9 +1649,8 @@ const AssignMatchToBreakModal = ({
     };
 
     const getBackToBackTeamMatchKeys = () => {
-        const conflictKeys = new Set(); // "matchId|teamIdentifier"
-        if (!allMatches || allMatches.length === 0) return conflictKeys;  // ← zmena
-    
+        const conflictKeys = new Set();
+        if (!allMatches || allMatches.length === 0) return conflictKeys;
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
             if (!category) return 30 + 5;
@@ -1664,18 +1661,15 @@ const AssignMatchToBreakModal = ({
             const matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
             return matchDuration + matchBreak;
         };
-    
         const K = 1;
-    
         const matchesByDate = {};
-        allMatches.forEach(match => {   // ← zmena
+        allMatches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
             if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
             matchesByDate[dateStr].push(match);
         });
-    
         Object.keys(matchesByDate).forEach(dateStr => {
             const teamMatchTimes = {};
             matchesByDate[dateStr].forEach(m => {
@@ -1687,7 +1681,6 @@ const AssignMatchToBreakModal = ({
                     teamMatchTimes[team].push({ time, duration, match: m });
                 });
             });
-    
             Object.keys(teamMatchTimes).forEach(team => {
                 const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
                 for (let i = 0; i < times.length - 1; i++) {
@@ -1695,7 +1688,6 @@ const AssignMatchToBreakModal = ({
                     const next = times[i + 1];
                     const gapMinutes = (next.time - current.time) / 60000;
                     const maxGap = (current.duration / 60000) * K;
-    
                     if (gapMinutes <= maxGap) {
                         conflictKeys.add(`${current.match.id}|${team}`);
                         conflictKeys.add(`${next.match.id}|${team}`);
@@ -1703,7 +1695,6 @@ const AssignMatchToBreakModal = ({
                 }
             });
         });
-    
         return conflictKeys;
     };
     
@@ -1803,6 +1794,13 @@ const AssignMatchToBreakModal = ({
                         awayName = awayDisplay;
                     }
                     const matchDurationValue = getMatchDuration(match.categoryName);
+
+                    // ===== NOVÉ: počty členov a farby ubytovania =====
+                    const homeMemberCount = getTotalMembersCount(match.homeTeamIdentifier, match.categoryName);
+                    const awayMemberCount = getTotalMembersCount(match.awayTeamIdentifier, match.categoryName);
+                    const homeTeamColor = getTeamColor(match.homeTeamIdentifier, match.categoryName);
+                    const awayTeamColor = getTeamColor(match.awayTeamIdentifier, match.categoryName);
+
                     return React.createElement(
                         'div',
                         {
@@ -1814,7 +1812,8 @@ const AssignMatchToBreakModal = ({
                         },
                         React.createElement(
                             'div',
-                            { className: 'grid items-start text-xs', style: { gridTemplateColumns: displayMode === 'both' ? '200px 10px 200px 10px 50px 30px 60px' : '200px 200px 10px 50px 30px 60px', width: '100%' } },
+                            { className: 'grid items-start text-xs', style: { gridTemplateColumns: displayMode === 'both' ? '180px 20px 180px 20px 50px 30px 60px' : '180px 20px 180px 20px 50px 30px 60px', width: '100%' } },
+                            // Domáci tím
                             React.createElement(
                                 'div',
                                 {
@@ -1837,7 +1836,13 @@ const AssignMatchToBreakModal = ({
                                     displayMode === 'both' ? homeName : homeDisplay
                                 )
                             ),
-                            React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' } }, React.createElement('span', null, '0')),
+                            // Počet členov domáci (nové – farebné podľa ubytovania)
+                            React.createElement('div', { 
+                                className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', 
+                                style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '20px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' },
+                                title: `Počet členov tímu: ${homeMemberCount || 0}`
+                            }, React.createElement('span', null, homeMemberCount || 0)),
+                            // Hosťujúci tím
                             React.createElement(
                                 'div',
                                 {
@@ -1860,7 +1865,12 @@ const AssignMatchToBreakModal = ({
                                     displayMode === 'both' ? awayName : awayDisplay
                                 )
                             ),
-                            React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' } }, React.createElement('span', null, '0')),
+                            // Počet členov hosťujúci (nové – farebné podľa ubytovania)
+                            React.createElement('div', { 
+                                className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', 
+                                style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '20px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' },
+                                title: `Počet členov tímu: ${awayMemberCount || 0}`
+                            }, React.createElement('span', null, awayMemberCount || 0)),
                             !isSpecialMatch ? React.createElement(
                                 React.Fragment,
                                 null,
