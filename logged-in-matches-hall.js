@@ -122,6 +122,56 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
+// 🔥 Pomocná funkcia: prevedie "U12 CH G1" -> "U12 CH 4D" -> "ŠK Zemplín Trebišov"
+const resolveTeamNameViaTeamManager = async (teamIdentifier, categoryName) => {
+    if (!teamIdentifier) return teamIdentifier;
+    
+    let intermediateName = teamIdentifier;
+    
+    // KROK 1: Skús teamManager.getTeamNameByDisplayIdSync (synchrónne)
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        try {
+            const syncResult = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+            if (syncResult && syncResult !== teamIdentifier) {
+                intermediateName = syncResult;
+                console.log(`[resolveTeamName] KROK 1 (sync): "${teamIdentifier}" -> "${intermediateName}"`);
+            }
+        } catch (e) {
+            console.error('[resolveTeamName] Chyba v getTeamNameByDisplayIdSync:', e);
+        }
+    }
+    
+    // KROK 2: Ak intermediateName stále obsahuje categoryName (alebo je to prvý krok),
+    //         zavolaj matchTracker.getTeamNameByDisplayId
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        // Skúsime vždy, keď intermediateName obsahuje categoryName,
+        // ALEBO keď sa zmenil oproti pôvodnému (aby sme dostali finálny názov)
+        const shouldTryMatchTracker = 
+            !categoryName || 
+            intermediateName.includes(categoryName) || 
+            intermediateName !== teamIdentifier;
+        
+        if (shouldTryMatchTracker) {
+            try {
+                const asyncResult = await resolveTeamNameViaTeamManager(intermediateName);
+                if (asyncResult && asyncResult !== intermediateName && asyncResult !== 'null') {
+                    console.log(`[resolveTeamName] KROK 2 (async): "${intermediateName}" -> "${asyncResult}"`);
+                    return asyncResult;
+                }
+            } catch (e) {
+                console.error('[resolveTeamName] Chyba v getTeamNameByDisplayId:', e);
+            }
+        }
+    }
+    
+    // Ak matchTracker zlyhal, ale teamManager vrátil aspoň niečo, vráť to
+    if (intermediateName !== teamIdentifier) {
+        return intermediateName;
+    }
+    
+    return teamIdentifier;
+};
+
 const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNames) => {
     if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
         return;
@@ -145,7 +195,7 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
             
             if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                 try {
-                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    const newName = await resolveTeamNameViaTeamManager(currentDisplayName);
                     if (newName && newName !== currentDisplayName && newName !== updatedNames[match.homeTeamIdentifier]) {
                         updatedNames[match.homeTeamIdentifier] = newName;
                         needsUpdate = true;
@@ -161,7 +211,7 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
             
             if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                 try {
-                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    const newName = await resolveTeamNameViaTeamManager(currentDisplayName);
                     if (newName && newName !== currentDisplayName && newName !== updatedNames[match.awayTeamIdentifier]) {
                         updatedNames[match.awayTeamIdentifier] = newName;
                         needsUpdate = true;
@@ -203,7 +253,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
     let actualTeamName = teamName;
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
         try {
-            const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
+            const convertedName = await resolveTeamNameViaTeamManager(teamName);
             if (convertedName && convertedName !== teamName) {
                 actualTeamName = convertedName;
                 if (onMappedName) {
@@ -3090,7 +3140,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
-                        const mapped = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                        const mapped = await resolveTeamNameViaTeamManager(teamName);
                         console.log(`[LoadTeamMatches] mapovanie vstupu: "${teamName}" -> "${mapped}"`);
                         if (mapped && mapped !== teamName && mapped !== 'null') {
                             resolvedTeamName = mapped;
@@ -3098,7 +3148,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             // 🔥 RETRY: Skúsime to znova po krátkej pauze
                             console.log(`[LoadTeamMatches] ⏳ mapovanie zlyhalo, skúšam znova po 1s...`);
                             await new Promise(resolve => setTimeout(resolve, 1000));
-                            const retryMapped = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                            const retryMapped = await resolveTeamNameViaTeamManager(teamName);
                             console.log(`[LoadTeamMatches] retry mapovanie: "${teamName}" -> "${retryMapped}"`);
                             if (retryMapped && retryMapped !== teamName && retryMapped !== 'null') {
                                 resolvedTeamName = retryMapped;
@@ -3139,7 +3189,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(homeTeamName);
+                            const mapped = await resolveTeamNameViaTeamManager(homeTeamName);
                             if (mapped && mapped !== homeTeamName) {
                                 homeTeamName = mapped;
                             }
@@ -3152,7 +3202,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 if (awayTeamName && matchCategoryName && awayTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(awayTeamName);
+                            const mapped = await resolveTeamNameViaTeamManager(awayTeamName);
                             if (mapped && mapped !== awayTeamName) {
                                 awayTeamName = mapped;
                             }
@@ -3227,7 +3277,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             console.log(`[resolveTeamNameForMatch] teamName obsahuje categoryName, mapujem...`);
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 try {
-                    const mappedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                    const mappedName = await resolveTeamNameViaTeamManager(teamName);
                     console.log(`[resolveTeamNameForMatch] mapovanie: "${teamName}" -> "${mappedName}"`);
                     if (mappedName && mappedName !== teamName) {
                         return mappedName;
@@ -5142,7 +5192,7 @@ const MatchesHallApp = () => {
                 if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                            const newName = await resolveTeamNameViaTeamManager(currentDisplayName);
                             if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
                                 names[match.homeTeamIdentifier] = newName;
                                 needsUpdate = true;
@@ -5162,7 +5212,7 @@ const MatchesHallApp = () => {
                 if (currentDisplayName && currentDisplayName.includes(categoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                            const newName = await resolveTeamNameViaTeamManager(currentDisplayName);
                             if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
                                 names[match.awayTeamIdentifier] = newName;
                                 needsUpdate = true;
