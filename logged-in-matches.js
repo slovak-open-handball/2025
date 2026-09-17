@@ -1638,7 +1638,7 @@ const AssignMatchToBreakModal = ({
 
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!allMatches || matches.length === 0) return teamsInConflict;
+        if (!allMatches || allMatches.length === 0) return teamsInConflict;
     
         // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
@@ -3045,7 +3045,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!allMatches || matches.length === 0) return teamsInConflict;
+        if (!allMatches || allMatches.length === 0) return teamsInConflict;
     
         // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
