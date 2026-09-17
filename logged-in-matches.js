@@ -1640,7 +1640,24 @@ const AssignMatchToBreakModal = ({
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
     
-        // Kľúč: LEN dateStr (globálne v rámci dňa, bez ohľadu na halu)
+        // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
+        const getMatchTotalDuration = (categoryName) => {
+            const category = categories.find(c => c.name === categoryName);
+            if (!category) return 30 + 5; // fallback: 30 min zápas + 5 min prestávka
+            const periods = category.periods || 2;
+            const periodDuration = category.periodDuration || 20;
+            const breakDuration = category.breakDuration || 2;
+            const matchBreak = category.matchBreak || 5;
+            const matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            return matchDuration + matchBreak;
+        };
+    
+        // Koeficient: koľkokrát môže byť medzi zápasmi "zápas + prestávka" iného tímu
+        // K = 1 → prísne back-to-back (druhý zápas začína hneď po skončení prvého + prestávka)
+        // K = 2 → miernejšie (povolí jednu "medzeru" veľkosti jedného zápasu)
+        const K = 1;
+    
+        // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
         matches.forEach(match => {
             if (!match.scheduledTime) return;
@@ -1651,19 +1668,38 @@ const AssignMatchToBreakModal = ({
         });
     
         Object.keys(matchesByDate).forEach(dateStr => {
-            const dayMatches = matchesByDate[dateStr]
-                .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
-                .sort((a, b) => a._time - b._time);
-            for (let i = 0; i < dayMatches.length - 1; i++) {
-                const current = dayMatches[i];
-                const next = dayMatches[i + 1];
-                const currentTeams = [current.homeTeamIdentifier, current.awayTeamIdentifier];
-                const nextTeams = [next.homeTeamIdentifier, next.awayTeamIdentifier];
-                currentTeams.forEach(team => {
-                    if (nextTeams.includes(team)) teamsInConflict.add(team);
+            // Pre každý tím zisti, kedy hrá (bez ohľadu na halu)
+            const teamMatchTimes = {};
+            matchesByDate[dateStr].forEach(m => {
+                if (!m.scheduledTime) return;
+                const time = m.scheduledTime.toDate().getTime();
+                const duration = getMatchTotalDuration(m.categoryName) * 60000;
+                [m.homeTeamIdentifier, m.awayTeamIdentifier].forEach(team => {
+                    if (!teamMatchTimes[team]) teamMatchTimes[team] = [];
+                    teamMatchTimes[team].push({ time, duration, match: m });
                 });
-            }
+            });
+    
+            // Pre každý tím skontroluj, či má dva zápasy v priebehu "jedného zápasu + prestávky"
+            Object.keys(teamMatchTimes).forEach(team => {
+                const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
+                for (let i = 0; i < times.length - 1; i++) {
+                    const current = times[i];
+                    const next = times[i + 1];
+                    const gapMinutes = (next.time - current.time) / 60000;
+    
+                    // Maximálna povolená medzera = dĺžka PREDCHÁDZAJÚCEHO zápasu + jeho prestávka, krát K
+                    // (alebo môžeš použiť max z oboch zápasov, ak chceš byť miernejší)
+                    const maxGap = (current.duration / 60000) * K;
+    
+                    if (gapMinutes <= maxGap) {
+                        teamsInConflict.add(team);
+                        break;
+                    }
+                }
+            });
         });
+    
         return teamsInConflict;
     };
 
@@ -3011,7 +3047,24 @@ const AddMatchesApp = ({ userProfileData }) => {
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
     
-        // Kľúč: LEN dateStr (globálne v rámci dňa, bez ohľadu na halu)
+        // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
+        const getMatchTotalDuration = (categoryName) => {
+            const category = categories.find(c => c.name === categoryName);
+            if (!category) return 30 + 5; // fallback: 30 min zápas + 5 min prestávka
+            const periods = category.periods || 2;
+            const periodDuration = category.periodDuration || 20;
+            const breakDuration = category.breakDuration || 2;
+            const matchBreak = category.matchBreak || 5;
+            const matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            return matchDuration + matchBreak;
+        };
+    
+        // Koeficient: koľkokrát môže byť medzi zápasmi "zápas + prestávka" iného tímu
+        // K = 1 → prísne back-to-back (druhý zápas začína hneď po skončení prvého + prestávka)
+        // K = 2 → miernejšie (povolí jednu "medzeru" veľkosti jedného zápasu)
+        const K = 1;
+    
+        // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
         matches.forEach(match => {
             if (!match.scheduledTime) return;
@@ -3022,19 +3075,38 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         Object.keys(matchesByDate).forEach(dateStr => {
-            const dayMatches = matchesByDate[dateStr]
-                .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
-                .sort((a, b) => a._time - b._time);
-            for (let i = 0; i < dayMatches.length - 1; i++) {
-                const current = dayMatches[i];
-                const next = dayMatches[i + 1];
-                const currentTeams = [current.homeTeamIdentifier, current.awayTeamIdentifier];
-                const nextTeams = [next.homeTeamIdentifier, next.awayTeamIdentifier];
-                currentTeams.forEach(team => {
-                    if (nextTeams.includes(team)) teamsInConflict.add(team);
+            // Pre každý tím zisti, kedy hrá (bez ohľadu na halu)
+            const teamMatchTimes = {};
+            matchesByDate[dateStr].forEach(m => {
+                if (!m.scheduledTime) return;
+                const time = m.scheduledTime.toDate().getTime();
+                const duration = getMatchTotalDuration(m.categoryName) * 60000;
+                [m.homeTeamIdentifier, m.awayTeamIdentifier].forEach(team => {
+                    if (!teamMatchTimes[team]) teamMatchTimes[team] = [];
+                    teamMatchTimes[team].push({ time, duration, match: m });
                 });
-            }
+            });
+    
+            // Pre každý tím skontroluj, či má dva zápasy v priebehu "jedného zápasu + prestávky"
+            Object.keys(teamMatchTimes).forEach(team => {
+                const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
+                for (let i = 0; i < times.length - 1; i++) {
+                    const current = times[i];
+                    const next = times[i + 1];
+                    const gapMinutes = (next.time - current.time) / 60000;
+    
+                    // Maximálna povolená medzera = dĺžka PREDCHÁDZAJÚCEHO zápasu + jeho prestávka, krát K
+                    // (alebo môžeš použiť max z oboch zápasov, ak chceš byť miernejší)
+                    const maxGap = (current.duration / 60000) * K;
+    
+                    if (gapMinutes <= maxGap) {
+                        teamsInConflict.add(team);
+                        break;
+                    }
+                }
+            });
         });
+    
         return teamsInConflict;
     };
     
