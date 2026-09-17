@@ -1759,6 +1759,24 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
+    const resolveTeamNameForMatch = async (teamName, categoryName) => {
+        if (!teamName) return teamName;
+    
+        if (categoryName && teamName.includes(categoryName)) {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mappedName = await resolveTeamNameViaTeamManager(teamName);
+                    if (mappedName && mappedName !== teamName) {
+                        return mappedName;
+                    }
+                } catch (err) {
+                }
+            }
+        }
+        
+        return teamName;
+    };    
+
     const calculateBlueCardSuspensionsRealTime = async (homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal) => {
         if (!window.db || !match.id) return;
         
