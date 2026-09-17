@@ -1809,7 +1809,7 @@ const AssignMatchToBreakModal = ({
                                     className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
                                     style: {
                                         textAlign: 'center',
-                                        backgroundColor: backToBackMatchIds.has(match.id) ? '#dc2626' : 'transparent'
+                                        backgroundColor: backToBackTeamMatchKeys.has(`${match.id}|${match.homeTeamIdentifier}`) ? '#dc2626' : 'transparent',
                                     }
                                 },
                                 React.createElement(
@@ -1818,7 +1818,7 @@ const AssignMatchToBreakModal = ({
                                         className: 'font-medium truncate block w-full',
                                         style: {
                                             color: '#000000',
-                                            fontWeight: backToBackMatchIds.has(match.id) ? 'bold' : undefined
+                                            fontWeight: backToBackTeamMatchKeys.has(`${match.id}|${match.homeTeamIdentifier}`) ? 'bold' : undefined,
                                         },
                                         title: displayMode === 'both' ? homeName : homeDisplay
                                     },
@@ -1832,7 +1832,7 @@ const AssignMatchToBreakModal = ({
                                     className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
                                     style: {
                                         textAlign: 'center',
-                                        backgroundColor: backToBackMatchIds.has(match.id) ? '#dc2626' : 'transparent'
+                                        backgroundColor: backToBackTeamMatchKeys.has(`${match.id}|${match.awayTeamIdentifier}`) ? '#dc2626' : 'transparent',
                                     }
                                 },
                                 React.createElement(
@@ -1841,7 +1841,7 @@ const AssignMatchToBreakModal = ({
                                         className: 'font-medium truncate block w-full',
                                         style: {
                                             color: '#000000',
-                                            fontWeight: backToBackMatchIds.has(match.id) ? 'bold' : undefined
+                                            fontWeight: backToBackTeamMatchKeys.has(`${match.id}|${match.awayTeamIdentifier}`) ? 'bold' : undefined,
                                         },
                                         title: displayMode === 'both' ? awayName : awayDisplay
                                     },
