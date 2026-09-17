@@ -1659,7 +1659,7 @@ const AssignMatchToBreakModal = ({
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
@@ -3066,7 +3066,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        allMatches.forEach(match => {
+        matches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
