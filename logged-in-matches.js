@@ -4008,8 +4008,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
                 if (teamsInGroup.length < 2) { window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error'); setGenerationInProgress(false); return; }
                 
-                // Zistíme, či ide o nadstavbovú skupinu a či kategória má zapnuté prenášanie bodov
-                const isNadstavbova = typeof groupName === 'string' && groupName.toLowerCase().includes('nadstavb');
+                // Zistíme typ skupiny z groupsByCategory podľa názvu skupiny
+                const groupMeta = (groupsByCategory[category.id] || []).find(g => g.name === groupName);
+                const isNadstavbova = groupMeta?.type === 'nadstavbová skupina';
                 const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
                 
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
@@ -4030,10 +4031,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                     if (teamsInGroup.length >= 2) {
-                        // Zistíme, či ide o nadstavbovú skupinu a či kategória má zapnuté prenášanie bodov
-                        const isNadstavbova = typeof group.name === 'string' && group.name.toLowerCase().includes('nadstavb');
+                        // Zistíme typ skupiny z groupsByCategory podľa názvu skupiny
+                        const groupMeta = (groupsByCategory[category.id] || []).find(g => g.name === group.name);
+                        const isNadstavbova = groupMeta?.type === 'nadstavbová skupina';
                         const skipSameGroupLetter = isNadstavbova && category.carryOverPoints === true;
-                        
+        
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, skipSameGroupLetter);
                         const matchesWithInfo = groupMatches.map((match, index) => ({
                             homeTeamIdentifier: match.homeTeamIdentifier,
