@@ -1742,9 +1742,39 @@ const AssignMatchToBreakModal = ({
                         React.createElement(
                             'div',
                             { className: 'grid items-start text-xs', style: { gridTemplateColumns: displayMode === 'both' ? '200px 10px 200px 10px 50px 30px 60px' : '200px 200px 10px 50px 30px 60px', width: '100%' } },
-                            React.createElement('div', { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } }, React.createElement('span', { className: 'font-medium truncate block w-full', style: { color: '#000000' }, title: displayMode === 'both' ? homeName : homeDisplay }, displayMode === 'both' ? homeName : homeDisplay)),
+                            React.createElement(
+                                'div',
+                                { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'font-medium truncate block w-full',
+                                        style: {
+                                            color: backToBackTeams.has(match.homeTeamIdentifier) ? '#dc2626' : '#000000',
+                                            fontWeight: backToBackTeams.has(match.homeTeamIdentifier) ? 'bold' : undefined
+                                        },
+                                        title: displayMode === 'both' ? homeName : homeDisplay
+                                    },
+                                    displayMode === 'both' ? homeName : homeDisplay
+                                )
+                            ),
                             React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' } }, React.createElement('span', null, '0')),
-                            React.createElement('div', { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } }, React.createElement('span', { className: 'font-medium truncate block w-full', style: { color: '#000000' }, title: displayMode === 'both' ? awayName : awayDisplay }, displayMode === 'both' ? awayName : awayDisplay)),
+                            React.createElement(
+                                'div',
+                                { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'font-medium truncate block w-full',
+                                        style: {
+                                            color: backToBackTeams.has(match.awayTeamIdentifier) ? '#dc2626' : '#000000',
+                                            fontWeight: backToBackTeams.has(match.awayTeamIdentifier) ? 'bold' : undefined
+                                        },
+                                        title: displayMode === 'both' ? awayName : awayDisplay
+                                    },
+                                    displayMode === 'both' ? awayName : awayDisplay
+                                )
+                            ),
                             React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: '#f3f4f6', width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' } }, React.createElement('span', null, '0')),
                             !isSpecialMatch ? React.createElement(
                                 React.Fragment,
@@ -2932,6 +2962,37 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
+    // ===== TÍMY S DVOJZÁPASOM PO SEBE =====
+    const getTeamsWithBackToBackMatches = () => {
+        const teamsInConflict = new Set();
+        if (!allMatches || allMatches.length === 0) return teamsInConflict;
+        const matchesByDate = {};
+        allMatches.forEach(match => {
+            if (!match.scheduledTime) return;
+            let dateStr;
+            try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
+            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
+            matchesByDate[dateStr].push(match);
+        });
+        Object.keys(matchesByDate).forEach(dateStr => {
+            const dayMatches = matchesByDate[dateStr]
+                .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
+                .sort((a, b) => a._time - b._time);
+            for (let i = 0; i < dayMatches.length - 1; i++) {
+                const current = dayMatches[i];
+                const next = dayMatches[i + 1];
+                const currentTeams = [current.homeTeamIdentifier, current.awayTeamIdentifier];
+                const nextTeams = [next.homeTeamIdentifier, next.awayTeamIdentifier];
+                currentTeams.forEach(team => {
+                    if (nextTeams.includes(team)) teamsInConflict.add(team);
+                });
+            }
+        });
+        return teamsInConflict;
+    };
+    
+    const backToBackTeams = getTeamsWithBackToBackMatches();
+
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
             if (selectedCategoriesFilter.length > 0 && !selectedCategoriesFilter.includes(match.categoryId)) return false;
@@ -3551,6 +3612,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
             return true;
         });
+    
+        // ===== ZÍSKAME TÍMY, KTORÉ HRAJÚ DVA ZÁPASY PO SEBE =====
+        const backToBackTeams = getTeamsWithBackToBackMatches();
+    
         const filteredWithColors = filteredMatches.map(match => {
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
             let homeTeamColor = '#f3f4f6', awayTeamColor = '#f3f4f6';
@@ -3591,14 +3656,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
                 return 0;
             };
+    
+            // ===== KONTROLA BACK-TO-BACK PRE DOMÁCI A HOSŤOVSKÝ TÍM =====
+            const homeBackToBack = backToBackTeams.has(match.homeTeamIdentifier);
+            const awayBackToBack = backToBackTeams.has(match.awayTeamIdentifier);
+    
             return {
                 ...match,
-                homeTeamInConflict: false,
-                awayTeamInConflict: false,
+                homeTeamInConflict: homeBackToBack,
+                awayTeamInConflict: awayBackToBack,
                 homeTeamColor: homeTeamColor,
                 awayTeamColor: awayTeamColor,
-                homeTextColor: '#000000',
-                awayTextColor: '#000000',
+                homeTextColor: homeBackToBack ? '#dc2626' : '#000000',
+                awayTextColor: awayBackToBack ? '#dc2626' : '#000000',
                 homeTotalMembersCount: getTotalMembersCount(match.homeTeamIdentifier, match.categoryName),
                 awayTotalMembersCount: getTotalMembersCount(match.awayTeamIdentifier, match.categoryName)
             };
@@ -4419,9 +4489,39 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'grid items-start text-xs', style: { gridTemplateColumns: '200px 10px 200px 10px 50px 30px', width: '100%' } },
-                                        React.createElement('div', { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } }, React.createElement('span', { className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full', style: { color: '#000000' }, title: homeTeamDisplay.name || homeTeamDisplay }, homeTeamDisplay.name || homeTeamDisplay)),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                            React.createElement(
+                                                'span',
+                                                {
+                                                    className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                    style: {
+                                                        color: backToBackTeams.has(match.homeTeamIdentifier) ? '#dc2626' : '#000000',
+                                                        fontWeight: backToBackTeams.has(match.homeTeamIdentifier) ? 'bold' : undefined
+                                                    },
+                                                    title: homeTeamDisplay.name || homeTeamDisplay
+                                                },
+                                                homeTeamDisplay.name || homeTeamDisplay
+                                            )
+                                        ),
                                         React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${homeMemberCount || 0}` }, React.createElement('span', null, homeMemberCount || 0)),
-                                        React.createElement('div', { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } }, React.createElement('span', { className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full', style: { color: '#000000' }, title: awayTeamDisplay.name || awayTeamDisplay }, awayTeamDisplay.name || awayTeamDisplay)),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center' } },
+                                            React.createElement(
+                                                'span',
+                                                {
+                                                    className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                    style: {
+                                                        color: backToBackTeams.has(match.awayTeamIdentifier) ? '#dc2626' : '#000000',
+                                                        fontWeight: backToBackTeams.has(match.awayTeamIdentifier) ? 'bold' : undefined
+                                                    },
+                                                    title: awayTeamDisplay.name || awayTeamDisplay
+                                                },
+                                                awayTeamDisplay.name || awayTeamDisplay
+                                            )
+                                        ),
                                         React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '10px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${awayMemberCount || 0}` }, React.createElement('span', null, awayMemberCount || 0)),
                                         !isSpecialMatch && React.createElement(
                                             React.Fragment,
@@ -4827,9 +4927,53 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 'div',
                                                                                 { className: 'grid items-center text-xs', style: { gridTemplateColumns: '130px 200px 10px 200px 10px 50px 30px', width: '100%' }, onClick: function(e) { e.stopPropagation(); handleMatchCardClick(match); }, title: hasCompletedMatch ? '' : 'Kliknite pre úpravu zápasu' },
                                                                                 React.createElement('div', { className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300', style: { minWidth: '130px', textAlign: 'center' } }, React.createElement('div', { className: 'flex items-center justify-center gap-1 w-full' }, React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }), React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime))),
-                                                                                React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: match.homeTeamInConflict ? '#dc2626' : 'transparent', fontWeight: match.homeTeamInConflict ? 'bold' : 'normal' } }, React.createElement('span', { className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full', style: { color: match.homeTeamInConflict ? '#ffffff' : '#000000' }, title: homeDisplay.name }, homeDisplay.name)),
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    {
+                                                                                        className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                        style: {
+                                                                                            textAlign: 'center',
+                                                                                            backgroundColor: 'transparent',
+                                                                                            fontWeight: match.homeTeamInConflict ? 'bold' : 'normal'
+                                                                                        }
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        {
+                                                                                            className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                            style: {
+                                                                                                color: match.homeTextColor || '#000000',
+                                                                                                fontWeight: match.homeTeamInConflict ? 'bold' : undefined
+                                                                                            },
+                                                                                            title: homeDisplay.name
+                                                                                        },
+                                                                                        homeDisplay.name
+                                                                                    )
+                                                                                ),
                                                                                 React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: homeTeamColor, width: '20px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${match.homeTotalMembersCount || 0}` }, React.createElement('span', null, match.homeTotalMembersCount || 0)),
-                                                                                React.createElement('div', { className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: match.awayTeamInConflict ? '#dc2626' : 'transparent', fontWeight: match.awayTeamInConflict ? 'bold' : 'normal' } }, React.createElement('span', { className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full', style: { color: match.awayTeamInConflict ? '#ffffff' : '#000000' }, title: awayDisplay.name }, awayDisplay.name)),
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    {
+                                                                                        className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                        style: {
+                                                                                            textAlign: 'center',
+                                                                                            backgroundColor: 'transparent',
+                                                                                            fontWeight: match.awayTeamInConflict ? 'bold' : 'normal'
+                                                                                        }
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        {
+                                                                                            className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                            style: {
+                                                                                                color: match.awayTextColor || '#000000',
+                                                                                                fontWeight: match.awayTeamInConflict ? 'bold' : undefined
+                                                                                            },
+                                                                                            title: awayDisplay.name
+                                                                                        },
+                                                                                        awayDisplay.name
+                                                                                    )
+                                                                                ),
                                                                                 React.createElement('div', { className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300', style: { textAlign: 'center', backgroundColor: awayTeamColor, width: '20px', height: '100%', fontSize: '9px', fontWeight: 'bold', color: '#000000' }, title: `Počet členov tímu: ${match.awayTotalMembersCount || 0}` }, React.createElement('span', null, match.awayTotalMembersCount || 0)),
                                                                                 !isSpecialMatch && React.createElement(
                                                                                     React.Fragment,
