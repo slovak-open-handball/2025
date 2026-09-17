@@ -1700,7 +1700,7 @@ const AssignMatchToBreakModal = ({
         return conflictMatchIds;
     };
     
-    const backToBackTeams = getTeamsWithBackToBackMatches();    
+    const backToBackMatchIds = getTeamsWithBackToBackMatches();
 
     return React.createElement(
         'div',
@@ -1814,7 +1814,7 @@ const AssignMatchToBreakModal = ({
                                     className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
                                     style: {
                                         textAlign: 'center',
-                                        backgroundColor: backToBackTeams.has(match.homeTeamIdentifier) ? '#dc2626' : 'transparent'
+                                        backgroundColor: backToBackMatchIds.has(match.id) ? '#dc2626' : 'transparent'
                                     }
                                 },
                                 React.createElement(
@@ -1837,7 +1837,7 @@ const AssignMatchToBreakModal = ({
                                     className: 'px-2 py-1 flex items-center justify-center border-r border-gray-300',
                                     style: {
                                         textAlign: 'center',
-                                        backgroundColor: backToBackTeams.has(match.awayTeamIdentifier) ? '#dc2626' : 'transparent'
+                                        backgroundColor: backToBackMatchIds.has(match.id) ? '#dc2626' : 'transparent'
                                     }
                                 },
                                 React.createElement(
@@ -3104,7 +3104,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         return conflictMatchIds;
     };
     
-    const backToBackTeams = getTeamsWithBackToBackMatches();
+    const backToBackMatchIds = getTeamsWithBackToBackMatches();
     
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
@@ -3727,9 +3727,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         // ===== ZÍSKAME TÍMY, KTORÉ HRAJÚ DVA ZÁPASY PO SEBE =====
-        const backToBackTeams = getTeamsWithBackToBackMatches();
-
-
+        const backToBackMatchIds = getTeamsWithBackToBackMatches();
 
         console.log('=== getMatchesForHallAndDay ===');
         console.log('hallId:', hallId, '| date:', dateStr);
@@ -3788,8 +3786,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             };
     
             // ===== KONTROLA BACK-TO-BACK PRE DOMÁCI A HOSŤOVSKÝ TÍM =====
-            const homeBackToBack = backToBackTeams.has(match.homeTeamIdentifier);
-            const awayBackToBack = backToBackTeams.has(match.awayTeamIdentifier);
+            const isBackToBackMatch = backToBackMatchIds.has(match.id);
+            const homeBackToBack = isBackToBackMatch;
+            const awayBackToBack = isBackToBackMatch;
 
 
 
