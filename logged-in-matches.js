@@ -1638,7 +1638,7 @@ const AssignMatchToBreakModal = ({
 
     const getBackToBackTeamMatchKeys = () => {
         const conflictKeys = new Set(); // "matchId|teamIdentifier"
-        if (!matches || matches.length === 0) return conflictKeys;
+        if (!allMatches || allMatches.length === 0) return conflictKeys;  // ← zmena
     
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
@@ -1654,7 +1654,7 @@ const AssignMatchToBreakModal = ({
         const K = 1;
     
         const matchesByDate = {};
-        matches.forEach(match => {
+        allMatches.forEach(match => {   // ← zmena
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
