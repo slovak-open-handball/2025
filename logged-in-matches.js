@@ -3724,6 +3724,18 @@ const AddMatchesApp = ({ userProfileData }) => {
             // ===== KONTROLA BACK-TO-BACK PRE DOMÁCI A HOSŤOVSKÝ TÍM =====
             const homeBackToBack = backToBackTeams.has(match.homeTeamIdentifier);
             const awayBackToBack = backToBackTeams.has(match.awayTeamIdentifier);
+
+
+
+            console.log('Match:', match.homeTeamIdentifier, 'vs', match.awayTeamIdentifier,
+            '| homeBackToBack:', homeBackToBack,
+            '| awayBackToBack:', awayBackToBack,
+            '| homeBgColor:', homeBackToBack ? '#dc2626' : 'transparent',
+            '| awayBgColor:', awayBackToBack ? '#dc2626' : 'transparent');
+
+
+
+            
     
             return {
                 ...match,
