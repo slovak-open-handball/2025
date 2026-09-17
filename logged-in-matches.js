@@ -1358,7 +1358,8 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
 const AssignMatchToBreakModal = ({ 
     isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, 
     breakDuration, hallId, date, categories, displayMode, getTeamDisplayText, 
-    allMatches, groupsByCategory, blockedBreaks, sportHalls 
+    allMatches, groupsByCategory, blockedBreaks, sportHalls,
+    selectedCategoriesFilter = []
 }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -1412,7 +1413,16 @@ const AssignMatchToBreakModal = ({
             const matchDate = m.scheduledTime.toDate();
             return getLocalDateStr(matchDate) === date;
         }) || [];
-        const filtered = availableMatches.filter(match => isMatchEligibleForBreak(match, existingMatchesInHallAndDay));
+        
+        // ===== APLIKOVANIE FILTRA KATEGÓRIÍ =====
+        let matchesToFilter = availableMatches;
+        if (selectedCategoriesFilter && selectedCategoriesFilter.length > 0) {
+            matchesToFilter = availableMatches.filter(match => 
+                selectedCategoriesFilter.includes(match.categoryId)
+            );
+        }
+        
+        const filtered = matchesToFilter.filter(match => isMatchEligibleForBreak(match, existingMatchesInHallAndDay));
         setFilteredByConditions(filtered);
     };
 
@@ -1426,7 +1436,7 @@ const AssignMatchToBreakModal = ({
 
     useEffect(() => {
         if (isOpen) filterMatchesByConditions();
-    }, [availableMatches, isOpen, hallId, date, breakStartTime, breakDuration, allMatches, categories, groupsByCategory]);
+    }, [availableMatches, isOpen, hallId, date, breakStartTime, breakDuration, allMatches, categories, groupsByCategory, selectedCategoriesFilter]);
 
     if (!isOpen) return null;
 
@@ -4090,7 +4100,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             allMatches: matches,
             groupsByCategory: groupsByCategory,
             blockedBreaks: blockedBreaks,
-            sportHalls: sportHalls
+            sportHalls: sportHalls,
+            selectedCategoriesFilter: selectedCategoriesFilter
         }),
         React.createElement(AssignMatchModal, {
             isOpen: isAssignModalOpen,
