@@ -1823,7 +1823,7 @@ const AssignMatchToBreakModal = ({
                                         className: 'font-medium truncate block w-full',
                                         style: {
                                             color: '#000000',
-                                            fontWeight: backToBackTeams.has(match.homeTeamIdentifier) ? 'bold' : undefined
+                                            fontWeight: backToBackMatchIds.has(match.id) ? 'bold' : undefined
                                         },
                                         title: displayMode === 'both' ? homeName : homeDisplay
                                     },
@@ -1846,7 +1846,7 @@ const AssignMatchToBreakModal = ({
                                         className: 'font-medium truncate block w-full',
                                         style: {
                                             color: '#000000',
-                                            fontWeight: backToBackTeams.has(match.awayTeamIdentifier) ? 'bold' : undefined
+                                            fontWeight: backToBackMatchIds.has(match.id) ? 'bold' : undefined
                                         },
                                         title: displayMode === 'both' ? awayName : awayDisplay
                                     },
