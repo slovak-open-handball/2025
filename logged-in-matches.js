@@ -1641,7 +1641,7 @@ const AssignMatchToBreakModal = ({
         if (!matches || matches.length === 0) return teamsInConflict;
     
         // Kľúč: hallId + dateStr
-    vconst matchesByHallAndDate = {};
+        const matchesByHallAndDate = {};
         matches.forEach(match => {
             if (!match.scheduledTime || !match.hallId) return;
             let dateStr;
