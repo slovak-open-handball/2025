@@ -1690,6 +1690,34 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
+    const handleTeamNameClick = (teamName, categoryName) => {
+        const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
+        const baseTeamName = removeSuffix(normalizedTeamName);
+
+        const userTeams = getUserTeamsFromProfile();
+        const occurrences = userTeams
+            .filter(t => removeSuffix(t.teamName) === baseTeamName)
+            .map(t => ({
+                category: t.category,
+                teamName: t.teamName,
+                groupName: t.groupName,
+                order: t.order
+            }));
+
+        if (occurrences.length === 0) return;
+
+        setSelectedTeamDetails({
+            teamName: normalizedTeamName,
+            category: categoryName || null,
+            occurrences
+        });
+
+        updateUrlHash(normalizedTeamName, categoryName || null);
+
+        const catName = categoryName || occurrences[0].category;
+        loadTeamRoster(normalizedTeamName, catName);
+    };
+
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
@@ -2004,12 +2032,60 @@ const TeamsOverviewApp = (props) => {
         );
     };
 
-    const renderEmptyState = () => {
+    const renderUserTeamsButtons = () => {
+        const userTeams = getUserTeamsFromProfile();
+
+        if (userTeams.length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'text-center py-16 text-gray-500' },
+                'Pre váš účet neboli nájdené žiadne tímy.'
+            );
+        }
+
+        // Zoradiť podľa kategórie a názvu tímu
+        const sorted = [...userTeams].sort((a, b) => {
+            const catCompare = slovakCollator.compare(a.category, b.category);
+            if (catCompare !== 0) return catCompare;
+            return slovakCollator.compare(a.teamName, b.teamName);
+        });
+
+        // Zoskupiť podľa kategórie
+        const grouped = {};
+        sorted.forEach(t => {
+            if (!grouped[t.category]) grouped[t.category] = [];
+            grouped[t.category].push(t);
+        });
+
         return React.createElement(
             'div',
-            { className: 'text-center py-16 text-gray-500' },
-            React.createElement('p', { className: 'text-lg' }, 'Nie je vybraný žiadny tím.'),
-            React.createElement('p', { className: 'text-sm mt-2' }, 'Vyberte tím z URL adresy alebo z prehľadu tímov.')
+            { className: 'w-full' },
+            Object.entries(grouped).map(([categoryName, teams]) =>
+                React.createElement(
+                    'div',
+                    { key: categoryName, className: 'bg-white rounded-xl shadow-xl p-6 mb-4' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-700 mb-3' },
+                        categoryName
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-wrap gap-3' },
+                        teams.map((t, i) =>
+                            React.createElement(
+                                'button',
+                                {
+                                    key: i,
+                                    onClick: () => handleTeamNameClick(t.teamName, t.category),
+                                    className: 'px-4 py-2 rounded-lg transition-colors text-sm font-medium bg-gray-300 text-gray-700 hover:bg-gray-400'
+                                },
+                                `${t.category} | ${t.teamName}`
+                            )
+                        )
+                    )
+                )
+            )
         );
     };
 
@@ -2018,7 +2094,7 @@ const TeamsOverviewApp = (props) => {
             return renderTeamDetails();
         }
 
-        return renderEmptyState();
+        return renderUserTeamsButtons();
     };
 
     return React.createElement(
@@ -2031,12 +2107,12 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'h1',
                 { className: 'text-3xl font-bold text-gray-800 text-center' },
-                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Detaily tímov'
+                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Moje tímy'
             ),
             React.createElement(
                 'p',
                 { className: 'text-center text-gray-500 mt-1' },
-                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny tím' : 'Vyberte tím pre zobrazenie detailov'
+                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny tím' : 'Kliknite na tlačidlo pre zobrazenie detailov tímu'
             )
         ),
         renderMainContent()
