@@ -1648,11 +1648,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
-                        const retryMapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
-                        const mapped = await resolveTeamNameViaTeamManager(homeTeamName, matchCategoryName);
-                        const mapped = await resolveTeamNameViaTeamManager(awayTeamName, matchCategoryName);
-                        if (mapped && mapped !== teamName) {
+                        if (mapped && mapped !== teamName && mapped !== 'null') {
                             resolvedTeamName = mapped;
+                        } else {
+                            // RETRY: Skúsime to znova po krátkej pauze
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            const retryMapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
+                            if (retryMapped && retryMapped !== teamName && retryMapped !== 'null') {
+                                resolvedTeamName = retryMapped;
+                            }
                         }
                     } catch (err) {
                         console.error(`Chyba pri mapovaní názvu tímu ${teamName}:`, err);
@@ -1683,7 +1687,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 let homeTeamName = matchData.homeTeamName;
                 let awayTeamName = matchData.awayTeamName;
                 
-                // Ak homeTeamName chýba, fallback na homeTeamIdentifier LEN pre zobrazenie (nemapuje sa)
+                // Ak homeTeamName chýba, fallback na homeTeamIdentifier LEN pre zobrazenie
                 if (!homeTeamName && matchData.homeTeamIdentifier) {
                     homeTeamName = matchData.homeTeamIdentifier;
                 }
@@ -1691,13 +1695,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     awayTeamName = matchData.awayTeamIdentifier;
                 }
                 
-                // Mapujeme LEN ak teamName obsahuje categoryName (podmienka zostáva zachovaná)
+                // Mapujeme LEN ak teamName obsahuje categoryName
                 if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(homeTeamName);
-                            if (mapped && mapped !== homeTeamName) {
-                                homeTeamName = mapped;
+                            const mappedHome = await resolveTeamNameViaTeamManager(homeTeamName, matchCategoryName);
+                            if (mappedHome && mappedHome !== homeTeamName) {
+                                homeTeamName = mappedHome;
                             }
                         } catch (e) {
                             console.error(`Chyba pri mapovaní domáceho tímu ${homeTeamName}:`, e);
@@ -1708,9 +1712,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 if (awayTeamName && matchCategoryName && awayTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
-                            const mapped = await window.matchTracker.getTeamNameByDisplayId(awayTeamName);
-                            if (mapped && mapped !== awayTeamName) {
-                                awayTeamName = mapped;
+                            const mappedAway = await resolveTeamNameViaTeamManager(awayTeamName, matchCategoryName);
+                            if (mappedAway && mappedAway !== awayTeamName) {
+                                awayTeamName = mappedAway;
                             }
                         } catch (e) {
                             console.error(`Chyba pri mapovaní hosťujúceho tímu ${awayTeamName}:`, e);
