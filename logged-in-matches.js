@@ -3662,6 +3662,23 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // ===== ZÍSKAME TÍMY, KTORÉ HRAJÚ DVA ZÁPASY PO SEBE =====
         const backToBackTeams = getTeamsWithBackToBackMatches();
+
+
+
+        console.log('=== getMatchesForHallAndDay ===');
+        console.log('hallId:', hallId, '| date:', dateStr);
+        console.log('backToBackTeams (celý Set):', Array.from(backToBackTeams));
+        console.log('allHallDayMatches count:', allHallDayMatches.length);
+        console.log('allHallDayMatches:', allHallDayMatches.map(m => ({
+            id: m.id,
+            home: m.homeTeamIdentifier,
+            away: m.awayTeamIdentifier,
+            time: m.scheduledTime ? m.scheduledTime.toDate().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }) : 'no time',
+            hallId: m.hallId
+        })));  
+
+
+        
     
         const filteredWithColors = filteredMatches.map(match => {
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
