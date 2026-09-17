@@ -1638,7 +1638,7 @@ const AssignMatchToBreakModal = ({
 
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!matches || matches.length === 0) return teamsInConflict;
+        if (!allMatches || matches.length === 0) return teamsInConflict;
     
         // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
@@ -1659,7 +1659,7 @@ const AssignMatchToBreakModal = ({
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        matches.forEach(match => {
+        allMatches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
@@ -3045,7 +3045,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const getTeamsWithBackToBackMatches = () => {
         const teamsInConflict = new Set();
-        if (!matches || matches.length === 0) return teamsInConflict;
+        if (!allMatches || matches.length === 0) return teamsInConflict;
     
         // Pomocná funkcia: vráti dĺžku zápasu + prestávku pre danú kategóriu
         const getMatchTotalDuration = (categoryName) => {
@@ -3066,7 +3066,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        matches.forEach(match => {
+        allMatches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
