@@ -424,9 +424,7 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     const [categoriesData, setCategoriesData] = useState({});
     const [allMatchesList, setAllMatchesList] = useState([]);
     
-    // Sledovanie zmien v teamName a categoryName pre resetovanie loading stavu
     useEffect(() => {
-        // Reset loading stavu pri zmene tímu alebo kategórie
         setLoading(true);
         setMatches([]);
         setAllMatchesList([]);
@@ -950,119 +948,9 @@ const TeamMatchesList = ({ teamName, categoryName, categoryId }) => {
     );
 };
 
-const renderTeamDetails = () => {
-    if (!selectedTeamDetails) return null;
-
-    const categoryFromUrl = getCategoryFromUrl();
-    const hasCategoryInUrl = !!categoryFromUrl;
-
-    const sortedOccurrences = [...selectedTeamDetails.occurrences].sort((a, b) => {
-        const categoryCompare = slovakCollator.compare(a.category, b.category);
-        if (categoryCompare !== 0) return categoryCompare;
-        return slovakCollator.compare(a.teamName, b.teamName);
-    });
-
-    let categoryId = null;
-    const currentCategoryName = selectedTeamDetails.category || categoryFromUrl;
-    if (currentCategoryName) {
-        const foundId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === currentCategoryName);
-        if (foundId) categoryId = foundId;
-    }
-
-    // Zistíme, či je nejaké tlačidlo modré (vybrané)
-    // T.j. či máme vybranú kategóriu a tím
-    const isAnyButtonSelected = hasCategoryInUrl && 
-                                selectedTeamDetails.category !== null &&
-                                selectedTeamDetails.category !== undefined;
-
-    return React.createElement(
-        'div',
-        { className: 'w-full' },
-        React.createElement(
-            'div',
-            { className: 'mb-6' },
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center' },
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: closeTeamDetails,
-                            className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2'
-                        },
-                        '← Späť na prehľad'
-                    ),
-                    React.createElement(
-                        'h2',
-                        { className: 'text-2xl font-bold text-gray-800 mt-4' },
-                        `Tím: ${selectedTeamDetails.teamName}`
-                    )
-                )
-            )
-        ),
-        React.createElement(
-            'div',
-            { className: 'bg-white rounded-xl shadow-xl p-6' },
-            React.createElement(
-                'h3',
-                { className: 'text-lg font-semibold text-gray-700 mb-4' },
-                'Tím v kategóriách:'
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex flex-wrap gap-3 mt-2' },
-                sortedOccurrences.map((occ, index) => {
-                    let isSelected = false;
-                    if (hasCategoryInUrl) {
-                        if (selectedTeamDetails.category === null) {
-                            isSelected = occ.teamName === selectedTeamDetails.teamName;
-                        } else {
-                            isSelected = occ.category === selectedTeamDetails.category && 
-                                       occ.teamName === selectedTeamDetails.teamName;
-                        }
-                    }
-                    const buttonLabel = `${occ.category} | ${occ.teamName}`;
-                    return React.createElement(
-                        'button',
-                        {
-                            key: index,
-                            className: `px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                                hasCategoryInUrl && isSelected 
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                            }`,
-                            onClick: () => handleTeamOccurrenceClick(occ)
-                        },
-                        buttonLabel
-                    );
-                })
-            ),
-            React.createElement(
-                'div',
-                { className: 'mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500' },
-                `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
-            )
-        ),
-        // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
-        (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
-            teamName: selectedTeamDetails.teamName,
-            categoryName: selectedTeamDetails.category || categoryFromUrl || '',
-            categoryId: categoryId
-        }) : null,
-        renderTeamRoster()
-    );
-};
-
 const TeamsOverviewApp = (props) => {
-    const [allTeams, setAllTeams] = useState([]);
-    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [uiNotification, setUiNotification] = useState(null);
     
-    const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
     const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [teamRoster, setTeamRoster] = useState([]);
@@ -1072,6 +960,7 @@ const TeamsOverviewApp = (props) => {
     const [rosterUnsubscribe, setRosterUnsubscribe] = useState(null);
     const [membersStats, setMembersStats] = useState({});
     const [updateTrigger, setUpdateTrigger] = useState(0);
+    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
 
     const [isRostersVisible, setIsRostersVisible] = useState(
         window.pagesVisibility && 
@@ -1084,6 +973,30 @@ const TeamsOverviewApp = (props) => {
         window.pagesVisibility['matches'] && 
         window.pagesVisibility['matches'].visible === true
     );
+
+    // Získa tímy prihláseného používateľa z props alebo z window.globalUserProfileData
+    const getUserTeamsFromProfile = () => {
+        const profile = props.userProfileData || window.globalUserProfileData;
+        if (!profile || !profile.teams) return [];
+
+        const result = [];
+        Object.entries(profile.teams).forEach(([categoryName, teamsArray]) => {
+            if (Array.isArray(teamsArray)) {
+                teamsArray.forEach(team => {
+                    if (team && team.teamName) {
+                        result.push({
+                            teamName: team.teamName,
+                            category: categoryName,
+                            groupName: team.groupName || null,
+                            order: team.order ?? null,
+                            id: team.id
+                        });
+                    }
+                });
+            }
+        });
+        return result;
+    };
 
     useEffect(() => {
         if (!window.db) return;
@@ -1127,9 +1040,24 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    const tableContainerRef = useRef(null);
+    // Načítanie mapovania categoryId -> categoryName
+    useEffect(() => {
+        if (!window.db) return;
+        const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
+            const categoryIdToName = {};
+            if (docSnap.exists()) {
+                const categoryData = docSnap.data();
+                Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
+                    if (categoryObject && categoryObject.name) {
+                        categoryIdToName[categoryId] = categoryObject.name;
+                    }
+                });
+            }
+            setCategoryIdToNameMap(categoryIdToName);
+        });
 
-    const [maxTableHeight, setMaxTableHeight] = useState('60vh');
+        return () => unsubscribeCategories();
+    }, []);
 
     useEffect(() => {
         if (selectedTeamDetails) {
@@ -1147,49 +1075,12 @@ const TeamsOverviewApp = (props) => {
     }, [selectedTeamDetails]);
 
     useEffect(() => {
-        const updateHeight = () => {
-            if (tableContainerRef.current) {
-                const rect = tableContainerRef.current.getBoundingClientRect();
-                const calculatedMaxHeight = window.innerHeight - rect.top - 50; 
-                setMaxTableHeight(`${Math.max(calculatedMaxHeight, 200)}px`);
-            }
-        };
-
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, [allTeams, selectedCategoryId, selectedTeamNameFilter]);
-
-    const COLUMN_WIDTHS = {
-        teamName: { minWidth: '180px', maxWidth: '250px', width: '180px' },
-        category: { minWidth: '80px', width: '80px' },
-        total: { minWidth: '80px', width: '80px' }
-    };
-
-    const TOP_OFFSET = '0px'; 
-
-    const convertIdentifierToDisplayName = (identifier) => {
-        if (!identifier) return identifier;
-        
-        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-            try {
-                const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                if (convertedName && convertedName !== identifier) {
-                    return convertedName;
-                }
-            } catch (err) {}
-        }
-        return identifier;
-    };
-
-    useEffect(() => {
         if (!window.db) return;
         
         const eventsRef = collection(window.db, 'matchEvents');
         const eventsQuery = query(eventsRef);
         
         const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
-            
             if (selectedTeamDetails && teamRoster.length > 0) {
                 setUpdateTrigger(prev => prev + 1);
             }
@@ -1277,15 +1168,12 @@ const TeamsOverviewApp = (props) => {
                     return;
                 }
         
-                // NOVÁ ČASŤ: Zistiť, či sa názov kategórie nachádza v názve tímu zápasu
                 const matchTeamName = eventData.team === 'home' ? matchInfo.homeTeam : matchInfo.awayTeam;
                 if (eventData.categoryName && matchTeamName && matchTeamName.includes(eventData.categoryName)) {
-                    // Ak áno, pošli názov tímu zo zápasu do getTeamNameByDisplayId
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
                             window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                         } catch (err) {
-                            // ignorovať chybu
                         }
                     }
                 }
@@ -1477,30 +1365,25 @@ const TeamsOverviewApp = (props) => {
         let unsubscribeMatches = null;
         let matchTeamMap = {};
     
-        // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
         const teamNameContainsCategory = (teamName, categoryName) => {
             if (!teamName || !categoryName) return false;
             return teamName.includes(categoryName);
         };
         
-        // Pomocná async funkcia na zmapovanie názvu tímu zo zápasu
         const mapMatchTeamName = async (matchTeamName, categoryName) => {
             if (!matchTeamName) return matchTeamName;
-            // Ak názov tímu obsahuje názov kategórie, treba ho zmapovať
             if (teamNameContainsCategory(matchTeamName, categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await window.matchTracker.getTeamNameByDisplayId(matchTeamName);
                         if (mapped) return mapped;
                     } catch (err) {
-                        // ignorovať
                     }
                 }
             }
             return matchTeamName;
         };
         
-        // V processMatches - upravíme tak, aby sa mapovanie dialo asynchrónne
         const processMatches = async (matchesSnapshot) => {
             const newMatchIds = new Set();
             const newMatchTeamMap = {};            
@@ -1508,18 +1391,15 @@ const TeamsOverviewApp = (props) => {
             const fullTeamName = currentTeamName;
             const categoryForMapping = currentCategoryName;
             
-            // Najprv zozbierame všetky zápasy a ich tímy
             const rawMatches = [];
             matchesSnapshot.forEach(doc => {
                 rawMatches.push({ id: doc.id, data: doc.data() });
             });
             
-            // Asynchrónne zmapujeme názvy tímov, ktoré obsahujú názov kategórie
             for (const { id: matchId, data: matchData } of rawMatches) {
                 let convertedHome = convertIdentifierToDisplayName(matchData.homeTeamIdentifier);
                 let convertedAway = convertIdentifierToDisplayName(matchData.awayTeamIdentifier);
                 
-                // Ak názov tímu obsahuje názov kategórie, zmapuj cez matchTracker
                 convertedHome = await mapMatchTeamName(convertedHome, categoryForMapping);
                 convertedAway = await mapMatchTeamName(convertedAway, categoryForMapping);
                 
@@ -1629,66 +1509,100 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
+    // Inicializácia z URL pri prvom načítaní - pracuje len s tímami používateľa
     useEffect(() => {
-        const categoryFromUrl = getCategoryFromUrl();
-        const hasCategoryInUrl = !!categoryFromUrl;
-        
-        if (selectedTeamDetails && selectedTeamDetails.occurrences && selectedTeamDetails.occurrences.length > 0 && hasCategoryInUrl) {
-            let selectedOcc = null;
-            
-            if (selectedTeamDetails.category && selectedTeamDetails.teamName) {
-                selectedOcc = selectedTeamDetails.occurrences.find(
-                    occ => occ.category === selectedTeamDetails.category && 
-                           occ.teamName === selectedTeamDetails.teamName
-                );
-            }
-            
-            if (!selectedOcc) {
-                const { teamName: teamNameFromUrl } = parseUrlHash();
-                if (categoryFromUrl && teamNameFromUrl) {
-                    selectedOcc = selectedTeamDetails.occurrences.find(
-                        occ => occ.category === categoryFromUrl && 
-                               occ.teamName === teamNameFromUrl
-                    );
-                }
-            }
-            
-            if (!selectedOcc && categoryFromUrl) {
-                selectedOcc = selectedTeamDetails.occurrences.find(
-                    occ => occ.category === categoryFromUrl
-                );
-            }
-            
-            if (!selectedOcc && selectedTeamDetails.occurrences.length > 0) {
-                selectedOcc = selectedTeamDetails.occurrences[0];
-                setSelectedTeamDetails(prev => ({
-                    ...prev,
-                    teamName: selectedOcc.teamName,
-                    category: selectedOcc.category
-                }));
-            }
-            
-            if (selectedOcc) {
-                let categoryName = selectedOcc.category;
-                if (categoryIdToNameMap[categoryName]) {
-                    categoryName = categoryIdToNameMap[categoryName];
-                }
-                loadTeamRoster(selectedOcc.teamName, categoryName);
-            }
-        } else {
-            if (rosterUnsubscribe) {
-                try {
-                    rosterUnsubscribe();
-                } catch (e) {}
-                setRosterUnsubscribe(null);
-            }
-            setTeamRoster([]);
-            setIsLoadingRoster(false);
-            setRosterTeamName('');
-            setRosterCategoryName('');
-            setMembersStats({});
+        if (!isInitialLoad) return;
+        if (Object.keys(categoryIdToNameMap).length === 0) return;
+
+        const userTeams = getUserTeamsFromProfile();
+        if (userTeams.length === 0) {
+            setIsInitialLoad(false);
+            return;
         }
-    }, [selectedTeamDetails, categoryIdToNameMap]);
+
+        const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
+
+        if (teamNameFromUrl) {
+            const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+            let occurrences = userTeams
+                .filter(t => removeSuffix(t.teamName) === baseTeamNameFromUrl)
+                .map(t => ({
+                    category: t.category,
+                    teamName: t.teamName,
+                    groupName: t.groupName,
+                    order: t.order
+                }));
+
+            if (occurrences.length > 0) {
+                let selectedTeamName = teamNameFromUrl;
+                if (categoryNameFromUrl) {
+                    const exactMatch = occurrences.find(occ => occ.category === categoryNameFromUrl);
+                    if (exactMatch) {
+                        selectedTeamName = exactMatch.teamName;
+                    }
+                }
+
+                setSelectedTeamDetails({
+                    teamName: selectedTeamName,
+                    category: categoryNameFromUrl || null,
+                    occurrences
+                });
+
+                const categoryName = categoryNameFromUrl || occurrences[0].category;
+                loadTeamRoster(selectedTeamName, categoryName);
+            }
+        }
+
+        setIsInitialLoad(false);
+    }, [categoryIdToNameMap, isInitialLoad]);
+
+    // Sledovanie hashchange - pracuje len s tímami používateľa
+    useEffect(() => {
+        const handleHashChange = () => {
+            if (isInitialLoad) return;
+
+            const userTeams = getUserTeamsFromProfile();
+            const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
+
+            if (teamNameFromUrl) {
+                const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
+                let occurrences = userTeams
+                    .filter(t => removeSuffix(t.teamName) === baseTeamNameFromUrl)
+                    .map(t => ({
+                        category: t.category,
+                        teamName: t.teamName,
+                        groupName: t.groupName,
+                        order: t.order
+                    }));
+
+                if (occurrences.length > 0) {
+                    let selectedTeamName = teamNameFromUrl;
+                    if (categoryNameFromUrl) {
+                        const exactMatch = occurrences.find(occ => occ.category === categoryNameFromUrl);
+                        if (exactMatch) {
+                            selectedTeamName = exactMatch.teamName;
+                        }
+                    }
+
+                    setSelectedTeamDetails({
+                        teamName: selectedTeamName,
+                        category: categoryNameFromUrl || null,
+                        occurrences
+                    });
+
+                    const categoryName = categoryNameFromUrl || occurrences[0].category;
+                    loadTeamRoster(selectedTeamName, categoryName);
+                } else {
+                    setSelectedTeamDetails(null);
+                }
+            } else {
+                setSelectedTeamDetails(null);
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [categoryIdToNameMap, isInitialLoad]);
 
     const updateUrlHash = (teamName, categoryName = null) => {
         let hashParts = [];
@@ -1747,289 +1661,19 @@ const TeamsOverviewApp = (props) => {
         return categoryName;
     };
 
-    useEffect(() => {
-        if (allTeams.length > 0 && categoryIdToNameMap && Object.keys(categoryIdToNameMap).length > 0 && isInitialLoad) {
-            const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
-            
-            let categoryIdFromUrl = '';
-            let categoryNameToStore = null;
-            
-            if (categoryNameFromUrl) {
-                const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
-                if (categoryId) {
-                    categoryIdFromUrl = categoryId;
-                    categoryNameToStore = categoryNameFromUrl;
-                }
-            }
-            
-            if (categoryIdFromUrl) {
-                setSelectedCategoryId(categoryIdFromUrl);
-            }
-            
-            if (teamNameFromUrl) {
-                let teamOccurrences = allTeams
-                    .filter(team => team.teamName === teamNameFromUrl)
-                    .map(team => ({
-                        category: team.category,
-                        teamName: team.teamName,
-                        uid: team.uid,
-                        id: team.id,
-                        groupName: team.groupName,
-                        order: team.order
-                    }));
+    const convertIdentifierToDisplayName = (identifier) => {
+        if (!identifier) return identifier;
         
-                if (teamOccurrences.length === 0) {
-                    const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
-                    teamOccurrences = allTeams
-                        .filter(team => {
-                            let cleanName = removeSuffix(team.teamName);
-                            if (team.category && cleanName.startsWith(team.category + ' ')) {
-                                cleanName = cleanName.substring(team.category.length + 1).trim();
-                            }
-                            cleanName = removeSuffix(cleanName);
-                            return cleanName === baseTeamNameFromUrl;
-                        })
-                        .map(team => ({
-                            category: team.category,
-                            teamName: team.teamName,
-                            uid: team.uid,
-                            id: team.id,
-                            groupName: team.groupName,
-                            order: team.order
-                        }));
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                const convertedName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                if (convertedName && convertedName !== identifier) {
+                    return convertedName;
                 }
-        
-                if (teamOccurrences.length > 0) {
-                    const baseTeamName = removeSuffix(teamNameFromUrl);
-                    const allOccurrences = allTeams
-                        .filter(team => {
-                            let cleanName = removeSuffix(team.teamName);
-                            if (team.category && cleanName.startsWith(team.category + ' ')) {
-                                cleanName = cleanName.substring(team.category.length + 1).trim();
-                            }
-                            cleanName = removeSuffix(cleanName);
-                            return cleanName === baseTeamName;
-                        })
-                        .map(team => ({
-                            category: team.category,
-                            teamName: team.teamName,
-                            uid: team.uid,
-                            id: team.id,
-                            groupName: team.groupName,
-                            order: team.order
-                        }));
-                    
-                    let selectedTeamName = teamNameFromUrl;
-                    if (categoryNameFromUrl) {
-                        const exactMatch = teamOccurrences.find(occ => occ.category === categoryNameFromUrl);
-                        if (exactMatch) {
-                            selectedTeamName = exactMatch.teamName;
-                        }
-                    }
-                    
-                    setSelectedTeamDetails({
-                        teamName: selectedTeamName,
-                        category: categoryNameToStore,
-                        occurrences: allOccurrences
-                    });
-                }
-            }
-            setIsInitialLoad(false);
+            } catch (err) {}
         }
-    }, [allTeams, categoryIdToNameMap, isInitialLoad]);
-
-    useEffect(() => {
-        if (!window.db) return;
-
-        const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
-            let userTeamsList = [];
-            querySnapshot.forEach((doc) => {
-                const userData = doc.data();
-                if (userData && userData.teams) {
-                    Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
-                        if (Array.isArray(teamArray)) {
-                            teamArray.forEach(team => {
-                                if (team.teamName) {
-                                    userTeamsList.push({
-                                        uid: doc.id,
-                                        category: categoryName,
-                                        id: team.id,
-                                        teamName: team.teamName,
-                                        groupName: team.groupName || null,
-                                        order: team.order ?? null,
-                                        isSuperstructureTeam: false,
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-            setAllTeams(userTeamsList);
-        });
-
-        const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
-            const categoryIdToName = {};
-            if (docSnap.exists()) {
-                const categoryData = docSnap.data();
-                Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
-                    if (categoryObject && categoryObject.name) {
-                        categoryIdToName[categoryId] = categoryObject.name;
-                    }
-                });
-            }
-            setCategoryIdToNameMap(categoryIdToName);
-        });
-
-        return () => {
-            unsubscribeUsers();
-            unsubscribeCategories();
-        };
-    }, []);
-
-    useEffect(() => {
-        const handleHashChange = () => {
-            if (!isInitialLoad) {
-                const { teamName: teamNameFromUrl, categoryName: categoryNameFromUrl } = parseUrlHash();
-                
-                let newCategoryId = '';
-                if (categoryNameFromUrl) {
-                    const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
-                    if (categoryId) {
-                        newCategoryId = categoryId;
-                    }
-                }
-                
-                setSelectedCategoryId(newCategoryId);
-                
-                if (teamNameFromUrl) {
-                    let teamOccurrences = allTeams
-                        .filter(team => team.teamName === teamNameFromUrl)
-                        .map(team => ({
-                            category: team.category,
-                            teamName: team.teamName,
-                            uid: team.uid,
-                            id: team.id,
-                            groupName: team.groupName,
-                            order: team.order
-                        }));
-                    
-                    if (teamOccurrences.length === 0) {
-                        const baseTeamNameFromUrl = removeSuffix(teamNameFromUrl);
-                        teamOccurrences = allTeams
-                            .filter(team => {
-                                let cleanName = removeSuffix(team.teamName);
-                                if (team.category && cleanName.startsWith(team.category + ' ')) {
-                                    cleanName = cleanName.substring(team.category.length + 1).trim();
-                                }
-                                cleanName = removeSuffix(cleanName);
-                                return cleanName === baseTeamNameFromUrl;
-                            })
-                            .map(team => ({
-                                category: team.category,
-                                teamName: team.teamName,
-                                uid: team.uid,
-                                id: team.id,
-                                groupName: team.groupName,
-                                order: team.order
-                            }));
-                    }
-                    
-                    if (teamOccurrences.length > 0) {
-                        const baseTeamName = removeSuffix(teamNameFromUrl);
-                        const allOccurrences = allTeams
-                            .filter(team => {
-                                let cleanName = removeSuffix(team.teamName);
-                                if (team.category && cleanName.startsWith(team.category + ' ')) {
-                                    cleanName = cleanName.substring(team.category.length + 1).trim();
-                                }
-                                cleanName = removeSuffix(cleanName);
-                                return cleanName === baseTeamName;
-                            })
-                            .map(team => ({
-                                category: team.category,
-                                teamName: team.teamName,
-                                uid: team.uid,
-                                id: team.id,
-                                groupName: team.groupName,
-                                order: team.order
-                            }));
-                        
-                        let selectedTeamName = teamNameFromUrl;
-                        if (categoryNameFromUrl) {
-                            const exactMatch = teamOccurrences.find(occ => occ.category === categoryNameFromUrl);
-                            if (exactMatch) {
-                                selectedTeamName = exactMatch.teamName;
-                            }
-                        }
-                        
-                        setSelectedTeamDetails({
-                            teamName: selectedTeamName,
-                            category: categoryNameFromUrl || null,
-                            occurrences: allOccurrences
-                        });
-                    } else {
-                        setSelectedTeamDetails(null);
-                    }
-                } else {
-                    setSelectedTeamDetails(null);
-                }
-            }
-        };
-    
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [allTeams, categoryIdToNameMap, isInitialLoad, selectedTeamDetails]);
-
-    const getTableData = () => {
-        if (allTeams.length === 0 || Object.keys(categoryIdToNameMap).length === 0) {
-            return { teamNames: [], categoryNames: [], matrix: {} };
-        }
-
-        const categoryNames = Object.values(categoryIdToNameMap).sort((a, b) => slovakCollator.compare(a, b));
-        
-        const cleanedTeams = allTeams.map(team => ({
-            ...team,
-            cleanName: removeSuffix(team.teamName)
-        }));
-        
-        const teamNamesSet = new Set();
-        cleanedTeams.forEach(team => {
-            let cleanName = team.cleanName;
-            if (team.category && cleanName.startsWith(team.category + ' ')) {
-                cleanName = cleanName.substring(team.category.length + 1).trim();
-            }
-            cleanName = removeSuffix(cleanName);
-            
-            if (selectedTeamNameFilter && !cleanName.toLowerCase().includes(selectedTeamNameFilter.toLowerCase())) {
-                return;
-            }
-            teamNamesSet.add(cleanName);
-        });
-        
-        const teamNames = Array.from(teamNamesSet).sort((a, b) => slovakCollator.compare(a, b));
-        
-        const matrix = {};
-        teamNames.forEach(name => {
-            matrix[name] = {};
-            categoryNames.forEach(cat => {
-                const count = cleanedTeams.filter(team => {
-                    let cleanName = team.cleanName;
-                    if (team.category && cleanName.startsWith(team.category + ' ')) {
-                        cleanName = cleanName.substring(team.category.length + 1).trim();
-                    }
-                    cleanName = removeSuffix(cleanName);
-                    return team.category === cat && cleanName === name;
-                }).length;
-                matrix[name][cat] = count;
-            });
-        });
-
-        return { teamNames, categoryNames, matrix };
+        return identifier;
     };
-
-    const { teamNames, categoryNames, matrix } = getTableData();
-    const filteredCategoryNames = categoryNames;
 
     useEffect(() => {
         let timer;
@@ -2046,56 +1690,32 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    const handleCategoryHeaderClick = (categoryName) => {
-        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
-        if (categoryId) {
-            if (selectedCategoryId === categoryId) {
-                setSelectedCategoryId('');
-                if (selectedTeamDetails) {
-                    const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
-                    updateUrlHash(normalizedTeam, null);
-                } else {
-                    updateUrlHash(null);
-                }
-            } else {
-                setSelectedCategoryId(categoryId);
-                if (selectedTeamDetails) {
-                    const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
-                    updateUrlHash(normalizedTeam, categoryName);
-                } else {
-                    updateUrlHash(null, categoryName);
-                }
-            }
-        }
-    };
-
-    const handleTeamNameClick = (teamName) => {
+    const handleTeamNameClick = (teamName, categoryName) => {
         const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
-        const currentCategoryName = selectedCategoryId ? categoryIdToNameMap[selectedCategoryId] : null;
         const baseTeamName = removeSuffix(normalizedTeamName);
-        
-        const teamOccurrences = allTeams
-            .filter(team => {
-                const cleanName = removeSuffix(team.teamName);
-                return cleanName === baseTeamName;
-            })
-            .map(team => ({
-                category: team.category,
-                teamName: team.teamName,
-                uid: team.uid,
-                id: team.id,
-                groupName: team.groupName,
-                order: team.order
+
+        const userTeams = getUserTeamsFromProfile();
+        const occurrences = userTeams
+            .filter(t => removeSuffix(t.teamName) === baseTeamName)
+            .map(t => ({
+                category: t.category,
+                teamName: t.teamName,
+                groupName: t.groupName,
+                order: t.order
             }));
 
-        if (teamOccurrences.length > 0) {
-            setSelectedTeamDetails({
-                teamName: normalizedTeamName,
-                category: currentCategoryName,
-                occurrences: teamOccurrences
-            });
-            updateUrlHash(normalizedTeamName, currentCategoryName);
-        }
+        if (occurrences.length === 0) return;
+
+        setSelectedTeamDetails({
+            teamName: normalizedTeamName,
+            category: categoryName || null,
+            occurrences
+        });
+
+        updateUrlHash(normalizedTeamName, categoryName || null);
+
+        const catName = categoryName || occurrences[0].category;
+        loadTeamRoster(normalizedTeamName, catName);
     };
 
     const closeTeamDetails = () => {
@@ -2113,15 +1733,6 @@ const TeamsOverviewApp = (props) => {
         setRosterTeamName('');
         setRosterCategoryName('');
         setMembersStats({});
-        
-        if (categoryNameFromUrl) {
-            const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryNameFromUrl);
-            if (categoryId) {
-                setSelectedCategoryId(categoryId);
-            }
-        } else {
-            setSelectedCategoryId('');
-        }
         
         updateUrlHash(null, categoryNameFromUrl || null);
     };
@@ -2150,18 +1761,14 @@ const TeamsOverviewApp = (props) => {
         }
         
         const baseTeamName = removeSuffix(normalizedTeamName);
-        const allOccurrences = allTeams
-            .filter(team => {
-                const cleanName = removeSuffix(team.teamName);
-                return cleanName === baseTeamName;
-            })
-            .map(team => ({
-                category: team.category,
-                teamName: team.teamName,
-                uid: team.uid,
-                id: team.id,
-                groupName: team.groupName,
-                order: team.order
+        const userTeams = getUserTeamsFromProfile();
+        const allOccurrences = userTeams
+            .filter(t => removeSuffix(t.teamName) === baseTeamName)
+            .map(t => ({
+                category: t.category,
+                teamName: t.teamName,
+                groupName: t.groupName,
+                order: t.order
             }));
         
         setSelectedTeamDetails({
@@ -2385,8 +1992,6 @@ const TeamsOverviewApp = (props) => {
             if (foundId) categoryId = foundId;
         }
     
-        // Zistíme, či je nejaké tlačidlo modré (vybrané)
-        // T.j. či máme vybranú kategóriu a tím
         const isAnyButtonSelected = hasCategoryInUrl && 
                                     selectedTeamDetails.category !== null &&
                                     selectedTeamDetails.category !== undefined;
@@ -2462,7 +2067,6 @@ const TeamsOverviewApp = (props) => {
                     `Celkový počet tímov: ${selectedTeamDetails.occurrences.length}`
                 )
             ),
-            // --- ZÁPASY TÍMU (zobrazia sa iba ak je matches zverejnená A je vybrané tlačidlo) ---
             (isMatchesVisible && isAnyButtonSelected) ? React.createElement(TeamMatchesList, {
                 teamName: selectedTeamDetails.teamName,
                 categoryName: selectedTeamDetails.category || categoryFromUrl || '',
@@ -2472,223 +2076,60 @@ const TeamsOverviewApp = (props) => {
         );
     };
 
-    const renderOverviewTable = () => {
-        if (teamNames.length === 0 || filteredCategoryNames.length === 0) {
+    const renderUserTeamsList = () => {
+        const userTeams = getUserTeamsFromProfile();
+
+        if (userTeams.length === 0) {
             return React.createElement(
                 'div',
                 { className: 'text-center py-16 text-gray-500' },
-                'Žiadne údaje.'
+                'Pre váš účet neboli nájdené žiadne tímy.'
             );
         }
 
-        const getTotalForTeam = (teamName) => {
-            let total = 0;
-            filteredCategoryNames.forEach(cat => {
-                total += (matrix[teamName]?.[cat] || 0);
-            });
-            return total;
-        };
+        // Zoradiť podľa kategórie a názvu tímu
+        const sorted = [...userTeams].sort((a, b) => {
+            const catCompare = slovakCollator.compare(a.category, b.category);
+            if (catCompare !== 0) return catCompare;
+            return slovakCollator.compare(a.teamName, b.teamName);
+        });
 
-        let filteredTeamNames = teamNames;
-        if (selectedCategoryId) {
-            const selectedCategoryName = categoryIdToNameMap[selectedCategoryId];
-            filteredTeamNames = teamNames.filter(teamName => {
-                const count = matrix[teamName]?.[selectedCategoryName] || 0;
-                return count > 0;
-            });
-        }
-
-        const sortedTeamNames = filteredTeamNames;
-
-        if (sortedTeamNames.length === 0) {
-            return React.createElement(
-                'div',
-                { className: 'text-center py-16 text-gray-500' },
-                'Žiadne tímy v tejto kategórii.'
-            );
-        }
+        // Zoskupiť podľa kategórie
+        const grouped = {};
+        sorted.forEach(t => {
+            if (!grouped[t.category]) grouped[t.category] = [];
+            grouped[t.category].push(t);
+        });
 
         return React.createElement(
             'div',
-            { 
-                className: 'w-full overflow-x-auto overflow-y-auto relative shadow-lg rounded-lg',
-                ref: tableContainerRef,
-                style: { maxHeight: maxTableHeight }
-            },
-            React.createElement(
-                'table',
-                { 
-                    className: 'w-full border-collapse bg-white',
-                    style: { minWidth: '600px' }
-                },
+            { className: 'w-full' },
+            Object.entries(grouped).map(([categoryName, teams]) =>
                 React.createElement(
-                    'thead',
-                    { className: 'bg-gray-800 text-white' },
+                    'div',
+                    { key: categoryName, className: 'bg-white rounded-xl shadow-xl p-6 mb-4' },
                     React.createElement(
-                        'tr',
-                        null,
-                        React.createElement(
-                            'th',
-                            { 
-                                className: 'px-4 py-3 text-left font-semibold sticky left-0 bg-gray-800 z-20 border-r border-gray-600',
-                                style: { ...COLUMN_WIDTHS.teamName, top: TOP_OFFSET }
-                            },
-                            'Názov tímu'
-                        ),
-                        filteredCategoryNames.map((catName) => {
-                            const isSelected = selectedCategoryId && categoryIdToNameMap[selectedCategoryId] === catName;
-                            
-                            return React.createElement(
-                                'th',
-                                { 
-                                    key: catName,
-                                    onClick: () => handleCategoryHeaderClick(catName),
-                                    className: `px-4 py-3 text-center font-semibold whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors duration-200 sticky z-10 border-r border-gray-600 ${isSelected ? 'bg-[#1d4ed8]' : 'bg-gray-800'}`,
-                                    style: { ...COLUMN_WIDTHS.category, top: TOP_OFFSET },
-                                    title: isSelected ? 'Kliknite pre zrušenie filtra' : 'Kliknite pre filtrovanie podľa tejto kategórie'
-                                },
-                                React.createElement(
-                                    'span',
-                                    { className: 'flex items-center justify-center gap-1' },
-                                    catName,
-                                    isSelected && React.createElement('span', { className: 'text-xs ml-1' }, '✕')
-                                )
-                            );
-                        }),
-                        React.createElement(
-                            'th',
-                            { 
-                                className: 'px-4 py-3 text-center font-semibold bg-gray-700 whitespace-nowrap sticky z-10',
-                                style: { ...COLUMN_WIDTHS.total, top: TOP_OFFSET }
-                            },
-                            'Celkom'
-                        )
-                    )
-                ),
-                React.createElement(
-                    'tbody',
-                    null,
-                    sortedTeamNames.map((teamName, rowIndex) => {
-                        const total = getTotalForTeam(teamName);
-                        const isEvenRow = rowIndex % 2 === 0;
-                        
-                        return React.createElement(
-                            'tr',
-                            { 
-                                key: teamName,
-                                className: `${isEvenRow ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`
-                            },
+                        'h3',
+                        { className: 'text-lg font-semibold text-gray-700 mb-3' },
+                        categoryName
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' },
+                        teams.map((t, i) =>
                             React.createElement(
-                                'td',
-                                { 
-                                    className: 'px-4 py-3 font-medium text-gray-800 sticky left-0 bg-inherit z-10 border-r border-gray-200 cursor-pointer hover:text-blue-600 hover:underline',
-                                    style: COLUMN_WIDTHS.teamName,
-                                    onClick: () => handleTeamNameClick(teamName)
+                                'button',
+                                {
+                                    key: i,
+                                    onClick: () => handleTeamNameClick(t.teamName, t.category),
+                                    className: 'text-left px-4 py-3 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200'
                                 },
-                                teamName
-                            ),
-                            filteredCategoryNames.map((catName) => {
-                                const count = matrix[teamName]?.[catName] || 0;
-                                return React.createElement(
-                                    'td',
-                                    { 
-                                        key: catName,
-                                        className: 'px-4 py-3 text-center font-semibold border-r border-gray-200',
-                                        style: COLUMN_WIDTHS.category
-                                    },
-                                    count > 0 ? count : ''
-                                );
-                            }),
-                            React.createElement(
-                                'td',
-                                { 
-                                    className: `px-4 py-3 text-center font-bold ${total > 0 ? 'text-gray-800' : 'text-gray-400'}`,
-                                    style: COLUMN_WIDTHS.total
-                                },
-                                total > 0 ? total : ''
+                                React.createElement('div', { className: 'font-medium text-gray-800' }, t.teamName),
+                                t.groupName && React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, t.groupName)
                             )
-                        );
-                    })
-                ),
-                React.createElement(
-                    'tfoot',
-                    { className: 'bg-gray-200 font-semibold' },
-                    React.createElement(
-                        'tr',
-                        null,
-                        React.createElement(
-                            'td',
-                            { 
-                                className: 'px-4 py-3 text-left text-gray-700 sticky left-0 bottom-0 bg-gray-200 z-20 border-r border-gray-300 border-t border-gray-400',
-                                style: { ...COLUMN_WIDTHS.teamName, bottom: 0 }
-                            },
-                            'Celkom tímov'
-                        ),
-                        filteredCategoryNames.map((catName) => {
-                            let totalInCategory = 0;
-                            sortedTeamNames.forEach(teamName => {
-                                totalInCategory += (matrix[teamName]?.[catName] || 0);
-                            });
-                            
-                            return React.createElement(
-                                'td',
-                                { 
-                                    key: catName,
-                                    className: 'px-4 py-3 text-center text-gray-700 sticky bottom-0 bg-gray-200 z-10 border-r border-gray-300 border-t border-gray-400',
-                                    style: { ...COLUMN_WIDTHS.category, bottom: 0 }
-                                },
-                                totalInCategory
-                            );
-                        }),
-                        React.createElement(
-                            'td',
-                            { 
-                                className: 'px-4 py-3 text-center text-gray-700 bg-gray-300 sticky bottom-0 z-10 border-t border-gray-400',
-                                style: { ...COLUMN_WIDTHS.total, bottom: 0 }
-                            },
-                            sortedTeamNames.reduce((sum, name) => sum + getTotalForTeam(name), 0)
                         )
                     )
                 )
-            )
-        );
-    };
-
-    const renderFilters = () => {
-        return React.createElement(
-            'div',
-            { className: 'flex flex-wrap gap-4 mb-6 items-end' },
-            React.createElement(
-                'div',
-                { className: 'flex flex-col flex-1 min-w-[200px]' },
-                React.createElement('label', { className: 'text-sm font-medium text-gray-600 mb-1' }, 'Hľadať tím'),
-                React.createElement(
-                    'input',
-                    {
-                        type: 'text',
-                        value: selectedTeamNameFilter,
-                        onChange: (e) => setSelectedTeamNameFilter(e.target.value),
-                        placeholder: 'Zadajte názov tímu...',
-                        className: 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-                    }
-                )
-            ),
-            (selectedCategoryId || selectedTeamNameFilter) && React.createElement(
-                'button',
-                {
-                    onClick: () => {
-                        setSelectedCategoryId('');
-                        setSelectedTeamNameFilter('');
-                        if (selectedTeamDetails) {
-                            const normalizedTeam = selectedTeamDetails.teamName.replace(/\s+/g, ' ').trim();
-                            updateUrlHash(normalizedTeam, null);
-                        } else {
-                            updateUrlHash(null);
-                        }
-                    },
-                    className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'
-                },
-                'Vymazať filtre ✕'
             )
         );
     };
@@ -2698,16 +2139,7 @@ const TeamsOverviewApp = (props) => {
             return renderTeamDetails();
         }
 
-        return React.createElement(
-            React.Fragment,
-            null,
-            renderFilters(),
-            React.createElement(
-                'div',
-                { className: 'bg-white rounded-xl shadow-xl p-4' },
-                renderOverviewTable()
-            )
-        );
+        return renderUserTeamsList();
     };
 
     return React.createElement(
@@ -2720,7 +2152,7 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'h1',
                 { className: 'text-3xl font-bold text-gray-800 text-center' },
-                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Prehľad tímov podľa kategórií'
+                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Moje tímy'
             ),
             React.createElement(
                 'p',
