@@ -1690,53 +1690,6 @@ const TeamsOverviewApp = (props) => {
         };
     }, []);
 
-    const handleTeamNameClick = (teamName, categoryName) => {
-        const normalizedTeamName = teamName.replace(/\s+/g, ' ').trim();
-        const baseTeamName = removeSuffix(normalizedTeamName);
-
-        const userTeams = getUserTeamsFromProfile();
-        const occurrences = userTeams
-            .filter(t => removeSuffix(t.teamName) === baseTeamName)
-            .map(t => ({
-                category: t.category,
-                teamName: t.teamName,
-                groupName: t.groupName,
-                order: t.order
-            }));
-
-        if (occurrences.length === 0) return;
-
-        setSelectedTeamDetails({
-            teamName: normalizedTeamName,
-            category: categoryName || null,
-            occurrences
-        });
-
-        updateUrlHash(normalizedTeamName, categoryName || null);
-
-        const catName = categoryName || occurrences[0].category;
-        loadTeamRoster(normalizedTeamName, catName);
-    };
-
-    const closeTeamDetails = () => {
-        const { categoryName: categoryNameFromUrl } = parseUrlHash();
-        
-        if (rosterUnsubscribe) {
-            try {
-                rosterUnsubscribe();
-            } catch (e) {}
-            setRosterUnsubscribe(null);
-        }
-        
-        setSelectedTeamDetails(null);
-        setTeamRoster([]);
-        setRosterTeamName('');
-        setRosterCategoryName('');
-        setMembersStats({});
-        
-        updateUrlHash(null, categoryNameFromUrl || null);
-    };
-
     const handleTeamOccurrenceClick = (occ) => {
         const normalizedTeamName = occ.teamName.replace(/\s+/g, ' ').trim();
         const normalizedCategory = occ.category.replace(/\s+/g, ' ').trim();        
@@ -2001,31 +1954,6 @@ const TeamsOverviewApp = (props) => {
             { className: 'w-full' },
             React.createElement(
                 'div',
-                { className: 'mb-6' },
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-between items-center' },
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: closeTeamDetails,
-                                className: 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2'
-                            },
-                            '← Späť na prehľad'
-                        ),
-                        React.createElement(
-                            'h2',
-                            { className: 'text-2xl font-bold text-gray-800 mt-4' },
-                            `Tím: ${selectedTeamDetails.teamName}`
-                        )
-                    )
-                )
-            ),
-            React.createElement(
-                'div',
                 { className: 'bg-white rounded-xl shadow-xl p-6' },
                 React.createElement(
                     'h3',
@@ -2076,61 +2004,12 @@ const TeamsOverviewApp = (props) => {
         );
     };
 
-    const renderUserTeamsList = () => {
-        const userTeams = getUserTeamsFromProfile();
-
-        if (userTeams.length === 0) {
-            return React.createElement(
-                'div',
-                { className: 'text-center py-16 text-gray-500' },
-                'Pre váš účet neboli nájdené žiadne tímy.'
-            );
-        }
-
-        // Zoradiť podľa kategórie a názvu tímu
-        const sorted = [...userTeams].sort((a, b) => {
-            const catCompare = slovakCollator.compare(a.category, b.category);
-            if (catCompare !== 0) return catCompare;
-            return slovakCollator.compare(a.teamName, b.teamName);
-        });
-
-        // Zoskupiť podľa kategórie
-        const grouped = {};
-        sorted.forEach(t => {
-            if (!grouped[t.category]) grouped[t.category] = [];
-            grouped[t.category].push(t);
-        });
-
+    const renderEmptyState = () => {
         return React.createElement(
             'div',
-            { className: 'w-full' },
-            Object.entries(grouped).map(([categoryName, teams]) =>
-                React.createElement(
-                    'div',
-                    { key: categoryName, className: 'bg-white rounded-xl shadow-xl p-6 mb-4' },
-                    React.createElement(
-                        'h3',
-                        { className: 'text-lg font-semibold text-gray-700 mb-3' },
-                        categoryName
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' },
-                        teams.map((t, i) =>
-                            React.createElement(
-                                'button',
-                                {
-                                    key: i,
-                                    onClick: () => handleTeamNameClick(t.teamName, t.category),
-                                    className: 'text-left px-4 py-3 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200'
-                                },
-                                React.createElement('div', { className: 'font-medium text-gray-800' }, t.teamName),
-                                t.groupName && React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, t.groupName)
-                            )
-                        )
-                    )
-                )
-            )
+            { className: 'text-center py-16 text-gray-500' },
+            React.createElement('p', { className: 'text-lg' }, 'Nie je vybraný žiadny tím.'),
+            React.createElement('p', { className: 'text-sm mt-2' }, 'Vyberte tím z URL adresy alebo z prehľadu tímov.')
         );
     };
 
@@ -2139,7 +2018,7 @@ const TeamsOverviewApp = (props) => {
             return renderTeamDetails();
         }
 
-        return renderUserTeamsList();
+        return renderEmptyState();
     };
 
     return React.createElement(
@@ -2152,12 +2031,12 @@ const TeamsOverviewApp = (props) => {
             React.createElement(
                 'h1',
                 { className: 'text-3xl font-bold text-gray-800 text-center' },
-                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Moje tímy'
+                selectedTeamDetails ? `Detail tímu: ${selectedTeamDetails.teamName}` : 'Detaily tímov'
             ),
             React.createElement(
                 'p',
                 { className: 'text-center text-gray-500 mt-1' },
-                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny tím' : 'Kliknite na názov tímu pre zobrazenie detailov'
+                selectedTeamDetails ? 'Kliknutím na tlačidlo vyberiete konkrétny tím' : 'Vyberte tím pre zobrazenie detailov'
             )
         ),
         renderMainContent()
