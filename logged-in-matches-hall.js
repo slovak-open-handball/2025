@@ -134,10 +134,8 @@ const resolveTeamNameViaTeamManager = async (teamIdentifier, categoryName) => {
             const syncResult = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
             if (syncResult && syncResult !== teamIdentifier) {
                 intermediateName = syncResult;
-                console.log(`[resolveTeamName] KROK 1 (sync): "${teamIdentifier}" -> "${intermediateName}"`);
             }
         } catch (e) {
-            console.error('[resolveTeamName] Chyba v getTeamNameByDisplayIdSync:', e);
         }
     }
     
@@ -155,11 +153,9 @@ const resolveTeamNameViaTeamManager = async (teamIdentifier, categoryName) => {
             try {
                 const asyncResult = await window.matchTracker.getTeamNameByDisplayId(intermediateName);
                 if (asyncResult && asyncResult !== intermediateName && asyncResult !== 'null') {
-                    console.log(`[resolveTeamName] KROK 2 (async): "${intermediateName}" -> "${asyncResult}"`);
                     return asyncResult;
                 }
             } catch (e) {
-                console.error('[resolveTeamName] Chyba v getTeamNameByDisplayId:', e);
             }
         }
     }
@@ -201,7 +197,6 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
                         needsUpdate = true;
                     }
                 } catch (err) {
-                    console.error(`Chyba pri získavaní názvu pre domáci tím ${currentDisplayName}:`, err);
                 }
             }
         }
@@ -217,7 +212,6 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
                         needsUpdate = true;
                     } 
                 } catch (err) {
-                    console.error(`Chyba pri získavaní názvu pre hosťujúci tím ${currentDisplayName}:`, err);
                 }
             }
         }
@@ -692,7 +686,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     }
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení vylúčenia:', err);
             }
         };
         
@@ -829,12 +822,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             setMembers(membersWithOriginalIndex);
             setLoading(false);
             
-            // 🔥 KĽÚČOVÉ: Akonáhle sa načítali členovia, mapovanie MUSÍ byť pripravené
-            // (lebo loadTeamMembers musel úspešne namapovať teamName)
             if (membersWithOriginalIndex.length > 0 && onMappedNameUpdate && typeof onMappedNameUpdate === 'function') {
-                // Zavoláme onMappedNameUpdate s aktuálnym mappedName, čo signalizuje rodičovi,
-                // že mapovanie je funkčné
-                console.log(`[TeamMembersList] ✅ Načítaných ${membersWithOriginalIndex.length} členov, mapovanie je pripravené`);
                 onMappedNameUpdate(mappedName);
             }
         };
@@ -1038,7 +1026,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const eventRef = doc(window.db, 'matchEvents', removalEvent.eventId);
                         await deleteDoc(eventRef);
                     } catch (err) {
-                        console.error('Chyba pri rušení odstránenia:', err);
                     }
                 }
             } else {
@@ -1064,7 +1051,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         const eventsRef = collection(window.db, 'matchEvents');
                         await addDoc(eventsRef, eventData);
                     } catch (err) {
-                        console.error('Chyba pri ukladaní odstránenia člena:', err);
                     }
                 }
             }
@@ -1413,7 +1399,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             
             setShowResetModal(false);
         } catch (err) {
-            console.error('Chyba pri resetovaní:', err);
         } finally {
             setResetLoading(false);
         }
@@ -1530,7 +1515,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
             });
             setMatchEvents(events);
         } catch (err) {
-            console.error('Chyba pri načítaní udalostí:', err);
         } finally {
             setEventsLoading(false);
         }
@@ -1653,7 +1637,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     if (userId) break;
                 }
             } catch (err) {
-                console.error('Chyba pri vyhľadávaní userId:', err);
             }
         }
         
@@ -1720,7 +1703,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 await addDoc(eventsRef, eventData);
                 savedEvents.push(selectedAction);
             } catch (err) {
-                console.error('Chyba pri ukladaní udalosti:', err);
             }
         }
         
@@ -1853,7 +1835,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     await window.updateTeamNamesGlobally();
                 }
             } catch (err) {
-                console.error('Chyba pri ukladaní manuálneho výsledku:', err);
             }
         }
     };
@@ -2100,7 +2081,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 await window.updateTeamNamesGlobally();
             }
         } catch (err) {
-            console.error('Chyba pri kontumácii zápasu:', err);
         }
     };
 
@@ -2399,7 +2379,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
             } catch (err) { 
-                console.error('Chyba pri zastavovaní časovača:', err);
             }
         }
     };
@@ -2432,7 +2411,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 if (onTimeUpdate) onTimeUpdate({ totalSeconds: currentSeconds, period, isRunning: true });
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
             } catch (err) {
-                console.error(err);
                 stopLocalInterval();
                 setIsRunning(false);
                 isRunningRef.current = false;
@@ -2546,7 +2524,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 }
             }
         }, (error) => {
-            console.error('Chyba pri počúvaní zápasu:', error);
         });
         
         return () => unsubscribe();
@@ -2691,7 +2668,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);                
                 
             } catch (err) {
-                console.error('Chyba pri resetovaní časovača:', err);
             }
         }
     };
@@ -2726,7 +2702,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     isRunning: false 
                 });
             } catch (err) {
-                console.error('Chyba pri manuálnom prepnutí periódy:', err);
             }
         }
     };
@@ -2761,7 +2736,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                     isRunning: false 
                 });
             } catch (err) {
-                console.error('Chyba pri manuálnom prepnutí periódy:', err);
             }
         }
     };
@@ -2841,7 +2815,6 @@ const MatchTimer = React.forwardRef(({ match, matchId, onTimeUpdate, categorySet
                 }
                 
             } catch (err) {
-                console.error('Chyba pri ukončovaní zápasu:', err);
             }
         }
     };
@@ -3072,7 +3045,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const awayIsMapped = awayTeamDisplay && !awayTeamDisplay.includes(categoryNameForMatch);
         
         if (homeIsMapped || awayIsMapped) {
-            console.log(`[BlueCard] ✅ Tímy sú namapované (home="${homeTeamDisplay}", away="${awayTeamDisplay}"), nastavujem isMappingReady=true`);
             setIsMappingReady(true);
         }
     }, [homeTeamDisplay, awayTeamDisplay, match?.categoryName, match?.categoryId, isMappingReady]);
@@ -3092,12 +3064,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
         
         const handleMappingReady = () => {
-            console.log('[BlueCard] 🎉 Prijatá udalosť teamNameMappingReady!');
             setIsMappingReady(true);
         };
         
         const handleTeamNamesReplaced = () => {
-            console.log('[BlueCard] 🎉 Prijatá udalosť teamNamesReplaced!');
             setIsMappingReady(true);
         };
         
@@ -3123,50 +3093,37 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 setSuspensionMatchesCount(matches);
             }
         } catch (err) {
-            console.error('Chyba pri načítaní nastavení vylúčenia za modrú kartu:', err);
         }
     };
 
     const loadTeamMatches = async (teamName, categoryName) => {
         if (!window.db || !teamName) {
-            console.log(`[LoadTeamMatches] ❌ Chýba db alebo teamName. db=${!!window.db}, teamName="${teamName}"`);
             return [];
         }
         
-        try {
-            console.log(`[LoadTeamMatches] ▶️ ŠTART pre teamName="${teamName}", categoryName="${categoryName}"`);
-            
+        try {            
             let resolvedTeamName = teamName;
             if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await resolveTeamNameViaTeamManager(teamName);
-                        console.log(`[LoadTeamMatches] mapovanie vstupu: "${teamName}" -> "${mapped}"`);
                         if (mapped && mapped !== teamName && mapped !== 'null') {
                             resolvedTeamName = mapped;
                         } else {
-                            // 🔥 RETRY: Skúsime to znova po krátkej pauze
-                            console.log(`[LoadTeamMatches] ⏳ mapovanie zlyhalo, skúšam znova po 1s...`);
                             await new Promise(resolve => setTimeout(resolve, 1000));
                             const retryMapped = await resolveTeamNameViaTeamManager(teamName);
-                            console.log(`[LoadTeamMatches] retry mapovanie: "${teamName}" -> "${retryMapped}"`);
                             if (retryMapped && retryMapped !== teamName && retryMapped !== 'null') {
                                 resolvedTeamName = retryMapped;
                             }
                         }
                     } catch (err) {
-                        console.error(`[LoadTeamMatches] ❌ Chyba pri mapovaní názvu tímu ${teamName}:`, err);
                     }
                 }
-            }
-            
-            console.log(`[LoadTeamMatches] resolvedTeamName="${resolvedTeamName}"`);
+            }            
             
             const matchesRef = collection(window.db, 'matches');
             const matchesSnapshot = await getDocs(matchesRef);
-            const teamMatches = [];
-            
-            console.log(`[LoadTeamMatches] Celkovo zápasov v DB: ${matchesSnapshot.docs.length}`);
+            const teamMatches = [];            
             
             for (const doc of matchesSnapshot.docs) {
                 const matchData = doc.data();
@@ -3194,7 +3151,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 homeTeamName = mapped;
                             }
                         } catch (e) {
-                            console.error(`[LoadTeamMatches] ❌ Chyba pri mapovaní domáceho tímu ${homeTeamName}:`, e);
                         }
                     }
                 }
@@ -3207,7 +3163,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 awayTeamName = mapped;
                             }
                         } catch (e) {
-                            console.error(`[LoadTeamMatches] ❌ Chyba pri mapovaní hosťujúceho tímu ${awayTeamName}:`, e);
                         }
                     }
                 }
@@ -3215,9 +3170,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 const homeMatch = homeTeamName === resolvedTeamName;
                 const awayMatch = awayTeamName === resolvedTeamName;
                 
-                if (homeMatch || awayMatch) {
-                    console.log(`[LoadTeamMatches] ✅ ZHODA: matchId=${doc.id}, group="${matchData.groupName}", category="${matchCategoryName}", home="${originalHome}"->"${homeTeamName}" (match=${homeMatch}), away="${originalAway}"->"${awayTeamName}" (match=${awayMatch})`);
-                    
+                if (homeMatch || awayMatch) {                    
                     teamMatches.push({
                         id: doc.id,
                         ...matchData,
@@ -3228,11 +3181,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 }
             }
             
-            console.log(`[LoadTeamMatches] ✅ Nájdených ${teamMatches.length} zápasov pre tím "${resolvedTeamName}" v kategórii "${categoryName}"`);
-            teamMatches.forEach((m, i) => {
-                console.log(`[LoadTeamMatches]   ${i+1}. matchId=${m.id}, group="${m.groupName}", home="${m.homeTeamName}", away="${m.awayTeamName}"`);
-            });
-            
             teamMatches.sort((a, b) => {
                 const timeA = a.scheduledTimeDate?.getTime() || 0;
                 const timeB = b.scheduledTimeDate?.getTime() || 0;
@@ -3241,7 +3189,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             
             return teamMatches;
         } catch (err) {
-            console.error('[LoadTeamMatches] ❌ Chyba pri načítaní zápasov tímu:', err);
             return [];
         }
     };
@@ -3249,9 +3196,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const calculateBlueCardSuspensions = async () => {
         if (!window.db || !match.id) return;
 
-        // 🔥 KĽÚČOVÉ: Počkáme, kým je mapovanie pripravené
         if (!isMappingReady) {
-            console.log(`[BlueCard] ⏳ calculateBlueCardSuspensions: isMappingReady=false, preskakujem...`);
             return;
         }
 
@@ -3264,30 +3209,22 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
             await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
         } catch (err) {
-            console.error('Chyba pri výpočte vylúčení:', err);
         }
     };
 
     const resolveTeamNameForMatch = async (teamName, categoryName) => {
         if (!teamName) return teamName;
-
-        console.log(`[resolveTeamNameForMatch] VSTUP: teamName="${teamName}", categoryName="${categoryName}"`);
     
         if (categoryName && teamName.includes(categoryName)) {
-            console.log(`[resolveTeamNameForMatch] teamName obsahuje categoryName, mapujem...`);
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 try {
                     const mappedName = await resolveTeamNameViaTeamManager(teamName);
-                    console.log(`[resolveTeamNameForMatch] mapovanie: "${teamName}" -> "${mappedName}"`);
                     if (mappedName && mappedName !== teamName) {
                         return mappedName;
                     }
                 } catch (err) {
-                    console.error(`[resolveTeamNameForMatch] ❌ Chyba pri mapovaní názvu tímu ${teamName}:`, err);
                 }
             }
-        } else {
-            console.log(`[resolveTeamNameForMatch] teamName NEobsahuje categoryName, vracia sa bez mapovania`);
         }
         
         return teamName;
@@ -3296,14 +3233,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const calculateBlueCardSuspensionsRealTime = async (homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal) => {
         if (!window.db || !match.id) return;
         
-        try {
-            console.log(`\n[BlueCard] ==========================================`);
-            console.log(`[BlueCard] ▶️ ŠTART pre match.id=${match.id}`);
-            console.log(`[BlueCard] homeTeamDisplayLocal="${homeTeamDisplayLocal}"`);
-            console.log(`[BlueCard] awayTeamDisplayLocal="${awayTeamDisplayLocal}"`);
-            console.log(`[BlueCard] homeTeamMatches IDs:`, homeTeamMatches.map(m => `${m.id}(${m.groupName})`));
-            console.log(`[BlueCard] awayTeamMatches IDs:`, awayTeamMatches.map(m => `${m.id}(${m.groupName})`));
-                        
+        try {                        
             const eventsRef = collection(window.db, 'matchEvents');
             const eventsSnapshot = await getDocs(eventsRef);
             
@@ -3312,22 +3242,16 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const suspensions = {};
             
             const currentMatchIndexHome = homeTeamMatches.findIndex(m => m.id === match.id);
-            const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
-            
-            console.log(`[BlueCard] currentMatchIndexHome=${currentMatchIndexHome}, currentMatchIndexAway=${currentMatchIndexAway}`);
+            const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);            
                         
             const categoryNameForMatch = match.categoryName || 
                 (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
-            
-            console.log(`[BlueCard] categoryNameForMatch="${categoryNameForMatch}"`);
-            
+                        
             if (currentMatchIndexHome !== -1) {
                 const resolvedHomeTeamName = await resolveTeamNameForMatch(
                     homeTeamDisplayLocal,
                     categoryNameForMatch
-                );
-                
-                console.log(`[BlueCard] resolvedHomeTeamName="${resolvedHomeTeamName}" (z "${homeTeamDisplayLocal}")`);
+                );                
                 
                 let foundHomeTeamInUsers = false;
                 
@@ -3340,7 +3264,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         
                         if (foundTeam) {
                             foundHomeTeamInUsers = true;
-                            console.log(`[BlueCard] ✅ Našiel domáci tím "${resolvedHomeTeamName}" v users/${userDoc.id}, categoryKey="${categoryKey}"`);
                             
                             const allMembers = [];
                             
@@ -3381,9 +3304,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         type: 'Člen RT (žena)'
                                     });
                                 });
-                            }
-                            
-                            console.log(`[BlueCard] Domáci tím má ${allMembers.length} členov`);
+                            }                            
                             
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
@@ -3398,9 +3319,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         event.memberIndex === member.memberIndex) {
                                         
                                         const matchIdOfEvent = event.matchId;
-                                        const matchIndex = homeTeamMatches.findIndex(m => m.id === matchIdOfEvent);
-                                        
-                                        console.log(`[BlueCard]   🟦 Modrá karta pre member=${member.name}, event.matchId=${matchIdOfEvent}, nájdený matchIndex=${matchIndex}, currentMatchIndexHome=${currentMatchIndexHome}`);
+                                        const matchIndex = homeTeamMatches.findIndex(m => m.id === matchIdOfEvent);                                        
                                         
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexHome) {
                                             blueCardEvents.push({
@@ -3413,9 +3332,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 
                                 if (blueCardEvents.length > 0) {
                                     const lastBlueEvent = blueCardEvents[blueCardEvents.length - 1];
-                                    const matchesSinceLastBlue = currentMatchIndexHome - lastBlueEvent.matchIndex;
-                                    
-                                    console.log(`[BlueCard]   🟦 member=${member.name}: blueCardEvents.length=${blueCardEvents.length}, lastBlueIndex=${lastBlueEvent.matchIndex}, matchesSinceLastBlue=${matchesSinceLastBlue}, suspensionMatchesCount=${suspensionMatchesCount}`);
+                                    const matchesSinceLastBlue = currentMatchIndexHome - lastBlueEvent.matchIndex;                                    
                                     
                                     if (matchesSinceLastBlue >= 1 && matchesSinceLastBlue <= suspensionMatchesCount) {
                                         const remainingMatches = suspensionMatchesCount - (matchesSinceLastBlue - 1);
@@ -3428,11 +3345,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             jerseyNumber: member.jerseyNumber,
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
-                                        };
-                                        
-                                        console.log(`[BlueCard]   ✅ PRIDANÉ VYLÚČENIE pre ${member.name} (${memberKey}), remainingMatches=${remainingMatches}`);
-                                    } else {
-                                        console.log(`[BlueCard]   ⏭️ PRESKOČENÉ pre ${member.name} - matchesSinceLastBlue=${matchesSinceLastBlue} mimo rozsah 1..${suspensionMatchesCount}`);
+                                        };                                        
                                     }
                                 }
                             }
@@ -3441,19 +3354,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                     if (foundHomeTeamInUsers) break;
                 }
-                
-                if (!foundHomeTeamInUsers) {
-                    console.warn(`[BlueCard] ❌ Domáci tím "${resolvedHomeTeamName}" sa NENAŠIEL v users kolekcii!`);
-                }
             }
             
             if (currentMatchIndexAway !== -1) {
                 const resolvedAwayTeamName = await resolveTeamNameForMatch(
                     awayTeamDisplayLocal,
                     categoryNameForMatch
-                );
-                
-                console.log(`[BlueCard] resolvedAwayTeamName="${resolvedAwayTeamName}" (z "${awayTeamDisplayLocal}")`);
+                );                
                 
                 let foundAwayTeamInUsers = false;
                 
@@ -3466,7 +3373,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         
                         if (foundTeam) {
                             foundAwayTeamInUsers = true;
-                            console.log(`[BlueCard] ✅ Našiel hosťujúci tím "${resolvedAwayTeamName}" v users/${userDoc.id}, categoryKey="${categoryKey}"`);
                             
                             const allMembers = [];
                             
@@ -3507,9 +3413,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         type: 'Člen RT (žena)'
                                     });
                                 });
-                            }
-                            
-                            console.log(`[BlueCard] Hosťujúci tím má ${allMembers.length} členov`);
+                            }                            
                             
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
@@ -3525,9 +3429,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         
                                         const matchIdOfEvent = event.matchId;
                                         const matchIndex = awayTeamMatches.findIndex(m => m.id === matchIdOfEvent);
-                                        
-                                        console.log(`[BlueCard]   🟦 Modrá karta pre member=${member.name}, event.matchId=${matchIdOfEvent}, nájdený matchIndex=${matchIndex}, currentMatchIndexAway=${currentMatchIndexAway}`);
-                                        
+                                                                                
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexAway) {
                                             blueCardEvents.push({
                                                 matchIndex: matchIndex,
@@ -3540,9 +3442,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 if (blueCardEvents.length > 0) {
                                     const lastBlueEvent = blueCardEvents[blueCardEvents.length - 1];
                                     const matchesSinceLastBlue = currentMatchIndexAway - lastBlueEvent.matchIndex;
-                                    
-                                    console.log(`[BlueCard]   🟦 member=${member.name}: blueCardEvents.length=${blueCardEvents.length}, lastBlueIndex=${lastBlueEvent.matchIndex}, matchesSinceLastBlue=${matchesSinceLastBlue}, suspensionMatchesCount=${suspensionMatchesCount}`);
-                                    
+                                                                        
                                     if (matchesSinceLastBlue >= 1 && matchesSinceLastBlue <= suspensionMatchesCount) {
                                         const remainingMatches = suspensionMatchesCount - (matchesSinceLastBlue - 1);
                                         
@@ -3554,11 +3454,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             jerseyNumber: member.jerseyNumber,
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
-                                        };
-                                        
-                                        console.log(`[BlueCard]   ✅ PRIDANÉ VYLÚČENIE pre ${member.name} (${memberKey}), remainingMatches=${remainingMatches}`);
-                                    } else {
-                                        console.log(`[BlueCard]   ⏭️ PRESKOČENÉ pre ${member.name} - matchesSinceLastBlue=${matchesSinceLastBlue} mimo rozsah 1..${suspensionMatchesCount}`);
+                                        };                                        
                                     }
                                 }
                             }
@@ -3567,20 +3463,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                     if (foundAwayTeamInUsers) break;
                 }
-                
-                if (!foundAwayTeamInUsers) {
-                    console.warn(`[BlueCard] ❌ Hosťujúci tím "${resolvedAwayTeamName}" sa NENAŠIEL v users kolekcii!`);
-                }
-            }
-            
-            console.log(`[BlueCard] 📋 VÝSLEDNÉ suspensions (${Object.keys(suspensions).length}):`, suspensions);
-            console.log(`[BlueCard] ▶️ KONIEC pre match.id=${match.id}`);
-            console.log(`[BlueCard] ==========================================\n`);
-            
-            setBlueCardSuspensions(suspensions);
-            
+            }            
+            setBlueCardSuspensions(suspensions);            
         } catch (err) {
-            console.error('[BlueCard] ❌ Chyba pri real-time výpočte vylúčení:', err);
         }
     };
 
@@ -3594,7 +3479,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             setShowDeleteConfirmModal(false);
             setEventToDelete(null);
         } catch (err) {
-            console.error('Chyba pri mazaní udalosti:', err);
         } finally {
             setDeleteLoading(false);
         }
@@ -3719,7 +3603,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         if (userId) break;
                     }
                 } catch (err) {
-                    console.error('Chyba pri vyhľadávaní userId:', err);
                 }
             }
             
@@ -3746,7 +3629,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             
             return true;
         } catch (err) {
-            console.error('Chyba pri editácii udalosti:', err);
             return false;
         }
     };
@@ -3794,7 +3676,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     
         // 🔥 KĽÚČOVÉ: Počkáme, kým je mapovanie pripravené
         if (!isMappingReady) {
-            console.log(`[BlueCard] ⏳ Čakám na mapovanie (isMappingReady=false)...`);
             return;
         }
     
@@ -3802,61 +3683,45 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
         
         if (categoryNameForMatch && homeTeamDisplay.includes(categoryNameForMatch)) {
-            console.log(`[BlueCard] ⏳ homeTeamDisplay="${homeTeamDisplay}" ešte obsahuje categoryName, čakám na teamNames...`);
             return;
         }
         if (categoryNameForMatch && awayTeamDisplay.includes(categoryNameForMatch)) {
-            console.log(`[BlueCard] ⏳ awayTeamDisplay="${awayTeamDisplay}" ešte obsahuje categoryName, čakám na teamNames...`);
             return;
-        }
-        
-        console.log(`[BlueCard] ✅ Spúšťam calculateBlueCardSuspensions (isMappingReady=true)`);
+        }        
         calculateBlueCardSuspensions();
     }, [match.id, homeTeamDisplay, awayTeamDisplay, suspensionMatchesCount, teamNames, isMappingReady]);
 
-    // 🔥 Real-time listener pre modré karty - čaká na isMappingReady
     React.useEffect(() => {
         if (!window.db || !match.id) return;        
         
-        // 🔥 KĽÚČOVÉ: Počkáme, kým je mapovanie pripravené
         if (!isMappingReady) {
-            console.log(`[BlueCard-Listener] ⏳ Čakám na mapovanie (isMappingReady=false)...`);
             return;
         }
         
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where('eventType', '==', 'card'), where('eventSubtype', '==', 'blue'));
         
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-            console.log(`\n[BlueCard-Listener] 🔔 Zmena v modrých kartách, snapshot.docs.length=${snapshot.docs.length}`);
-            
+        const unsubscribe = onSnapshot(q, async (snapshot) => {            
             if (match.homeTeamIdentifier && match.awayTeamIdentifier) {
                 const categoryNameForMatch = match.categoryName || 
                     (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
                 
                 const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
-                const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
-                
-                console.log(`[BlueCard-Listener] homeTeamDisplayLocal="${homeTeamDisplayLocal}", awayTeamDisplayLocal="${awayTeamDisplayLocal}"`);
+                const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);                
                 
                 if (categoryNameForMatch && homeTeamDisplayLocal.includes(categoryNameForMatch)) {
-                    console.log(`[BlueCard-Listener] ⏳ homeTeamDisplayLocal ešte obsahuje categoryName, preskakujem...`);
                     return;
                 }
                 if (categoryNameForMatch && awayTeamDisplayLocal.includes(categoryNameForMatch)) {
-                    console.log(`[BlueCard-Listener] ⏳ awayTeamDisplayLocal ešte obsahuje categoryName, preskakujem...`);
                     return;
                 }
                 
                 const homeTeamMatches = await loadTeamMatches(homeTeamDisplayLocal, categoryNameForMatch);
-                const awayTeamMatches = await loadTeamMatches(awayTeamDisplayLocal, categoryNameForMatch);
-                
-                console.log(`[BlueCard-Listener] homeTeamMatches.length=${homeTeamMatches.length}, awayTeamMatches.length=${awayTeamMatches.length}`);
+                const awayTeamMatches = await loadTeamMatches(awayTeamDisplayLocal, categoryNameForMatch);                
                 
                 await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
             }
         }, (error) => {
-            console.error('[BlueCard-Listener] ❌ Chyba pri real-time počúvaní modrých kariet:', error);
         });
         
         return () => {
@@ -3868,7 +3733,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         loadSuspensionSettings();
     }, []);
 
-    // 🔥 Ďalší useEffect - tiež čaká na isMappingReady
     React.useEffect(() => {        
         if (match.id && homeTeamDisplay && awayTeamDisplay && isMappingReady) {
             calculateBlueCardSuspensions();
@@ -3926,7 +3790,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             });
             setMatchEvents(events);
         } catch (err) {
-            console.error('Chyba pri načítaní udalostí:', err);
         } finally {
             setEventsLoading(false);
         }
@@ -4098,7 +3961,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní člena:', err);
             }
             
             return { name: 'Neznámy hráč', jerseyNumber: '' };
@@ -4502,7 +4364,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 }
             }
         }, (error) => {
-            console.error(`[MatchDetailView] Chyba pri počúvaní zápasu ${match.id}:`, error);
         });
         
         return () => {
@@ -4557,7 +4418,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     });
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní nastavení kategórie:', err);
                 setCategorySettings({
                     periods: 2,
                     periodDuration: 20,
@@ -5054,8 +4914,6 @@ const MatchesHallApp = () => {
                 pendingUpdateTimeout = setTimeout(() => {
                     if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                         window.updateTeamNamesGlobally();
-                    } else {
-                        console.error('❌ window.updateTeamNamesGlobally nie je dostupný!');
                     }
                     pendingUpdateTimeout = null;
                 }, 5000);
@@ -5090,7 +4948,6 @@ const MatchesHallApp = () => {
             });
             
         }, (error) => {
-            console.error('Chyba pri real-time načítaní zápasov:', error);
         });
         
         const cleanup = () => {
@@ -5137,7 +4994,6 @@ const MatchesHallApp = () => {
                 window.categoriesList = list;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní farieb kategórií:', err);
         }
     };
 
@@ -5154,7 +5010,6 @@ const MatchesHallApp = () => {
                 window.groupsData = data;
             }
         } catch (err) {
-            console.error('Chyba pri načítaní skupín:', err);
         }
     };
 
@@ -5168,7 +5023,6 @@ const MatchesHallApp = () => {
                 setHallInfo({ id: hallSnap.id, ...hallSnap.data() });
             }
         } catch (err) {
-            console.error('Chyba pri načítaní haly:', err);
         }
     };
 
@@ -5198,7 +5052,6 @@ const MatchesHallApp = () => {
                                 needsUpdate = true;
                             }
                         } catch (err) {
-                            console.error(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
                         }
                     }
                 } else if (!names[match.homeTeamIdentifier]) {
@@ -5218,7 +5071,6 @@ const MatchesHallApp = () => {
                                 needsUpdate = true;
                             }
                         } catch (err) {
-                            console.error(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
                         }
                     }
                 } else if (!names[match.awayTeamIdentifier]) {
@@ -5443,7 +5295,6 @@ const MatchesHallApp = () => {
             });
             
         }, (error) => {
-            console.error('Chyba pri real-time počúvaní udalostí:', error);
         });
         
         return () => {
