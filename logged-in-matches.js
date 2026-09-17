@@ -95,30 +95,21 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, skipSameG
             category: category,
             groupName: groupName,
             order: order,
-            teamName: t.teamName
+            teamName: t.teamName || '',
+            // Posledný znak názvu tímu (napr. "U12 CH C4" → "4")
+            lastChar: (t.teamName || '').trim().slice(-1)
         };
     });
-    
-    // Pomocná funkcia – vráti písmeno skupiny z identifikátora (napr. "A2" → "A")
-    const getGroupLetter = (identifier) => {
-        if (!identifier) return '';
-        const parts = identifier.split(' ');
-        if (parts.length < 2) return '';
-        const lastPart = parts[parts.length - 1];
-        // Zoberieme všetko pred prvým číslom
-        const match = lastPart.match(/^([a-zA-Z]+)/);
-        return match ? match[1].toUpperCase() : '';
-    };
     
     if (withRepetitions) {
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = 0; j < teamIdentifiers.length; j++) {
                 if (i !== j) {
-                    // Ak skipSameGroupLetter a obe skupiny majú rovnaké písmeno → preskočiť
+                    // Ak skipSameGroupLetter a oba tímy majú rovnaký posledný znak názvu → preskočiť
                     if (skipSameGroupLetter) {
-                        const letterI = getGroupLetter(teamIdentifiers[i].identifier);
-                        const letterJ = getGroupLetter(teamIdentifiers[j].identifier);
-                        if (letterI && letterJ && letterI === letterJ) continue;
+                        const charI = teamIdentifiers[i].lastChar;
+                        const charJ = teamIdentifiers[j].lastChar;
+                        if (charI && charJ && charI === charJ) continue;
                     }
                     matches.push({
                         homeTeamIdentifier: teamIdentifiers[i].identifier,
@@ -130,11 +121,11 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, skipSameG
     } else {
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                // Ak skipSameGroupLetter a obe skupiny majú rovnaké písmeno → preskočiť
+                // Ak skipSameGroupLetter a oba tímy majú rovnaký posledný znak názvu → preskočiť
                 if (skipSameGroupLetter) {
-                    const letterI = getGroupLetter(teamIdentifiers[i].identifier);
-                    const letterJ = getGroupLetter(teamIdentifiers[j].identifier);
-                    if (letterI && letterJ && letterI === letterJ) continue;
+                    const charI = teamIdentifiers[i].lastChar;
+                    const charJ = teamIdentifiers[j].lastChar;
+                    if (charI && charJ && charI === charJ) continue;
                 }
                 matches.push({
                     homeTeamIdentifier: teamIdentifiers[i].identifier,
