@@ -1201,8 +1201,19 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                             isClickable = matchStatus !== 'completed';
                         }
                         
-                        const cursorClass = isClickable ? 'cursor-pointer' : 'cursor-not-allowed';
+                        const cursorClass = isSuspendedByBlue 
+                            ? 'cursor-not-allowed' 
+                            : (isClickable ? 'cursor-pointer' : 'cursor-not-allowed');
                         let rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
+                        if (isExcluded) {
+                            if (isRemovedFromRoster) {
+                                rowClassName = `hover:bg-orange-50 transition-colors ${cursorClass} opacity-80 bg-orange-100`;
+                            } else if (matchStatus === 'completed') {
+                                rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass}`;
+                            } else {
+                                rowClassName = `hover:bg-gray-50 transition-colors ${cursorClass} opacity-60 bg-gray-100`;
+                            }
+                        }
                         if (isExcluded) {
                             if (isRemovedFromRoster) {
                                 rowClassName = `hover:bg-orange-50 transition-colors ${cursorClass} opacity-80 bg-orange-100`;
