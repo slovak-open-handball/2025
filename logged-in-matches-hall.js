@@ -3022,21 +3022,21 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     };
 
-        const loadTeamMatches = async (teamIdentifier, categoryName) => {
-        if (!window.db || !teamIdentifier) return [];
+    const loadTeamMatches = async (teamName, categoryName) => {
+        if (!window.db || !teamName) return [];
         
         try {
-            // Vyriešime skutočný názov tímu
-            let resolvedTeamName = teamIdentifier;
-            if (categoryName && teamIdentifier.includes(categoryName)) {
+            // Vyriešime skutočný názov tímu (ak obsahuje názov kategórie)
+            let resolvedTeamName = teamName;
+            if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
-                        const mapped = await window.matchTracker.getTeamNameByDisplayId(teamIdentifier);
-                        if (mapped && mapped !== teamIdentifier) {
+                        const mapped = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                        if (mapped && mapped !== teamName) {
                             resolvedTeamName = mapped;
                         }
                     } catch (err) {
-                        console.error(`Chyba pri mapovaní názvu tímu ${teamIdentifier}:`, err);
+                        console.error(`Chyba pri mapovaní názvu tímu ${teamName}:`, err);
                     }
                 }
             }
@@ -3060,7 +3060,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     continue;
                 }
                 
-                // Vyriešime názvy tímov v zápase
+                // Vyriešime názvy tímov v zápase (rovnakým spôsobom ako resolvedTeamName)
                 let homeName = matchData.homeTeamIdentifier;
                 let awayName = matchData.awayTeamIdentifier;
                 
@@ -3082,7 +3082,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                 }
                 
-                // Zápas patrí tímu, ak sa niektorý z názvov zhoduje s resolvedTeamName
+                // Zápas patrí tímu, ak sa niektorý z vyriešených názvov zhoduje s resolvedTeamName
                 if (homeName === resolvedTeamName || awayName === resolvedTeamName) {
                     teamMatches.push({
                         id: doc.id,
@@ -3103,7 +3103,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             console.error('Chyba pri načítaní zápasov tímu:', err);
             return [];
         }
-    };  
+    };
 
     const calculateBlueCardSuspensions = async () => {
         if (!window.db || !match.id) return;
@@ -3112,8 +3112,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const categoryNameForMatch = match.categoryName || 
                 (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
             
-            const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier, categoryNameForMatch);
-            const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier, categoryNameForMatch);
+            const homeTeamMatches = await loadTeamMatches(homeTeamDisplay, categoryNameForMatch);
+            const awayTeamMatches = await loadTeamMatches(awayTeamDisplay, categoryNameForMatch);
         
             await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
         } catch (err) {
@@ -3590,8 +3590,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 const categoryNameForMatch = match.categoryName || 
                     (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
                 
-                const homeTeamMatches = await loadTeamMatches(match.homeTeamIdentifier, categoryNameForMatch);
-                const awayTeamMatches = await loadTeamMatches(match.awayTeamIdentifier, categoryNameForMatch);                
+                const homeTeamMatches = await loadTeamMatches(homeTeamDisplay, categoryNameForMatch);
+                const awayTeamMatches = await loadTeamMatches(awayTeamDisplay, categoryNameForMatch);                              
                 const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                 const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);                
                 await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
