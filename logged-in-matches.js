@@ -1659,7 +1659,7 @@ const AssignMatchToBreakModal = ({
     
         // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
-        matches.forEach(match => {
+        allMatches.forEach(match => {
             if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
