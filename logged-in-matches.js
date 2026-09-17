@@ -1636,9 +1636,9 @@ const AssignMatchToBreakModal = ({
         return category?.drawColor || '#f3f4f6';
     };
 
-    const getBackToBackMatchIds = () => {
-        const conflictMatchIds = new Set();
-        if (!matches || matches.length === 0) return conflictMatchIds;
+    const getBackToBackTeamMatchKeys = () => {
+        const conflictKeys = new Set(); // "matchId|teamIdentifier"
+        if (!matches || matches.length === 0) return conflictKeys;
     
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
@@ -1653,7 +1653,6 @@ const AssignMatchToBreakModal = ({
     
         const K = 1;
     
-        // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
         matches.forEach(match => {
             if (!match.scheduledTime) return;
@@ -1664,7 +1663,6 @@ const AssignMatchToBreakModal = ({
         });
     
         Object.keys(matchesByDate).forEach(dateStr => {
-            // Pre každý tím zisti, kedy hrá (bez ohľadu na halu)
             const teamMatchTimes = {};
             matchesByDate[dateStr].forEach(m => {
                 if (!m.scheduledTime) return;
@@ -1676,7 +1674,6 @@ const AssignMatchToBreakModal = ({
                 });
             });
     
-            // Pre každý tím nájdi konfliktné PÁRY zápasov
             Object.keys(teamMatchTimes).forEach(team => {
                 const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
                 for (let i = 0; i < times.length - 1; i++) {
@@ -1686,21 +1683,19 @@ const AssignMatchToBreakModal = ({
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        // Zvýrazníme OBA zápasy konfliktného páru
-                        conflictMatchIds.add(current.match.id);
-                        conflictMatchIds.add(next.match.id);
-                        // Ak chceš zvýrazniť len druhý zápas, zakomentuj riadok vyššie
-                        // a ponechaj iba: conflictMatchIds.add(next.match.id);
+                        // Zvýrazníme LEN KONKRÉTNY TÍM v oboch zápasoch
+                        conflictKeys.add(`${current.match.id}|${team}`);
+                        conflictKeys.add(`${next.match.id}|${team}`);
                         break;
                     }
                 }
             });
         });
     
-        return conflictMatchIds;
+        return conflictKeys;
     };
     
-    const backToBackMatchIds = getTeamsWithBackToBackMatches();
+    const backToBackTeamMatchKeys = getBackToBackTeamMatchKeys();
 
     return React.createElement(
         'div',
@@ -3040,9 +3035,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    const getBackToBackMatchIds = () => {
-        const conflictMatchIds = new Set();
-        if (!matches || matches.length === 0) return conflictMatchIds;
+    const getBackToBackTeamMatchKeys = () => {
+        const conflictKeys = new Set(); // "matchId|teamIdentifier"
+        if (!matches || matches.length === 0) return conflictKeys;
     
         const getMatchTotalDuration = (categoryName) => {
             const category = categories.find(c => c.name === categoryName);
@@ -3057,7 +3052,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     
         const K = 1;
     
-        // Zoskup zápasy podľa dňa — GLOBÁLNE pre všetky haly
         const matchesByDate = {};
         matches.forEach(match => {
             if (!match.scheduledTime) return;
@@ -3068,7 +3062,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         Object.keys(matchesByDate).forEach(dateStr => {
-            // Pre každý tím zisti, kedy hrá (bez ohľadu na halu)
             const teamMatchTimes = {};
             matchesByDate[dateStr].forEach(m => {
                 if (!m.scheduledTime) return;
@@ -3080,7 +3073,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 });
             });
     
-            // Pre každý tím nájdi konfliktné PÁRY zápasov
             Object.keys(teamMatchTimes).forEach(team => {
                 const times = teamMatchTimes[team].sort((a, b) => a.time - b.time);
                 for (let i = 0; i < times.length - 1; i++) {
@@ -3090,21 +3082,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        // Zvýrazníme OBA zápasy konfliktného páru
-                        conflictMatchIds.add(current.match.id);
-                        conflictMatchIds.add(next.match.id);
-                        // Ak chceš zvýrazniť len druhý zápas, zakomentuj riadok vyššie
-                        // a ponechaj iba: conflictMatchIds.add(next.match.id);
+                        // Zvýrazníme LEN KONKRÉTNY TÍM v oboch zápasoch
+                        conflictKeys.add(`${current.match.id}|${team}`);
+                        conflictKeys.add(`${next.match.id}|${team}`);
                         break;
                     }
                 }
             });
         });
     
-        return conflictMatchIds;
+        return conflictKeys;
     };
     
-    const backToBackMatchIds = getTeamsWithBackToBackMatches();
+    const backToBackTeamMatchKeys = getBackToBackTeamMatchKeys();
     
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
@@ -3727,22 +3717,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     
         // ===== ZÍSKAME TÍMY, KTORÉ HRAJÚ DVA ZÁPASY PO SEBE =====
-        const backToBackMatchIds = getTeamsWithBackToBackMatches();
-
-        console.log('=== getMatchesForHallAndDay ===');
-        console.log('hallId:', hallId, '| date:', dateStr);
-        console.log('backToBackMatchIds (celý Set):', Array.from(backToBackMatchIds));
-        console.log('allHallDayMatches count:', allHallDayMatches.length);
-        console.log('allHallDayMatches:', allHallDayMatches.map(m => ({
-            id: m.id,
-            home: m.homeTeamIdentifier,
-            away: m.awayTeamIdentifier,
-            time: m.scheduledTime ? m.scheduledTime.toDate().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }) : 'no time',
-            hallId: m.hallId
-        })));  
-
-
-        
+        const backToBackTeamMatchKeys = getBackToBackTeamMatchKeys();      
     
         const filteredWithColors = filteredMatches.map(match => {
             const accommodationsMap = window.__teamAccommodationsMap || new Map();
@@ -3786,21 +3761,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             };
     
             // ===== KONTROLA BACK-TO-BACK PRE DOMÁCI A HOSŤOVSKÝ TÍM =====
-            const isBackToBackMatch = backToBackMatchIds.has(match.id);
-            const homeBackToBack = isBackToBackMatch;
-            const awayBackToBack = isBackToBackMatch;
-
-
-
-            console.log('Match:', match.homeTeamIdentifier, 'vs', match.awayTeamIdentifier,
-            '| homeBackToBack:', homeBackToBack,
-            '| awayBackToBack:', awayBackToBack,
-            '| homeBgColor:', homeBackToBack ? '#dc2626' : 'transparent',
-            '| awayBgColor:', awayBackToBack ? '#dc2626' : 'transparent');
-
-
-
-            
+            const homeBackToBack = backToBackTeamMatchKeys.has(`${match.id}|${match.homeTeamIdentifier}`);
+            const awayBackToBack = backToBackTeamMatchKeys.has(`${match.id}|${match.awayTeamIdentifier}`);            
     
             return {
                 ...match,
