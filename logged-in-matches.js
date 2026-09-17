@@ -1636,7 +1636,7 @@ const AssignMatchToBreakModal = ({
         return category?.drawColor || '#f3f4f6';
     };
 
-    const getTeamsWithBackToBackMatches = () => {
+    const getBackToBackMatchIds = () => {
         const conflictMatchIds = new Set();
         if (!matches || matches.length === 0) return conflictMatchIds;
     
@@ -3040,7 +3040,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    const getTeamsWithBackToBackMatches = () => {
+    const getBackToBackMatchIds = () => {
         const conflictMatchIds = new Set();
         if (!matches || matches.length === 0) return conflictMatchIds;
     
