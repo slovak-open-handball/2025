@@ -3036,22 +3036,17 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             // Vyriešime skutočný názov tímu (ak obsahuje názov kategórie)
             let resolvedTeamName = teamName;
             if (categoryName && teamName && teamName.includes(categoryName)) {
-                console.log(`[LoadTeamMatches] teamName obsahuje categoryName, mapujem...`);
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
                         const mapped = await window.matchTracker.getTeamNameByDisplayId(teamName);
-                        console.log(`[LoadTeamMatches] mapovanie: "${teamName}" -> "${mapped}"`);
+                        console.log(`[LoadTeamMatches] mapovanie vstupu: "${teamName}" -> "${mapped}"`);
                         if (mapped && mapped !== teamName) {
                             resolvedTeamName = mapped;
                         }
                     } catch (err) {
                         console.error(`[LoadTeamMatches] ❌ Chyba pri mapovaní názvu tímu ${teamName}:`, err);
                     }
-                } else {
-                    console.warn(`[LoadTeamMatches] ⚠️ window.matchTracker.getTeamNameByDisplayId nie je dostupný`);
                 }
-            } else {
-                console.log(`[LoadTeamMatches] teamName NEobsahuje categoryName, mapovanie sa preskakuje`);
             }
             
             console.log(`[LoadTeamMatches] resolvedTeamName="${resolvedTeamName}"`);
@@ -3078,21 +3073,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 }
                 
                 // Získame teamName z match objektu (NIE teamIdentifier)
-                let homeTeamName = matchData.homeTeamName;
-                let awayTeamName = matchData.awayTeamName;
+                // POZOR: V match objekte sú uložené LEN homeTeamIdentifier / awayTeamIdentifier (napr. "U12 CH B3"),
+                // ktoré obsahujú categoryName. Preto ich MUSÍME namapovať, aby sme dostali "ŠK Zemplín Trebišov".
+                let homeTeamName = matchData.homeTeamName || matchData.homeTeamIdentifier;
+                let awayTeamName = matchData.awayTeamName || matchData.awayTeamIdentifier;
                 
-                // Ak homeTeamName chýba, fallback na homeTeamIdentifier len pre zobrazenie (nemapuje sa)
-                if (!homeTeamName && matchData.homeTeamIdentifier) {
-                    homeTeamName = matchData.homeTeamIdentifier;
-                }
-                if (!awayTeamName && matchData.awayTeamIdentifier) {
-                    awayTeamName = matchData.awayTeamIdentifier;
-                }
+                const originalHome = homeTeamName;
+                const originalAway = awayTeamName;
                 
-                const originalHomeTeamName = homeTeamName;
-                const originalAwayTeamName = awayTeamName;
-                
-                // Mapujeme LEN ak teamName obsahuje categoryName
+                // Mapujeme LEN ak teamName obsahuje categoryName (podmienka zostáva zachovaná)
                 if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
@@ -3119,12 +3108,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     }
                 }
                 
-                // Log pre každý zápas, ktorý by mohol patriť tímu
                 const homeMatch = homeTeamName === resolvedTeamName;
                 const awayMatch = awayTeamName === resolvedTeamName;
                 
                 if (homeMatch || awayMatch) {
-                    console.log(`[LoadTeamMatches] ✅ ZHODA: matchId=${doc.id}, scheduledTime=${matchData.scheduledTime?.toDate?.()}, group="${matchData.groupName}", category="${matchCategoryName}", home="${originalHomeTeamName}"->"${homeTeamName}" (match=${homeMatch}), away="${originalAwayTeamName}"->"${awayTeamName}" (match=${awayMatch})`);
+                    console.log(`[LoadTeamMatches] ✅ ZHODA: matchId=${doc.id}, group="${matchData.groupName}", category="${matchCategoryName}", home="${originalHome}"->"${homeTeamName}" (match=${homeMatch}), away="${originalAway}"->"${awayTeamName}" (match=${awayMatch})`);
                     
                     teamMatches.push({
                         id: doc.id,
@@ -3133,17 +3121,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         awayTeamName,
                         scheduledTimeDate: matchData.scheduledTime?.toDate()
                     });
-                } else if (originalHomeTeamName === resolvedTeamName || originalAwayTeamName === resolvedTeamName || 
-                           (originalHomeTeamName && originalHomeTeamName.includes(resolvedTeamName)) ||
-                           (originalAwayTeamName && originalAwayTeamName.includes(resolvedTeamName))) {
-                    // Debug: zápas sa na prvý pohľad zdá, že patrí tímu, ale po mapovaní už nie
-                    console.log(`[LoadTeamMatches] ⚠️ POTENCIÁLNA ZHODA, ale po mapovaní NESEDÍ: matchId=${doc.id}, group="${matchData.groupName}", home="${originalHomeTeamName}"->"${homeTeamName}", away="${originalAwayTeamName}"->"${awayTeamName}", resolvedTeamName="${resolvedTeamName}"`);
                 }
             }
             
             console.log(`[LoadTeamMatches] ✅ Nájdených ${teamMatches.length} zápasov pre tím "${resolvedTeamName}" v kategórii "${categoryName}"`);
             teamMatches.forEach((m, i) => {
-                console.log(`[LoadTeamMatches]   ${i+1}. matchId=${m.id}, group="${m.groupName}", home="${m.homeTeamName}", away="${m.awayTeamName}", date=${m.scheduledTimeDate}`);
+                console.log(`[LoadTeamMatches]   ${i+1}. matchId=${m.id}, group="${m.groupName}", home="${m.homeTeamName}", away="${m.awayTeamName}"`);
             });
             
             teamMatches.sort((a, b) => {
@@ -3152,7 +3135,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return timeA - timeB;
             });
             
-            console.log(`[LoadTeamMatches] ▶️ KONIEC pre "${resolvedTeamName}"`);
             return teamMatches;
         } catch (err) {
             console.error('[LoadTeamMatches] ❌ Chyba pri načítaní zápasov tímu:', err);
@@ -3710,6 +3692,26 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return { homeGoals, awayGoals };
     };
+
+    React.useEffect(() => {        
+        if (!match.id || !homeTeamDisplay || !awayTeamDisplay) return;
+    
+        // Ak homeTeamDisplay/awayTeamDisplay stále obsahujú categoryName, znamená to,
+        // že teamNames ešte nebol naplnený. Preskočíme výpočet a počkáme.
+        const categoryNameForMatch = match.categoryName || 
+            (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        
+        if (categoryNameForMatch && homeTeamDisplay.includes(categoryNameForMatch)) {
+            console.log(`[BlueCard] ⏳ homeTeamDisplay="${homeTeamDisplay}" ešte obsahuje categoryName, čakám na teamNames...`);
+            return;
+        }
+        if (categoryNameForMatch && awayTeamDisplay.includes(categoryNameForMatch)) {
+            console.log(`[BlueCard] ⏳ awayTeamDisplay="${awayTeamDisplay}" ešte obsahuje categoryName, čakám na teamNames...`);
+            return;
+        }
+        
+        calculateBlueCardSuspensions();
+    }, [match.id, homeTeamDisplay, awayTeamDisplay, suspensionMatchesCount, teamNames]);
 
     React.useEffect(() => {
         if (!window.db || !match.id) return;        
