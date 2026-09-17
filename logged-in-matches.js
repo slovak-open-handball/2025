@@ -1683,10 +1683,8 @@ const AssignMatchToBreakModal = ({
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        // Zvýrazníme LEN KONKRÉTNY TÍM v oboch zápasoch
                         conflictKeys.add(`${current.match.id}|${team}`);
                         conflictKeys.add(`${next.match.id}|${team}`);
-                        break;
                     }
                 }
             });
@@ -3082,10 +3080,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const maxGap = (current.duration / 60000) * K;
     
                     if (gapMinutes <= maxGap) {
-                        // Zvýrazníme LEN KONKRÉTNY TÍM v oboch zápasoch
                         conflictKeys.add(`${current.match.id}|${team}`);
                         conflictKeys.add(`${next.match.id}|${team}`);
-                        break;
                     }
                 }
             });
