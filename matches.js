@@ -1642,16 +1642,16 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         if (!window.db || !teamName) return [];
         
         try {
-            //let resolvedTeamName = teamName;
+            let resolvedTeamName = teamName;
             if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
-                        const mapped = await resolveTeamNameViaTeamManager(teamName);   // ← resolveTeamNameViaTeamManager
+                        const mapped = await resolveTeamNameViaTeamManager(teamName);
                         if (mapped && mapped !== teamName && mapped !== 'null') {
                             resolvedTeamName = mapped;
                         } else {
                             await new Promise(resolve => setTimeout(resolve, 1000));
-                            const retryMapped = await resolveTeamNameViaTeamManager(teamName);   // ← retry
+                            const retryMapped = await resolveTeamNameViaTeamManager(teamName);
                             if (retryMapped && retryMapped !== teamName && retryMapped !== 'null') {
                                 resolvedTeamName = retryMapped;
                             }
@@ -2081,7 +2081,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         if (match.id && homeTeamDisplay && awayTeamDisplay) {
             calculateBlueCardSuspensions();
         }
-    }, [match.id, homeTeamDisplay, awayTeamDisplay, suspensionMatchesCount]);
+    }, [match.id, homeTeamDisplay, awayTeamDisplay, suspensionMatchesCount, isMappingReady]);
     
     React.useEffect(() => {
         window.blueCardSuspensions = blueCardSuspensions;
