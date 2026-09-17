@@ -190,7 +190,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||
                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) ||
                 (href === 'logged-in-catering.html' && currentPath.includes('catering')) ||
-                (href === 'logged-in-teams.html' && currentPath.includes('teams'));
+                (href === 'logged-in-teams.html' && currentPath.endsWith('logged-in-teams.html'));
 
             if (isActive) {
                 link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
@@ -223,7 +223,10 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
             if (menuIcon) menuIcon.style.color = '';
             if (menuText) menuText.style.color = '';
         }
-        menuTexts.forEach(span => span.classList.toggle('opacity-0', !isMenuToggled));
+        // Použijeme aktuálny zoznam .whitespace-nowrap (aby zahŕňal aj novo zobrazené odkazy)
+        document.querySelectorAll('#left-menu .whitespace-nowrap').forEach(span => {
+            span.classList.toggle('opacity-0', !isMenuToggled);
+        });
     };
 
     const updateMenuText = () => {
@@ -326,9 +329,10 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         }
     };
 
-    applyMenuState();
+    // DÔLEŽITÉ: Najprv zobrazíme linky podľa role, POTOM aplikujeme stav menu
     updateMenuText();
     await showRoleBasedLinks();
+    applyMenuState();
     setTimeout(highlightActiveMenuLinkGray, 100);
 
     menuToggleButton.addEventListener('click', () => {
@@ -342,7 +346,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-16'); leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16'); menuSpacer.classList.add('w-64');
-            menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            document.querySelectorAll('#left-menu .whitespace-nowrap').forEach(span => span.classList.remove('opacity-0'));
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
@@ -351,7 +355,7 @@ const setupMenuListeners = async (userProfileData, db, userId) => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-64'); leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64'); menuSpacer.classList.add('w-16');
-            menuTexts.forEach(span => span.classList.add('opacity-0'));
+            document.querySelectorAll('#left-menu .whitespace-nowrap').forEach(span => span.classList.add('opacity-0'));
         }
     });
 };
