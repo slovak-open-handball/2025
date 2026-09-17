@@ -1640,19 +1640,18 @@ const AssignMatchToBreakModal = ({
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
     
-        // Kľúč: hallId + dateStr
-        const matchesByHallAndDate = {};
+        // Kľúč: LEN dateStr (globálne v rámci dňa, bez ohľadu na halu)
+        const matchesByDate = {};
         matches.forEach(match => {
-            if (!match.scheduledTime || !match.hallId) return;
+            if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
-            const key = `${match.hallId}_${dateStr}`;
-            if (!matchesByHallAndDate[key]) matchesByHallAndDate[key] = [];
-            matchesByHallAndDate[key].push(match);
+            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
+            matchesByDate[dateStr].push(match);
         });
-        
-        Object.keys(matchesByHallAndDate).forEach(key => {
-            const dayMatches = matchesByHallAndDate[key]
+    
+        Object.keys(matchesByDate).forEach(dateStr => {
+            const dayMatches = matchesByDate[dateStr]
                 .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
                 .sort((a, b) => a._time - b._time);
             for (let i = 0; i < dayMatches.length - 1; i++) {
@@ -3012,19 +3011,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         const teamsInConflict = new Set();
         if (!matches || matches.length === 0) return teamsInConflict;
     
-        // Kľúč: hallId + dateStr
-        const matchesByHallAndDate = {};
+        // Kľúč: LEN dateStr (globálne v rámci dňa, bez ohľadu na halu)
+        const matchesByDate = {};
         matches.forEach(match => {
-            if (!match.scheduledTime || !match.hallId) return;
+            if (!match.scheduledTime) return;
             let dateStr;
             try { dateStr = getLocalDateStr(match.scheduledTime.toDate()); } catch (e) { return; }
-            const key = `${match.hallId}_${dateStr}`;
-            if (!matchesByHallAndDate[key]) matchesByHallAndDate[key] = [];
-            matchesByHallAndDate[key].push(match);
+            if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
+            matchesByDate[dateStr].push(match);
         });
     
-        Object.keys(matchesByHallAndDate).forEach(key => {
-            const dayMatches = matchesByHallAndDate[key]
+        Object.keys(matchesByDate).forEach(dateStr => {
+            const dayMatches = matchesByDate[dateStr]
                 .map(m => ({ ...m, _time: m.scheduledTime.toDate().getTime() }))
                 .sort((a, b) => a._time - b._time);
             for (let i = 0; i < dayMatches.length - 1; i++) {
