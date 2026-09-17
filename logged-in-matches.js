@@ -2566,7 +2566,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
 
 // ===== ADD BREAK MODAL =====
 const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime, nextMatchTime, matchBreak, matchDuration }) => {
-    const [breakPosition, setBreakPosition] = useState('after');
+    const [breakPosition, setBreakPosition] = useState('before');
     const [breakDuration, setBreakDuration] = useState(5);
     const [multiplier, setMultiplier] = useState(1);
     const [durationError, setDurationError] = useState('');
@@ -2599,7 +2599,7 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
     };
 
     useEffect(() => {
-        if (!isOpen) { setBreakPosition('after'); setBreakDuration(5); setMultiplier(1); setDurationError(''); setMultiplierError(''); }
+        if (!isOpen) { setBreakPosition('before'); setBreakDuration(5); setMultiplier(1); setDurationError(''); setMultiplierError(''); }
     }, [isOpen]);
 
     if (!isOpen || !match) return null;
