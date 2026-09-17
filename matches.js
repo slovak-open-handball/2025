@@ -1642,24 +1642,21 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         if (!window.db || !teamName) return [];
         
         try {
-            // Vyriešime skutočný názov tímu (ak obsahuje názov kategórie)
-            let resolvedTeamName = teamName;
+            //let resolvedTeamName = teamName;
             if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
-                        const mapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
+                        const mapped = await resolveTeamNameViaTeamManager(teamName);   // ← resolveTeamNameViaTeamManager
                         if (mapped && mapped !== teamName && mapped !== 'null') {
                             resolvedTeamName = mapped;
                         } else {
-                            // RETRY: Skúsime to znova po krátkej pauze
                             await new Promise(resolve => setTimeout(resolve, 1000));
-                            const retryMapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
+                            const retryMapped = await resolveTeamNameViaTeamManager(teamName);   // ← retry
                             if (retryMapped && retryMapped !== teamName && retryMapped !== 'null') {
                                 resolvedTeamName = retryMapped;
                             }
                         }
                     } catch (err) {
-                        console.error(`Chyba pri mapovaní názvu tímu ${teamName}:`, err);
                     }
                 }
             }
@@ -1695,7 +1692,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     awayTeamName = matchData.awayTeamIdentifier;
                 }
                 
-                // Mapujeme LEN ak teamName obsahuje categoryName
                 if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
@@ -1704,11 +1700,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 homeTeamName = mappedHome;
                             }
                         } catch (e) {
-                            console.error(`Chyba pri mapovaní domáceho tímu ${homeTeamName}:`, e);
                         }
                     }
                 }
-                
+
                 if (awayTeamName && matchCategoryName && awayTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
@@ -1717,7 +1712,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 awayTeamName = mappedAway;
                             }
                         } catch (e) {
-                            console.error(`Chyba pri mapovaní hosťujúceho tímu ${awayTeamName}:`, e);
                         }
                     }
                 }
@@ -1768,7 +1762,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const calculateBlueCardSuspensionsRealTime = async (homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal) => {
         if (!window.db || !match.id) return;
         
-        try {
+        try {                        
             const eventsRef = collection(window.db, 'matchEvents');
             const eventsSnapshot = await getDocs(eventsRef);
             
@@ -1777,11 +1771,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const suspensions = {};
             
             const currentMatchIndexHome = homeTeamMatches.findIndex(m => m.id === match.id);
-            const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
-            
+            const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);            
+                        
+            const categoryNameForMatch = match.categoryName || 
+                (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+                        
             if (currentMatchIndexHome !== -1) {
-                // Použijeme homeTeamDisplayLocal (čo je už namapovaný názov tímu)
-                const resolvedHomeTeamName = homeTeamDisplayLocal;
+                const resolvedHomeTeamName = await resolveTeamNameForMatch(
+                    homeTeamDisplayLocal,
+                    categoryNameForMatch
+                );                
+                
+                let foundHomeTeamInUsers = false;
                 
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
@@ -1791,6 +1792,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedHomeTeamName);
                         
                         if (foundTeam) {
+                            foundHomeTeamInUsers = true;
+                            
                             const allMembers = [];
                             
                             if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
@@ -1830,7 +1833,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         type: 'Člen RT (žena)'
                                     });
                                 });
-                            }
+                            }                            
                             
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
@@ -1845,7 +1848,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         event.memberIndex === member.memberIndex) {
                                         
                                         const matchIdOfEvent = event.matchId;
-                                        const matchIndex = homeTeamMatches.findIndex(m => m.id === matchIdOfEvent);
+                                        const matchIndex = homeTeamMatches.findIndex(m => m.id === matchIdOfEvent);                                        
                                         
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexHome) {
                                             blueCardEvents.push({
@@ -1858,7 +1861,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 
                                 if (blueCardEvents.length > 0) {
                                     const lastBlueEvent = blueCardEvents[blueCardEvents.length - 1];
-                                    const matchesSinceLastBlue = currentMatchIndexHome - lastBlueEvent.matchIndex;
+                                    const matchesSinceLastBlue = currentMatchIndexHome - lastBlueEvent.matchIndex;                                    
                                     
                                     if (matchesSinceLastBlue >= 1 && matchesSinceLastBlue <= suspensionMatchesCount) {
                                         const remainingMatches = suspensionMatchesCount - (matchesSinceLastBlue - 1);
@@ -1871,19 +1874,24 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             jerseyNumber: member.jerseyNumber,
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
-                                        };
+                                        };                                        
                                     }
                                 }
                             }
                             break;
                         }
                     }
+                    if (foundHomeTeamInUsers) break;
                 }
             }
             
             if (currentMatchIndexAway !== -1) {
-                // Použijeme awayTeamDisplayLocal (čo je už namapovaný názov tímu)
-                const resolvedAwayTeamName = awayTeamDisplayLocal;
+                const resolvedAwayTeamName = await resolveTeamNameForMatch(
+                    awayTeamDisplayLocal,
+                    categoryNameForMatch
+                );                
+                
+                let foundAwayTeamInUsers = false;
                 
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
@@ -1893,6 +1901,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedAwayTeamName);
                         
                         if (foundTeam) {
+                            foundAwayTeamInUsers = true;
+                            
                             const allMembers = [];
                             
                             if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
@@ -1932,7 +1942,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         type: 'Člen RT (žena)'
                                     });
                                 });
-                            }
+                            }                            
                             
                             for (const member of allMembers) {
                                 const memberKey = `${userDoc.id}_${member.memberTypeKey}_${member.memberIndex}`;
@@ -1948,7 +1958,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                         
                                         const matchIdOfEvent = event.matchId;
                                         const matchIndex = awayTeamMatches.findIndex(m => m.id === matchIdOfEvent);
-                                        
+                                                                                
                                         if (matchIndex !== -1 && matchIndex < currentMatchIndexAway) {
                                             blueCardEvents.push({
                                                 matchIndex: matchIndex,
@@ -1961,7 +1971,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 if (blueCardEvents.length > 0) {
                                     const lastBlueEvent = blueCardEvents[blueCardEvents.length - 1];
                                     const matchesSinceLastBlue = currentMatchIndexAway - lastBlueEvent.matchIndex;
-                                    
+                                                                        
                                     if (matchesSinceLastBlue >= 1 && matchesSinceLastBlue <= suspensionMatchesCount) {
                                         const remainingMatches = suspensionMatchesCount - (matchesSinceLastBlue - 1);
                                         
@@ -1973,20 +1983,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                             jerseyNumber: member.jerseyNumber,
                                             memberType: member.type,
                                             reason: `Modrá karta v zápase č. ${lastBlueEvent.matchIndex + 1}`
-                                        };
+                                        };                                        
                                     }
                                 }
                             }
                             break;
                         }
                     }
+                    if (foundAwayTeamInUsers) break;
                 }
-            }
-            
-            setBlueCardSuspensions(suspensions);
-            
+            }            
+            setBlueCardSuspensions(suspensions);            
         } catch (err) {
-            console.error('Chyba pri real-time výpočte vylúčení:', err);
         }
     };
 
