@@ -153,7 +153,7 @@ const resolveTeamNameViaTeamManager = async (teamIdentifier, categoryName) => {
         
         if (shouldTryMatchTracker) {
             try {
-                const asyncResult = await resolveTeamNameViaTeamManager(intermediateName);
+                const asyncResult = await window.matchTracker.getTeamNameByDisplayId(intermediateName);
                 if (asyncResult && asyncResult !== intermediateName && asyncResult !== 'null') {
                     console.log(`[resolveTeamName] KROK 2 (async): "${intermediateName}" -> "${asyncResult}"`);
                     return asyncResult;
