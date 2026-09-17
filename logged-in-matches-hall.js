@@ -3255,6 +3255,86 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             console.log(`[BlueCard] homeTeamMatches IDs:`, homeTeamMatches.map(m => `${m.id}(${m.groupName})`));
             console.log(`[BlueCard] awayTeamMatches IDs:`, awayTeamMatches.map(m => `${m.id}(${m.groupName})`));
             
+            // 🔥 KĽÚČOVÉ: Ak aktuálny zápas nie je v homeTeamMatches/awayTeamMatches,
+            // musíme ho tam pridať manuálne, aby sme správne vypočítali currentMatchIndex.
+            // Potrebujeme zistiť, či aktuálny zápas patrí domácemu alebo hosťujúcemu tímu.
+            const currentMatchInHome = homeTeamMatches.find(m => m.id === match.id);
+            const currentMatchInAway = awayTeamMatches.find(m => m.id === match.id);
+            
+            if (!currentMatchInHome && !currentMatchInAway) {
+                console.log(`[BlueCard] ⚠️ Aktuálny zápas ${match.id} NIE JE v homeTeamMatches ani awayTeamMatches!`);
+                console.log(`[BlueCard] 🔧 Pridávam aktuálny zápas manuálne...`);
+                
+                // Zistíme, či aktuálny zápas patrí domácemu alebo hosťujúcemu tímu
+                // podľa homeTeamIdentifier / awayTeamIdentifier alebo homeTeamName / awayTeamName
+                const currentHomeId = match.homeTeamIdentifier || match.homeTeamName;
+                const currentAwayId = match.awayTeamIdentifier || match.awayTeamName;
+                
+                // Namapujeme ich
+                let resolvedCurrentHome = currentHomeId;
+                let resolvedCurrentAway = currentAwayId;
+                const categoryNameForMatch = match.categoryName || 
+                    (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+                
+                if (currentHomeId && categoryNameForMatch && currentHomeId.includes(categoryNameForMatch)) {
+                    try {
+                        const mapped = await window.matchTracker.getTeamNameByDisplayId(currentHomeId);
+                        if (mapped && mapped !== currentHomeId) resolvedCurrentHome = mapped;
+                    } catch (e) {}
+                }
+                
+                if (currentAwayId && categoryNameForMatch && currentAwayId.includes(categoryNameForMatch)) {
+                    try {
+                        const mapped = await window.matchTracker.getTeamNameByDisplayId(currentAwayId);
+                        if (mapped && mapped !== currentAwayId) resolvedCurrentAway = mapped;
+                    } catch (e) {}
+                }
+                
+                console.log(`[BlueCard] 🔧 resolvedCurrentHome="${resolvedCurrentHome}", resolvedCurrentAway="${resolvedCurrentAway}"`);
+                console.log(`[BlueCard] 🔧 homeTeamDisplayLocal="${homeTeamDisplayLocal}", awayTeamDisplayLocal="${awayTeamDisplayLocal}"`);
+                
+                // Aktuálny zápas pridáme do toho poľa, kam patrí
+                const currentMatchObj = {
+                    id: match.id,
+                    ...match,
+                    homeTeamName: resolvedCurrentHome,
+                    awayTeamName: resolvedCurrentAway,
+                    scheduledTimeDate: match.scheduledTime?.toDate()
+                };
+                
+                if (resolvedCurrentHome === homeTeamDisplayLocal) {
+                    homeTeamMatches.push(currentMatchObj);
+                    console.log(`[BlueCard] 🔧 Pridaný do homeTeamMatches (domáci tím)`);
+                } else if (resolvedCurrentAway === homeTeamDisplayLocal) {
+                    homeTeamMatches.push(currentMatchObj);
+                    console.log(`[BlueCard] 🔧 Pridaný do homeTeamMatches (hosťujúci tím - homeTeamMatches pre tohto hráča)`);
+                }
+                
+                if (resolvedCurrentHome === awayTeamDisplayLocal) {
+                    awayTeamMatches.push(currentMatchObj);
+                    console.log(`[BlueCard] 🔧 Pridaný do awayTeamMatches (domáci tím)`);
+                } else if (resolvedCurrentAway === awayTeamDisplayLocal) {
+                    awayTeamMatches.push(currentMatchObj);
+                    console.log(`[BlueCard] 🔧 Pridaný do awayTeamMatches (hosťujúci tím)`);
+                }
+                
+                // Zoradíme znova podľa času
+                homeTeamMatches.sort((a, b) => {
+                    const timeA = a.scheduledTimeDate?.getTime() || 0;
+                    const timeB = b.scheduledTimeDate?.getTime() || 0;
+                    return timeA - timeB;
+                });
+                
+                awayTeamMatches.sort((a, b) => {
+                    const timeA = a.scheduledTimeDate?.getTime() || 0;
+                    const timeB = b.scheduledTimeDate?.getTime() || 0;
+                    return timeA - timeB;
+                });
+                
+                console.log(`[BlueCard] 🔧 Po pridaní: homeTeamMatches IDs:`, homeTeamMatches.map(m => `${m.id}(${m.groupName})`));
+                console.log(`[BlueCard] 🔧 Po pridaní: awayTeamMatches IDs:`, awayTeamMatches.map(m => `${m.id}(${m.groupName})`));
+            }
+            
             const eventsRef = collection(window.db, 'matchEvents');
             const eventsSnapshot = await getDocs(eventsRef);
             
@@ -3266,7 +3346,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
             
             console.log(`[BlueCard] currentMatchIndexHome=${currentMatchIndexHome}, currentMatchIndexAway=${currentMatchIndexAway}`);
-            
+                        
             const categoryNameForMatch = match.categoryName || 
                 (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
             
