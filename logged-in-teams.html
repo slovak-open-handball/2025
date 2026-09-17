@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Tímy</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- GitHub Pages - development only -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
+            overflow-x: hidden; /* Skryje horizontálny posuvník pre celú stránku */
+            background-color: #f3f4f6;
+        }
+        /* Štýly pre modálne okná */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px; /* Upravené na širšie */
+            width: 90%;
+            position: relative;
+        }
+        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        #main-content-area {
+            margin-left: 0; /* Len ako východisková hodnota, bude riadené menu-spacer */
+            flex-grow: 1;
+            display: flex; /* Dôležité pre správne rozloženie menu-spacer a content-wrapper */
+            align-items: flex-start; /* Zarovnanie obsahu na začiatok vertikálne */
+            transition: margin-left 0.3s ease-in-out; /* Hladký prechod */
+            overflow-y: auto; /* Zabezpečíme rolovanie, ak je obsah dlhší ako výška */
+
+            /* Na menších obrazovkách necháme margin-left na 0, ľavé menu sa prekrýva alebo je skryté */
+            @media (max-width: 768px) {
+                margin-left: 0 !important;
+            }
+        }
+
+        /* Štýly pre React root, ktorý slúži ako kontajner pre React aplikáciu */
+        #root {
+            box-sizing: border-box; /* Započítanie paddingu do šírky */
+            margin-left: auto; /* Centrovanie v rámci .content-wrapper */
+            margin-right: auto; /* Centrovanie v rámci .content-wrapper */
+            flex-grow: 1; /* Umožní elementu rásť */
+            flex-shrink: 1; /* Umožní elementu zmenšovať sa */
+            min-width: 0; /* Zabezpečí, že sa element môže zmenšiť pod svojou obsahovou šírkou */
+            
+            /* Na mobilných zariadeniach odstránime maximálnu šírku, aby sa prispôsobilo */
+            @media (max-width: 768px) {
+                max-width: 100%;
+            }
+        }
+
+        /* Styling pre obalový div obsahu, ktorý zabezpečí symetrické okraje a centrovanie */
+        .content-wrapper {
+            flex-grow: 1; /* Zaberá všetok dostupný priestor po menu-spacer */
+            flex-shrink: 1; /* Umožňuje zmenšenie, ak je to potrebné */
+            min-width: 0; /* Umožňuje zmenšenie pod jeho obsahovú šírku */
+            display: flex;
+            justify-content: center; /* Centrovanie #root vo vnútri tohto wrapperu */
+            align-items: flex-start; /* Zarovnanie #root na začiatok vertikálne */
+
+            padding-top: 2rem; /* pt-8 */
+            padding-bottom: 2rem; /* pb-8 */
+            padding-left: 1rem; /* px-4 */
+            padding-right: 1rem; /* px-4 */
+            
+            /* Responzívne paddingy */
+            @media (min-width: 640px) { /* sm: */
+                padding-left: 1.5rem; /* sm:px-6 */
+                padding-right: 1.5rem; /* sm:px-6 */
+            }
+            @media (min-width: 1024px) { /* lg: */
+                padding-left: 2rem; /* lg:px-8 */
+                padding-right: 2rem; /* lg:px-8 */
+            }
+        }
+
+        /* Štýly pre plávajúce tlačidlo */
+        .fab-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #34D399; /* Zelená */
+            color: white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            z-index: 30;
+        }
+        .fab-button:hover {
+            background-color: #10B981; /* Tmavšia zelená */
+        }
+        #header-placeholder {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        table td {
+            white-space: nowrap;
+        }
+    </style>
+
+
+
+
+
+
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Hlavička sa načíta dynamicky -->
+    <div id="header-placeholder"></div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+        <!-- Tento div slúži ako 'spacer' pre ľavé menu a jeho šírka sa bude dynamicky meniť pomocou JS v logged-in-left-menu.js -->
+        <div id="menu-spacer" class="flex-shrink-0 w-16 transition-all duration-300"></div> 
+
+        <!-- Obalový div pre obsah, ktorý zabezpečí symetrické okraje a centrovanie -->
+        <div class="content-wrapper">
+            <div id="root">
+                <!-- Načítavací indikátor vnútri #root -->
+                <div class="flex justify-center pt-16">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
+    <script src="clear-console.js"></script>
+    <div id="authentication-root" style="display: none;"></div>
+
+    <!-- Načítanie globálnych skriptov -->
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
+    
+    <!-- Načítanie hlavného skriptu pre túto stránku (RostersApp) -->
+    <script type="module" src="logged-in-teams.js"></script>
+
+    <script type="text/javascript">
+        // Globálna funkcia na skrytie loaderu, aby ju bolo možné volať odkiaľkoľvek
+        window.hideGlobalLoader = () => {
+            const rootElement = document.getElementById('root');
+            if (rootElement) {
+                rootElement.innerHTML = ''; // Vyčistíme obsah root elementu
+            }
+        };
+
+        const checkReadyAndRender = () => {
+            if (window.isGlobalAuthReady && typeof window.RostersApp !== 'undefined') {
+                try {
+                    // Pred samotným vykreslením Reactu skryjeme loader
+                    window.hideGlobalLoader();
+
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(window.RostersApp, null));
+                } catch (error) {
+                }
+            } else {
+                // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
+                setTimeout(checkReadyAndRender, 100);
+            }
+        };
+
+        // Spustenie globálneho loaderu hneď na začiatku
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        } else {
+            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof window.showGlobalLoader === 'function') {
+                    window.showGlobalLoader();
+                }
+            });
+        }
+        
+        // Spustíme kontrolu a renderovanie po načítaní DOM a hlavičky
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Zabezpečíme, že hlavička je načítaná a inicializovaná
+            if (typeof window.loadHeaderAndScripts === 'function') {
+                await window.loadHeaderAndScripts();
+                checkReadyAndRender();
+            }
+        });
+    </script>
+</body>
+</html>
