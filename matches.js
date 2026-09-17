@@ -1515,6 +1515,47 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         window.pagesVisibility['rosters'].visible === true
     );
 
+    const [isMappingReady, setIsMappingReady] = React.useState(() => {
+        try {
+            return window.teamNameReplacer?.isMappingReady?.() === true;
+        } catch (e) { return false; }
+    });
+
+    React.useEffect(() => {
+        if (isMappingReady) return;
+    
+        const categoryNameForMatch = match?.categoryName || 
+            (match?.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        
+        if (!categoryNameForMatch) return;
+        
+        const homeIsMapped = homeTeamDisplay && !homeTeamDisplay.includes(categoryNameForMatch);
+        const awayIsMapped = awayTeamDisplay && !awayTeamDisplay.includes(categoryNameForMatch);
+        
+        if (homeIsMapped || awayIsMapped) {
+            setIsMappingReady(true);
+        }
+    }, [homeTeamDisplay, awayTeamDisplay, match?.categoryName, match?.categoryId, isMappingReady]);
+
+    React.useEffect(() => {
+        try {
+            if (window.teamNameReplacer?.isMappingReady?.() === true) {
+                setIsMappingReady(true);
+            }
+        } catch (e) {}
+        
+        const handleMappingReady = () => setIsMappingReady(true);
+        const handleTeamNamesReplaced = () => setIsMappingReady(true);
+        
+        window.addEventListener('teamNameMappingReady', handleMappingReady);
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        
+        return () => {
+            window.removeEventListener('teamNameMappingReady', handleMappingReady);
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        };
+    }, []);
+
     React.useEffect(() => {
         if (!window.db) return;
 
@@ -1606,7 +1647,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             if (categoryName && teamName && teamName.includes(categoryName)) {
                 if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                     try {
-                        const mapped = await window.matchTracker.getTeamNameByDisplayId(teamName);
+                        const mapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
+                        const retryMapped = await resolveTeamNameViaTeamManager(teamName, categoryName);
+                        const mapped = await resolveTeamNameViaTeamManager(homeTeamName, matchCategoryName);
+                        const mapped = await resolveTeamNameViaTeamManager(awayTeamName, matchCategoryName);
                         if (mapped && mapped !== teamName) {
                             resolvedTeamName = mapped;
                         }
@@ -1701,6 +1745,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
 
     const calculateBlueCardSuspensions = async () => {
         if (!window.db || !match.id) return;
+        if (!isMappingReady) return;
     
         try {
             const categoryNameForMatch = match.categoryName || 
@@ -1969,7 +2014,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
 
     React.useEffect(() => {
-        if (!window.db || !match.id) return;        
+        if (!window.db || !match.id) return;  
+        if (!isMappingReady) return;
         
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where('eventType', '==', 'card'), where('eventSubtype', '==', 'blue'));
