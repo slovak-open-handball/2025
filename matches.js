@@ -1596,11 +1596,19 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     continue;
                 }
                 
-                // Získame skutočné názvy tímov z match objektu (NIE identifikátory)
-                let homeTeamName = matchData.homeTeamName || matchData.homeTeamIdentifier;
-                let awayTeamName = matchData.awayTeamName || matchData.awayTeamIdentifier;
+                // Získame teamName z match objektu (NIE teamIdentifier)
+                let homeTeamName = matchData.homeTeamName;
+                let awayTeamName = matchData.awayTeamName;
                 
-                // Vždy mapujeme názvy tímov cez matchTracker, ak obsahujú názov kategórie
+                // Ak homeTeamName chýba, fallback na homeTeamIdentifier LEN pre zobrazenie (nemapuje sa)
+                if (!homeTeamName && matchData.homeTeamIdentifier) {
+                    homeTeamName = matchData.homeTeamIdentifier;
+                }
+                if (!awayTeamName && matchData.awayTeamIdentifier) {
+                    awayTeamName = matchData.awayTeamIdentifier;
+                }
+                
+                // Mapujeme LEN ak teamName obsahuje categoryName (podmienka zostáva zachovaná)
                 if (homeTeamName && matchCategoryName && homeTeamName.includes(matchCategoryName)) {
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                         try {
@@ -1632,7 +1640,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     teamMatches.push({
                         id: doc.id,
                         ...matchData,
-                        homeTeamName,  // uložíme aj namapované názvy
+                        homeTeamName,
                         awayTeamName,
                         scheduledTimeDate: matchData.scheduledTime?.toDate()
                     });
@@ -1659,11 +1667,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const categoryNameForMatch = match.categoryName || 
                 (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
             
+            // Použijeme homeTeamDisplay a awayTeamDisplay (čo sú už namapované názvy)
             const homeTeamMatches = await loadTeamMatches(homeTeamDisplay, categoryNameForMatch);
             const awayTeamMatches = await loadTeamMatches(awayTeamDisplay, categoryNameForMatch);
         
             await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplay, awayTeamDisplay);
         } catch (err) {
+            console.error('Chyba pri výpočte vylúčení:', err);
         }
     };
 
@@ -1682,12 +1692,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             const currentMatchIndexAway = awayTeamMatches.findIndex(m => m.id === match.id);
             
             if (currentMatchIndexHome !== -1) {
+                // Použijeme homeTeamDisplayLocal (čo je už namapovaný názov tímu)
+                const resolvedHomeTeamName = homeTeamDisplayLocal;
+                
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === homeTeamDisplayLocal);
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedHomeTeamName);
                         
                         if (foundTeam) {
                             const allMembers = [];
@@ -1781,12 +1794,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             if (currentMatchIndexAway !== -1) {
+                // Použijeme awayTeamDisplayLocal (čo je už namapovaný názov tímu)
+                const resolvedAwayTeamName = awayTeamDisplayLocal;
+                
                 for (const userDoc of usersSnapshot.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
                     
                     for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === awayTeamDisplayLocal);
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === resolvedAwayTeamName);
                         
                         if (foundTeam) {
                             const allMembers = [];
@@ -1882,6 +1898,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             setBlueCardSuspensions(suspensions);
             
         } catch (err) {
+            console.error('Chyba pri real-time výpočte vylúčení:', err);
         }
     };
 
@@ -1926,12 +1943,14 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                 const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                 
+                // Použijeme homeTeamDisplayLocal a awayTeamDisplayLocal (teamName, nie teamIdentifier)
                 const homeTeamMatches = await loadTeamMatches(homeTeamDisplayLocal, categoryNameForMatch);
                 const awayTeamMatches = await loadTeamMatches(awayTeamDisplayLocal, categoryNameForMatch);
                 
                 await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
             }
         }, (error) => {
+            console.error('[BlueCard] Chyba pri real-time počúvaní modrých kariet:', error);
         });
         
         return () => {
