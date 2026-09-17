@@ -778,6 +778,15 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
             
             setMembers(membersWithOriginalIndex);
             setLoading(false);
+            
+            // 🔥 KĽÚČOVÉ: Akonáhle sa načítali členovia, mapovanie MUSÍ byť pripravené
+            // (lebo loadTeamMembers musel úspešne namapovať teamName)
+            if (membersWithOriginalIndex.length > 0 && onMappedNameUpdate && typeof onMappedNameUpdate === 'function') {
+                // Zavoláme onMappedNameUpdate s aktuálnym mappedName, čo signalizuje rodičovi,
+                // že mapovanie je funkčné
+                console.log(`[TeamMembersList] ✅ Načítaných ${membersWithOriginalIndex.length} členov, mapovanie je pripravené`);
+                onMappedNameUpdate(mappedName);
+            }
         };
         
         const handleMappedName = (newMappedName) => {
@@ -2995,114 +3004,61 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     });
 
+    // 🔥 AKONÁHLE SA NAČÍTA SÚPISKA TÍMU, NASTAVÍME isMappingReady = true
+    React.useEffect(() => {
+        // Ak už je true, netreba nič robiť
+        if (isMappingReady) return;
+        
+        // Sledujeme, či sa načítali členovia (homeTeamMappedName alebo awayTeamMappedName sa zmenil)
+        // Ale lepšie: skontrolujeme, či homeTeamDisplay/awayTeamDisplay už NEOBSAHUJE categoryName
+        const categoryNameForMatch = match?.categoryName || 
+            (match?.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+        
+        if (!categoryNameForMatch) return;
+        
+        // Ak homeTeamDisplay alebo awayTeamDisplay už NEobsahuje categoryName,
+        // znamená to, že teamNames bol naplnený (mapovanie funguje)
+        const homeIsMapped = homeTeamDisplay && !homeTeamDisplay.includes(categoryNameForMatch);
+        const awayIsMapped = awayTeamDisplay && !awayTeamDisplay.includes(categoryNameForMatch);
+        
+        if (homeIsMapped || awayIsMapped) {
+            console.log(`[BlueCard] ✅ Tímy sú namapované (home="${homeTeamDisplay}", away="${awayTeamDisplay}"), nastavujem isMappingReady=true`);
+            setIsMappingReady(true);
+        }
+    }, [homeTeamDisplay, awayTeamDisplay, match?.categoryName, match?.categoryId, isMappingReady]);
+
     // ============================================================
-    // 🔥 POČÚVANIE NA UDALOSŤ teamNameMappingReady / teamNamesReplaced
-    // + POLLING, pretože udalosť nemusí doraziť (lazy mapping)
+    // 🔥 MAPOVANIE JE PRIPRAVENÉ, KEĎ SA NAČÍTA SÚPISKA TÍMU
+    // (nie je potrebné čakať na udalosť ani polling)
     // ============================================================
     React.useEffect(() => {
-        // Ak už je mapovanie hotové, netreba čakať
+        // Skontrolujeme, či už je mapovanie hotové (napr. pri reloade)
         try {
             if (window.teamNameReplacer?.isMappingReady?.() === true) {
-                console.log('[BlueCard] ✅ Mapovanie už je hotové (isMappingReady=true)');
                 setIsMappingReady(true);
-                return;
             }
         } catch (e) {
             // ignorujeme
         }
         
-        console.log('[BlueCard] ⏳ Čakám na udalosť teamNameMappingReady alebo na funkčné mapovanie...');
-        
-        const handleMappingReady = (event) => {
-            console.log('[BlueCard] 🎉 Prijatá udalosť teamNameMappingReady!', event?.detail);
+        const handleMappingReady = () => {
+            console.log('[BlueCard] 🎉 Prijatá udalosť teamNameMappingReady!');
             setIsMappingReady(true);
         };
         
-        const handleTeamNamesReplaced = (event) => {
-            console.log('[BlueCard] 🎉 Prijatá udalosť teamNamesReplaced!', event?.detail);
+        const handleTeamNamesReplaced = () => {
+            console.log('[BlueCard] 🎉 Prijatá udalosť teamNamesReplaced!');
             setIsMappingReady(true);
         };
         
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
         
-        // 🔥 POLLING: Skúsime, či getTeamNameByDisplayId už funguje
-        // POZOR: Testujeme LEN teamName (nie teamIdentifier)!
-        const testHomeTeamName = match?.homeTeamName;
-        const testAwayTeamName = match?.awayTeamName;
-        
-        let pollCount = 0;
-        const maxPolls = 60; // 60 * 500ms = 30 sekúnd
-        
-        const pollInterval = setInterval(() => {
-            pollCount++;
-            
-            let mappingWorks = false;
-            try {
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                    // Test 1: Skúsime namapovať teamName (NIE teamIdentifier!)
-                    // teamName v match objekte môže byť napr. "U12 CH 4D" alebo podobne
-                    const testNames = [testHomeTeamName, testAwayTeamName].filter(Boolean);
-                    for (const testName of testNames) {
-                        const mapped = window.matchTracker.getTeamNameByDisplayId(testName);
-                        if (mapped && mapped !== testName && mapped !== 'null' && mapped !== null) {
-                            mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: mapovanie funguje! "${testName}" -> "${mapped}"`);
-                            break;
-                        }
-                    }
-                    
-                    // Test 2: Skúsime window.teamNameReplacer.isMappingReady()
-                    if (!mappingWorks) {
-                        if (window.teamNameReplacer?.isMappingReady?.() === true) {
-                            mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: teamNameReplacer.isMappingReady() = true`);
-                        }
-                    }
-                    
-                    // Test 3: Skúsime __teamNameMapping
-                    if (!mappingWorks) {
-                        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-                            mappingWorks = true;
-                            console.log(`[BlueCard] ✅ Polling #${pollCount}: __teamNameMapping má ${Object.keys(window.__teamNameMapping).length} záznamov`);
-                        }
-                    }
-                }
-            } catch (e) {
-                // ignorujeme chyby počas pollingu
-            }
-            
-            if (mappingWorks) {
-                console.log(`[BlueCard] 🎉 Polling #${pollCount}: mapovanie je pripravené, nastavujem isMappingReady=true`);
-                setIsMappingReady(true);
-                clearInterval(pollInterval);
-            } else if (pollCount >= maxPolls) {
-                console.warn(`[BlueCard] ⚠️ Polling: mapovanie stále nie je pripravené po ${maxPolls * 0.5}s, vzdávam to`);
-                clearInterval(pollInterval);
-            }
-        }, 500);
-        
-        // Fallback: ak udalosť nedorazí do 20 sekúnd, skúsime to manuálne
-        const fallbackTimeout = setTimeout(() => {
-            try {
-                if (window.teamNameReplacer?.isMappingReady?.() === true) {
-                    console.log('[BlueCard] ⏰ Fallback: mapovanie je hotové (isMappingReady=true)');
-                    setIsMappingReady(true);
-                } else {
-                    console.warn('[BlueCard] ⚠️ Fallback: mapovanie stále nie je hotové po 20s');
-                }
-            } catch (e) {
-                console.warn('[BlueCard] ⚠️ Fallback: chyba pri kontrole isMappingReady', e);
-            }
-        }, 20000);
-        
         return () => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-            clearTimeout(fallbackTimeout);
-            clearInterval(pollInterval);
         };
-    }, [match?.homeTeamIdentifier, match?.awayTeamIdentifier, match?.categoryName, match?.categoryId]);
+    }, []);
 
     const loadSuspensionSettings = async () => {
         if (!window.db) return;
