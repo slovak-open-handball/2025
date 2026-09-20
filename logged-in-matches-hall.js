@@ -3769,9 +3769,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             matchTimerRef.current.clearSelectedActions();
         }
     };
-    
-    const categoryDisplayName = getCategoryDisplayName();
-    
+        
     const calculateGoalsFromEvents = (events) => {
         let homeGoals = 0;
         let awayGoals = 0;
