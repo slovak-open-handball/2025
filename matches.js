@@ -2473,7 +2473,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const eventsSortedDesc = [...matchEvents]
             .filter(event => 
                 event.eventType !== 'roster_removal' && 
-                event.eventType !== 'jersey_color_change'   // 🔥 PRIDANÉ
+                event.eventType !== 'jersey_color_change' 
             )
             .sort((a, b) => {
                 const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
@@ -2502,7 +2502,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
                         React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam udalosti...')
                     ) :
-                    matchEvents.length === 0 ?
+                    eventsSortedDesc.length === 0 ?  
                         React.createElement('div', { className: 'text-center py-8 text-gray-400' },
                             React.createElement('i', { className: 'fa-regular fa-clock text-3xl mb-2 opacity-50' }),
                             React.createElement('p', { className: 'text-sm' }, 'Žiadne udalosti zápasu.')
