@@ -536,7 +536,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions,  activeJerseyColor, onJerseyColorChange, jerseyColors}) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -553,10 +553,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
 
     const [rosterRemovals, setRosterRemovals] = useState({});
     const [matchStatus, setMatchStatusLocal] = useState(null);
-
-    // 🔥 NOVÉ: farby dresov a aktívna farba
-    const [teamJerseyColors, setTeamJerseyColors] = useState({ home: '', away: '' });
-    const [activeJerseyColor, setActiveJerseyColor] = useState('home'); // 'home' alebo 'away'
 
     useEffect(() => {
         if (!window.db || !matchId) return;
@@ -620,40 +616,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     useEffect(() => {
         matchDataRef.current = matchData;
     }, [matchData]);
-
-    // 🔥 NOVÉ: Načítanie farieb dresov tímu
-    useEffect(() => {
-        if (!window.db || !mappedName || !categoryName) return;
-
-        const loadJerseyColors = async () => {
-            try {
-                const usersRef = collection(window.db, 'users');
-                const usersSnapshot = await getDocs(usersRef);
-
-                for (const userDoc of usersSnapshot.docs) {
-                    const userData = userDoc.data();
-                    const teams = userData.teams || {};
-
-                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                        if (categoryKey !== categoryName) continue;
-
-                        const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
-                        if (foundTeam) {
-                            setTeamJerseyColors({
-                                home: foundTeam.jerseyHomeColor || '',
-                                away: foundTeam.jerseyAwayColor || ''
-                            });
-                            return;
-                        }
-                    }
-                }
-            } catch (err) {
-                // ignore
-            }
-        };
-
-        loadJerseyColors();
-    }, [mappedName, categoryName]);
     
     useEffect(() => {
         const updateGameTime = () => {
@@ -3102,7 +3064,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
 
-    // 🔥 KĽÚČOVÝ STAV: Či je mapovanie tímov už pripravené (udalosť z func-tables.js)
+    const [activeJerseyColor, setActiveJerseyColor] = React.useState('home');
+
+    const [homeJerseyColors, setHomeJerseyColors] = React.useState({ home: '', away: '' });
+    const [awayJerseyColors, setAwayJerseyColors] = React.useState({ home: '', away: '' });
+
     const [isMappingReady, setIsMappingReady] = React.useState(() => {
         // Ak už je mapovanie hotové (napr. pri reloade), nastavíme true
         try {
@@ -3111,6 +3077,44 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             return false;
         }
     });
+
+    React.useEffect(() => {
+        if (!window.db || !categoryDisplayName) return;
+
+        const loadColorsForTeam = async (teamDisplayName, setter) => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        if (categoryKey !== categoryDisplayName) continue;
+
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamDisplayName);
+                        if (foundTeam) {
+                            setter({
+                                home: foundTeam.jerseyHomeColor || '',
+                                away: foundTeam.jerseyAwayColor || ''
+                            });
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+
+        if (homeTeamDisplay && categoryDisplayName) {
+            loadColorsForTeam(homeTeamDisplay, setHomeJerseyColors);
+        }
+        if (awayTeamDisplay && categoryDisplayName) {
+            loadColorsForTeam(awayTeamDisplay, setAwayJerseyColors);
+        }
+    }, [homeTeamDisplay, awayTeamDisplay, categoryDisplayName]);
 
     React.useEffect(() => {
         setHomeTeamMappedName(homeTeamDisplay);
@@ -4041,7 +4045,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             if (member) {
                                 const memberData = {
                                     name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
-                                    jerseyNumber: member.jerseyNumber || ''
+                                    jerseyNumber: member.jerseyNumber || '',
+                                    jerseyNumber2: member.jerseyNumber2 || ''
                                 };
                                 
                                 setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
@@ -4053,7 +4058,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             } catch (err) {
             }
             
-            return { name: 'Neznámy hráč', jerseyNumber: '' };
+            return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
         };
         
         const getEventIcon = (eventType, eventSubtype) => {
@@ -4093,7 +4098,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         };
         
         const PlayerDisplay = ({ event, isHomeEvent }) => {
-            const [memberData, setMemberData] = React.useState({ name: '', jerseyNumber: '' });
+            const [memberData, setMemberData] = React.useState({ name: '', jerseyNumber: '', jerseyNumber2: '' });
             const [loading, setLoading] = React.useState(true);
             
             const teamName = isHomeEvent 
@@ -4121,7 +4126,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             const displayName = memberData.name;
-            const jerseyNumber = memberData.jerseyNumber;
+            const jerseyNumber = activeJerseyColor === 'home'
+                ? (memberData.jerseyNumber || '')
+                : (memberData.jerseyNumber2 || '');
             
             if (isHomeEvent) {
                 return React.createElement(
@@ -4813,7 +4820,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 onMappedNameUpdate: setHomeTeamMappedName,
                 matchId: match.id,
                 periodDuration: categorySettings?.periodDuration || 15,
-                blueCardSuspensions: blueCardSuspensions
+                blueCardSuspensions: blueCardSuspensions,
+                activeJerseyColor: activeJerseyColor,
+                onJerseyColorChange: setActiveJerseyColor,
+                jerseyColors: homeJerseyColors
             }),
             React.createElement(TeamMembersList, {
                 key: `${match.id}-away`,
@@ -4824,7 +4834,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 onMappedNameUpdate: setAwayTeamMappedName,
                 matchId: match.id,
                 periodDuration: categorySettings?.periodDuration || 15,
-                blueCardSuspensions: blueCardSuspensions
+                blueCardSuspensions: blueCardSuspensions,
+                activeJerseyColor: activeJerseyColor,
+                onJerseyColorChange: setActiveJerseyColor,
+                jerseyColors: awayJerseyColors
             })
         ),
         
