@@ -4220,7 +4220,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const eventsSortedDesc = [...matchEvents]
             .filter(event => 
                 event.eventType !== 'roster_removal' && 
-                event.eventType !== 'jersey_color_change'   // 🔥 PRIDANÉ
+                event.eventType !== 'jersey_color_change'
             )
             .sort((a, b) => {
                 const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
