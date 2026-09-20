@@ -553,6 +553,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     const [rosterRemovals, setRosterRemovals] = useState({});
     const [matchStatus, setMatchStatusLocal] = useState(null);
 
+    // 🔥 NOVÉ: farby dresov a aktívna farba
+    const [teamJerseyColors, setTeamJerseyColors] = useState({ home: '', away: '' });
+    const [activeJerseyColor, setActiveJerseyColor] = useState('home'); // 'home' alebo 'away'
+
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -615,6 +619,40 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     useEffect(() => {
         matchDataRef.current = matchData;
     }, [matchData]);
+
+    // 🔥 NOVÉ: Načítanie farieb dresov tímu
+    useEffect(() => {
+        if (!window.db || !mappedName || !categoryName) return;
+
+        const loadJerseyColors = async () => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        if (categoryKey !== categoryName) continue;
+
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === mappedName);
+                        if (foundTeam) {
+                            setTeamJerseyColors({
+                                home: foundTeam.jerseyHomeColor || '',
+                                away: foundTeam.jerseyAwayColor || ''
+                            });
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+
+        loadJerseyColors();
+    }, [mappedName, categoryName]);
     
     useEffect(() => {
         const updateGameTime = () => {
@@ -1124,9 +1162,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     
     const displayTeamName = mappedName !== teamName ? mappedName : teamName;
     
+    // 🔥 UPRAVENÉ: zoradenie hráčov podľa aktívnej farby dresov
     const sortedPlayers = [...members.filter(m => m.type === 'Hráč')].sort((a, b) => {
-        const aNum = parseInt(a.jerseyNumber) || 999;
-        const bNum = parseInt(b.jerseyNumber) || 999;
+        const aNum = parseInt(activeJerseyColor === 'home' ? a.jerseyNumber : a.jerseyNumber2) || 999;
+        const bNum = parseInt(activeJerseyColor === 'home' ? b.jerseyNumber : b.jerseyNumber2) || 999;
         return aNum - bNum;
     });
     const rtMembers = members.filter(m => m.type !== 'Hráč');
@@ -1135,11 +1174,47 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
+        // 🔥 UPRAVENÁ HLAVIČKA S PREPÍNAČOM FARIEB
         React.createElement(
             'div',
-            { className: 'bg-gray-50 px-4 py-2 border-b border-gray-200' },
-            React.createElement('h3', { className: 'font-semibold text-gray-800' }, displayTeamName),
-            React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
+            { className: 'bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between' },
+            React.createElement(
+                'div',
+                null,
+                React.createElement('h3', { className: 'font-semibold text-gray-800' }, displayTeamName),
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
+            ),
+            // Prepínač farieb dresov (zobrazí sa len ak sú farby nastavené)
+            (teamJerseyColors.home || teamJerseyColors.away) && React.createElement(
+                'div',
+                { className: 'flex items-center gap-1 bg-white border border-gray-300 rounded-full p-1' },
+                teamJerseyColors.home && React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveJerseyColor('home'),
+                        className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                            activeJerseyColor === 'home'
+                                ? 'bg-blue-500 text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`,
+                        title: `Farba dresov 1: ${teamJerseyColors.home}`
+                    },
+                    teamJerseyColors.home
+                ),
+                teamJerseyColors.away && React.createElement(
+                    'button',
+                    {
+                        onClick: () => setActiveJerseyColor('away'),
+                        className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                            activeJerseyColor === 'away'
+                                ? 'bg-blue-500 text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`,
+                        title: `Farba dresov 2: ${teamJerseyColors.away}`
+                    },
+                    teamJerseyColors.away
+                )
+            )
         ),
         React.createElement(
             'div',
@@ -1154,7 +1229,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         'tr',
                         { className: 'border-b border-gray-200' },
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, ''),
+                        // 🔥 UPRAVENÝ STĹPEC PRE ČÍSLO DRESU
+                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '45px' } }, 
+                            activeJerseyColor === 'home' ? 'Č.1' : 'Č.2'
+                        ),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
                             React.createElement('div', { className: 'flex flex-col items-center' },
@@ -1200,7 +1278,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     allMembersSorted.map((member, idx) => {
                         const stats = getMemberStats(member);
                         const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        const jerseyDisplay = member.jerseyNumber || '';
+                        // 🔥 ZOBRAZENIE SPRÁVNEHO ČÍSLA DRESU
+                        const jerseyDisplay = activeJerseyColor === 'home'
+                            ? (member.jerseyNumber || '')
+                            : (member.jerseyNumber2 || '');
                         
                         const memberIcon = member.type === 'Hráč' 
                             ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
