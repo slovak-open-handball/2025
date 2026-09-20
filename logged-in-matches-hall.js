@@ -4274,7 +4274,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
                         React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam udalosti...')
                     ) :
-                    matchEvents.length === 0 ?
+                    eventsSortedDesc.length === 0 ? 
                         React.createElement('div', { className: 'text-center py-8 text-gray-400' },
                             React.createElement('i', { className: 'fa-regular fa-clock text-3xl mb-2 opacity-50' }),
                             React.createElement('p', { className: 'text-sm' }, 'Žiadne udalosti zápasu.')
