@@ -289,6 +289,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
                                 firstName: player.firstName || '',
                                 lastName: player.lastName || '',
                                 jerseyNumber: player.jerseyNumber || '',
+                                jerseyNumber2: player.jerseyNumber2 || '',
                                 registrationNumber: player.registrationNumber || '',
                                 userId: userId,
                                 originalIndex: idx 
@@ -875,6 +876,7 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     dbIndex: member.originalIndex,
                     name: `${member.firstName} ${member.lastName}`.trim(),
                     jerseyNumber: member.jerseyNumber || '',
+                    jerseyNumber2: member.jerseyNumber2 || '',
                     memberType: member.type
                 };
             });
@@ -2099,34 +2101,48 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
 
     React.useEffect(() => {
-        if (!window.db || !match.id) return;  
-        if (!isMappingReady) return;
-        
+        if (!window.db || !match.id) return;
+    
         const eventsRef = collection(window.db, 'matchEvents');
-        const q = query(eventsRef, where('eventType', '==', 'card'), where('eventSubtype', '==', 'blue'));
-        
-        const unsubscribe = onSnapshot(q, async (snapshot) => {            
-            if (match.homeTeamIdentifier && match.awayTeamIdentifier) {
-                const categoryNameForMatch = match.categoryName || 
-                    (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
-                
-                const homeTeamDisplayLocal = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
-                const awayTeamDisplayLocal = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
-                
-                // Použijeme homeTeamDisplayLocal a awayTeamDisplayLocal (teamName, nie teamIdentifier)
-                const homeTeamMatches = await loadTeamMatches(homeTeamDisplayLocal, categoryNameForMatch);
-                const awayTeamMatches = await loadTeamMatches(awayTeamDisplayLocal, categoryNameForMatch);
-                
-                await calculateBlueCardSuspensionsRealTime(homeTeamMatches, awayTeamMatches, homeTeamDisplayLocal, awayTeamDisplayLocal);
+        const q = query(
+            eventsRef,
+            where('matchId', '==', match.id),
+            where('eventType', '==', 'jersey_color_change')
+        );
+    
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let latestHome = null;
+            let latestAway = null;
+    
+            snapshot.forEach((doc) => {
+                const event = doc.data();
+                const ts = event.timestamp?.toDate?.()?.getTime() 
+                    || event.createdAt?.toDate?.()?.getTime() 
+                    || 0;
+    
+                if (event.team === 'home') {
+                    if (!latestHome || ts > latestHome.ts) {
+                        latestHome = { ts, value: event.eventSubtype };
+                    }
+                } else if (event.team === 'away') {
+                    if (!latestAway || ts > latestAway.ts) {
+                        latestAway = { ts, value: event.eventSubtype };
+                    }
+                }
+            });
+    
+            if (latestHome && (latestHome.value === 'home' || latestHome.value === 'away')) {
+                setHomeActiveJerseyColor(latestHome.value);
+            }
+            if (latestAway && (latestAway.value === 'home' || latestAway.value === 'away')) {
+                setAwayActiveJerseyColor(latestAway.value);
             }
         }, (error) => {
-            console.error('[BlueCard] Chyba pri real-time počúvaní modrých kariet:', error);
+            // ignore
         });
-        
-        return () => {
-            unsubscribe();
-        };
-    }, [match.id, match.homeTeamIdentifier, match.awayTeamIdentifier, teamNames]);
+    
+        return () => unsubscribe();
+    }, [match.id]);
 
     React.useEffect(() => {
         loadSuspensionSettings();
