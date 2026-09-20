@@ -3047,7 +3047,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         periodDuration: categorySettings?.periodDuration || 15,
                         blueCardSuspensions: blueCardSuspensions,
                         activeJerseyColor: awayActiveJerseyColor,
-                        jerseyColors: homeJerseyColors
+                        jerseyColors: awayJerseyColors
                     })
                 );
             })()
