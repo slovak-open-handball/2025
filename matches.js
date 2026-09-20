@@ -529,7 +529,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions, activeJerseyColor = 'home' }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -1017,9 +1017,10 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     
     const displayTeamName = mappedName !== teamName ? mappedName : teamName;
     
+    // 🔥 Zoradenie hráčov podľa aktívnej farby dresov
     const sortedPlayers = [...members.filter(m => m.type === 'Hráč')].sort((a, b) => {
-        const aNum = parseInt(a.jerseyNumber) || 999;
-        const bNum = parseInt(b.jerseyNumber) || 999;
+        const aNum = parseInt(activeJerseyColor === 'home' ? a.jerseyNumber : a.jerseyNumber2) || 999;
+        const bNum = parseInt(activeJerseyColor === 'home' ? b.jerseyNumber : b.jerseyNumber2) || 999;
         return aNum - bNum;
     });
     const rtMembers = members.filter(m => m.type !== 'Hráč');
@@ -1093,7 +1094,9 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                     allMembersSorted.map((member, idx) => {
                         const stats = getMemberStats(member);
                         const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        const jerseyDisplay = member.jerseyNumber || '';
+                        const jerseyDisplay = activeJerseyColor === 'home'
+                            ? (member.jerseyNumber || '')
+                            : (member.jerseyNumber2 || '');
                         
                         const memberIcon = member.type === 'Hráč' 
                             ? React.createElement('i', { className: 'fa-solid fa-user text-gray-500 text-sm' })
@@ -3030,7 +3033,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         onMappedNameUpdate: setHomeTeamMappedName,
                         matchId: match.id,
                         periodDuration: categorySettings?.periodDuration || 15,
-                        blueCardSuspensions: blueCardSuspensions
+                        blueCardSuspensions: blueCardSuspensions,
+                        activeJerseyColor: homeActiveJerseyColor
                     }),
                     React.createElement(TeamMembersList, {
                         teamName: awayTeamDisplay,
@@ -3040,7 +3044,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         onMappedNameUpdate: setAwayTeamMappedName,
                         matchId: match.id,
                         periodDuration: categorySettings?.periodDuration || 15,
-                        blueCardSuspensions: blueCardSuspensions
+                        blueCardSuspensions: blueCardSuspensions,
+                        activeJerseyColor: awayActiveJerseyColor
                     })
                 );
             })()
