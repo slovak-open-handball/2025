@@ -2222,52 +2222,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         });
         
         return () => unsubscribe();
-    }, [match.id]);
-
-    // 🔥 Načítanie poslednej zmeny farby dresov z matchEvents (zvlášť pre home/away)
-    React.useEffect(() => {
-        if (!window.db || !match.id) return;
-
-        const eventsRef = collection(window.db, 'matchEvents');
-        const q = query(
-            eventsRef,
-            where('matchId', '==', match.id),
-            where('eventType', '==', 'jersey_color_change')
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            let latestHome = null;
-            let latestAway = null;
-
-            snapshot.forEach((doc) => {
-                const event = doc.data();
-                const ts = event.timestamp?.toDate?.()?.getTime() 
-                    || event.createdAt?.toDate?.()?.getTime() 
-                    || 0;
-
-                if (event.team === 'home') {
-                    if (!latestHome || ts > latestHome.ts) {
-                        latestHome = { ts, value: event.eventSubtype };
-                    }
-                } else if (event.team === 'away') {
-                    if (!latestAway || ts > latestAway.ts) {
-                        latestAway = { ts, value: event.eventSubtype };
-                    }
-                }
-            });
-
-            if (latestHome && (latestHome.value === 'home' || latestHome.value === 'away')) {
-                setHomeActiveJerseyColor(latestHome.value);
-            }
-            if (latestAway && (latestAway.value === 'home' || latestAway.value === 'away')) {
-                setAwayActiveJerseyColor(latestAway.value);
-            }
-        }, (error) => {
-            // ignore
-        });
-
-        return () => unsubscribe();
-    }, [match.id]);    
+    }, [match.id]); 
     
     const getDisplayScore = () => {
         if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
