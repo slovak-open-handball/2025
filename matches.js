@@ -530,7 +530,7 @@ const ExclusionTimer = ({ member, matchId, teamType, exclusionDuration, matchTim
     );
 };
 
-const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions, activeJerseyColor = 'home' }) => {
+const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedNameUpdate, matchId, periodDuration: propPeriodDuration, blueCardSuspensions: propBlueCardSuspensions, activeJerseyColor = 'home', jerseyColors }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -1035,9 +1035,31 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
         React.createElement(
             'div',
-            { className: 'bg-gray-50 px-4 py-2 border-b border-gray-200' },
-            React.createElement('h3', { className: 'font-semibold text-gray-800' }, displayTeamName),
-            React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
+            { className: 'bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between' },
+            React.createElement(
+                'div',
+                null,
+                React.createElement('h3', { className: 'font-semibold text-gray-800' }, displayTeamName),
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
+            ),
+            // 🔥 Indikátor aktívnej farby dresov (read-only – verejná verzia)
+            (jerseyColors?.home || jerseyColors?.away) && React.createElement(
+                'div',
+                { 
+                    className: 'flex items-center gap-2 bg-white border border-gray-300 rounded-full px-3 py-1',
+                    title: activeJerseyColor === 'home' 
+                        ? `Farba dresov 1: ${jerseyColors.home}` 
+                        : `Farba dresov 2: ${jerseyColors.away}`
+                },
+                React.createElement('i', { className: 'fa-solid fa-shirt text-gray-500 text-xs' }),
+                React.createElement(
+                    'span',
+                    { className: 'text-xs font-medium text-gray-700' },
+                    activeJerseyColor === 'home' 
+                        ? (jerseyColors.home || '-') 
+                        : (jerseyColors.away || '-')
+                )
+            )
         ),
         React.createElement(
             'div',
@@ -3012,7 +3034,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         matchId: match.id,
                         periodDuration: categorySettings?.periodDuration || 15,
                         blueCardSuspensions: blueCardSuspensions,
-                        activeJerseyColor: homeActiveJerseyColor
+                        activeJerseyColor: homeActiveJerseyColor,
+                        jerseyColors: homeJerseyColors
                     }),
                     React.createElement(TeamMembersList, {
                         teamName: awayTeamDisplay,
@@ -3023,7 +3046,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         matchId: match.id,
                         periodDuration: categorySettings?.periodDuration || 15,
                         blueCardSuspensions: blueCardSuspensions,
-                        activeJerseyColor: awayActiveJerseyColor
+                        activeJerseyColor: awayActiveJerseyColor,
+                        jerseyColors: homeJerseyColors
                     })
                 );
             })()
