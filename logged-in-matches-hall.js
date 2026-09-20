@@ -3079,6 +3079,39 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     });
 
     React.useEffect(() => {
+        if (!window.db || !match.id) return;
+
+        const eventsRef = collection(window.db, 'matchEvents');
+        const q = query(
+            eventsRef,
+            where('matchId', '==', match.id),
+            where('eventType', '==', 'jersey_color_change')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let latest = null;
+
+            snapshot.forEach((doc) => {
+                const event = doc.data();
+                const ts = event.timestamp?.toDate?.()?.getTime() 
+                    || event.createdAt?.toDate?.()?.getTime() 
+                    || 0;
+                if (!latest || ts > latest.ts) {
+                    latest = { ts, value: event.eventSubtype };
+                }
+            });
+
+            if (latest && (latest.value === 'home' || latest.value === 'away')) {
+                setActiveJerseyColor(latest.value);
+            }
+        }, (error) => {
+            // ignore
+        });
+
+        return () => unsubscribe();
+    }, [match.id]);
+
+    React.useEffect(() => {
         if (!window.db || !categoryDisplayName) return;
 
         const loadColorsForTeam = async (teamDisplayName, setter) => {
@@ -4180,7 +4213,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         };
         
         const eventsSortedDesc = [...matchEvents]
-            .filter(event => event.eventType !== 'roster_removal')
+            .filter(event => 
+                event.eventType !== 'roster_removal' && 
+                event.eventType !== 'jersey_color_change'   // 🔥 PRIDANÉ
+            )
             .sort((a, b) => {
                 const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
                 const timeB = b.totalTime !== undefined ? b.totalTime : (b.matchTime || 0);
@@ -4547,6 +4583,33 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     
     const hasPrevious = currentMatchIndex > 0;
     const hasNext = currentMatchIndex < allMatches.length - 1;
+
+        // 🔥 Prepnutie farby dresov + uloženie do DB
+    const handleJerseyColorChange = async (newColor) => {
+        if (newColor !== 'home' && newColor !== 'away') return;
+
+        setActiveJerseyColor(newColor);
+
+        if (!window.db || !match.id) return;
+
+        try {
+            const eventsRef = collection(window.db, 'matchEvents');
+            await addDoc(eventsRef, {
+                matchId: match.id,
+                eventType: 'jersey_color_change',
+                eventSubtype: newColor,
+                team: null,
+                categoryName: categoryDisplayName || match.categoryName || null,
+                totalTime: 0,
+                periodTime: 0,
+                period: 1,
+                createdAt: Timestamp.now(),
+                timestamp: Timestamp.now()
+            });
+        } catch (err) {
+            // ignore
+        }
+    };
     
     const handleTimeUpdate = (timeData) => {
         if (onMatchUpdate) {
@@ -4822,7 +4885,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 periodDuration: categorySettings?.periodDuration || 15,
                 blueCardSuspensions: blueCardSuspensions,
                 activeJerseyColor: activeJerseyColor,
-                onJerseyColorChange: setActiveJerseyColor,
+                onJerseyColorChange: handleJerseyColorChange,
                 jerseyColors: homeJerseyColors
             }),
             React.createElement(TeamMembersList, {
@@ -4836,7 +4899,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 periodDuration: categorySettings?.periodDuration || 15,
                 blueCardSuspensions: blueCardSuspensions,
                 activeJerseyColor: activeJerseyColor,
-                onJerseyColorChange: setActiveJerseyColor,
+                onJerseyColorChange: handleJerseyColorChange,
                 jerseyColors: awayJerseyColors
             })
         ),
