@@ -1216,8 +1216,11 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                         { className: 'border-b border-gray-200' },
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '30px' } }, ''),
                         // 🔥 UPRAVENÝ STĹPEC PRE ČÍSLO DRESU
-                        React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', style: { width: '45px' } }, 
-                            activeJerseyColor === 'home' ? 'Č.1' : 'Č.2'
+                        React.createElement('th', { 
+                            className: 'px-2 py-2 text-left text-xs font-medium text-gray-500', 
+                            style: { width: '45px' } 
+                        }, 
+                            React.createElement('i', { className: 'fa-solid fa-shirt text-gray-400 text-xs' })
                         ),
                         React.createElement('th', { className: 'px-2 py-2 text-left text-xs font-medium text-gray-500' }, 'Meno a priezvisko'),
                         React.createElement('th', { className: 'px-2 py-2 text-center text-xs font-medium text-gray-500', style: { width: '45px' } }, 
