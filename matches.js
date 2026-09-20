@@ -824,6 +824,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 
                 return {
                     ...member,
+                    jerseyNumber: member.jerseyNumber || '',
+                    jerseyNumber2: member.jerseyNumber2 || '',
                     originalIndex: originalIndex,
                     dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
                                 (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
