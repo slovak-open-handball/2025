@@ -1148,36 +1148,58 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 React.createElement('h3', { className: 'font-semibold text-gray-800' }, displayTeamName),
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
             ),
-            // Prepínač farieb dresov (zobrazí sa len ak sú farby nastavené)
-            (jerseyColors?.home || jerseyColors?.away) && React.createElement(
-                'div',
-                { className: 'flex items-center gap-1 bg-white border border-gray-300 rounded-full p-1' },
-                jerseyColors.home && React.createElement(
-                    'button',
-                    {
-                        onClick: () => onJerseyColorChange('home'),
-                        className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                            activeJerseyColor === 'home'
-                                ? 'bg-blue-500 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
-                        }`,
-                        title: `Farba dresov 1: ${jerseyColors.home}`
-                    },
-                    jerseyColors.home
-                ),
-                jerseyColors.away && React.createElement(
-                    'button',
-                    {
-                        onClick: () => onJerseyColorChange('away'),
-                        className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                            activeJerseyColor === 'away'
-                                ? 'bg-blue-500 text-white'
-                                : 'text-gray-600 hover:bg-gray-100'
-                        }`,
-                        title: `Farba dresov 2: ${jerseyColors.away}`
-                    },
-                    jerseyColors.away
-                )
+            // 🔥 Prepínač farieb dresov – viditeľný LEN keď je zápas v stave 'scheduled'
+            // Ak je zápas in-progress / paused / completed, zobrazí sa iba TEXT s aktuálne zvolenou farbou
+            (jerseyColors?.home || jerseyColors?.away) && (
+                matchStatus === 'scheduled'
+                    ? React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1 bg-white border border-gray-300 rounded-full p-1' },
+                        jerseyColors.home && React.createElement(
+                            'button',
+                            {
+                                onClick: () => onJerseyColorChange('home'),
+                                className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                                    activeJerseyColor === 'home'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                }`,
+                                title: `Farba dresov 1: ${jerseyColors.home}`
+                            },
+                            jerseyColors.home
+                        ),
+                        jerseyColors.away && React.createElement(
+                            'button',
+                            {
+                                onClick: () => onJerseyColorChange('away'),
+                                className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                                    activeJerseyColor === 'away'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                }`,
+                                title: `Farba dresov 2: ${jerseyColors.away}`
+                            },
+                            jerseyColors.away
+                        )
+                    )
+                    : React.createElement(
+                        // 🔥 Iba text – zvolená farba
+                        'div',
+                        { 
+                            className: 'flex items-center gap-2 bg-white border border-gray-300 rounded-full px-3 py-1',
+                            title: activeJerseyColor === 'home' 
+                                ? `Farba dresov 1: ${jerseyColors.home}` 
+                                : `Farba dresov 2: ${jerseyColors.away}`
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-500 text-xs' }),
+                        React.createElement(
+                            'span',
+                            { className: 'text-xs font-medium text-gray-700' },
+                            activeJerseyColor === 'home' 
+                                ? (jerseyColors.home || '-') 
+                                : (jerseyColors.away || '-')
+                        )
+                    )
             )
         ),
         React.createElement(
