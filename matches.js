@@ -1506,6 +1506,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
 
+    const [homeActiveJerseyColor, setHomeActiveJerseyColor] = React.useState('home');
+    const [awayActiveJerseyColor, setAwayActiveJerseyColor] = React.useState('home');
+
+    const [homeJerseyColors, setHomeJerseyColors] = React.useState({ home: '', away: '' });
+    const [awayJerseyColors, setAwayJerseyColors] = React.useState({ home: '', away: '' });
+
     const [hallName, setHallName] = React.useState(null);
     const [loadingHall, setLoadingHall] = React.useState(true);
 
@@ -1621,6 +1627,47 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
 
         loadHallName();
     }, [match.hallId]);
+
+    React.useEffect(() => {
+        const categoryNameForColors = match?.categoryName || 
+            (match?.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
+
+        if (!window.db || !categoryNameForColors) return;
+
+        const loadColorsForTeam = async (teamDisplayName, setter) => {
+            try {
+                const usersRef = collection(window.db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const teams = userData.teams || {};
+
+                    for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                        if (categoryKey !== categoryNameForColors) continue;
+
+                        const foundTeam = (teamsArray || []).find(t => t.teamName === teamDisplayName);
+                        if (foundTeam) {
+                            setter({
+                                home: foundTeam.jerseyHomeColor || '',
+                                away: foundTeam.jerseyAwayColor || ''
+                            });
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+
+        if (homeTeamDisplay) {
+            loadColorsForTeam(homeTeamDisplay, setHomeJerseyColors);
+        }
+        if (awayTeamDisplay) {
+            loadColorsForTeam(awayTeamDisplay, setAwayJerseyColors);
+        }
+    }, [homeTeamDisplay, awayTeamDisplay, match?.categoryName, match?.categoryId]);    
 
     const loadSuspensionSettings = async () => {
         if (!window.db) return;
@@ -2150,6 +2197,51 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         return () => unsubscribe();
     }, [match.id]);
+
+    // 🔥 Načítanie poslednej zmeny farby dresov z matchEvents (zvlášť pre home/away)
+    React.useEffect(() => {
+        if (!window.db || !match.id) return;
+
+        const eventsRef = collection(window.db, 'matchEvents');
+        const q = query(
+            eventsRef,
+            where('matchId', '==', match.id),
+            where('eventType', '==', 'jersey_color_change')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let latestHome = null;
+            let latestAway = null;
+
+            snapshot.forEach((doc) => {
+                const event = doc.data();
+                const ts = event.timestamp?.toDate?.()?.getTime() 
+                    || event.createdAt?.toDate?.()?.getTime() 
+                    || 0;
+
+                if (event.team === 'home') {
+                    if (!latestHome || ts > latestHome.ts) {
+                        latestHome = { ts, value: event.eventSubtype };
+                    }
+                } else if (event.team === 'away') {
+                    if (!latestAway || ts > latestAway.ts) {
+                        latestAway = { ts, value: event.eventSubtype };
+                    }
+                }
+            });
+
+            if (latestHome && (latestHome.value === 'home' || latestHome.value === 'away')) {
+                setHomeActiveJerseyColor(latestHome.value);
+            }
+            if (latestAway && (latestAway.value === 'home' || latestAway.value === 'away')) {
+                setAwayActiveJerseyColor(latestAway.value);
+            }
+        }, (error) => {
+            // ignore
+        });
+
+        return () => unsubscribe();
+    }, [match.id]);    
     
     const getDisplayScore = () => {
         if (currentMatchStatus === 'completed' && currentHomeScore !== undefined && currentHomeScore !== null) {
@@ -2200,7 +2292,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         const isMatchCompleted = currentMatchStatus === 'completed';        
         const loadMemberDetails = async (userId, categoryName, teamName, memberTypeKey, memberIndex, eventId) => {
             if (!userId || !memberTypeKey || memberIndex === undefined) {
-                return { name: 'Neznámy hráč', jerseyNumber: '' };
+                return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
             }            
             const cacheKey = `${userId}_${categoryName}_${teamName}_${memberTypeKey}_${memberIndex}`;
             if (memberDataCache[cacheKey]) {
@@ -2233,7 +2325,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             if (member) {
                                 const memberData = {
                                     name: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Neznámy hráč',
-                                    jerseyNumber: member.jerseyNumber || ''
+                                    jerseyNumber: member.jerseyNumber || '',
+                                    jerseyNumber2: member.jerseyNumber2 || ''
                                 };
                                 
                                 setMemberDataCache(prev => ({ ...prev, [cacheKey]: memberData }));
@@ -2245,7 +2338,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             } catch (err) {
             }
             
-            return { name: 'Neznámy hráč', jerseyNumber: '' };
+            return { name: 'Neznámy hráč', jerseyNumber: '', jerseyNumber2: '' };
         };
         
         const getEventIcon = (eventType, eventSubtype) => {
@@ -2285,7 +2378,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         };
         
         const PlayerDisplay = ({ event, isHomeEvent }) => {
-            const [memberData, setMemberData] = React.useState({ name: '', jerseyNumber: '' });
+            const [memberData, setMemberData] = React.useState({ name: '', jerseyNumber: '', jerseyNumber2: '' });
             const [loading, setLoading] = React.useState(true);
             
             const teamName = isHomeEvent 
@@ -2313,7 +2406,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             const displayName = memberData.name;
-            const jerseyNumber = memberData.jerseyNumber;
+
+            // 🔥 Výber správneho čísla dresu podľa aktívnej farby príslušného tímu
+            const activeColorForTeam = isHomeEvent ? homeActiveJerseyColor : awayActiveJerseyColor;
+            const jerseyNumber = activeColorForTeam === 'home'
+                ? (memberData.jerseyNumber || '')
+                : (memberData.jerseyNumber2 || '');
             
             if (isHomeEvent) {
                 return React.createElement(
@@ -2365,7 +2463,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         };
         
         const eventsSortedDesc = [...matchEvents]
-            .filter(event => event.eventType !== 'roster_removal')
+            .filter(event => 
+                event.eventType !== 'roster_removal' && 
+                event.eventType !== 'jersey_color_change'   // 🔥 PRIDANÉ
+            )
             .sort((a, b) => {
                 const timeA = a.totalTime !== undefined ? a.totalTime : (a.matchTime || 0);
                 const timeB = b.totalTime !== undefined ? b.totalTime : (b.matchTime || 0);
