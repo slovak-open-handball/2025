@@ -1,3 +1,4 @@
+// logged-in-all-registrations.js
 import { collection, doc, onSnapshot, setDoc, updateDoc, getDoc, query, orderBy, getDocs, serverTimestamp, addDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { countryDialCodes } from './countryDialCodes.js'; 
 
