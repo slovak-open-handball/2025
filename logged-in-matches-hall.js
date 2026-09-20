@@ -295,6 +295,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) =
                                 firstName: player.firstName || '',
                                 lastName: player.lastName || '',
                                 jerseyNumber: player.jerseyNumber || '',
+                                jerseyNumber2: player.jerseyNumber2 || '',
                                 registrationNumber: player.registrationNumber || '',
                                 userId: userId,
                                 originalIndex: idx 
@@ -851,6 +852,8 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 
                 return {
                     ...member,
+                    jerseyNumber: member.jerseyNumber || '',
+                    jerseyNumber2: member.jerseyNumber2 || '',
                     originalIndex: originalIndex,
                     dbArrayName: member.type === 'Hráč' ? 'playerDetails' : 
                                 (member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails'),
