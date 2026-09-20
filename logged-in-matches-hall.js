@@ -3064,7 +3064,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [suspensionMatchesCount, setSuspensionMatchesCount] = React.useState(1);
     const [allMatchesForTeam, setAllMatchesForTeam] = React.useState([]);
 
-    const [activeJerseyColor, setActiveJerseyColor] = React.useState('home');
+    const [homeActiveJerseyColor, setHomeActiveJerseyColor] = React.useState('home');
+    const [awayActiveJerseyColor, setAwayActiveJerseyColor] = React.useState('home');
 
     const [homeJerseyColors, setHomeJerseyColors] = React.useState({ home: '', away: '' });
     const [awayJerseyColors, setAwayJerseyColors] = React.useState({ home: '', away: '' });
@@ -3078,36 +3079,49 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         }
     });
 
+    // 🔥 Načítanie poslednej farby dresov ZVLÁŠŤ pre domácich a hostí
     React.useEffect(() => {
         if (!window.db || !match.id) return;
-
+    
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(
             eventsRef,
             where('matchId', '==', match.id),
             where('eventType', '==', 'jersey_color_change')
         );
-
+    
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            let latest = null;
-
+            let latestHome = null;
+            let latestAway = null;
+    
             snapshot.forEach((doc) => {
                 const event = doc.data();
                 const ts = event.timestamp?.toDate?.()?.getTime() 
                     || event.createdAt?.toDate?.()?.getTime() 
                     || 0;
-                if (!latest || ts > latest.ts) {
-                    latest = { ts, value: event.eventSubtype };
+
+                // 🔥 team: 'home' alebo 'away' – rozlišujeme podľa poľa "team"
+                if (event.team === 'home') {
+                    if (!latestHome || ts > latestHome.ts) {
+                        latestHome = { ts, value: event.eventSubtype };
+                    }
+                } else if (event.team === 'away') {
+                    if (!latestAway || ts > latestAway.ts) {
+                        latestAway = { ts, value: event.eventSubtype };
+                    }
                 }
             });
 
-            if (latest && (latest.value === 'home' || latest.value === 'away')) {
-                setActiveJerseyColor(latest.value);
+            if (latestHome && (latestHome.value === 'home' || latestHome.value === 'away')) {
+                setHomeActiveJerseyColor(latestHome.value);
+            }
+            if (latestAway && (latestAway.value === 'home' || latestAway.value === 'away')) {
+                setAwayActiveJerseyColor(latestAway.value);
             }
         }, (error) => {
             // ignore
         });
-
+    
         return () => unsubscribe();
     }, [match.id]);
 
@@ -4149,7 +4163,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             }
             
             const displayName = memberData.name;
-            const jerseyNumber = activeJerseyColor === 'home'
+            const activeColorForTeam = isHomeEvent ? homeActiveJerseyColor : awayActiveJerseyColor;
+            const jerseyNumber = activeColorForTeam === 'home'
                 ? (memberData.jerseyNumber || '')
                 : (memberData.jerseyNumber2 || '');
             
@@ -4574,21 +4589,27 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const hasPrevious = currentMatchIndex > 0;
     const hasNext = currentMatchIndex < allMatches.length - 1;
 
-        // 🔥 Prepnutie farby dresov + uloženie do DB
-    const handleJerseyColorChange = async (newColor) => {
+    // 🔥 Prepnutie farby dresov ZVLÁŠŤ pre domácich/hostí + uloženie do DB
+    const handleJerseyColorChange = async (newColor, teamType) => {
         if (newColor !== 'home' && newColor !== 'away') return;
-
-        setActiveJerseyColor(newColor);
-
+        if (teamType !== 'home' && teamType !== 'away') return;
+    
+        // 🔥 Aktualizuj správny stav
+        if (teamType === 'home') {
+            setHomeActiveJerseyColor(newColor);
+        } else {
+            setAwayActiveJerseyColor(newColor);
+        }
+    
         if (!window.db || !match.id) return;
-
+    
         try {
             const eventsRef = collection(window.db, 'matchEvents');
             await addDoc(eventsRef, {
                 matchId: match.id,
                 eventType: 'jersey_color_change',
                 eventSubtype: newColor,
-                team: null,
+                team: teamType,   // 🔥 'home' alebo 'away'
                 categoryName: categoryDisplayName || match.categoryName || null,
                 totalTime: 0,
                 periodTime: 0,
@@ -4874,8 +4895,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 matchId: match.id,
                 periodDuration: categorySettings?.periodDuration || 15,
                 blueCardSuspensions: blueCardSuspensions,
-                activeJerseyColor: activeJerseyColor,
-                onJerseyColorChange: handleJerseyColorChange,
+                // 🔥 VLASTNÁ farba pre domácich
+                activeJerseyColor: homeActiveJerseyColor,
+                onJerseyColorChange: (newColor) => handleJerseyColorChange(newColor, 'home'),
                 jerseyColors: homeJerseyColors
             }),
             React.createElement(TeamMembersList, {
@@ -4888,8 +4910,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 matchId: match.id,
                 periodDuration: categorySettings?.periodDuration || 15,
                 blueCardSuspensions: blueCardSuspensions,
-                activeJerseyColor: activeJerseyColor,
-                onJerseyColorChange: handleJerseyColorChange,
+                // 🔥 VLASTNÁ farba pre hostí
+                activeJerseyColor: awayActiveJerseyColor,
+                onJerseyColorChange: (newColor) => handleJerseyColorChange(newColor, 'away'),
                 jerseyColors: awayJerseyColors
             })
         ),
