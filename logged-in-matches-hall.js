@@ -1139,7 +1139,6 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
-        // 🔥 UPRAVENÁ HLAVIČKA S PREPÍNAČOM FARIEB
         React.createElement(
             'div',
             { className: 'bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between' },
@@ -1150,34 +1149,34 @@ const TeamMembersList = ({ teamName, categoryName, teamType, timerRef, onMappedN
                 React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, 'Spolu: ' + members.length + ' členov')
             ),
             // Prepínač farieb dresov (zobrazí sa len ak sú farby nastavené)
-            (teamJerseyColors.home || teamJerseyColors.away) && React.createElement(
+            (jerseyColors?.home || jerseyColors?.away) && React.createElement(
                 'div',
                 { className: 'flex items-center gap-1 bg-white border border-gray-300 rounded-full p-1' },
-                teamJerseyColors.home && React.createElement(
+                jerseyColors.home && React.createElement(
                     'button',
                     {
-                        onClick: () => setActiveJerseyColor('home'),
+                        onClick: () => onJerseyColorChange('home'),
                         className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
                             activeJerseyColor === 'home'
                                 ? 'bg-blue-500 text-white'
                                 : 'text-gray-600 hover:bg-gray-100'
                         }`,
-                        title: `Farba dresov 1: ${teamJerseyColors.home}`
+                        title: `Farba dresov 1: ${jerseyColors.home}`
                     },
-                    teamJerseyColors.home
+                    jerseyColors.home
                 ),
-                teamJerseyColors.away && React.createElement(
+                jerseyColors.away && React.createElement(
                     'button',
                     {
-                        onClick: () => setActiveJerseyColor('away'),
+                        onClick: () => onJerseyColorChange('away'),
                         className: `px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
                             activeJerseyColor === 'away'
                                 ? 'bg-blue-500 text-white'
                                 : 'text-gray-600 hover:bg-gray-100'
                         }`,
-                        title: `Farba dresov 2: ${teamJerseyColors.away}`
+                        title: `Farba dresov 2: ${jerseyColors.away}`
                     },
-                    teamJerseyColors.away
+                    jerseyColors.away
                 )
             )
         ),
