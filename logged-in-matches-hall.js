@@ -3033,6 +3033,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const isResultAvailable = currentHomeScore !== undefined && currentHomeScore !== null && currentAwayScore !== undefined && currentAwayScore !== null;
     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
     const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+    const categoryDisplayName = match.categoryName || (match.categoryId && window.categoriesData ? window.categoriesData[match.categoryId] : null);
     const categoryColor = getCategoryDrawColor(match.categoryId);
     const lighterCategoryColor = getLighterColor(categoryColor);
     const matchColors = getMatchColors(match, groupsData);
@@ -3767,14 +3768,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         if (matchTimerRef.current && typeof matchTimerRef.current.clearSelectedActions === 'function') {
             matchTimerRef.current.clearSelectedActions();
         }
-    };
-    
-    const getCategoryDisplayName = () => {
-        if (match.categoryName) return match.categoryName;
-        if (match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
-            return window.categoriesData[match.categoryId];
-        }
-        return null;
     };
     
     const categoryDisplayName = getCategoryDisplayName();
