@@ -1500,10 +1500,16 @@ const CrossTable = ({
                             const leftStyle = { ...subCellLeftStyle };
                             const middleStyle = { ...subCellBaseStyle };
                             const rightStyle = { ...subCellRightStyle };
+
                             if (bgColor) {
                                 leftStyle.backgroundColor = bgColor;
                                 middleStyle.backgroundColor = bgColor;
                                 rightStyle.backgroundColor = bgColor;
+
+                                leftStyle.borderRight = `1px solid ${bgColor}`;
+                                middleStyle.borderLeft = `1px solid ${bgColor}`;
+                                middleStyle.borderRight = `1px solid ${bgColor}`;
+                                rightStyle.borderLeft = `1px solid ${bgColor}`;
                             }
 
                             rowCells.push(
