@@ -380,52 +380,57 @@ const ExportApp = ({ userProfileData }) => {
     }, [selectedGroupType, exportHash]);
 
     useEffect(() => {
-        const hasMatchesNow = window.matchTracker?.getAllMatches?.()?.length > 0;
-        const mappingNow = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
+        let resolved = false;
 
-        if (hasMatchesNow || mappingNow) {
+        const markReady = () => {
+            if (resolved) return;
+            resolved = true;
             setIsTrackerReady(true);
+        };
+
+        // Aspoň JEDEN zdroj mien musí byť dostupný
+        const trackerReady = () => {
+            const hasTracker = !!window.matchTracker
+                && typeof window.matchTracker.getTeamNameByDisplayId === 'function';
+            const hasManager = !!window.teamManager
+                && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
+            const hasMapping = !!(window.__teamNameMapping
+                && Object.keys(window.__teamNameMapping).length > 0);
+            return hasTracker || hasManager || hasMapping;
+        };
+
+        if (trackerReady()) {
+            markReady();
             return;
         }
 
-        const handleGroupTablesUpdated = (event) => {
-            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
-            if (hasMatches) {
-                setIsTrackerReady(true);
-            }
+        const handleReady = () => {
+            if (trackerReady()) markReady();
         };
 
-        const handleMappingReady = (event) => {
-            setIsTrackerReady(true);
-        };
-
-        window.addEventListener('teamNameMappingReady', handleMappingReady);
-        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+        window.addEventListener('teamNameMappingReady', handleReady);
+        window.addEventListener('groupTablesUpdated', handleReady);
 
         let attempts = 0;
-        const maxAttempts = 200;
+        const maxAttempts = 200; // 60 s
         const pollInterval = setInterval(() => {
             attempts++;
 
-            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
-            const mappingReady = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
-            const teamManagerReady = window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
-
-            if (hasMatches || mappingReady || teamManagerReady) {
+            if (trackerReady()) {
                 clearInterval(pollInterval);
-                setIsTrackerReady(true);
+                markReady();
                 return;
             }
 
             if (attempts >= maxAttempts) {
                 clearInterval(pollInterval);
-                setIsTrackerReady(true);
+                markReady(); // fallback, aby sa niečo zobrazilo
             }
         }, 300);
 
         return () => {
-            window.removeEventListener('teamNameMappingReady', handleMappingReady);
-            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+            window.removeEventListener('teamNameMappingReady', handleReady);
+            window.removeEventListener('groupTablesUpdated', handleReady);
             clearInterval(pollInterval);
         };
     }, []);
@@ -580,6 +585,35 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
+                // NOVÉ: getFreshTeamName – vždy najaktuálnejšie meno z dostupných zdrojov
+                const getFreshTeamName = (identifier) => {
+                    if (!identifier) return identifier;
+
+                    if (teamNamesFromMatches[identifier]) return teamNamesFromMatches[identifier];
+
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
+                            if (mapped && mapped !== identifier) {
+                                teamNamesFromMatches[identifier] = mapped;
+                                return mapped;
+                            }
+                        } catch (e) { }
+                    }
+
+                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        try {
+                            const mapped = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                            if (mapped && mapped !== identifier) {
+                                teamNamesFromMatches[identifier] = mapped;
+                                return mapped;
+                            }
+                        } catch (e) { }
+                    }
+
+                    return identifier;
+                };
+
                 const groupMatches = allMatches.filter(m => {
                     if (m.isPlacementMatch) return false;
                     let mCatName = m.categoryName;
@@ -596,18 +630,24 @@ const ExportApp = ({ userProfileData }) => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
                         teamsMap.set(m.homeTeamIdentifier, {
                             id: m.homeTeamIdentifier,
-                            name: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier
+                            name: getFreshTeamName(m.homeTeamIdentifier)
                         });
                     }
                     if (m.awayTeamIdentifier && !teamsMap.has(m.awayTeamIdentifier)) {
                         teamsMap.set(m.awayTeamIdentifier, {
                             id: m.awayTeamIdentifier,
-                            name: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier
+                            name: getFreshTeamName(m.awayTeamIdentifier)
                         });
                     }
                 });
 
                 const teams = Array.from(teamsMap.values());
+
+                // Poistka: aktualizuj mená ešte raz, keby sa medzitým niečo doplnilo
+                teams.forEach(t => {
+                    const fresh = getFreshTeamName(t.id);
+                    if (fresh && fresh !== t.id) t.name = fresh;
+                });
 
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
@@ -677,11 +717,12 @@ const ExportApp = ({ userProfileData }) => {
 
                         candidateCount++;
 
-                        let homeTeam = null, awayTeam = null;
-                        for (const team of teams) {
-                            if (team.name === homeTeamName) homeTeam = team;
-                            if (team.name === awayTeamName) awayTeam = team;
-                        }
+                        // Párovanie PREDOVŠETKÝM podľa ID, fallback podľa mena
+                        let homeTeam = teams.find(t => t.id === m.homeTeamIdentifier);
+                        let awayTeam = teams.find(t => t.id === m.awayTeamIdentifier);
+
+                        if (!homeTeam) homeTeam = teams.find(t => t.name === homeTeamName);
+                        if (!awayTeam) awayTeam = teams.find(t => t.name === awayTeamName);
 
                         if (!homeTeam || !awayTeam) {
                             skippedByTeamMatch++;
