@@ -869,31 +869,105 @@ const ExportApp = ({ userProfileData }) => {
                 });
 
                 if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
-                    Object.keys(matrix).forEach(h => {
-                        Object.keys(matrix[h] || {}).forEach(a => {
-                            const cell = matrix[h][a];
-                            if (!cell || !cell.isTransferred) return;
-                            const alreadyIncluded = matchesForComparison.some(m =>
-                                (m.homeTeamIdentifier === h && m.awayTeamIdentifier === a) ||
-                                (m.homeTeamIdentifier === a && m.awayTeamIdentifier === h)
-                            );
-                            if (alreadyIncluded) return;
+                    const allBaseGroups = groupList
+                        .filter(g => g.type === 'základná skupina')
+                        .map(g => g.name);
+                    const allAdvancedGroups = groupList
+                        .filter(g => g.type === 'nadstavbová skupina')
+                        .map(g => g.name);
 
-                            const homeTeamName = teams.find(t => t.id === h)?.name || h;
-                            const awayTeamName = teams.find(t => t.id === a)?.name || a;
-
-                            matchesForComparison.push({
-                                id: `transferred_${h}_${a}`,
-                                homeTeamIdentifier: h,
-                                awayTeamIdentifier: a,
-                                homeTeamName: homeTeamName,
-                                awayTeamName: awayTeamName,
-                                homeScore: cell.homeScore ?? 0,
-                                awayScore: cell.awayScore ?? 0,
-                                status: 'completed',
-                                isTransferred: true
-                            });
+                    // KROK 1: Vypočítaj finálne mená tímov pre všetky základné skupiny
+                    // (rovnako ako tables.js — cez calculateGroupTable, alebo manuálne)
+                    const baseGroupTeamNames = new Map(); // identifier -> finalName
+                    for (const baseGroupName of allBaseGroups) {
+                        const baseMatches = allMatches.filter(m => {
+                            if (m.isPlacementMatch) return false;
+                            let mCatName = m.categoryName;
+                            if (!mCatName && m.categoryId && categoriesData[m.categoryId]) {
+                                mCatName = categoriesData[m.categoryId].name;
+                            }
+                            if (!mCatName || !m.groupName) return false;
+                            return normalizeName(mCatName) === normalizeName(categoryName)
+                                && normalizeName(m.groupName) === normalizeName(baseGroupName);
                         });
+
+                        for (const bm of baseMatches) {
+                            if (bm.homeTeamIdentifier && !baseGroupTeamNames.has(bm.homeTeamIdentifier)) {
+                                baseGroupTeamNames.set(bm.homeTeamIdentifier, getFreshTeamName(bm.homeTeamIdentifier));
+                            }
+                            if (bm.awayTeamIdentifier && !baseGroupTeamNames.has(bm.awayTeamIdentifier)) {
+                                baseGroupTeamNames.set(bm.awayTeamIdentifier, getFreshTeamName(bm.awayTeamIdentifier));
+                            }
+                        }
+                    }
+
+                    // KROK 2: Pre každý prenesený zápas použi finálne meno
+                    let candidateCount = 0;
+                    let transferredCount = 0;
+                    let skippedByTeamMatch = 0;
+                
+                    allMatches.forEach(m => {
+                        if (m.isPlacementMatch) return;
+                        if (m.status !== 'completed') return;
+                
+                        let mCatName = m.categoryName;
+                        if (!mCatName && m.categoryId && categoriesData[m.categoryId]) {
+                            mCatName = categoriesData[m.categoryId].name;
+                        }
+                        if (!mCatName) return;
+                        if (normalizeName(mCatName) !== normalizeName(categoryName)) return;
+                        if (!m.groupName) return;
+
+                        const isBase = allBaseGroups.some(bg => normalizeName(bg) === normalizeName(m.groupName));
+                        const isOtherAdvanced = allAdvancedGroups.some(ag =>
+                            normalizeName(ag) === normalizeName(m.groupName) &&
+                            normalizeName(ag) !== normalizeName(groupName)
+                        );
+                        if (!isBase && !isOtherAdvanced) return;
+                
+                        candidateCount++;
+                
+                        // KĽÚČOVÉ: použi finálne meno z baseGroupTeamNames (ako tables.js)
+                        const homeFinalName = baseGroupTeamNames.get(m.homeTeamIdentifier)
+                            || teamNamesFromMatches[m.homeTeamIdentifier]
+                            || m.homeTeamIdentifier;
+                        const awayFinalName = baseGroupTeamNames.get(m.awayTeamIdentifier)
+                            || teamNamesFromMatches[m.awayTeamIdentifier]
+                            || m.awayTeamIdentifier;
+
+                        // Párovanie do teams: najprv podľa ID, potom podľa finálneho mena
+                        let homeTeam = teams.find(t => t.id === m.homeTeamIdentifier);
+                        let awayTeam = teams.find(t => t.id === m.awayTeamIdentifier);
+                
+                        if (!homeTeam) homeTeam = teams.find(t => t.name === homeFinalName);
+                        if (!awayTeam) awayTeam = teams.find(t => t.name === awayFinalName);
+                
+                        if (!homeTeam || !awayTeam) {
+                            skippedByTeamMatch++;
+                            return;
+                        }
+                
+                        const h = homeTeam.id;
+                        const a = awayTeam.id;
+
+                        const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
+                        if (processedPairs.has(pairKey)) return;
+                        processedPairs.add(pairKey);
+
+                        let hs = m.homeScore || 0;
+                        let as = m.awayScore || 0;
+
+                        if (!matrix[h]) matrix[h] = {};
+                        if (!matrix[h][a]) {
+                            matrix[h][a] = {
+                                homeScore: hs,
+                                awayScore: as,
+                                status: 'completed',
+                                isTransferred: true,
+                                fromGroup: m.groupName
+                            };
+                            transferredCount++;
+                        }
                     });
                 }
 
