@@ -625,6 +625,39 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
 
     const groupTypeLabel = groupType === 'nadstavbová skupina' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
 
+    /**
+     * Získa výsledok zápasu medzi dvoma tímami z pohľadu riadkového tímu.
+     * Vráti { homeScore, awayScore, status, isSwapped } alebo null.
+     *
+     * - Ak je zápas uložený ako rowTeam (domáci) vs colTeam (hostia) → použijeme priamo.
+     * - Ak je uložený opačne (colTeam domáci, rowTeam hostia) → otočíme skóre.
+     */
+    const getMatchResult = (rowTeamId, colTeamId) => {
+        // Skúsime priamy záznam: rowTeam bol domáci
+        const direct = matrix?.[rowTeamId]?.[colTeamId];
+        if (direct) {
+            return {
+                homeScore: direct.homeScore,
+                awayScore: direct.awayScore,
+                status: direct.status,
+                isSwapped: false
+            };
+        }
+
+        // Skúsime opačný záznam: colTeam bol domáci → otočíme skóre
+        const reversed = matrix?.[colTeamId]?.[rowTeamId];
+        if (reversed) {
+            return {
+                homeScore: reversed.awayScore,
+                awayScore: reversed.homeScore,
+                status: reversed.status,
+                isSwapped: true
+            };
+        }
+
+        return null;
+    };
+
     return React.createElement(
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
@@ -670,7 +703,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                             'Tím / Súper'
                         ),
                         // Názvy tímov v stĺpcoch
-                        teams.map((team, idx) =>
+                        teams.map((team) =>
                             React.createElement(
                                 'th',
                                 {
@@ -715,9 +748,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                     );
                                 }
 
-                                const cell = matrix?.[rowTeam.id]?.[colTeam.id];
+                                const matchResult = getMatchResult(rowTeam.id, colTeam.id);
 
-                                if (!cell) {
+                                if (!matchResult) {
                                     return React.createElement(
                                         'td',
                                         {
@@ -728,8 +761,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                     );
                                 }
 
-                                const isCompleted = cell.status === 'completed'
-                                    || (cell.homeScore !== null && cell.awayScore !== null && cell.status !== 'scheduled');
+                                const isCompleted = matchResult.status === 'completed'
+                                    || (matchResult.homeScore !== null && matchResult.awayScore !== null && matchResult.status !== 'scheduled');
 
                                 if (!isCompleted) {
                                     return React.createElement(
@@ -742,11 +775,12 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                     );
                                 }
 
-                                const hs = cell.homeScore ?? 0;
-                                const as = cell.awayScore ?? 0;
+                                const hs = matchResult.homeScore ?? 0;
+                                const as = matchResult.awayScore ?? 0;
                                 const rowWin = hs > as;
                                 const rowLoss = hs < as;
 
+                                // Skóre vždy z pohľadu riadkového tímu (rowTeam = "domáci" v tomto zobrazení)
                                 return React.createElement(
                                     'td',
                                     {
@@ -755,7 +789,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                             rowWin ? 'bg-green-50 text-green-700'
                                                 : rowLoss ? 'bg-red-50 text-red-700'
                                                 : 'bg-yellow-50 text-yellow-700'
-                                        }`
+                                        }`,
+                                        title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
                                     },
                                     `${hs}:${as}`
                                 );
