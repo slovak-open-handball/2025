@@ -1,3 +1,4 @@
+// logged-in-export.js
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -45,6 +46,38 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
+
+/**
+ * Skryje hlavičku a ľavé menu, ak URL obsahuje akýkoľvek hash.
+ */
+const hideHeaderAndMenuIfHash = () => {
+    if (window.location.hash && window.location.hash.length > 0) {
+        const headerPlaceholder = document.getElementById('header-placeholder');
+        const menuPlaceholder = document.getElementById('menu-placeholder');
+        if (headerPlaceholder) {
+            headerPlaceholder.style.display = 'none';
+        }
+        if (menuPlaceholder) {
+            menuPlaceholder.style.display = 'none';
+        }
+        // Odstránime aj padding-top na body, ktorý bol určený pre pevnú hlavičku
+        document.body.style.paddingTop = '0';
+        // Odstránime pomocný div pre zbalené menu, ak existuje
+        const mainContentArea = document.getElementById('main-content-area');
+        if (mainContentArea) {
+            const spacerDiv = mainContentArea.querySelector('.flex-shrink-0.w-16');
+            if (spacerDiv) {
+                spacerDiv.style.display = 'none';
+            }
+        }
+    }
+};
+
+// Okamžite skryjeme hlavičku a menu, ak URL obsahuje hash
+hideHeaderAndMenuIfHash();
+
+// Počúvame na zmeny hash v URL (napr. pri navigácii v rámci SPA)
+window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
 const TemplateApp = ({ userProfileData }) => {
     return React.createElement(
