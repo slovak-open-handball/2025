@@ -1422,7 +1422,7 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: rightStyle
+                                    style: leftStyle
                                 }, hs),
                                 React.createElement('td', {
                                     key: `${keyBase}-m`,
@@ -1432,7 +1432,7 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: leftStyle
+                                    style: rightStyle
                                 }, as)
                             );
                         });
