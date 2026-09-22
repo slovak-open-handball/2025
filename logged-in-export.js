@@ -1422,7 +1422,7 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: leftStyle
+                                    style: rightStyle
                                 }, hs),
                                 React.createElement('td', {
                                     key: `${keyBase}-m`,
@@ -1432,7 +1432,7 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: rightStyle
+                                    style: leftStyle
                                 }, as)
                             );
                         });
@@ -1441,8 +1441,8 @@ const CrossTable = ({
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
-                                className: baseCell + ' ' + FONT_CLASS + ' font-mono',
-                                style: subCellLeftStyle
+                                className: baseCell + ' ' + FONT_CLASS ,
+                                style: subCellRightStyle
                             }, stats && showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
@@ -1451,8 +1451,8 @@ const CrossTable = ({
                             }, stats && showTotals ? ':' : ''),
                             React.createElement('td', {
                                 key: 'total-conceded',
-                                className: baseCell + ' ' + FONT_CLASS + ' font-mono',
-                                style: subCellRightStyle
+                                className: baseCell + ' ' + FONT_CLASS,
+                                style: subCellLeftStyle
                             }, stats && showTotals ? stats.goalsAgainst : '')
                         );
 
