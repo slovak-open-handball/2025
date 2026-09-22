@@ -128,7 +128,7 @@ const ExportApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-center' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8` },
             React.createElement(
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
@@ -165,7 +165,7 @@ const ExportApp = ({ userProfileData }) => {
                     {
                         onClick: handleGenerate,
                         disabled: !selectedOption,
-                        className: `w-full px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.01] ${selectedOption ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`
+                        className: `w-full px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md ${selectedOption ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' : 'bg-white border-2 border-blue-600 text-blue-600 cursor-not-allowed'}`
                     },
                     'Generovať'
                 )
