@@ -1114,6 +1114,8 @@ const CrossTable = ({
     const CELL_WIDTH = '200px';
     const CELL_HEIGHT = '200px';
     const SUB_CELL_WIDTH = '66.66px';
+    const MIDDLE_CELL_WIDTH = '20px'; // 10% z 200px
+    const SIDE_CELL_WIDTH = '90px'; // (200 - 20) / 2 = 90px
 
     const cellStyle = {
         width: CELL_WIDTH,
@@ -1125,9 +1127,20 @@ const CrossTable = ({
     };
 
     const subCellBaseStyle = {
-        width: SUB_CELL_WIDTH,
-        minWidth: SUB_CELL_WIDTH,
-        maxWidth: SUB_CELL_WIDTH,
+        width: SIDE_CELL_WIDTH,
+        minWidth: SIDE_CELL_WIDTH,
+        maxWidth: SIDE_CELL_WIDTH,
+        height: CELL_HEIGHT,
+        minHeight: CELL_HEIGHT,
+        maxHeight: CELL_HEIGHT,
+        borderLeft: '1px solid #ffffff',
+        borderRight: '1px solid #ffffff'
+    };
+
+    const subCellMiddleStyle = {
+        width: MIDDLE_CELL_WIDTH,
+        minWidth: MIDDLE_CELL_WIDTH,
+        maxWidth: MIDDLE_CELL_WIDTH,
         height: CELL_HEIGHT,
         minHeight: CELL_HEIGHT,
         maxHeight: CELL_HEIGHT,
@@ -1335,7 +1348,7 @@ const CrossTable = ({
 
                             if (!isMatchCompleted(matchResult) && transferredByChar) {
                                 const tLeftStyle = { ...subCellLeftStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
-                                const tMiddleStyle = { ...subCellBaseStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
+                                const tMiddleStyle = { ...subCellMiddleStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
                                 const tRightStyle = { ...subCellRightStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
                             
                                 tLeftStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
@@ -1352,7 +1365,7 @@ const CrossTable = ({
                                     React.createElement('td', {
                                         key: `${keyBase}-t2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: tMiddleStyle
+                                        style: { ...subCellMiddleStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-t3`,
@@ -1397,7 +1410,7 @@ const CrossTable = ({
                                     React.createElement('td', {
                                         key: `${keyBase}-z2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
+                                        style: { ...subCellMiddleStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
@@ -1411,7 +1424,7 @@ const CrossTable = ({
                             const bgColor = matchResult.isTransferred ? TRANSFERRED_BG : '';
 
                             const leftStyle = { ...subCellLeftStyle };
-                            const middleStyle = { ...subCellBaseStyle };
+                            const middleStyle = { ...subCellMiddleStyle  };
                             const rightStyle = { ...subCellRightStyle };
 
                             if (bgColor) {
@@ -1434,7 +1447,7 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-m`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: middleStyle
+                                    style: subCellMiddleStyle
                                 }, ':'),
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
@@ -1454,7 +1467,7 @@ const CrossTable = ({
                             React.createElement('td', {
                                 key: 'total-colon',
                                 className: baseCell + ' ' + FONT_CLASS,
-                                style: subCellBaseStyle
+                                style: subCellMiddleStyle
                             }, ':'), 
                             React.createElement('td', {
                                 key: 'total-conceded',
