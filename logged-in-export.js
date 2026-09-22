@@ -1,133 +1,131 @@
 // logged-in-export.js
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+const { useState, useEffect, useRef } = React;
 
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
+/* ============================================================
+   GLOBÁLNA NOTIFIKÁCIA
+   ============================================================ */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
-        case 'success':
-            typeClasses = 'bg-green-500 text-white';
-            break;
-        case 'error':
-            typeClasses = 'bg-red-500 text-white';
-            break;
-        case 'info':
-            typeClasses = 'bg-blue-500 text-white';
-            break;
-        default:
-            typeClasses = 'bg-gray-700 text-white';
+        case 'success': typeClasses = 'bg-green-500 text-white'; break;
+        case 'error':   typeClasses = 'bg-red-500 text-white'; break;
+        case 'info':    typeClasses = 'bg-blue-500 text-white'; break;
+        default:        typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
-
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
 
-/**
- * Skryje hlavičku, ľavé menu a export box, ak URL obsahuje akýkoľvek hash.
- */
+/* ============================================================
+   SKRYTIE HLAVIČKY / MENU PRI HASHI
+   ============================================================ */
 const hideHeaderAndMenuIfHash = () => {
-    if (window.location.hash && window.location.hash.length > 0) {
-        const headerPlaceholder = document.getElementById('header-placeholder');
-        const menuPlaceholder = document.getElementById('menu-placeholder');
-        if (headerPlaceholder) {
-            headerPlaceholder.style.display = 'none';
-        }
-        if (menuPlaceholder) {
-            menuPlaceholder.style.display = 'none';
-        }
-        // Odstránime aj padding-top na body, ktorý bol určený pre pevnú hlavičku
+    const hasHash = window.location.hash && window.location.hash.length > 0;
+
+    const headerPlaceholder = document.getElementById('header-placeholder');
+    const menuPlaceholder = document.getElementById('menu-placeholder');
+    const rootElement = document.getElementById('root');
+    const mainContentArea = document.getElementById('main-content-area');
+    const spacerDiv = mainContentArea ? mainContentArea.querySelector('.flex-shrink-0.w-16') : null;
+
+    if (hasHash) {
+        if (headerPlaceholder) headerPlaceholder.style.display = 'none';
+        if (menuPlaceholder) menuPlaceholder.style.display = 'none';
         document.body.style.paddingTop = '0';
-        // Odstránime pomocný div pre zbalené menu, ak existuje
-        const mainContentArea = document.getElementById('main-content-area');
-        if (mainContentArea) {
-            const spacerDiv = mainContentArea.querySelector('.flex-shrink-0.w-16');
-            if (spacerDiv) {
-                spacerDiv.style.display = 'none';
-            }
-        }
-        // Skryjeme aj samotný export box (root)
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-            rootElement.style.display = 'none';
-        }
+        if (spacerDiv) spacerDiv.style.display = 'none';
+        // POZOR: root už NEskrývame – chceme, aby sa vykreslil export tabuľky
     } else {
-        // Ak hash nie je prítomný, všetko zobrazíme späť
-        const headerPlaceholder = document.getElementById('header-placeholder');
-        const menuPlaceholder = document.getElementById('menu-placeholder');
-        if (headerPlaceholder) {
-            headerPlaceholder.style.display = '';
-        }
-        if (menuPlaceholder) {
-            menuPlaceholder.style.display = '';
-        }
+        if (headerPlaceholder) headerPlaceholder.style.display = '';
+        if (menuPlaceholder) menuPlaceholder.style.display = '';
         document.body.style.paddingTop = '64px';
-        const mainContentArea = document.getElementById('main-content-area');
-        if (mainContentArea) {
-            const spacerDiv = mainContentArea.querySelector('.flex-shrink-0.w-16');
-            if (spacerDiv) {
-                spacerDiv.style.display = '';
-            }
-        }
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-            rootElement.style.display = '';
-        }
+        if (spacerDiv) spacerDiv.style.display = '';
+        if (rootElement) rootElement.style.display = '';
     }
 };
 
-// Okamžite skryjeme hlavičku, menu a export box, ak URL obsahuje hash
 hideHeaderAndMenuIfHash();
-
-// Počúvame na zmeny hash v URL (napr. pri navigácii v rámci SPA)
 window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
-/**
- * Pomocná funkcia - nahradí všetky medzery znakom '-'
- */
-const spacesToDashes = (str) => {
-    if (!str) return '';
-    return str.replace(/\s+/g, '-');
-};
+/* ============================================================
+   POMOCNÉ FUNKCIE PRE URL
+   ============================================================ */
+const spacesToDashes = (str) => (!str ? '' : str.replace(/\s+/g, '-'));
+const dashesToSpaces = (str) => (!str ? '' : str.replace(/-/g, ' '));
+window.spacesToDashes = spacesToDashes;
+window.dashesToSpaces = dashesToSpaces;
 
 /**
- * Pomocná funkcia - nahradí všetky znaky '-' znakom ' ' (medzera)
+ * Parsovanie hashu:
+ *   #tabulky/<categoryName>/<groupName>
+ * vracia { type: 'tabulky', categoryName, groupName } alebo null
  */
-const dashesToSpaces = (str) => {
-    if (!str) return '';
-    return str.replace(/-/g, ' ');
-};
+const parseExportHash = () => {
+    const hash = window.location.hash;
+    if (!hash || hash === '#') return null;
 
-const ExportApp = ({ userProfileData }) => {
-    // Ak URL obsahuje hash, nevykreslíme nič
-    if (window.location.hash && window.location.hash.length > 0) {
-        return null;
+    const raw = hash.substring(1);
+    const parts = raw.split('/').filter(Boolean);
+
+    if (parts.length === 0) return null;
+
+    if (parts[0] === 'tabulky') {
+        if (parts.length < 3) return null;
+        const categoryName = dashesToSpaces(decodeURIComponent(parts[1]));
+        const groupName = dashesToSpaces(decodeURIComponent(parts[2]));
+        return { type: 'tabulky', categoryName, groupName };
     }
 
+    if (parts[0] === 'zapasy') {
+        return { type: 'zapasy' };
+    }
+
+    return null;
+};
+
+/* ============================================================
+   POMOCNÉ FUNKCIE PRE TABUĽKU
+   ============================================================ */
+const normalizeName = (name) => {
+    if (!name) return '';
+    return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+};
+
+const getDisplayTeamName = (teamIdentifier) => {
+    if (!teamIdentifier) return '???';
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        const teamName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+        if (teamName && teamName !== teamIdentifier) return teamName;
+    }
+    return teamIdentifier;
+};
+
+/* ============================================================
+   HLAVNÝ KOMPONENT
+   ============================================================ */
+const ExportApp = ({ userProfileData }) => {
+    const exportHash = parseExportHash();
+
+    // Ak nie je platný hash, zobrazíme klasický export box
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
@@ -136,15 +134,19 @@ const ExportApp = ({ userProfileData }) => {
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
-    // Načítanie kategórií a skupín z Firestore pomocou onSnapshot (real-time)
+    // Stav pre exportovanú tabuľku
+    const [exportedTable, setExportedTable] = useState(null);
+    const [loadingTable, setLoadingTable] = useState(false);
+    const [errorTable, setErrorTable] = useState(null);
+
+    /* --------- Načítanie kategórií a skupín (len keď NIE je hash) --------- */
     useEffect(() => {
-        if (selectedOption !== 'tabulky') {
-            return;
-        }
+        if (exportHash) return; // pri hash-i nepotrebujeme select boxy
+
+        if (selectedOption !== 'tabulky') return;
 
         setIsLoadingCategories(true);
 
-        // Načítanie kategórií
         const unsubscribeCategories = onSnapshot(
             doc(window.db, 'settings', 'categories'),
             (docSnap) => {
@@ -168,7 +170,6 @@ const ExportApp = ({ userProfileData }) => {
             }
         );
 
-        // Načítanie skupín
         const unsubscribeGroups = onSnapshot(
             doc(window.db, 'settings', 'groups'),
             (docSnap) => {
@@ -188,27 +189,194 @@ const ExportApp = ({ userProfileData }) => {
             unsubscribeCategories();
             unsubscribeGroups();
         };
-    }, [selectedOption]);
+    }, [selectedOption, exportHash]);
 
-    // Reset všetkých vybraných hodnôt pri zmene typu exportu
+    /* --------- Reset select boxov --------- */
     useEffect(() => {
+        if (exportHash) return;
         setSelectedCategoryId('');
         setSelectedGroupType('');
         setSelectedGroupName('');
-    }, [selectedOption]);
+    }, [selectedOption, exportHash]);
 
-    // Reset typu skupiny a skupiny pri zmene kategórie
     useEffect(() => {
+        if (exportHash) return;
         setSelectedGroupType('');
         setSelectedGroupName('');
-    }, [selectedCategoryId]);
+    }, [selectedCategoryId, exportHash]);
 
-    // Reset konkrétnej skupiny pri zmene typu skupiny
     useEffect(() => {
+        if (exportHash) return;
         setSelectedGroupName('');
-    }, [selectedGroupType]);
+    }, [selectedGroupType, exportHash]);
 
-    // Dostupné typy skupín pre vybranú kategóriu (unikátne, zoradené: základná, nadstavbová)
+    /* --------- Načítanie tabuľky pre hash --------- */
+    useEffect(() => {
+        if (!exportHash || exportHash.type !== 'tabulky') {
+            setExportedTable(null);
+            return;
+        }
+
+        let isCancelled = false;
+        setLoadingTable(true);
+        setErrorTable(null);
+
+        const loadData = async () => {
+            try {
+                // 1) Načítame kategórie a skupiny
+                const [categoriesSnap, groupsSnap] = await Promise.all([
+                    getDoc(doc(window.db, 'settings', 'categories')),
+                    getDoc(doc(window.db, 'settings', 'groups'))
+                ]);
+
+                const categoriesData = categoriesSnap.exists() ? categoriesSnap.data() : {};
+                const groupsData = groupsSnap.exists() ? groupsSnap.data() : {};
+
+                // 2) Nájdeme categoryId podľa názvu (bez diakritiky)
+                let categoryId = null;
+                let categoryName = exportHash.categoryName;
+                const targetCategoryNorm = normalizeName(exportHash.categoryName);
+
+                for (const [catId, catData] of Object.entries(categoriesData)) {
+                    if (catData && catData.name && normalizeName(catData.name) === targetCategoryNorm) {
+                        categoryId = catId;
+                        categoryName = catData.name;
+                        break;
+                    }
+                }
+
+                if (!categoryId) {
+                    if (!isCancelled) {
+                        setErrorTable(`Kategória "${exportHash.categoryName}" sa nenašla.`);
+                        setLoadingTable(false);
+                    }
+                    return;
+                }
+
+                // 3) Nájdeme skupinu (podľa názvu, bez diakritiky) v rámci kategórie
+                const groupList = groupsData[categoryId] || [];
+                const targetGroupNorm = normalizeName(exportHash.groupName);
+                let foundGroup = null;
+                for (const g of groupList) {
+                    if (g && g.name && normalizeName(g.name) === targetGroupNorm) {
+                        foundGroup = g;
+                        break;
+                    }
+                }
+
+                if (!foundGroup) {
+                    if (!isCancelled) {
+                        setErrorTable(`Skupina "${exportHash.groupName}" sa v kategórii "${categoryName}" nenašla.`);
+                        setLoadingTable(false);
+                    }
+                    return;
+                }
+
+                const groupName = foundGroup.name;
+                const groupType = foundGroup.type;
+
+                // 4) Načítame všetky zápasy
+                const matchesSnap = await getDocs(collection(window.db, 'matches'));
+                const allMatches = [];
+                matchesSnap.forEach((d) => allMatches.push({ id: d.id, ...d.data() }));
+
+                // 5) Filtrujeme zápasy pre danú kategóriu + skupinu
+                const groupMatches = allMatches.filter(m => {
+                    if (m.isPlacementMatch) return false;
+                    let mCatName = m.categoryName;
+                    if (!mCatName && m.categoryId && categoriesData[m.categoryId]) {
+                        mCatName = categoriesData[m.categoryId].name;
+                    }
+                    if (!mCatName || !m.groupName) return false;
+                    return normalizeName(mCatName) === normalizeName(categoryName)
+                        && normalizeName(m.groupName) === normalizeName(groupName);
+                });
+
+                // 6) Pripravíme mená tímov
+                const teamNamesMap = {};
+                groupMatches.forEach(m => {
+                    if (m.homeTeamIdentifier && !teamNamesMap[m.homeTeamIdentifier]) {
+                        teamNamesMap[m.homeTeamIdentifier] =
+                            (window.teamNames && window.teamNames[m.homeTeamIdentifier]) ||
+                            getDisplayTeamName(m.homeTeamIdentifier) ||
+                            m.homeTeamName ||
+                            m.homeTeamIdentifier;
+                    }
+                    if (m.awayTeamIdentifier && !teamNamesMap[m.awayTeamIdentifier]) {
+                        teamNamesMap[m.awayTeamIdentifier] =
+                            (window.teamNames && window.teamNames[m.awayTeamIdentifier]) ||
+                            getDisplayTeamName(m.awayTeamIdentifier) ||
+                            m.awayTeamName ||
+                            m.awayTeamIdentifier;
+                    }
+                });
+
+                // 7) Zostavíme zoznam tímov
+                const teamsMap = new Map();
+                groupMatches.forEach(m => {
+                    if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
+                        teamsMap.set(m.homeTeamIdentifier, {
+                            id: m.homeTeamIdentifier,
+                            name: teamNamesMap[m.homeTeamIdentifier] || m.homeTeamIdentifier
+                        });
+                    }
+                    if (m.awayTeamIdentifier && !teamsMap.has(m.awayTeamIdentifier)) {
+                        teamsMap.set(m.awayTeamIdentifier, {
+                            id: m.awayTeamIdentifier,
+                            name: teamNamesMap[m.awayTeamIdentifier] || m.awayTeamIdentifier
+                        });
+                    }
+                });
+
+                const teams = Array.from(teamsMap.values())
+                    .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+
+                // 8) Vytvoríme maticu vzájomných zápasov
+                // matrix[homeId][awayId] = { homeScore, awayScore, status }
+                const matrix = {};
+                teams.forEach(t => { matrix[t.id] = {}; });
+
+                groupMatches.forEach(m => {
+                    const h = m.homeTeamIdentifier;
+                    const a = m.awayTeamIdentifier;
+                    if (!h || !a) return;
+                    if (!matrix[h]) matrix[h] = {};
+                    if (!matrix[h][a]) {
+                        matrix[h][a] = {
+                            homeScore: m.homeScore ?? null,
+                            awayScore: m.awayScore ?? null,
+                            status: m.status || 'scheduled'
+                        };
+                    }
+                });
+
+                if (isCancelled) return;
+
+                setExportedTable({
+                    categoryName,
+                    groupName,
+                    groupType,
+                    teams,
+                    matrix,
+                    totalMatches: groupMatches.length
+                });
+                setLoadingTable(false);
+
+            } catch (err) {
+                console.error("Chyba pri načítavaní tabuľky:", err);
+                if (!isCancelled) {
+                    setErrorTable('Nepodarilo sa načítať tabuľku.');
+                    setLoadingTable(false);
+                }
+            }
+        };
+
+        loadData();
+
+        return () => { isCancelled = true; };
+    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName]);
+
+    /* --------- Dostupné typy skupín (pre select box) --------- */
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
             if (a === b) return 0;
@@ -216,7 +384,6 @@ const ExportApp = ({ userProfileData }) => {
         })
         : [];
 
-    // Dostupné skupiny pre vybranú kategóriu a typ skupiny
     const availableGroups = (selectedCategoryId && selectedGroupType)
         ? (groups[selectedCategoryId] || [])
             .filter(g => g.type === selectedGroupType)
@@ -224,13 +391,11 @@ const ExportApp = ({ userProfileData }) => {
             .sort((a, b) => a.name.localeCompare(b.name))
         : [];
 
-    // Formátovanie názvu typu pre zobrazenie (prvé písmeno veľké)
     const formatGroupType = (type) => {
         if (!type) return '';
         return type.charAt(0).toUpperCase() + type.slice(1);
     };
 
-    // Podmienka pre aktivovanie tlačidla
     const isGenerateDisabled =
         !selectedOption ||
         (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType || !selectedGroupName));
@@ -240,30 +405,89 @@ const ExportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
             return;
         }
-
         if (selectedOption === 'tabulky') {
             if (!selectedCategoryId || !selectedGroupType || !selectedGroupName) {
                 window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
                 return;
             }
-            // Získame názov kategórie podľa ID
             const selectedCategory = categories.find(c => c.id === selectedCategoryId);
             const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
-            // Nahradíme medzery znakom '-'
-            // Typ skupiny sa do URL neukladá
             const categoryNameSafe = spacesToDashes(categoryName);
             const groupNameSafe = spacesToDashes(selectedGroupName);
             const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-            const url = `logged-in-export.html#${hash}`;
-            window.open(url, '_blank');
+            window.open(`logged-in-export.html#${hash}`, '_blank');
             return;
         }
-
-        // Pre "zapasy"
-        const url = `logged-in-export.html#${selectedOption}`;
-        window.open(url, '_blank');
+        window.open(`logged-in-export.html#${selectedOption}`, '_blank');
     };
 
+    /* ============================================================
+       VYKRESLENIE – AK JE HASH, ZOBRAZÍME EXPORT TABUĽKU
+       ============================================================ */
+    if (exportHash && exportHash.type === 'tabulky') {
+        return React.createElement(
+            'div',
+            { className: 'w-full max-w-7xl mx-auto px-4 py-6' },
+
+            // Nadpis
+            React.createElement(
+                'div',
+                { className: 'mb-6 text-center' },
+                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' },
+                    exportedTable
+                        ? `${exportedTable.categoryName} - ${exportedTable.groupName}`
+                        : 'Načítavam tabuľku...'
+                )
+            ),
+
+            // Loading
+            loadingTable && React.createElement(
+                'div',
+                { className: 'flex justify-center items-center py-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+            ),
+
+            // Error
+            errorTable && React.createElement(
+                'div',
+                { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center' },
+                React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
+            ),
+
+            // Tabuľka
+            !loadingTable && !errorTable && exportedTable && React.createElement(
+                CrossTable,
+                {
+                    teams: exportedTable.teams,
+                    matrix: exportedTable.matrix,
+                    categoryName: exportedTable.categoryName,
+                    groupName: exportedTable.groupName,
+                    groupType: exportedTable.groupType
+                }
+            )
+        );
+    }
+
+    if (exportHash && exportHash.type === 'zapasy') {
+        return React.createElement(
+            'div',
+            { className: 'w-full max-w-7xl mx-auto px-4 py-6' },
+            React.createElement(
+                'div',
+                { className: 'mb-6 text-center' },
+                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale')
+            ),
+            React.createElement(
+                'div',
+                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
+                React.createElement('p', { className: 'text-lg' }, 'Export zápasov – pripravované.')
+            )
+        );
+    }
+
+    /* ============================================================
+       KLASICKÝ EXPORT BOX (bez hashu)
+       ============================================================ */
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -278,15 +502,12 @@ const ExportApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'flex flex-col gap-6' },
-                // Select box - typ exportu
+
+                // Typ exportu
                 React.createElement(
                     'div',
                     { className: 'flex flex-col gap-2' },
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'export-option', className: 'text-sm font-medium text-gray-700' },
-                        'Vyberte typ exportu'
-                    ),
+                    React.createElement('label', { htmlFor: 'export-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte typ exportu'),
                     React.createElement(
                         'select',
                         {
@@ -301,19 +522,14 @@ const ExportApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Ak je vybrané "Tabuľky" - zobrazíme kategórie, typ skupiny a skupinu
+                // Kategória / typ / skupina (len pri tabuľkách)
                 selectedOption === 'tabulky' && React.createElement(
                     React.Fragment,
                     null,
-                    // Select box - kategória
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
-                        React.createElement(
-                            'label',
-                            { htmlFor: 'category-option', className: 'text-sm font-medium text-gray-700' },
-                            'Vyberte kategóriu'
-                        ),
+                        React.createElement('label', { htmlFor: 'category-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte kategóriu'),
                         React.createElement(
                             'select',
                             {
@@ -323,30 +539,17 @@ const ExportApp = ({ userProfileData }) => {
                                 disabled: isLoadingCategories || categories.length === 0,
                                 className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(isLoadingCategories || categories.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
                             },
-                            React.createElement(
-                                'option',
-                                { value: '' },
-                                isLoadingCategories
-                                    ? '-- Načítavam kategórie... --'
-                                    : (categories.length === 0
-                                        ? '-- Žiadne kategórie --'
-                                        : '-- Vyberte kategóriu --')
+                            React.createElement('option', { value: '' },
+                                isLoadingCategories ? '-- Načítavam kategórie... --'
+                                    : (categories.length === 0 ? '-- Žiadne kategórie --' : '-- Vyberte kategóriu --')
                             ),
-                            categories.map(cat =>
-                                React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                            )
+                            categories.map(cat => React.createElement('option', { key: cat.id, value: cat.id }, cat.name))
                         )
                     ),
-
-                    // Select box - typ skupiny
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
-                        React.createElement(
-                            'label',
-                            { htmlFor: 'group-type-option', className: 'text-sm font-medium text-gray-700' },
-                            'Vyberte typ skupiny'
-                        ),
+                        React.createElement('label', { htmlFor: 'group-type-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte typ skupiny'),
                         React.createElement(
                             'select',
                             {
@@ -356,34 +559,19 @@ const ExportApp = ({ userProfileData }) => {
                                 disabled: !selectedCategoryId || availableGroupTypes.length === 0,
                                 className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedCategoryId || availableGroupTypes.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
                             },
-                            React.createElement(
-                                'option',
-                                { value: '' },
-                                !selectedCategoryId
-                                    ? '-- Najprv vyberte kategóriu --'
-                                    : (availableGroupTypes.length === 0
-                                        ? '-- Žiadne typy skupín --'
-                                        : '-- Vyberte typ skupiny --')
+                            React.createElement('option', { value: '' },
+                                !selectedCategoryId ? '-- Najprv vyberte kategóriu --'
+                                    : (availableGroupTypes.length === 0 ? '-- Žiadne typy skupín --' : '-- Vyberte typ skupiny --')
                             ),
                             availableGroupTypes.map((type, idx) =>
-                                React.createElement(
-                                    'option',
-                                    { key: `${type}-${idx}`, value: type },
-                                    formatGroupType(type)
-                                )
+                                React.createElement('option', { key: `${type}-${idx}`, value: type }, formatGroupType(type))
                             )
                         )
                     ),
-
-                    // Select box - konkrétna skupina
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
-                        React.createElement(
-                            'label',
-                            { htmlFor: 'group-option', className: 'text-sm font-medium text-gray-700' },
-                            'Vyberte skupinu'
-                        ),
+                        React.createElement('label', { htmlFor: 'group-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte skupinu'),
                         React.createElement(
                             'select',
                             {
@@ -393,27 +581,18 @@ const ExportApp = ({ userProfileData }) => {
                                 disabled: !selectedGroupType || availableGroups.length === 0,
                                 className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedGroupType || availableGroups.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
                             },
-                            React.createElement(
-                                'option',
-                                { value: '' },
-                                !selectedGroupType
-                                    ? '-- Najprv vyberte typ skupiny --'
-                                    : (availableGroups.length === 0
-                                        ? '-- Žiadne skupiny --'
-                                        : '-- Vyberte skupinu --')
+                            React.createElement('option', { value: '' },
+                                !selectedGroupType ? '-- Najprv vyberte typ skupiny --'
+                                    : (availableGroups.length === 0 ? '-- Žiadne skupiny --' : '-- Vyberte skupinu --')
                             ),
                             availableGroups.map((group, idx) =>
-                                React.createElement(
-                                    'option',
-                                    { key: `${group.name}-${idx}`, value: group.name },
-                                    group.name
-                                )
+                                React.createElement('option', { key: `${group.name}-${idx}`, value: group.name }, group.name)
                             )
                         )
                     )
                 ),
 
-                // Tlačidlo Generovať (obalené v div, aby cursor-not-allowed fungoval aj na disabled button)
+                // Tlačidlo Generovať
                 React.createElement(
                     'div',
                     { className: isGenerateDisabled ? 'cursor-not-allowed' : '' },
@@ -432,76 +611,228 @@ const ExportApp = ({ userProfileData }) => {
     );
 };
 
-// Export pomocných funkcií, aby boli dostupné aj pri parsovaní hashu v novej karte
-window.spacesToDashes = spacesToDashes;
-window.dashesToSpaces = dashesToSpaces;
+/* ============================================================
+   KRÍŽOVÁ TABUĽKA
+   ============================================================ */
+const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
+    if (!teams || teams.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
+            React.createElement('p', { className: 'text-lg' }, 'Pre túto skupinu neexistujú žiadne tímy.')
+        );
+    }
 
+    const groupTypeLabel = groupType === 'nadstavbová skupina' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
 
-// Premenná na sledovanie, či bol poslucháč už nastavený
+    return React.createElement(
+        'div',
+        { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+
+        // Hlavička
+        React.createElement(
+            'div',
+            { className: 'bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3' },
+            React.createElement(
+                'div',
+                { className: 'flex items-center gap-3' },
+                React.createElement('h2', { className: 'text-lg font-bold text-gray-800' }, `${categoryName} - ${groupName}`),
+                React.createElement(
+                    'span',
+                    { className: 'text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700' },
+                    groupTypeLabel
+                )
+            )
+        ),
+
+        // Tabuľka
+        React.createElement(
+            'div',
+            { className: 'overflow-x-auto' },
+            React.createElement(
+                'table',
+                { className: 'min-w-full border-collapse' },
+
+                // THEAD – názvy tímov v stĺpcoch
+                React.createElement(
+                    'thead',
+                    null,
+                    React.createElement(
+                        'tr',
+                        { className: 'bg-gray-100' },
+                        // Prvý stĺpec – prázdny roh
+                        React.createElement(
+                            'th',
+                            {
+                                className: 'sticky left-0 z-10 bg-gray-100 border border-gray-300 px-3 py-2 text-xs font-bold text-gray-600 uppercase tracking-wider text-center',
+                                style: { minWidth: '160px' }
+                            },
+                            'Tím / Súper'
+                        ),
+                        // Názvy tímov v stĺpcoch
+                        teams.map((team, idx) =>
+                            React.createElement(
+                                'th',
+                                {
+                                    key: team.id,
+                                    className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 text-center',
+                                    style: { minWidth: '90px' }
+                                },
+                                team.name
+                            )
+                        )
+                    )
+                ),
+
+                // TBODY – každý riadok = jeden tím
+                React.createElement(
+                    'tbody',
+                    null,
+                    teams.map((rowTeam, rowIdx) =>
+                        React.createElement(
+                            'tr',
+                            { key: rowTeam.id, className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
+                            // Hlavička riadku – názov tímu
+                            React.createElement(
+                                'th',
+                                {
+                                    className: 'sticky left-0 z-10 border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 text-left bg-gray-100',
+                                    style: { minWidth: '160px' }
+                                },
+                                rowTeam.name
+                            ),
+                            // Bunky
+                            teams.map((colTeam) => {
+                                // Diagonála
+                                if (rowTeam.id === colTeam.id) {
+                                    return React.createElement(
+                                        'td',
+                                        {
+                                            key: colTeam.id,
+                                            className: 'border border-gray-300 px-3 py-2 text-center bg-gray-200 text-gray-400 text-xs font-medium'
+                                        },
+                                        '—'
+                                    );
+                                }
+
+                                const cell = matrix?.[rowTeam.id]?.[colTeam.id];
+
+                                if (!cell) {
+                                    return React.createElement(
+                                        'td',
+                                        {
+                                            key: colTeam.id,
+                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-300 text-xs'
+                                        },
+                                        ''
+                                    );
+                                }
+
+                                const isCompleted = cell.status === 'completed'
+                                    || (cell.homeScore !== null && cell.awayScore !== null && cell.status !== 'scheduled');
+
+                                if (!isCompleted) {
+                                    return React.createElement(
+                                        'td',
+                                        {
+                                            key: colTeam.id,
+                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-400 text-xs'
+                                        },
+                                        'vs'
+                                    );
+                                }
+
+                                const hs = cell.homeScore ?? 0;
+                                const as = cell.awayScore ?? 0;
+                                const rowWin = hs > as;
+                                const rowLoss = hs < as;
+
+                                return React.createElement(
+                                    'td',
+                                    {
+                                        key: colTeam.id,
+                                        className: `border border-gray-300 px-3 py-2 text-center text-sm font-bold ${
+                                            rowWin ? 'bg-green-50 text-green-700'
+                                                : rowLoss ? 'bg-red-50 text-red-700'
+                                                : 'bg-yellow-50 text-yellow-700'
+                                        }`
+                                    },
+                                    `${hs}:${as}`
+                                );
+                            })
+                        )
+                    )
+                )
+            )
+        ),
+
+        // Legenda
+        React.createElement(
+            'div',
+            { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap items-center gap-4' },
+            React.createElement('span', null, 'Legenda:'),
+            React.createElement('span', { className: 'inline-flex items-center gap-1' },
+                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-green-100 border border-green-300' }),
+                'výhra riadkového tímu'
+            ),
+            React.createElement('span', { className: 'inline-flex items-center gap-1' },
+                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-300' }),
+                'remíza'
+            ),
+            React.createElement('span', { className: 'inline-flex items-center gap-1' },
+                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-red-100 border border-red-300' }),
+                'prehra riadkového tímu'
+            ),
+            React.createElement('span', { className: 'inline-flex items-center gap-1' },
+                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-gray-200 border border-gray-300' }),
+                'neodohrané / neexistuje'
+            )
+        )
+    );
+};
+
+/* ============================================================
+   SYNCHRONIZÁCIA E-MAILU + RENDER
+   ============================================================ */
 let isEmailSyncListenerSetup = false;
 
-/**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
- */
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
-        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-template.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
                         const userProfileRef = doc(window.db, 'users', user.uid);
                         const docSnap = await getDoc(userProfileRef);
-            
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-template.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
-                                await updateDoc(userProfileRef, {
-                                    email: user.email
-                                });
-            
-                                // Vytvorenie notifikácie v databáze s novou štruktúrou
+                                await updateDoc(userProfileRef, { email: user.email });
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
+                                    timestamp: new Date(),
                                 });
-                                
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-template.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-            
-                            } else {
-                                console.log("logged-in-template.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-template.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
-                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
                 }
             });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+            isEmailSyncListenerSetup = true;
         }
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(ExportApp, { userProfileData }));
-            console.log("logged-in-template.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
-        } else {
-            console.error("logged-in-template.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        // Ak dáta nie sú dostupné, zobrazíme loader
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -512,22 +843,14 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
-        console.error("logged-in-template.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-template.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-template.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-template.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
