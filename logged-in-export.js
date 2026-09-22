@@ -746,10 +746,10 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 && matchResult.status !== 'scheduled');
     };
 
-   /* ============================================================
-   NAČÍTANIE PRENESENÝCH ZÁPASOV Z INÝCH SKUPÍN
-   (rovnaká logika ako tables.js pre nadstavbové skupiny)
-   ============================================================ */
+    /* ============================================================
+       NAČÍTANIE PRENESENÝCH ZÁPASOV Z INÝCH SKUPÍN
+       (rovnaká logika ako tables.js pre nadstavbové skupiny)
+       ============================================================ */
 
     // Stav, ktorý sa naplní asynchrónne (keď je matchTracker pripravený)
     const [transferredData, setTransferredData] = useState({
@@ -759,77 +759,111 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     });
 
     useEffect(() => {
-        if (groupType !== 'nadstavbová skupina') return;
+        if (groupType !== 'nadstavbová skupina') {
+            // Pre základné skupiny nepotrebujeme prenášať – označíme ako hotové
+            setTransferredData({ matrix: {}, pairKeys: new Set(), loaded: true });
+            return;
+        }
 
         let cancelled = false;
-        let attempts = 0;
-        const maxAttempts = 30; // max ~3 sekundy (30 × 100 ms)
 
-        const tryLoad = () => {
+        // Funkcia na samotné načítanie prenesených zápasov
+        const loadTransferred = () => {
             if (cancelled) return;
 
-            // Skúsime použiť matchTracker.createAdvancedGroupTable
-            if (
+            // Skontrolujeme, či je matchTracker pripravený
+            const isReady =
                 window.matchTracker &&
-                typeof window.matchTracker.createAdvancedGroupTable === 'function' &&
                 typeof window.matchTracker.isDataReady === 'function' &&
-                window.matchTracker.isDataReady()
-            ) {
-                try {
-                    const advancedTable = window.matchTracker.createAdvancedGroupTable(categoryName, groupName);
+                window.matchTracker.isDataReady() &&
+                typeof window.matchTracker.createAdvancedGroupTable === 'function';
 
-                    if (advancedTable && Array.isArray(advancedTable.transferredMatches)) {
-                        const newMatrix = {};
-                        const newPairKeys = new Set();
-
-                        advancedTable.transferredMatches.forEach((tm) => {
-                            const homeName = tm.homeTeamName || tm.homeTeamIdentifier;
-                            const awayName = tm.awayTeamName || tm.awayTeamIdentifier;
-                            if (!homeName || !awayName) return;
-
-                            if (!newMatrix[homeName]) newMatrix[homeName] = {};
-                            if (!newMatrix[homeName][awayName]) {
-                                newMatrix[homeName][awayName] = {
-                                    homeScore: tm.homeScore ?? null,
-                                    awayScore: tm.awayScore ?? null,
-                                    status: 'completed',
-                                    isTransferred: true
-                                };
-                            }
-
-                            newPairKeys.add(`${homeName}|${awayName}`);
-                            newPairKeys.add(`${awayName}|${homeName}`);
-                        });
-
-                        if (!cancelled) {
-                            setTransferredData({
-                                matrix: newMatrix,
-                                pairKeys: newPairKeys,
-                                loaded: true
-                            });
-                        }
-                        return;
-                    }
-                } catch (err) {
-                    console.error('Chyba pri načítavaní prenesených zápasov:', err);
-                }
+            if (!isReady) {
+                return false; // ešte nie je pripravený
             }
 
-            // Skúsime znova po 100 ms (ak ešte nie je pripravený)
-            attempts++;
-            if (attempts < maxAttempts) {
-                setTimeout(tryLoad, 100);
-            } else {
-                console.warn('Prenesené zápasy sa nepodarilo načítať – matchTracker nie je pripravený.');
-                if (!cancelled) {
-                    setTransferredData({ matrix: {}, pairKeys: new Set(), loaded: true });
+            try {
+                const advancedTable = window.matchTracker.createAdvancedGroupTable(categoryName, groupName);
+
+                const newMatrix = {};
+                const newPairKeys = new Set();
+
+                if (advancedTable && Array.isArray(advancedTable.transferredMatches)) {
+                    advancedTable.transferredMatches.forEach((tm) => {
+                        const homeName = tm.homeTeamName || tm.homeTeamIdentifier;
+                        const awayName = tm.awayTeamName || tm.awayTeamIdentifier;
+                        if (!homeName || !awayName) return;
+
+                        if (!newMatrix[homeName]) newMatrix[homeName] = {};
+                        if (!newMatrix[homeName][awayName]) {
+                            newMatrix[homeName][awayName] = {
+                                homeScore: tm.homeScore ?? null,
+                                awayScore: tm.awayScore ?? null,
+                                status: 'completed',
+                                isTransferred: true
+                            };
+                        }
+
+                        newPairKeys.add(`${homeName}|${awayName}`);
+                        newPairKeys.add(`${awayName}|${homeName}`);
+                    });
                 }
+
+                if (!cancelled) {
+                    setTransferredData({
+                        matrix: newMatrix,
+                        pairKeys: newPairKeys,
+                        loaded: true
+                    });
+                }
+                return true; // úspešne načítané
+            } catch (err) {
+                console.error('Chyba pri načítavaní prenesených zápasov:', err);
+                return false;
             }
         };
 
-        tryLoad();
+        // Skúsime okamžite
+        const loadedNow = loadTransferred();
+        if (loadedNow) {
+            return () => { cancelled = true; };
+        }
 
-        return () => { cancelled = true; };
+        // Ak ešte nie je pripravený – počúvame na udalosť 'matchTrackerReady'
+        const handleMatchTrackerReady = () => {
+            const loadedAfterEvent = loadTransferred();
+            if (loadedAfterEvent) {
+                window.removeEventListener('matchTrackerReady', handleMatchTrackerReady);
+            }
+        };
+
+        window.addEventListener('matchTrackerReady', handleMatchTrackerReady);
+
+        // Zároveň skúsime aj s oneskorením (pre istotu, keby udalosť už prešla)
+        const retryInterval = setInterval(() => {
+            const loadedRetry = loadTransferred();
+            if (loadedRetry) {
+                clearInterval(retryInterval);
+            }
+        }, 200);
+
+        // Timeout ako poistka – po 15 sekundách to vzdáme
+        const timeoutId = setTimeout(() => {
+            if (!cancelled) {
+                console.warn('Prenesené zápasy sa nepodarilo načítať do 15 sekúnd – vzdávam to.');
+                setTransferredData({ matrix: {}, pairKeys: new Set(), loaded: true });
+            }
+            clearInterval(retryInterval);
+            window.removeEventListener('matchTrackerReady', handleMatchTrackerReady);
+        }, 15000);
+
+        // Cleanup
+        return () => {
+            cancelled = true;
+            clearInterval(retryInterval);
+            clearTimeout(timeoutId);
+            window.removeEventListener('matchTrackerReady', handleMatchTrackerReady);
+        };
     }, [categoryName, groupName, groupType]);
 
     // Skratky pre použitie v renderi
