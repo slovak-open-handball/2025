@@ -1466,7 +1466,7 @@ const CrossTable = ({
                             React.createElement('td', {
                                 key: 'total-colon',
                                 className: baseCell + ' ' + FONT_CLASS,
-                                style: middleStyle
+                                style: subCellMiddleStyle
                             }, ':'), 
                             React.createElement('td', {
                                 key: 'total-conceded',
