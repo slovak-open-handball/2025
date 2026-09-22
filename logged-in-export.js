@@ -1113,9 +1113,8 @@ const CrossTable = ({
 
     const CELL_WIDTH = '200px';
     const CELL_HEIGHT = '200px';
-    const SUB_CELL_WIDTH = '66.66px';
-    const MIDDLE_CELL_WIDTH = '20px'; // 10% z 200px
-    const SIDE_CELL_WIDTH = '90px'; // (200 - 20) / 2 = 90px
+    const MIDDLE_CELL_WIDTH = '20px'; 
+    const SIDE_CELL_WIDTH = '90px';
 
     const cellStyle = {
         width: CELL_WIDTH,
@@ -1386,7 +1385,7 @@ const CrossTable = ({
                                     React.createElement('td', {
                                         key: `${keyBase}-s2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
+                                        style: { ...subCellMiddleStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
