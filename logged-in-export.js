@@ -649,9 +649,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const drawPoints = 1;
 
     // FIXNÉ ROZMERY
-    const CELL_WIDTH = '250px';
-    const CELL_HEIGHT = '250px';
-    const SUB_CELL_WIDTH = '83.33px';
+    const CELL_WIDTH = '200px';
+    const CELL_HEIGHT = '200px';
+    const SUB_CELL_WIDTH = '66.66px';
 
     const cellStyle = {
         width: CELL_WIDTH,
