@@ -641,6 +641,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const winPoints = (pointsForWin !== undefined && pointsForWin !== null) ? pointsForWin : 3;
     const drawPoints = 1;
 
+    // FIXNÁ ŠÍRKA BUNKY = 250px
+    const CELL_WIDTH = '250px';
+
     /**
      * Získa výsledok zápasu medzi dvoma tímami z pohľadu riadkového tímu.
      */
@@ -763,7 +766,10 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
             { className: 'overflow-x-auto' },
             React.createElement(
                 'table',
-                { className: 'min-w-full border-collapse' },
+                {
+                    className: 'border-collapse',
+                    style: { tableLayout: 'fixed' } // FIXNÁ ŠÍRKA STĹPCOV
+                },
 
                 // THEAD – iba jeden riadok s názvami tímov + Skóre / Body / Miesto
                 React.createElement(
@@ -777,7 +783,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             'th',
                             {
                                 className: 'sticky left-0 z-10 bg-gray-100 border border-gray-300 px-3 py-2 text-center',
-                                style: { minWidth: '160px' }
+                                style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                             },
                             React.createElement(
                                 'div',
@@ -793,7 +799,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 {
                                     key: team.id,
                                     className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 text-center',
-                                    style: { minWidth: '90px' }
+                                    style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                 },
                                 team.name
                             )
@@ -803,7 +809,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             'th',
                             {
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center bg-blue-50',
-                                style: { minWidth: '80px' }
+                                style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                             },
                             'Skóre'
                         ),
@@ -811,7 +817,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             'th',
                             {
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center bg-blue-50',
-                                style: { minWidth: '60px' }
+                                style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                             },
                             'Body'
                         ),
@@ -819,7 +825,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             'th',
                             {
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center bg-blue-50',
-                                style: { minWidth: '70px' }
+                                style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                             },
                             'Miesto'
                         )
@@ -841,7 +847,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 'th',
                                 {
                                     className: 'sticky left-0 z-10 border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 text-left bg-gray-100',
-                                    style: { minWidth: '160px' }
+                                    style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                 },
                                 rowTeam.name
                             ),
@@ -851,7 +857,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                         'td',
                                         {
                                             key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center bg-gray-200 text-gray-400 text-xs font-medium'
+                                            className: 'border border-gray-300 px-3 py-2 text-center bg-gray-200 text-gray-400 text-xs font-medium',
+                                            style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                         },
                                         '—'
                                     );
@@ -864,7 +871,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                         'td',
                                         {
                                             key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-300 text-xs'
+                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-300 text-xs',
+                                            style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                         },
                                         ''
                                     );
@@ -875,7 +883,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                         'td',
                                         {
                                             key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-400 text-xs'
+                                            className: 'border border-gray-300 px-3 py-2 text-center text-gray-400 text-xs',
+                                            style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                         },
                                         'vs'
                                     );
@@ -895,6 +904,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                                 : rowLoss ? 'bg-red-50 text-red-700'
                                                 : 'bg-yellow-50 text-yellow-700'
                                         }`,
+                                        style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH },
                                         title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
                                     },
                                     `${hs}:${as}`
@@ -903,21 +913,24 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             React.createElement(
                                 'td',
                                 {
-                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-mono bg-blue-50 text-gray-800'
+                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-mono bg-blue-50 text-gray-800',
+                                    style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                 },
                                 `${stats.scored}:${stats.conceded}`
                             ),
                             React.createElement(
                                 'td',
                                 {
-                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-bold bg-blue-50 text-blue-700'
+                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-bold bg-blue-50 text-blue-700',
+                                    style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                 },
                                 stats.points
                             ),
                             React.createElement(
                                 'td',
                                 {
-                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-bold bg-blue-50 text-gray-800'
+                                    className: 'border border-gray-300 px-3 py-2 text-center text-sm font-bold bg-blue-50 text-gray-800',
+                                    style: { width: CELL_WIDTH, minWidth: CELL_WIDTH, maxWidth: CELL_WIDTH }
                                 },
                                 position
                             )
