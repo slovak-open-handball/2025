@@ -1442,7 +1442,7 @@ const CrossTable = ({
                             React.createElement('td', {
                                 key: 'total-scored',
                                 className: baseCell + ' ' + FONT_CLASS ,
-                                style: subCellRightStyle
+                                style: subCellLeftStyle
                             }, stats && showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
@@ -1452,7 +1452,7 @@ const CrossTable = ({
                             React.createElement('td', {
                                 key: 'total-conceded',
                                 className: baseCell + ' ' + FONT_CLASS,
-                                style: subCellLeftStyle
+                                style: subCellRightStyle
                             }, stats && showTotals ? stats.goalsAgainst : '')
                         );
 
