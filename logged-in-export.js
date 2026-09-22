@@ -954,7 +954,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                 style: cellStyle
                             },
-                            'Miesto'
+                            'Miesto v skupine'
                         )
                     )
                 ),
