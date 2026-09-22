@@ -1,6 +1,6 @@
 // logged-in-export.js
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
@@ -113,12 +113,112 @@ const ExportApp = ({ userProfileData }) => {
     }
 
     const [selectedOption, setSelectedOption] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [groups, setGroups] = useState({});
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [selectedGroupName, setSelectedGroupName] = useState('');
+    const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+    // Načítanie kategórií a skupín z Firestore pomocou onSnapshot (real-time)
+    useEffect(() => {
+        if (selectedOption !== 'tabulky') {
+            return;
+        }
+
+        setIsLoadingCategories(true);
+
+        // Načítanie kategórií
+        const unsubscribeCategories = onSnapshot(
+            doc(window.db, 'settings', 'categories'),
+            (docSnap) => {
+                if (docSnap.exists()) {
+                    const categoriesData = docSnap.data();
+                    const loadedCategories = Object.keys(categoriesData).map(id => ({
+                        id: id,
+                        name: categoriesData[id].name
+                    }));
+                    loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
+                    setCategories(loadedCategories);
+                } else {
+                    setCategories([]);
+                }
+                setIsLoadingCategories(false);
+            },
+            (error) => {
+                console.error("Chyba pri načítavaní kategórií:", error);
+                window.showGlobalNotification('Nastala chyba pri načítavaní kategórií.', 'error');
+                setIsLoadingCategories(false);
+            }
+        );
+
+        // Načítanie skupín
+        const unsubscribeGroups = onSnapshot(
+            doc(window.db, 'settings', 'groups'),
+            (docSnap) => {
+                if (docSnap.exists()) {
+                    setGroups(docSnap.data());
+                } else {
+                    setGroups({});
+                }
+            },
+            (error) => {
+                console.error("Chyba pri načítavaní skupín:", error);
+                window.showGlobalNotification('Nastala chyba pri načítavaní skupín.', 'error');
+            }
+        );
+
+        return () => {
+            unsubscribeCategories();
+            unsubscribeGroups();
+        };
+    }, [selectedOption]);
+
+    // Reset vybraných hodnôt pri zmene typu exportu
+    useEffect(() => {
+        setSelectedCategoryId('');
+        setSelectedGroupName('');
+    }, [selectedOption]);
+
+    // Reset skupiny pri zmene kategórie
+    useEffect(() => {
+        setSelectedGroupName('');
+    }, [selectedCategoryId]);
+
+    // Dostupné skupiny pre vybranú kategóriu (zoradené: základné, potom nadstavbové)
+    const availableGroups = selectedCategoryId
+        ? (groups[selectedCategoryId] || [])
+            .slice()
+            .sort((a, b) => {
+                if (a.type !== b.type) {
+                    return a.type === 'základná skupina' ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name);
+            })
+        : [];
+
+    // Podmienka pre aktivovanie tlačidla
+    const isGenerateDisabled =
+        !selectedOption ||
+        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupName));
 
     const handleGenerate = () => {
         if (!selectedOption) {
             window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
             return;
         }
+
+        if (selectedOption === 'tabulky') {
+            if (!selectedCategoryId || !selectedGroupName) {
+                window.showGlobalNotification('Prosím, vyberte kategóriu aj skupinu.', 'error');
+                return;
+            }
+            const hash = `tabulky/${selectedCategoryId}/${encodeURIComponent(selectedGroupName)}`;
+            const url = `logged-in-export.html#${hash}`;
+            window.open(url, '_blank');
+            return;
+        }
+
+        // Pre "zapasy"
         const url = `logged-in-export.html#${selectedOption}`;
         window.open(url, '_blank');
     };
@@ -137,7 +237,7 @@ const ExportApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'flex flex-col gap-6' },
-                // Select box
+                // Select box - typ exportu
                 React.createElement(
                     'div',
                     { className: 'flex flex-col gap-2' },
@@ -159,15 +259,95 @@ const ExportApp = ({ userProfileData }) => {
                         React.createElement('option', { value: 'tabulky' }, 'Tabuľky')
                     )
                 ),
-                // Tlačidlo Generovať
+
+                // Ak je vybrané "Tabuľky" - zobrazíme kategórie a skupiny
+                selectedOption === 'tabulky' && React.createElement(
+                    React.Fragment,
+                    null,
+                    // Select box - kategória
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-2' },
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'category-option', className: 'text-sm font-medium text-gray-700' },
+                            'Vyberte kategóriu'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                id: 'category-option',
+                                value: selectedCategoryId,
+                                onChange: (e) => setSelectedCategoryId(e.target.value),
+                                disabled: isLoadingCategories || categories.length === 0,
+                                className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(isLoadingCategories || categories.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
+                            },
+                            React.createElement(
+                                'option',
+                                { value: '' },
+                                isLoadingCategories
+                                    ? '-- Načítavam kategórie... --'
+                                    : (categories.length === 0
+                                        ? '-- Žiadne kategórie --'
+                                        : '-- Vyberte kategóriu --')
+                            ),
+                            categories.map(cat =>
+                                React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                            )
+                        )
+                    ),
+
+                    // Select box - skupina
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-2' },
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'group-option', className: 'text-sm font-medium text-gray-700' },
+                            'Vyberte skupinu'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                id: 'group-option',
+                                value: selectedGroupName,
+                                onChange: (e) => setSelectedGroupName(e.target.value),
+                                disabled: !selectedCategoryId || availableGroups.length === 0,
+                                className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedCategoryId || availableGroups.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
+                            },
+                            React.createElement(
+                                'option',
+                                { value: '' },
+                                !selectedCategoryId
+                                    ? '-- Najprv vyberte kategóriu --'
+                                    : (availableGroups.length === 0
+                                        ? '-- Žiadne skupiny --'
+                                        : '-- Vyberte skupinu --')
+                            ),
+                            availableGroups.map((group, idx) =>
+                                React.createElement(
+                                    'option',
+                                    { key: `${group.name}-${idx}`, value: group.name },
+                                    `${group.name} (${group.type})`
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Tlačidlo Generovať (obalené v div, aby cursor-not-allowed fungoval aj na disabled button)
                 React.createElement(
-                    'button',
-                    {
-                        onClick: handleGenerate,
-                        disabled: !selectedOption,
-                        className: `w-full px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md ${selectedOption ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' : 'bg-white border-2 border-blue-600 text-blue-600 cursor-not-allowed'}`
-                    },
-                    'Generovať'
+                    'div',
+                    { className: isGenerateDisabled ? 'cursor-not-allowed' : '' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleGenerate,
+                            disabled: isGenerateDisabled,
+                            className: `w-full px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md ${!isGenerateDisabled ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' : 'bg-white border-2 border-blue-600 text-blue-600 cursor-not-allowed'}`
+                        },
+                        'Generovať'
+                    )
                 )
             )
         )
