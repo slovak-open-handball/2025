@@ -1438,7 +1438,7 @@ const CrossTable = ({
                             );
                         });
 
-                        const showTotals = stats && !(stats.goalsFor === 0 && stats.goalsAgainst === 0);
+                        const showTotals = !!stats;
                         // Skóre – ľavá bunka (strely) vpravo, pravá bunka (obdržané) vľavo
                         rowCells.push(
                             React.createElement('td', {
@@ -1450,7 +1450,7 @@ const CrossTable = ({
                                 key: 'total-colon',
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: subCellBaseStyle
-                            }, stats && showTotals ? ':' : ''),
+                            }, ':'),
                             React.createElement('td', {
                                 key: 'total-conceded',
                                 className: baseCell + ' ' + FONT_CLASS,
