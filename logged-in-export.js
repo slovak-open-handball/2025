@@ -121,7 +121,7 @@ const parseExportHash = () => {
 };
 
 /* ============================================================
-   POMOCNÉ FUNKCIE PRE TABUĽKU (rovnaké ako v tables.js)
+   POMOCNÉ FUNKCIE PRE TABUĽKU
    ============================================================ */
 const normalizeName = (name) => {
     if (!name) return '';
@@ -142,18 +142,45 @@ const getDisplayTeamName = (teamIdentifier) => {
 };
 
 /**
- * Rovnaká logika ako v tables.js – compareTeams (body → kritériá → abeceda)
+ * Vyrieši display názov tímu z identifikátora (napr. "U12 D 1A" → "HK Slovan Duslo Šaľa A").
+ */
+const resolveTeamDisplayName = (identifier) => {
+    if (!identifier) return '???';
+
+    // 1) window.teamNames (najrýchlejšie)
+    if (window.teamNames && window.teamNames[identifier]) {
+        return window.teamNames[identifier];
+    }
+
+    // 2) matchTracker.getTeamNameByDisplayId
+    if (
+        window.matchTracker &&
+        typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+    ) {
+        try {
+            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
+            if (mapped && mapped !== identifier) return mapped;
+        } catch (e) { /* ignore */ }
+    }
+
+    // 3) fallback
+    const fallback = getDisplayTeamName(identifier);
+    if (fallback && fallback !== identifier) return fallback;
+
+    return identifier;
+};
+
+/**
+ * Rovnaká logika ako v tables.js – compareTeams
  */
 const calculateHeadToHead = (teamA, teamB, groupMatches) => {
     let teamAScore = 0;
     let teamBScore = 0;
     let teamAWins = 0;
     let teamBWins = 0;
-    let foundMatch = false;
 
     const teamAName = (teamA.name || teamA.id || "").trim();
     const teamBName = (teamB.name || teamB.id || "").trim();
-
     if (!teamAName || !teamBName) {
         return { teamAScore, teamBScore, teamAWins, teamBWins };
     }
@@ -174,7 +201,6 @@ const calculateHeadToHead = (teamA, teamB, groupMatches) => {
     for (const match of groupMatches) {
         let homeName = match.homeTeamName || match.homeTeamIdentifier || '';
         let awayName = match.awayTeamName || match.awayTeamIdentifier || '';
-
         if (!homeName || !awayName) continue;
 
         const homeNormalized = normalize(homeName);
@@ -185,8 +211,6 @@ const calculateHeadToHead = (teamA, teamB, groupMatches) => {
             (homeNormalized === teamBNormalized && awayNormalized === teamANormalized);
 
         if (isMatchBetweenThem && match.status === 'completed') {
-            foundMatch = true;
-
             let homeScore = match.homeScore || 0;
             let awayScore = match.awayScore || 0;
 
@@ -198,13 +222,8 @@ const calculateHeadToHead = (teamA, teamB, groupMatches) => {
                 teamBScore = homeScore;
             }
 
-            if (teamAScore > teamBScore) {
-                teamAWins = 1;
-                teamBWins = 0;
-            } else if (teamBScore > teamAScore) {
-                teamAWins = 0;
-                teamBWins = 1;
-            }
+            if (teamAScore > teamBScore) { teamAWins = 1; teamBWins = 0; }
+            else if (teamBScore > teamAScore) { teamAWins = 0; teamBWins = 1; }
             break;
         }
     }
@@ -462,27 +481,18 @@ const ExportApp = ({ userProfileData }) => {
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
                 // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
-                //    Rovnaká logika ako v tables.js – použijeme window.teamNames, matchTracker alebo fallback
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
                 allMatches.forEach(m => {
                     if (m.homeTeamIdentifier && !teamNamesFromMatches[m.homeTeamIdentifier]) {
                         teamNamesFromMatches[m.homeTeamIdentifier] =
-                            (window.teamNames && window.teamNames[m.homeTeamIdentifier]) ||
-                            (window.matchTracker && window.matchTracker.getTeamNameByDisplayId
-                                ? window.matchTracker.getTeamNameByDisplayId(m.homeTeamIdentifier)
-                                : null) ||
-                            getDisplayTeamName(m.homeTeamIdentifier) ||
+                            resolveTeamDisplayName(m.homeTeamIdentifier) ||
                             m.homeTeamName ||
                             m.homeTeamIdentifier;
                     }
                     if (m.awayTeamIdentifier && !teamNamesFromMatches[m.awayTeamIdentifier]) {
                         teamNamesFromMatches[m.awayTeamIdentifier] =
-                            (window.teamNames && window.teamNames[m.awayTeamIdentifier]) ||
-                            (window.matchTracker && window.matchTracker.getTeamNameByDisplayId
-                                ? window.matchTracker.getTeamNameByDisplayId(m.awayTeamIdentifier)
-                                : null) ||
-                            getDisplayTeamName(m.awayTeamIdentifier) ||
+                            resolveTeamDisplayName(m.awayTeamIdentifier) ||
                             m.awayTeamName ||
                             m.awayTeamIdentifier;
                     }
@@ -500,7 +510,7 @@ const ExportApp = ({ userProfileData }) => {
                         && normalizeName(m.groupName) === normalizeName(groupName);
                 });
 
-                // Zoznam tímov
+                // 7) Zoznam tímov (v skupine) – použijeme ID z groupMatches
                 const teamsMap = new Map();
                 groupMatches.forEach(m => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
@@ -517,10 +527,9 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 });
 
-                const teams = Array.from(teamsMap.values())
-                    .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+                const teams = Array.from(teamsMap.values());
 
-                // Matica
+                // 8) Matica – vlastné zápasy skupiny
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
 
@@ -533,63 +542,31 @@ const ExportApp = ({ userProfileData }) => {
                         matrix[h][a] = {
                             homeScore: m.homeScore ?? null,
                             awayScore: m.awayScore ?? null,
-                            status: m.status || 'scheduled'
+                            status: m.status || 'scheduled',
+                            isTransferred: false
                         };
                     }
                 });
 
-                // 7) Zoradíme tímy podľa poradia (rovnaká logika ako tables.js)
-                //    Vytvoríme dočasnú tabuľku, ktorá použije compareTeams a prenos zápasov
+                // 9) Prenos zápasov – základné skupiny + iné nadstavbové skupiny
                 const categorySettings = categoriesData[categoryId] || {};
                 const carryOverEnabled = categorySettings.carryOverPoints === true;
 
-                // Vytvoríme "teams" objekty pre štatistiky
-                const teamStatsMap = new Map();
-                teams.forEach(t => {
-                    teamStatsMap.set(t.id, {
-                        id: t.id,
-                        name: t.name,
-                        played: 0,
-                        wins: 0,
-                        draws: 0,
-                        losses: 0,
-                        goalsFor: 0,
-                        goalsAgainst: 0,
-                        points: 0,
-                        goalDifference: 0
-                    });
-                });
+                // Matica tímov podľa ID
+                const teamsById = new Map(teams.map(t => [t.id, t]));
 
                 const processedPairs = new Set();
 
-                // Vlastné zápasy skupiny
+                // Vlastné zápasy skupiny – označíme, že sú spracované
                 groupMatches.forEach(m => {
                     if (m.status !== 'completed') return;
                     const h = m.homeTeamIdentifier;
                     const a = m.awayTeamIdentifier;
                     if (!h || !a) return;
-                    if (!teamStatsMap.has(h) || !teamStatsMap.has(a)) return;
-
                     const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
-                    if (processedPairs.has(pairKey)) return;
                     processedPairs.add(pairKey);
-
-                    const hs = m.homeScore ?? 0;
-                    const as = m.awayScore ?? 0;
-
-                    const ht = teamStatsMap.get(h);
-                    const at = teamStatsMap.get(a);
-
-                    ht.played++; at.played++;
-                    ht.goalsFor += hs; ht.goalsAgainst += as;
-                    at.goalsFor += as; at.goalsAgainst += hs;
-
-                    if (hs > as) { ht.wins++; ht.points += pointsForWin; at.losses++; }
-                    else if (as > hs) { at.wins++; at.points += pointsForWin; ht.losses++; }
-                    else { ht.draws++; at.draws++; ht.points += 1; at.points += 1; }
                 });
 
-                // Prenos zápasov (základné skupiny + iné nadstavbové skupiny)
                 if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
                     const allBaseGroups = groupList
                         .filter(g => g.type === 'základná skupina')
@@ -597,9 +574,6 @@ const ExportApp = ({ userProfileData }) => {
                     const allAdvancedGroups = groupList
                         .filter(g => g.type === 'nadstavbová skupina')
                         .map(g => g.name);
-
-                    // Mapovanie na názvy tímov z aktuálnej skupiny
-                    const currentTeamNames = new Set(teams.map(t => t.name));
 
                     allMatches.forEach(m => {
                         if (m.isPlacementMatch) return;
@@ -620,61 +594,123 @@ const ExportApp = ({ userProfileData }) => {
                         );
                         if (!isBase && !isOtherAdvanced) return;
 
-                        const homeName = teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier;
-                        const awayName = teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier;
+                        // 🔥 KĽÚČOVÉ: pracujeme s ID tímu (nie s názvom)
+                        const h = m.homeTeamIdentifier;
+                        const a = m.awayTeamIdentifier;
+                        if (!h || !a) return;
 
-                        if (!currentTeamNames.has(homeName) || !currentTeamNames.has(awayName)) return;
+                        // Oba tímy musia byť v aktuálnej skupine
+                        if (!teamsById.has(h) || !teamsById.has(a)) return;
 
-                        // Musia to byť dva rôzne tímy z aktuálnej skupiny
-                        const homeTeam = teams.find(t => t.name === homeName);
-                        const awayTeam = teams.find(t => t.name === awayName);
-                        if (!homeTeam || !awayTeam) return;
-
-                        const pairKey = homeTeam.id < awayTeam.id
-                            ? `${homeTeam.id}|${awayTeam.id}`
-                            : `${awayTeam.id}|${homeTeam.id}`;
+                        const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
                         if (processedPairs.has(pairKey)) return;
-
-                        // Skontrolujeme, či už nie je vlastný zápas
-                        const hasOwn = groupMatches.some(gm => {
-                            if (gm.status !== 'completed') return false;
-                            const a = gm.homeTeamIdentifier;
-                            const b = gm.awayTeamIdentifier;
-                            return (a === homeTeam.id && b === awayTeam.id) || (a === awayTeam.id && b === homeTeam.id);
-                        });
-                        if (hasOwn) return;
-
                         processedPairs.add(pairKey);
 
                         const hs = m.homeScore ?? 0;
                         const as = m.awayScore ?? 0;
 
-                        const ht = teamStatsMap.get(homeTeam.id);
-                        const at = teamStatsMap.get(awayTeam.id);
-                        if (!ht || !at) return;
-
-                        ht.played++; at.played++;
-                        ht.goalsFor += hs; ht.goalsAgainst += as;
-                        at.goalsFor += as; at.goalsAgainst += hs;
-
-                        if (hs > as) { ht.wins++; ht.points += pointsForWin; at.losses++; }
-                        else if (as > hs) { at.wins++; at.points += pointsForWin; ht.losses++; }
-                        else { ht.draws++; at.draws++; ht.points += 1; at.points += 1; }
+                        // Pridáme do matice ako prenesený zápas
+                        if (!matrix[h]) matrix[h] = {};
+                        if (!matrix[h][a]) {
+                            matrix[h][a] = {
+                                homeScore: hs,
+                                awayScore: as,
+                                status: 'completed',
+                                isTransferred: true
+                            };
+                        }
                     });
                 }
 
-                // Vypočítame rozdiel skóre
+                // 10) Výpočet štatistík pre poradie
+                const teamStatsMap = new Map();
+                teams.forEach(t => {
+                    teamStatsMap.set(t.id, {
+                        id: t.id,
+                        name: t.name,
+                        played: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        goalsFor: 0,
+                        goalsAgainst: 0,
+                        points: 0,
+                        goalDifference: 0
+                    });
+                });
+
+                const statsProcessedPairs = new Set();
+
+                // Vlastné zápasy
+                groupMatches.forEach(m => {
+                    if (m.status !== 'completed') return;
+                    const h = m.homeTeamIdentifier;
+                    const a = m.awayTeamIdentifier;
+                    if (!h || !a) return;
+                    if (!teamStatsMap.has(h) || !teamStatsMap.has(a)) return;
+
+                    const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
+                    if (statsProcessedPairs.has(pairKey)) return;
+                    statsProcessedPairs.add(pairKey);
+
+                    const hs = m.homeScore ?? 0;
+                    const as = m.awayScore ?? 0;
+
+                    const ht = teamStatsMap.get(h);
+                    const at = teamStatsMap.get(a);
+
+                    ht.played++; at.played++;
+                    ht.goalsFor += hs; ht.goalsAgainst += as;
+                    at.goalsFor += as; at.goalsAgainst += hs;
+
+                    if (hs > as) { ht.wins++; ht.points += pointsForWin; at.losses++; }
+                    else if (as > hs) { at.wins++; at.points += pointsForWin; ht.losses++; }
+                    else { ht.draws++; at.draws++; ht.points += 1; at.points += 1; }
+                });
+
+                // Prenesené zápasy
+                if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
+                    Object.keys(matrix).forEach(h => {
+                        Object.keys(matrix[h] || {}).forEach(a => {
+                            const cell = matrix[h][a];
+                            if (!cell || !cell.isTransferred) return;
+
+                            const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
+                            if (statsProcessedPairs.has(pairKey)) return;
+                            statsProcessedPairs.add(pairKey);
+
+                            const ht = teamStatsMap.get(h);
+                            const at = teamStatsMap.get(a);
+                            if (!ht || !at) return;
+
+                            const hs = cell.homeScore ?? 0;
+                            const as = cell.awayScore ?? 0;
+
+                            ht.played++; at.played++;
+                            ht.goalsFor += hs; ht.goalsAgainst += as;
+                            at.goalsFor += as; at.goalsAgainst += hs;
+
+                            if (hs > as) { ht.wins++; ht.points += pointsForWin; at.losses++; }
+                            else if (as > hs) { at.wins++; at.points += pointsForWin; ht.losses++; }
+                            else { ht.draws++; at.draws++; ht.points += 1; at.points += 1; }
+                        });
+                    });
+                }
+
+                // Výpočet rozdielu skóre
                 teamStatsMap.forEach(t => {
                     t.goalDifference = t.goalsFor - t.goalsAgainst;
                 });
 
-                // Zoradíme
+                // 11) Zoradenie tímov
+                const matchesForComparison = groupMatches.map(m => ({
+                    ...m,
+                    homeTeamName: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier,
+                    awayTeamName: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier,
+                }));
+
                 const sortedStats = Array.from(teamStatsMap.values()).sort((a, b) =>
-                    compareTeams(a, b, groupMatches.map(m => ({
-                        ...m,
-                        homeTeamName: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier,
-                        awayTeamName: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier,
-                    })), sortingConditions)
+                    compareTeams(a, b, matchesForComparison, sortingConditions)
                 );
 
                 if (isCancelled) return;
@@ -683,8 +719,8 @@ const ExportApp = ({ userProfileData }) => {
                     categoryName,
                     groupName,
                     groupType,
-                    teams,                        // pôvodné poradie podľa abecedy (pre stĺpce)
-                    sortedTeams: sortedStats,     // poradie podľa pravidiel (pre riadky)
+                    teams,
+                    sortedTeams: sortedStats,
                     matrix,
                     teamNamesFromMatches
                 });
@@ -701,7 +737,7 @@ const ExportApp = ({ userProfileData }) => {
         loadData();
 
         return () => { isCancelled = true; };
-    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName]);
+    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, pointsForWin, sortingConditions]);
 
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
@@ -925,6 +961,7 @@ const ExportApp = ({ userProfileData }) => {
 
 /* ============================================================
    KRÍŽOVÁ TABUĽKA (maticová)
+   – riadky aj stĺpce v rovnakom poradí podľa sortedTeams
    ============================================================ */
 const CrossTable = ({
     teams,
@@ -943,6 +980,14 @@ const CrossTable = ({
             React.createElement('p', { className: 'text-lg' }, 'Pre túto skupinu neexistujú žiadne tímy.')
         );
     }
+
+    // 🔥 KĽÚČOVÉ: použitie sortedTeams pre obe (riadky aj stĺpce)
+    const orderedTeams = (sortedTeams && sortedTeams.length > 0)
+        ? sortedTeams.map(s => {
+            const original = teams.find(t => t.id === s.id);
+            return original || { id: s.id, name: s.name };
+        })
+        : teams;
 
     const winPoints = (pointsForWin !== undefined && pointsForWin !== null) ? pointsForWin : 3;
     const drawPoints = 1;
@@ -1030,29 +1075,15 @@ const CrossTable = ({
                 && matchResult.status !== 'scheduled');
     };
 
-    // Zoradíme riadky podľa sortedTeams
-    const rowTeams = sortedTeams && sortedTeams.length > 0
-        ? teams.slice().sort((a, b) => {
-            const posA = sortedTeams.findIndex(t => t.id === a.id);
-            const posB = sortedTeams.findIndex(t => t.id === b.id);
-            if (posA === -1 && posB === -1) return 0;
-            if (posA === -1) return 1;
-            if (posB === -1) return -1;
-            return posA - posB;
-        })
-        : teams;
+    const getStats = (teamId) => {
+        if (!sortedTeams) return null;
+        return sortedTeams.find(t => t.id === teamId) || null;
+    };
 
-    // Získame pozíciu tímov
     const getPosition = (teamId) => {
         if (!sortedTeams) return '';
         const idx = sortedTeams.findIndex(t => t.id === teamId);
         return idx === -1 ? '' : idx + 1;
-    };
-
-    // Získame štatistiky tímu zo sortedTeams
-    const getStats = (teamId) => {
-        if (!sortedTeams) return null;
-        return sortedTeams.find(t => t.id === teamId) || null;
     };
 
     return React.createElement(
@@ -1068,7 +1099,7 @@ const CrossTable = ({
                     style: { tableLayout: 'fixed', margin: 0, padding: 0, borderSpacing: 0 }
                 },
 
-                // THEAD
+                // THEAD – stĺpce v poradí podľa sortedTeams
                 React.createElement(
                     'thead',
                     null,
@@ -1089,7 +1120,7 @@ const CrossTable = ({
                                 React.createElement('span', { className: FONT_CLASS + ' text-black mt-1' }, groupName)
                             )
                         ),
-                        teams.map((team) =>
+                        orderedTeams.map((team) =>
                             React.createElement(
                                 'th',
                                 {
@@ -1117,11 +1148,11 @@ const CrossTable = ({
                     )
                 ),
 
-                // TBODY
+                // TBODY – riadky v poradí podľa sortedTeams
                 React.createElement(
                     'tbody',
                     null,
-                    rowTeams.map((rowTeam) => {
+                    orderedTeams.map((rowTeam) => {
                         const stats = getStats(rowTeam.id);
                         const position = getPosition(rowTeam.id);
 
@@ -1139,7 +1170,7 @@ const CrossTable = ({
                             )
                         );
 
-                        teams.forEach((colTeam) => {
+                        orderedTeams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
                             if (rowTeam.id === colTeam.id) {
