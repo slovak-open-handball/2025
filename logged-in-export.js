@@ -1516,24 +1516,24 @@ const CrossTable = ({
                             );
                         });
 
-                        const showTotals = !!stats;
+                        const showTotals = stats && stats.played > 0;
                         // Skóre – ľavá bunka (strely) vpravo, pravá bunka (obdržané) vľavo
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: { ...subCellLeftStyle, textAlign: 'right', paddingRight: '10px' }
-                            }, stats && showTotals ? stats.goalsFor : ''),
+                            }, showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: subCellBaseStyle
-                            }, ':'),
+                            }, showTotals ? ':' : ''),
                             React.createElement('td', {
                                 key: 'total-conceded',
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: { ...subCellRightStyle, textAlign: 'left', paddingLeft: '10px' }
-                            }, stats && showTotals ? stats.goalsAgainst : '')
+                            }, showTotals ? stats.goalsAgainst : '')
                         );
 
                         rowCells.push(
