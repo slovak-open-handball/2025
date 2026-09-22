@@ -1400,21 +1400,34 @@ const CrossTable = ({
                             const as = matchResult.awayScore ?? 0;
 
                             if (hs === 0 && as === 0) {
+                                const zBgColor = matchResult.isTransferred ? TRANSFERRED_BG : '#fff';
+                            
+                                const zLeftStyle = { ...subCellLeftStyle, color: '#000', backgroundColor: zBgColor };
+                                const zMiddleStyle = { ...subCellMiddleStyle, color: '#000', backgroundColor: zBgColor };
+                                const zRightStyle = { ...subCellRightStyle, color: '#000', backgroundColor: zBgColor };
+
+                                if (matchResult.isTransferred) {
+                                    zLeftStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                    zMiddleStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                                    zMiddleStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                    zRightStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                                }
+
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-z1`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellLeftStyle, color: '#000', backgroundColor: '#fff' }
+                                        style: zLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-z2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellMiddleStyle, color: '#000', backgroundColor: '#fff' }
+                                        style: zMiddleStyle
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellRightStyle, color: '#000', backgroundColor: '#fff' }
+                                        style: zRightStyle
                                     }, '')
                                 );
                                 return;
