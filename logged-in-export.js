@@ -53,7 +53,6 @@ const hideHeaderAndMenuIfHash = () => {
 
         if (spacerDiv) spacerDiv.style.display = 'none';
 
-        // Odstránime všetky vonkajšie paddings/margins z main-content-area
         if (mainContentArea) {
             mainContentArea.style.padding = '0';
             mainContentArea.style.margin = '0';
@@ -101,7 +100,6 @@ window.dashesToSpaces = dashesToSpaces;
 /**
  * Parsovanie hashu:
  *   #tabulky/<categoryName>/<groupName>
- * vracia { type: 'tabulky', categoryName, groupName } alebo null
  */
 const parseExportHash = () => {
     const hash = window.location.hash;
@@ -153,7 +151,6 @@ const getDisplayTeamName = (teamIdentifier) => {
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
-    // Ak nie je platný hash, zobrazíme klasický export box
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
@@ -162,12 +159,10 @@ const ExportApp = ({ userProfileData }) => {
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
-    // Stav pre exportovanú tabuľku
     const [exportedTable, setExportedTable] = useState(null);
     const [loadingTable, setLoadingTable] = useState(false);
     const [errorTable, setErrorTable] = useState(null);
 
-    // Body za výhru – načítané z DB
     const [pointsForWin, setPointsForWin] = useState(3);
 
     /* --------- Načítanie pointsForWin zo settings/table (real-time) --------- */
@@ -194,7 +189,7 @@ const ExportApp = ({ userProfileData }) => {
 
     /* --------- Načítanie kategórií a skupín (len keď NIE je hash) --------- */
     useEffect(() => {
-        if (exportHash) return; // pri hash-i nepotrebujeme select boxy
+        if (exportHash) return;
 
         if (selectedOption !== 'tabulky') return;
 
@@ -276,7 +271,6 @@ const ExportApp = ({ userProfileData }) => {
 
         const loadData = async () => {
             try {
-                // 1) Načítame kategórie a skupiny
                 const [categoriesSnap, groupsSnap] = await Promise.all([
                     getDoc(doc(window.db, 'settings', 'categories')),
                     getDoc(doc(window.db, 'settings', 'groups'))
@@ -285,7 +279,6 @@ const ExportApp = ({ userProfileData }) => {
                 const categoriesData = categoriesSnap.exists() ? categoriesSnap.data() : {};
                 const groupsData = groupsSnap.exists() ? groupsSnap.data() : {};
 
-                // 2) Nájdeme categoryId podľa názvu (bez diakritiky)
                 let categoryId = null;
                 let categoryName = exportHash.categoryName;
                 const targetCategoryNorm = normalizeName(exportHash.categoryName);
@@ -306,7 +299,6 @@ const ExportApp = ({ userProfileData }) => {
                     return;
                 }
 
-                // 3) Nájdeme skupinu (podľa názvu, bez diakritiky) v rámci kategórie
                 const groupList = groupsData[categoryId] || [];
                 const targetGroupNorm = normalizeName(exportHash.groupName);
                 let foundGroup = null;
@@ -328,12 +320,10 @@ const ExportApp = ({ userProfileData }) => {
                 const groupName = foundGroup.name;
                 const groupType = foundGroup.type;
 
-                // 4) Načítame všetky zápasy
                 const matchesSnap = await getDocs(collection(window.db, 'matches'));
                 const allMatches = [];
                 matchesSnap.forEach((d) => allMatches.push({ id: d.id, ...d.data() }));
 
-                // 5) Filtrujeme zápasy pre danú kategóriu + skupinu
                 const groupMatches = allMatches.filter(m => {
                     if (m.isPlacementMatch) return false;
                     let mCatName = m.categoryName;
@@ -345,7 +335,6 @@ const ExportApp = ({ userProfileData }) => {
                         && normalizeName(m.groupName) === normalizeName(groupName);
                 });
 
-                // 6) Pripravíme mená tímov
                 const teamNamesMap = {};
                 groupMatches.forEach(m => {
                     if (m.homeTeamIdentifier && !teamNamesMap[m.homeTeamIdentifier]) {
@@ -364,7 +353,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 });
 
-                // 7) Zostavíme zoznam tímov
                 const teamsMap = new Map();
                 groupMatches.forEach(m => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
@@ -384,7 +372,6 @@ const ExportApp = ({ userProfileData }) => {
                 const teams = Array.from(teamsMap.values())
                     .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
 
-                // 8) Vytvoríme maticu vzájomných zápasov
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
 
@@ -428,7 +415,6 @@ const ExportApp = ({ userProfileData }) => {
         return () => { isCancelled = true; };
     }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName]);
 
-    /* --------- Dostupné typy skupín (pre select box) --------- */
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
             if (a === b) return 0;
@@ -474,28 +460,25 @@ const ExportApp = ({ userProfileData }) => {
     };
 
     /* ============================================================
-       VYKRESLENIE – AK JE HASH, ZOBRAZÍME EXPORT TABUĽKU
+       VYKRESLENIE – AK JE HASH
        ============================================================ */
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
             'div',
             { className: 'w-full p-0 m-0' },
 
-            // Loading
             loadingTable && React.createElement(
                 'div',
                 { className: 'flex justify-center items-center py-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
             ),
 
-            // Error
             errorTable && React.createElement(
                 'div',
                 { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
                 React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
             ),
 
-            // Tabuľka
             !loadingTable && !errorTable && exportedTable && React.createElement(
                 CrossTable,
                 {
@@ -545,7 +528,6 @@ const ExportApp = ({ userProfileData }) => {
                 'div',
                 { className: 'flex flex-col gap-6' },
 
-                // Typ exportu
                 React.createElement(
                     'div',
                     { className: 'flex flex-col gap-2' },
@@ -564,7 +546,6 @@ const ExportApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Kategória / typ / skupina (len pri tabuľkách)
                 selectedOption === 'tabulky' && React.createElement(
                     React.Fragment,
                     null,
@@ -634,7 +615,6 @@ const ExportApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Tlačidlo Generovať
                 React.createElement(
                     'div',
                     { className: isGenerateDisabled ? 'cursor-not-allowed' : '' },
@@ -794,11 +774,22 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const positionMap = {};
     rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
 
+    // Pomocná funkcia: vypočíta šírku pre tretinovú pod-bunku (250px / 3 = 83.33px)
+    const SUB_CELL_WIDTH = '83.33px';
+
+    const subCellBaseStyle = {
+        width: SUB_CELL_WIDTH,
+        minWidth: SUB_CELL_WIDTH,
+        maxWidth: SUB_CELL_WIDTH,
+        height: CELL_HEIGHT,
+        minHeight: CELL_HEIGHT,
+        maxHeight: CELL_HEIGHT
+    };
+
     return React.createElement(
         'div',
         { className: 'bg-white rounded-none shadow-none border-0 p-0 m-0' },
 
-        // Tabuľka
         React.createElement(
             'div',
             { className: 'p-0 m-0' },
@@ -814,19 +805,21 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                     }
                 },
 
-                // THEAD – iba jeden riadok s názvami tímov + Skóre / Body / Miesto
+                // THEAD
                 React.createElement(
                     'thead',
                     null,
                     React.createElement(
                         'tr',
                         { className: 'bg-gray-100' },
-                        // Prvý stĺpec – roh s názvom kategórie a skupiny
+                        // Prvý stĺpec – roh (kategória + skupina)
                         React.createElement(
                             'th',
                             {
                                 className: 'bg-gray-100 border border-gray-300 px-3 py-2 text-center align-middle',
-                                style: cellStyle
+                                style: cellStyle,
+                                colSpan: 1,
+                                rowSpan: 2
                             },
                             React.createElement(
                                 'div',
@@ -835,38 +828,46 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 React.createElement('span', { className: 'text-xs font-medium text-gray-500 mt-0.5' }, groupName)
                             )
                         ),
-                        // Názvy tímov v stĺpcoch
+                        // Názvy tímov v stĺpcoch – každý zaberá 3 podstĺpce (rowSpan=2, aby hlavička nebola zdvojená)
                         teams.map((team) =>
                             React.createElement(
                                 'th',
                                 {
                                     key: team.id,
+                                    colSpan: 3,
+                                    rowSpan: 2,
                                     className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 text-center align-middle',
                                     style: cellStyle
                                 },
                                 team.name
                             )
                         ),
-                        // Skóre / Body / Miesto v hlavičke
+                        // Skóre – hlavička s 3 podstĺpcami (tiež rowSpan=2)
                         React.createElement(
                             'th',
                             {
+                                colSpan: 3,
+                                rowSpan: 2,
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center align-middle bg-blue-50',
                                 style: cellStyle
                             },
                             'Skóre'
                         ),
+                        // Body (jeden stĺpec)
                         React.createElement(
                             'th',
                             {
+                                rowSpan: 2,
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center align-middle bg-blue-50',
                                 style: cellStyle
                             },
                             'Body'
                         ),
+                        // Miesto (jeden stĺpec)
                         React.createElement(
                             'th',
                             {
+                                rowSpan: 2,
                                 className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 uppercase tracking-wider text-center align-middle bg-blue-50',
                                 style: cellStyle
                             },
@@ -883,100 +884,177 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         const stats = teamStats[rowTeam.id];
                         const position = positionMap[rowTeam.id];
 
-                        return React.createElement(
-                            'tr',
-                            { key: rowTeam.id, className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
+                        const rowCells = [];
+
+                        // Hlavička riadku – názov tímu
+                        rowCells.push(
                             React.createElement(
                                 'th',
                                 {
+                                    key: 'row-name',
                                     className: 'border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 text-left align-middle bg-gray-100',
                                     style: cellStyle
                                 },
                                 rowTeam.name
-                            ),
-                            teams.map((colTeam) => {
-                                if (rowTeam.id === colTeam.id) {
-                                    return React.createElement(
+                            )
+                        );
+
+                        // Bunky pre každého súpera – teraz 3 pod-bunky (domáci skóre | ":" alebo vs | hostia skóre)
+                        teams.forEach((colTeam) => {
+                            const keyBase = `${rowTeam.id}-${colTeam.id}`;
+
+                            // Diagonála
+                            if (rowTeam.id === colTeam.id) {
+                                rowCells.push(
+                                    React.createElement(
                                         'td',
                                         {
-                                            key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center align-middle bg-gray-200 text-gray-400 text-xs font-medium',
-                                            style: cellStyle
+                                            key: `${keyBase}-d1`,
+                                            className: 'border border-gray-300 text-center align-middle bg-gray-200 text-gray-400 text-xs font-medium',
+                                            style: subCellBaseStyle
                                         },
                                         '—'
-                                    );
-                                }
-
-                                const matchResult = getMatchResult(rowTeam.id, colTeam.id);
-
-                                if (!matchResult) {
-                                    return React.createElement(
+                                    ),
+                                    React.createElement(
                                         'td',
                                         {
-                                            key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center align-middle text-gray-300 text-xs',
-                                            style: cellStyle
+                                            key: `${keyBase}-d2`,
+                                            className: 'border border-gray-300 text-center align-middle bg-gray-200 text-gray-400 text-xs font-medium',
+                                            style: subCellBaseStyle
                                         },
                                         ''
-                                    );
-                                }
-
-                                if (!isMatchCompleted(matchResult)) {
-                                    return React.createElement(
+                                    ),
+                                    React.createElement(
                                         'td',
                                         {
-                                            key: colTeam.id,
-                                            className: 'border border-gray-300 px-3 py-2 text-center align-middle text-gray-400 text-xs',
-                                            style: cellStyle
+                                            key: `${keyBase}-d3`,
+                                            className: 'border border-gray-300 text-center align-middle bg-gray-200 text-gray-400 text-xs font-medium',
+                                            style: subCellBaseStyle
                                         },
-                                        'vs'
-                                    );
-                                }
-
-                                const hs = matchResult.homeScore ?? 0;
-                                const as = matchResult.awayScore ?? 0;
-                                const rowWin = hs > as;
-                                const rowLoss = hs < as;
-
-                                return React.createElement(
-                                    'td',
-                                    {
-                                        key: colTeam.id,
-                                        className: `border border-gray-300 px-3 py-2 text-center align-middle text-sm font-bold ${
-                                            rowWin ? 'bg-green-50 text-green-700'
-                                                : rowLoss ? 'bg-red-50 text-red-700'
-                                                : 'bg-yellow-50 text-yellow-700'
-                                        }`,
-                                        style: cellStyle,
-                                        title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
-                                    },
-                                    `${hs}:${as}`
+                                        ''
+                                    )
                                 );
-                            }),
-                            React.createElement(
-                                'td',
-                                {
-                                    className: 'border border-gray-300 px-3 py-2 text-center align-middle text-sm font-mono bg-blue-50 text-gray-800',
-                                    style: cellStyle
-                                },
-                                `${stats.scored}:${stats.conceded}`
-                            ),
-                            React.createElement(
-                                'td',
-                                {
-                                    className: 'border border-gray-300 px-3 py-2 text-center align-middle text-sm font-bold bg-blue-50 text-blue-700',
-                                    style: cellStyle
-                                },
-                                stats.points
-                            ),
-                            React.createElement(
-                                'td',
-                                {
-                                    className: 'border border-gray-300 px-3 py-2 text-center align-middle text-sm font-bold bg-blue-50 text-gray-800',
-                                    style: cellStyle
-                                },
-                                position
-                            )
+                                return;
+                            }
+
+                            const matchResult = getMatchResult(rowTeam.id, colTeam.id);
+
+                            // Žiadny záznam
+                            if (!matchResult) {
+                                rowCells.push(
+                                    React.createElement('td', {
+                                        key: `${keyBase}-e1`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-300 text-xs',
+                                        style: subCellBaseStyle
+                                    }, ''),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-e2`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-300 text-xs',
+                                        style: subCellBaseStyle
+                                    }, ''),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-e3`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-300 text-xs',
+                                        style: subCellBaseStyle
+                                    }, '')
+                                );
+                                return;
+                            }
+
+                            // Neodohrané – v prostrednej bunke ":"
+                            if (!isMatchCompleted(matchResult)) {
+                                rowCells.push(
+                                    React.createElement('td', {
+                                        key: `${keyBase}-s1`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-400 text-xs',
+                                        style: subCellBaseStyle
+                                    }, ''),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-s2`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-500 text-lg font-bold',
+                                        style: subCellBaseStyle
+                                    }, ':'),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-s3`,
+                                        className: 'border border-gray-300 text-center align-middle text-gray-400 text-xs',
+                                        style: subCellBaseStyle
+                                    }, '')
+                                );
+                                return;
+                            }
+
+                            const hs = matchResult.homeScore ?? 0;
+                            const as = matchResult.awayScore ?? 0;
+                            const rowWin = hs > as;
+                            const rowLoss = hs < as;
+
+                            const scoreColor = rowWin
+                                ? 'bg-green-50 text-green-700'
+                                : rowLoss
+                                    ? 'bg-red-50 text-red-700'
+                                    : 'bg-yellow-50 text-yellow-700';
+
+                            rowCells.push(
+                                React.createElement('td', {
+                                    key: `${keyBase}-l`,
+                                    className: `border border-gray-300 text-center align-middle text-2xl font-bold ${scoreColor}`,
+                                    style: subCellBaseStyle,
+                                    title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
+                                }, hs),
+                                React.createElement('td', {
+                                    key: `${keyBase}-m`,
+                                    className: `border border-gray-300 text-center align-middle text-2xl font-bold ${scoreColor}`,
+                                    style: subCellBaseStyle
+                                }, ':'),
+                                React.createElement('td', {
+                                    key: `${keyBase}-r`,
+                                    className: `border border-gray-300 text-center align-middle text-2xl font-bold ${scoreColor}`,
+                                    style: subCellBaseStyle
+                                }, as)
+                            );
+                        });
+
+                        // Skóre (3 podstĺpce: strelené | ":" | inkasované)
+                        rowCells.push(
+                            React.createElement('td', {
+                                key: 'total-scored',
+                                className: 'border border-gray-300 text-center align-middle text-2xl font-mono font-bold bg-blue-50 text-gray-800',
+                                style: subCellBaseStyle
+                            }, stats.scored),
+                            React.createElement('td', {
+                                key: 'total-colon',
+                                className: 'border border-gray-300 text-center align-middle text-2xl font-bold bg-blue-50 text-gray-800',
+                                style: subCellBaseStyle
+                            }, ':'),
+                            React.createElement('td', {
+                                key: 'total-conceded',
+                                className: 'border border-gray-300 text-center align-middle text-2xl font-mono font-bold bg-blue-50 text-gray-800',
+                                style: subCellBaseStyle
+                            }, stats.conceded)
+                        );
+
+                        // Body
+                        rowCells.push(
+                            React.createElement('td', {
+                                key: 'points',
+                                className: 'border border-gray-300 text-center align-middle text-2xl font-bold bg-blue-50 text-blue-700',
+                                style: cellStyle
+                            }, stats.points)
+                        );
+
+                        // Miesto
+                        rowCells.push(
+                            React.createElement('td', {
+                                key: 'position',
+                                className: 'border border-gray-300 text-center align-middle text-2xl font-bold bg-blue-50 text-gray-800',
+                                style: cellStyle
+                            }, position)
+                        );
+
+                        return React.createElement(
+                            'tr',
+                            { key: rowTeam.id, className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
+                            rowCells
                         );
                     })
                 )
