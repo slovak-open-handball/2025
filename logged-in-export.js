@@ -112,6 +112,17 @@ const ExportApp = ({ userProfileData }) => {
         return null;
     }
 
+    const [selectedOption, setSelectedOption] = useState('');
+
+    const handleGenerate = () => {
+        if (!selectedOption) {
+            window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
+            return;
+        }
+        const url = `logged-in-export.html#${selectedOption}`;
+        window.open(url, '_blank');
+    };
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -122,6 +133,42 @@ const ExportApp = ({ userProfileData }) => {
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Export')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex flex-col gap-6' },
+                // Select box
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col gap-2' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'export-option', className: 'text-sm font-medium text-gray-700' },
+                        'Vyberte typ exportu'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            id: 'export-option',
+                            value: selectedOption,
+                            onChange: (e) => setSelectedOption(e.target.value),
+                            className: 'w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte možnosť --'),
+                        React.createElement('option', { value: 'zapasy' }, 'Zápasy v športovej hale'),
+                        React.createElement('option', { value: 'tabulky' }, 'Tabuľky')
+                    )
+                ),
+                // Tlačidlo Generovať
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleGenerate,
+                        disabled: !selectedOption,
+                        className: `w-full px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.01] ${selectedOption ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' : 'bg-gray-400 cursor-not-allowed'}`
+                    },
+                    'Generovať'
+                )
             )
         )
     );
