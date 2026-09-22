@@ -505,8 +505,70 @@ const ExportApp = ({ userProfileData }) => {
                 const allMatches = [];
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
-                const teamNamesFromMatches = { ...(window.teamNames || {}) };
+                // Pomocná funkcia na kontrolu, či meno vyzerá ako nedokončené
+                const looksUnresolved = (name, identifier) => {
+                    if (!name) return true;
+                    if (name === identifier) return true;
+                    // Ak meno vyzerá ako kód (napr. "U12 CH 2A"), považuj za nedokončené
+                    // Heuristika: krátke, obsahuje čísla a veľké písmená, bez diakritiky
+                    const trimmed = String(name).trim();
+                    if (trimmed.length <= 12 && /^[A-Z0-9\s\-]+$/.test(trimmed)) {
+                        // Vyzerá ako kód tímu, nie ako názov klubu
+                        // Skontroluj, či existuje iné meno pre tento identifikátor
+                        return true;
+                    }
+                    return false;
+                };
+                
+                const resolveTeamNameNow = (identifier) => {
+                    if (!identifier) return identifier;
+                
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
+                            if (mapped && mapped !== identifier) return mapped;
+                        } catch (e) { }
+                    }
+                
+                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        try {
+                            const mapped = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                            if (mapped && mapped !== identifier) return mapped;
+                        } catch (e) { }
+                    }
+                
+                    return identifier;
+                };
+                
+                const collectUnresolvedIdentifiers = (matches) => {
+                    const unresolved = new Set();
+                    for (const m of matches) {
+                        const ids = [m.homeTeamIdentifier, m.awayTeamIdentifier].filter(Boolean);
+                        for (const id of ids) {
+                            const resolved = resolveTeamNameNow(id);
+                            if (looksUnresolved(resolved, id)) {
+                                unresolved.add(id);
+                            }
+                        }
+                    }
+                    return unresolved;
+                };
 
+                // Počkaj, kým sa všetky identifikátory vyriešia (max 5 sekúnd)
+                const MAX_WAIT_MS = 5000;
+                const POLL_MS = 200;
+                const startedAt = Date.now();
+                let lastUnresolved = collectUnresolvedIdentifiers(allMatches);
+                
+                while (lastUnresolved.size > 0 && (Date.now() - startedAt) < MAX_WAIT_MS) {
+                    await new Promise(r => setTimeout(r, POLL_MS));
+                    if (isCancelled) return;
+                    lastUnresolved = collectUnresolvedIdentifiers(allMatches);
+                }
+                
+                // Teraz naplň teamNamesFromMatches z aktuálne dostupných zdrojov
+                const teamNamesFromMatches = { ...(window.teamNames || {}) };
+                
                 if (window.__teamNameMapping && typeof window.__teamNameMapping === 'object') {
                     for (const [identifier, data] of Object.entries(window.__teamNameMapping)) {
                         if (data && data.teamName && !teamNamesFromMatches[identifier]) {
@@ -527,91 +589,27 @@ const ExportApp = ({ userProfileData }) => {
                                 }
                             });
                         }
-                    } catch (e) {
-                    }
+                    } catch (e) { }
                 }
-
-                if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
-                    const uniqueGroups = new Set();
-                    allMatches.forEach(m => {
-                        if (m.isPlacementMatch) return;
-                        if (!m.categoryName || !m.groupName) return;
-                        uniqueGroups.add(`${m.categoryName}|${m.groupName}`);
-                    });
-
-                    let resolvedCount = 0;
-
-                    for (const groupKey of uniqueGroups) {
-                        const [catName, grpName] = groupKey.split('|');
-
-                        try {
-                            const table = window.matchTracker.createGroupTable(catName, grpName);
-                            if (!table || !table.teams) continue;
-
-                            for (const team of table.teams) {
-                                if (!team || !team.id || !team.name) continue;
-                                if (!teamNamesFromMatches[team.id]) {
-                                    teamNamesFromMatches[team.id] = team.name;
-                                    resolvedCount++;
-                                }
-                            }
-                        } catch (e) { }
-                    }
-                }
-
-                if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                    let resolvedCount = 0;
-
-                    for (const match of allMatches) {
-                        if (match.homeTeamIdentifier && !teamNamesFromMatches[match.homeTeamIdentifier]) {
-                            try {
-                                const mapped = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                                if (mapped && mapped !== match.homeTeamIdentifier) {
-                                    teamNamesFromMatches[match.homeTeamIdentifier] = mapped;
-                                    resolvedCount++;
-                                }
-                            } catch (e) { }
-                        }
-
-                        if (match.awayTeamIdentifier && !teamNamesFromMatches[match.awayTeamIdentifier]) {
-                            try {
-                                const mapped = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                                if (mapped && mapped !== match.awayTeamIdentifier) {
-                                    teamNamesFromMatches[match.awayTeamIdentifier] = mapped;
-                                    resolvedCount++;
-                                }
-                            } catch (e) { }
+                
+                // Doplň všetky identifikátory z allMatches (aj tie, čo neboli vyriešené)
+                for (const m of allMatches) {
+                    const ids = [m.homeTeamIdentifier, m.awayTeamIdentifier].filter(Boolean);
+                    for (const id of ids) {
+                        if (!teamNamesFromMatches[id]) {
+                            const resolved = resolveTeamNameNow(id);
+                            teamNamesFromMatches[id] = resolved;
                         }
                     }
                 }
-
-                // NOVÉ: getFreshTeamName – vždy najaktuálnejšie meno z dostupných zdrojov
+                
+                // getFreshTeamName – vždy najaktuálnejšie meno
                 const getFreshTeamName = (identifier) => {
                     if (!identifier) return identifier;
-
                     if (teamNamesFromMatches[identifier]) return teamNamesFromMatches[identifier];
-
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
-                            if (mapped && mapped !== identifier) {
-                                teamNamesFromMatches[identifier] = mapped;
-                                return mapped;
-                            }
-                        } catch (e) { }
-                    }
-
-                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                        try {
-                            const mapped = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                            if (mapped && mapped !== identifier) {
-                                teamNamesFromMatches[identifier] = mapped;
-                                return mapped;
-                            }
-                        } catch (e) { }
-                    }
-
-                    return identifier;
+                    const resolved = resolveTeamNameNow(identifier);
+                    teamNamesFromMatches[identifier] = resolved;
+                    return resolved;
                 };
 
                 const groupMatches = allMatches.filter(m => {
