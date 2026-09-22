@@ -933,7 +933,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             'th',
                             {
                                 colSpan: 3,
-                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                 style: cellStyle
                             },
                             'Skóre'
@@ -942,7 +942,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         React.createElement(
                             'th',
                             {
-                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                 style: cellStyle
                             },
                             'Body'
@@ -951,7 +951,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         React.createElement(
                             'th',
                             {
-                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                 style: cellStyle
                             },
                             'Miesto'
