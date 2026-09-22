@@ -1573,36 +1573,44 @@ const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
-    if (userProfileData) {
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            onAuthStateChanged(window.auth, async (user) => {
-                if (user) {
-                    try {
-                        const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-                        if (docSnap.exists()) {
-                            const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                await updateDoc(userProfileRef, { email: user.email });
-                                const notificationsCollectionRef = collection(window.db, 'notifications');
-                                await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email,
-                                    changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(),
-                                });
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
+    // Ak URL obsahuje hash a ide o logged-in-export.html, vykreslíme ExportApp
+    // aj bez prihlásenia (userProfileData = null)
+    const hasHashInUrl = window.location.hash && window.location.hash.length > 1;
+    const isExportPage = window.location.pathname.endsWith('logged-in-export.html');
+    const shouldRenderExportWithoutUser = isExportPage && hasHashInUrl;
+
+    if (userProfileData || shouldRenderExportWithoutUser) {
+        if (userProfileData) {
+            if (window.auth && window.db && !isEmailSyncListenerSetup) {
+                onAuthStateChanged(window.auth, async (user) => {
+                    if (user) {
+                        try {
+                            const userProfileRef = doc(window.db, 'users', user.uid);
+                            const docSnap = await getDoc(userProfileRef);
+                            if (docSnap.exists()) {
+                                const firestoreEmail = docSnap.data().email;
+                                if (user.email !== firestoreEmail) {
+                                    await updateDoc(userProfileRef, { email: user.email });
+                                    const notificationsCollectionRef = collection(window.db, 'notifications');
+                                    await addDoc(notificationsCollectionRef, {
+                                        userEmail: user.email,
+                                        changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
+                                        timestamp: new Date(),
+                                    });
+                                    window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
+                                }
                             }
+                        } catch (error) {
                         }
-                    } catch (error) {
                     }
-                }
-            });
-            isEmailSyncListenerSetup = true;
+                });
+                isEmailSyncListenerSetup = true;
+            }
         }
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(ExportApp, { userProfileData }));
+            root.render(React.createElement(ExportApp, { userProfileData: userProfileData || null }));
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
