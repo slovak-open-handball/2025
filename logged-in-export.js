@@ -551,30 +551,27 @@ const ExportApp = ({ userProfileData }) => {
                 const allMatches = [];
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
-                                // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
-                //    🔥 PRESNE AKO V tables.js – cez matchTracker.getTeamNameByDisplayId
-                //    + použijeme aj window.__teamNameMapping z func-tables.js
+                // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
+                //    🔥 POUŽIJEME matchTracker.getTeamNameByDisplayId SYNCHRÓNNE pre každý identifier
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
-                // 🔥 Ak existuje window.__teamNameMapping (z func-tables.js), použijeme ho
+                // 5a) Použijeme window.__teamNameMapping (z func-tables.js), ak existuje
                 if (window.__teamNameMapping && typeof window.__teamNameMapping === 'object') {
                     for (const [identifier, data] of Object.entries(window.__teamNameMapping)) {
                         if (data && data.teamName && !teamNamesFromMatches[identifier]) {
                             teamNamesFromMatches[identifier] = data.teamName;
                         }
                     }
-                    console.log('[EXPORT] Použité mapovanie z window.__teamNameMapping:', 
+                    console.log('[EXPORT] Použité mapovanie z window.__teamNameMapping:',
                         Object.keys(window.__teamNameMapping).length, 'položiek');
                 }
 
-                // 🔥 Ak existuje aj cache (localStorage), použijeme ju tiež
+                // 5b) Použijeme cache z localStorage, ak existuje
                 if (window.__internalReplacementCache) {
                     try {
                         const cache = window.__internalReplacementCache.get?.();
                         if (cache && typeof cache.forEach === 'function') {
                             cache.forEach((value, key) => {
-                                // key je "category|groupLetter|position"
-                                // value obsahuje { teamName, displayId, ... }
                                 if (value && value.displayId && value.teamName) {
                                     if (!teamNamesFromMatches[value.displayId]) {
                                         teamNamesFromMatches[value.displayId] = value.teamName;
@@ -588,64 +585,38 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
-                // Ak window.teamNames je prázdne, načítame asynchrónne
-                if (Object.keys(teamNamesFromMatches).length === 0 &&
-                    window.matchTracker &&
-                    typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-
-                    console.log('[EXPORT] window.teamNames je prázdne, načítavam cez matchTracker...');
+                // 5c) 🔥 KĽÚČOVÉ: Pre KAŽDÝ identifier v zápasoch zavoláme SYNCHRÓNNE
+                //     matchTracker.getTeamNameByDisplayId(identifier)
+                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    let resolvedCount = 0;
 
                     for (const match of allMatches) {
-                        let categoryName = match.categoryName;
-                        if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
-                            categoryName = categoriesData[match.categoryId].name;
-                        }
-                        if (!categoryName) continue;
-
-                        if (match.homeTeamIdentifier) {
-                            const currentDisplayName = teamNamesFromMatches[match.homeTeamIdentifier]
-                                || getDisplayTeamName(match.homeTeamIdentifier);
-
-                            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
-                                try {
-                                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
-                                    if (newName && newName !== currentDisplayName) {
-                                        teamNamesFromMatches[match.homeTeamIdentifier] = newName;
-                                    } else if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
-                                        teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
-                                    }
-                                } catch (err) {
-                                    if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
-                                        teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
-                                    }
+                        // HOME
+                        if (match.homeTeamIdentifier && !teamNamesFromMatches[match.homeTeamIdentifier]) {
+                            try {
+                                const mapped = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+                                if (mapped && mapped !== match.homeTeamIdentifier) {
+                                    teamNamesFromMatches[match.homeTeamIdentifier] = mapped;
+                                    resolvedCount++;
                                 }
-                            } else if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
-                                teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
-                            }
+                            } catch (e) { /* ignore */ }
                         }
 
-                        if (match.awayTeamIdentifier) {
-                            const currentDisplayName = teamNamesFromMatches[match.awayTeamIdentifier]
-                                || getDisplayTeamName(match.awayTeamIdentifier);
-
-                            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
-                                try {
-                                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
-                                    if (newName && newName !== currentDisplayName) {
-                                        teamNamesFromMatches[match.awayTeamIdentifier] = newName;
-                                    } else if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
-                                        teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
-                                    }
-                                } catch (err) {
-                                    if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
-                                        teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
-                                    }
+                        // AWAY
+                        if (match.awayTeamIdentifier && !teamNamesFromMatches[match.awayTeamIdentifier]) {
+                            try {
+                                const mapped = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                                if (mapped && mapped !== match.awayTeamIdentifier) {
+                                    teamNamesFromMatches[match.awayTeamIdentifier] = mapped;
+                                    resolvedCount++;
                                 }
-                            } else if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
-                                teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
-                            }
+                            } catch (e) { /* ignore */ }
                         }
                     }
+
+                    console.log('[EXPORT] Cez matchTracker.getTeamNameByDisplayId (sync) vyriešených:', resolvedCount);
+                } else {
+                    console.warn('[EXPORT] ⚠️ matchTracker.getTeamNameByDisplayId NIE JE dostupný!');
                 }
 
                 console.log('[EXPORT] teamNamesFromMatches (po načítaní):', teamNamesFromMatches);
