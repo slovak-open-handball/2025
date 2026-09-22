@@ -730,15 +730,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 });
         
-                // Vlastné zápasy skupiny
-                groupMatches.forEach(m => {
-                    if (m.status !== 'completed') return;
-                    const h = m.homeTeamIdentifier;
-                    const a = m.awayTeamIdentifier;
-                    if (!h || !a) return;
-                    if (!teamStatsMapHas(h) || !teamStatsMapHas(a)) { /* placeholder */ }
-                });
-        
                 // Inicializuj štatistiky
                 const teamStatsMap = new Map();
                 teams.forEach(t => {
