@@ -357,7 +357,6 @@ const ExportApp = ({ userProfileData }) => {
                     .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
 
                 // 8) Vytvoríme maticu vzájomných zápasov
-                // matrix[homeId][awayId] = { homeScore, awayScore, status }
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
 
@@ -453,17 +452,6 @@ const ExportApp = ({ userProfileData }) => {
         return React.createElement(
             'div',
             { className: 'w-full max-w-7xl mx-auto px-4 py-6' },
-
-            // Nadpis
-            React.createElement(
-                'div',
-                { className: 'mb-6 text-center' },
-                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' },
-                    exportedTable
-                        ? `${exportedTable.categoryName} - ${exportedTable.groupName}`
-                        : 'Načítavam tabuľku...'
-                )
-            ),
 
             // Loading
             loadingTable && React.createElement(
@@ -655,7 +643,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
 
     /**
      * Získa výsledok zápasu medzi dvoma tímami z pohľadu riadkového tímu.
-     * Vráti { homeScore, awayScore, status, isSwapped } alebo null.
      */
     const getMatchResult = (rowTeamId, colTeamId) => {
         const direct = matrix?.[rowTeamId]?.[colTeamId];
@@ -690,7 +677,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     };
 
     /**
-     * Spočíta štatistiky pre každý tím (len z jeho pohľadu, teda každý zápas raz).
+     * Spočíta štatistiky pre každý tím.
      */
     const teamStats = {};
     teams.forEach(t => {
@@ -752,7 +739,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         });
     });
 
-    // Vypočítame poradie
     const rankedTeams = [...teams].sort((a, b) => {
         const sa = teamStats[a.id];
         const sb = teamStats[b.id];
@@ -771,22 +757,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
 
-        // Hlavička
-        React.createElement(
-            'div',
-            { className: 'bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3' },
-            React.createElement(
-                'div',
-                { className: 'flex items-center gap-3' },
-                React.createElement('h2', { className: 'text-lg font-bold text-gray-800' }, `${categoryName} - ${groupName}`),
-                React.createElement(
-                    'span',
-                    { className: 'text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700' },
-                    groupTypeLabel
-                )
-            )
-        ),
-
         // Tabuľka
         React.createElement(
             'div',
@@ -795,29 +765,40 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 'table',
                 { className: 'min-w-full border-collapse' },
 
-                // THEAD
+                // THEAD – iba jeden riadok s názvami tímov + Skóre / Body / Miesto
                 React.createElement(
                     'thead',
                     null,
                     React.createElement(
                         'tr',
-                        { className: 'bg-gray-200' },
+                        { className: 'bg-gray-100' },
+                        // Prvý stĺpec – roh s názvom kategórie a skupiny
                         React.createElement(
                             'th',
                             {
-                                className: 'sticky left-0 z-10 bg-gray-200 border border-gray-300 px-3 py-2 text-xs font-bold text-gray-600 uppercase tracking-wider text-center',
+                                className: 'sticky left-0 z-10 bg-gray-100 border border-gray-300 px-3 py-2 text-center',
                                 style: { minWidth: '160px' }
                             },
-                            'Tím / Súper'
+                            React.createElement(
+                                'div',
+                                { className: 'flex flex-col items-center justify-center leading-tight' },
+                                React.createElement('span', { className: 'text-sm font-bold text-gray-800' }, categoryName),
+                                React.createElement('span', { className: 'text-xs font-medium text-gray-500 mt-0.5' }, groupName)
+                            )
                         ),
-                        React.createElement(
-                            'th',
-                            {
-                                colSpan: teams.length,
-                                className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-600 uppercase tracking-wider text-center'
-                            },
-                            'Súperi'
+                        // Názvy tímov v stĺpcoch
+                        teams.map((team) =>
+                            React.createElement(
+                                'th',
+                                {
+                                    key: team.id,
+                                    className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 text-center',
+                                    style: { minWidth: '90px' }
+                                },
+                                team.name
+                            )
                         ),
+                        // Skóre / Body / Miesto v hlavičke
                         React.createElement(
                             'th',
                             {
@@ -842,31 +823,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             },
                             'Miesto'
                         )
-                    ),
-                    React.createElement(
-                        'tr',
-                        { className: 'bg-gray-100' },
-                        React.createElement(
-                            'th',
-                            {
-                                className: 'sticky left-0 z-10 bg-gray-100 border border-gray-300 px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider text-center'
-                            },
-                            ''
-                        ),
-                        teams.map((team) =>
-                            React.createElement(
-                                'th',
-                                {
-                                    key: team.id,
-                                    className: 'border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 text-center',
-                                    style: { minWidth: '90px' }
-                                },
-                                team.name
-                            )
-                        ),
-                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, ''),
-                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, ''),
-                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, '')
                     )
                 ),
 
@@ -968,32 +924,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         );
                     })
                 )
-            )
-        ),
-
-        // Legenda
-        React.createElement(
-            'div',
-            { className: 'px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap items-center gap-4' },
-            React.createElement('span', null, 'Legenda:'),
-            React.createElement('span', { className: 'inline-flex items-center gap-1' },
-                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-green-100 border border-green-300' }),
-                'výhra riadkového tímu'
-            ),
-            React.createElement('span', { className: 'inline-flex items-center gap-1' },
-                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-300' }),
-                'remíza'
-            ),
-            React.createElement('span', { className: 'inline-flex items-center gap-1' },
-                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-red-100 border border-red-300' }),
-                'prehra riadkového tímu'
-            ),
-            React.createElement('span', { className: 'inline-flex items-center gap-1' },
-                React.createElement('span', { className: 'inline-block w-3 h-3 rounded-sm bg-gray-200 border border-gray-300' }),
-                'neodohrané / neexistuje'
-            ),
-            React.createElement('span', { className: 'ml-auto text-gray-400' },
-                `Body: ${winPoints} za výhru, ${drawPoints} za remízu`
             )
         )
     );
