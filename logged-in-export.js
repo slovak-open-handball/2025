@@ -746,50 +746,95 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 && matchResult.status !== 'scheduled');
     };
 
-    /* ============================================================
-       NAČÍTANIE PRENESENÝCH ZÁPASOV Z INÝCH SKUPÍN
-       (rovnaká logika ako tables.js pre nadstavbové skupiny)
-       ============================================================ */
-    const extraTransferredMatrix = {}; // matrix[homeTeamName][awayTeamName] = { homeScore, awayScore }
-    const transferredPairKeys = new Set(); // množina párov (podľa názvov tímov), ktoré sú prenesené
+   /* ============================================================
+   NAČÍTANIE PRENESENÝCH ZÁPASOV Z INÝCH SKUPÍN
+   (rovnaká logika ako tables.js pre nadstavbové skupiny)
+   ============================================================ */
 
-    try {
-        if (
-            window.matchTracker &&
-            typeof window.matchTracker.createAdvancedGroupTable === 'function' &&
-            groupType === 'nadstavbová skupina'
-        ) {
-            const advancedTable = window.matchTracker.createAdvancedGroupTable(categoryName, groupName);
+    // Stav, ktorý sa naplní asynchrónne (keď je matchTracker pripravený)
+    const [transferredData, setTransferredData] = useState({
+        matrix: {},
+        pairKeys: new Set(),
+        loaded: false
+    });
 
-            if (advancedTable && Array.isArray(advancedTable.transferredMatches)) {
-                advancedTable.transferredMatches.forEach((tm) => {
-                    // Názvy tímov z preneseného zápasu
-                    const homeName = tm.homeTeamName || tm.homeTeamIdentifier;
-                    const awayName = tm.awayTeamName || tm.awayTeamIdentifier;
-                    if (!homeName || !awayName) return;
+    useEffect(() => {
+        if (groupType !== 'nadstavbová skupina') return;
 
-                    // Uložíme si zápas do pomocnej matice (podľa názvov tímov)
-                    if (!extraTransferredMatrix[homeName]) extraTransferredMatrix[homeName] = {};
-                    if (!extraTransferredMatrix[homeName][awayName]) {
-                        extraTransferredMatrix[homeName][awayName] = {
-                            homeScore: tm.homeScore ?? null,
-                            awayScore: tm.awayScore ?? null,
-                            status: 'completed',
-                            isTransferred: true
-                        };
+        let cancelled = false;
+        let attempts = 0;
+        const maxAttempts = 30; // max ~3 sekundy (30 × 100 ms)
+
+        const tryLoad = () => {
+            if (cancelled) return;
+
+            // Skúsime použiť matchTracker.createAdvancedGroupTable
+            if (
+                window.matchTracker &&
+                typeof window.matchTracker.createAdvancedGroupTable === 'function' &&
+                typeof window.matchTracker.isDataReady === 'function' &&
+                window.matchTracker.isDataReady()
+            ) {
+                try {
+                    const advancedTable = window.matchTracker.createAdvancedGroupTable(categoryName, groupName);
+
+                    if (advancedTable && Array.isArray(advancedTable.transferredMatches)) {
+                        const newMatrix = {};
+                        const newPairKeys = new Set();
+
+                        advancedTable.transferredMatches.forEach((tm) => {
+                            const homeName = tm.homeTeamName || tm.homeTeamIdentifier;
+                            const awayName = tm.awayTeamName || tm.awayTeamIdentifier;
+                            if (!homeName || !awayName) return;
+
+                            if (!newMatrix[homeName]) newMatrix[homeName] = {};
+                            if (!newMatrix[homeName][awayName]) {
+                                newMatrix[homeName][awayName] = {
+                                    homeScore: tm.homeScore ?? null,
+                                    awayScore: tm.awayScore ?? null,
+                                    status: 'completed',
+                                    isTransferred: true
+                                };
+                            }
+
+                            newPairKeys.add(`${homeName}|${awayName}`);
+                            newPairKeys.add(`${awayName}|${homeName}`);
+                        });
+
+                        if (!cancelled) {
+                            setTransferredData({
+                                matrix: newMatrix,
+                                pairKeys: newPairKeys,
+                                loaded: true
+                            });
+                        }
+                        return;
                     }
-
-                    // Zapamätáme si oba smery, aby sme vedeli označiť bunku
-                    const key1 = `${homeName}|${awayName}`;
-                    const key2 = `${awayName}|${homeName}`;
-                    transferredPairKeys.add(key1);
-                    transferredPairKeys.add(key2);
-                });
+                } catch (err) {
+                    console.error('Chyba pri načítavaní prenesených zápasov:', err);
+                }
             }
-        }
-    } catch (err) {
-        console.error('Chyba pri načítavaní prenesených zápasov:', err);
-    }
+
+            // Skúsime znova po 100 ms (ak ešte nie je pripravený)
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(tryLoad, 100);
+            } else {
+                console.warn('Prenesené zápasy sa nepodarilo načítať – matchTracker nie je pripravený.');
+                if (!cancelled) {
+                    setTransferredData({ matrix: {}, pairKeys: new Set(), loaded: true });
+                }
+            }
+        };
+
+        tryLoad();
+
+        return () => { cancelled = true; };
+    }, [categoryName, groupName, groupType]);
+
+    // Skratky pre použitie v renderi
+    const extraTransferredMatrix = transferredData.matrix;
+    const transferredPairKeys = transferredData.pairKeys;
 
     /**
      * Skúsi nájsť prenesený zápas medzi dvoma tímami podľa názvov.
