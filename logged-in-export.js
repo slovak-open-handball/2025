@@ -106,7 +106,7 @@ hideHeaderAndMenuIfHash();
 // Počúvame na zmeny hash v URL (napr. pri navigácii v rámci SPA)
 window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
-const TemplateApp = ({ userProfileData }) => {
+const ExportApp = ({ userProfileData }) => {
     // Ak URL obsahuje hash, nevykreslíme nič
     if (window.location.hash && window.location.hash.length > 0) {
         return null;
@@ -186,7 +186,7 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(TemplateApp, { userProfileData }));
+            root.render(React.createElement(ExportApp, { userProfileData }));
             console.log("logged-in-template.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-template.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
