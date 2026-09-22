@@ -739,7 +739,6 @@ const ExportApp = ({ userProfileData }) => {
                         goalsFor: 0, goalsAgainst: 0, points: 0, goalDifference: 0
                     });
                 });
-                function teamStatsMapHas(id) { return teamStatsMap.has(id); }
         
                 const statsProcessedPairs = new Set();
                 groupMatches.forEach(m => {
