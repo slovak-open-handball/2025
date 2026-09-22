@@ -1399,9 +1399,7 @@ const CrossTable = ({
                             const matchResult = getMatchResult(rowTeam.id, colTeam.id);
 
                             // 🔥 NOVÉ: Ak bunka nie je v matrix a posledné znaky sa rovnajú → podfarbiť
-                            const transferredByChar = (groupType === 'nadstavbová skupina')
-                                ? isTransferredByLastChar(rowTeam, colTeam)
-                                : false;
+                            const transferredByChar = isTransferredByLastChar(rowTeam, colTeam);
 
                             if (!isMatchCompleted(matchResult) && transferredByChar) {
                                 rowCells.push(
