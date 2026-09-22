@@ -380,56 +380,49 @@ const ExportApp = ({ userProfileData }) => {
     }, [selectedGroupType, exportHash]);
 
     useEffect(() => {
-        let resolved = false;
-    
-        const markReady = () => {
-            if (resolved) return;
-            resolved = true;
+        const hasMatchesNow = window.matchTracker?.getAllMatches?.()?.length > 0;
+        const mappingNow = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
+
+        if (hasMatchesNow || mappingNow) {
             setIsTrackerReady(true);
-        };
-    
-        const mappingReady = () =>
-            window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
-        const hasMatches = () =>
-            window.matchTracker?.getAllMatches?.()?.length > 0;
-    
-        // Ak už je všetko načítané pred mountom
-        if (mappingReady() && hasMatches()) {
-            markReady();
             return;
         }
-    
-        const handleMappingReady = () => {
-            // Po evente ešte over, že aj zápasy sú načítané
-            if (hasMatches()) markReady();
+
+        const handleGroupTablesUpdated = (event) => {
+            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
+            if (hasMatches) {
+                setIsTrackerReady(true);
+            }
         };
 
-        const handleGroupTablesUpdated = () => {
-            // Po evente ešte over, že aj mapovanie je hotové
-            if (mappingReady()) markReady();
+        const handleMappingReady = (event) => {
+            setIsTrackerReady(true);
         };
-    
+
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-    
+
         let attempts = 0;
-        const maxAttempts = 200; // 60 s
+        const maxAttempts = 200;
         const pollInterval = setInterval(() => {
             attempts++;
-    
-            // KĽÚČOVÁ ZMENA: vyžaduj OBOJE – mapping AJ matches
-            if (mappingReady() && hasMatches()) {
+
+            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
+            const mappingReady = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
+            const teamManagerReady = window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
+
+            if (hasMatches || mappingReady || teamManagerReady) {
                 clearInterval(pollInterval);
-                markReady();
+                setIsTrackerReady(true);
                 return;
             }
-    
+
             if (attempts >= maxAttempts) {
                 clearInterval(pollInterval);
-                markReady(); // fallback, aby sa niečo zobrazilo
+                setIsTrackerReady(true);
             }
         }, 300);
-    
+
         return () => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
@@ -587,35 +580,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
-                // Pomocná funkcia na získanie najaktuálnejšieho mena tímu
-                const getFreshTeamName = (identifier) => {
-                    if (!identifier) return identifier;
-                
-                    if (teamNamesFromMatches[identifier]) return teamNamesFromMatches[identifier];
-                
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
-                            if (mapped && mapped !== identifier) {
-                                teamNamesFromMatches[identifier] = mapped;
-                                return mapped;
-                            }
-                        } catch (e) { }
-                    }
-                
-                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                        try {
-                            const mapped = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                            if (mapped && mapped !== identifier) {
-                                teamNamesFromMatches[identifier] = mapped;
-                                return mapped;
-                            }
-                        } catch (e) { }
-                    }
-                
-                    return identifier;
-                };
-
                 const groupMatches = allMatches.filter(m => {
                     if (m.isPlacementMatch) return false;
                     let mCatName = m.categoryName;
@@ -632,23 +596,18 @@ const ExportApp = ({ userProfileData }) => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
                         teamsMap.set(m.homeTeamIdentifier, {
                             id: m.homeTeamIdentifier,
-                            name: getFreshTeamName(m.homeTeamIdentifier)
+                            name: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier
                         });
                     }
                     if (m.awayTeamIdentifier && !teamsMap.has(m.awayTeamIdentifier)) {
                         teamsMap.set(m.awayTeamIdentifier, {
                             id: m.awayTeamIdentifier,
-                            name: getFreshTeamName(m.awayTeamIdentifier)
+                            name: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier
                         });
                     }
                 });
 
                 const teams = Array.from(teamsMap.values());
-
-                teams.forEach(t => {
-                    const fresh = getFreshTeamName(t.id);
-                    if (fresh && fresh !== t.id) t.name = fresh;
-                });
 
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
@@ -715,21 +674,20 @@ const ExportApp = ({ userProfileData }) => {
 
                         const homeTeamName = teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier;
                         const awayTeamName = teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier;
-                        
+
                         candidateCount++;
-                        
-                        // Párovanie PREDOVŠETKÝM podľa ID (identifier), fallback podľa mena
-                        let homeTeam = teams.find(t => t.id === m.homeTeamIdentifier);
-                        let awayTeam = teams.find(t => t.id === m.awayTeamIdentifier);
-                        
-                        if (!homeTeam) homeTeam = teams.find(t => t.name === homeTeamName);
-                        if (!awayTeam) awayTeam = teams.find(t => t.name === awayTeamName);
-                        
+
+                        let homeTeam = null, awayTeam = null;
+                        for (const team of teams) {
+                            if (team.name === homeTeamName) homeTeam = team;
+                            if (team.name === awayTeamName) awayTeam = team;
+                        }
+
                         if (!homeTeam || !awayTeam) {
                             skippedByTeamMatch++;
                             return;
                         }
-                        
+
                         const h = homeTeam.id;
                         const a = awayTeam.id;
 
