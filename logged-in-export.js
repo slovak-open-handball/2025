@@ -1216,6 +1216,44 @@ const CrossTable = ({
 
     const TRANSFERRED_BG = '#f3f4f6';
 
+    /* ------------------------------------------------------------
+       POMOCNÉ FUNKCIE PRE ROZPOZNANIE PRENESENÉHO ZÁPASU
+       PODĽA POSLEDNÉHO ZNAKU NÁZVU TÍMU
+       ------------------------------------------------------------ */
+    const getLastChar = (team) => {
+        if (!team || !team.name) return '';
+        const trimmed = String(team.name).trim();
+        if (trimmed.length === 0) return '';
+        return trimmed.charAt(trimmed.length - 1).toUpperCase();
+    };
+
+    /**
+     * Vráti true, ak ide o "prenesený" zápas rozpoznaný len podľa posledného znaku.
+     * Podmienky:
+     *  - posledný znak oboch tímov je písmeno A-Z
+     *  - posledné znaky sa rovnajú
+     *  - nejde o ten istý tím (rôzne id)
+     *  - v matrix neexistuje záznam pre túto dvojicu (t.j. nie je to vlastný zápas)
+     */
+    const isTransferredByLastChar = (rowTeam, colTeam) => {
+        if (!rowTeam || !colTeam) return false;
+        if (rowTeam.id === colTeam.id) return false;
+
+        const rowChar = getLastChar(rowTeam);
+        const colChar = getLastChar(colTeam);
+
+        if (!rowChar || !colChar) return false;
+        if (!/[A-Z]/.test(rowChar) || !/[A-Z]/.test(colChar)) return false;
+        if (rowChar !== colChar) return false;
+
+        // Ak existuje priamy alebo reverzný záznam v matrix, nejde o prenos
+        const direct = matrix?.[rowTeam.id]?.[colTeam.id];
+        const reversed = matrix?.[colTeam.id]?.[rowTeam.id];
+        if (direct || reversed) return false;
+
+        return true;
+    };
+
     const getMatchResult = (rowTeamId, colTeamId) => {
         const direct = matrix?.[rowTeamId]?.[colTeamId];
         if (direct) {
@@ -1342,6 +1380,7 @@ const CrossTable = ({
                         orderedTeams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
+                            // Diagonála
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1356,6 +1395,30 @@ const CrossTable = ({
 
                             const matchResult = getMatchResult(rowTeam.id, colTeam.id);
 
+                            // 🔥 NOVÉ: Ak bunka nie je v matrix a posledné znaky sa rovnajú → podfarbiť
+                            const transferredByChar = isTransferredByLastChar(rowTeam, colTeam);
+
+                            if (!isMatchCompleted(matchResult) && transferredByChar) {
+                                rowCells.push(
+                                    React.createElement('td', {
+                                        key: `${keyBase}-t1`,
+                                        className: baseCell + ' ' + FONT_CLASS,
+                                        style: { ...subCellLeftStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                    }, ''),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-t2`,
+                                        className: baseCell + ' ' + FONT_CLASS,
+                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                    }, ':'),
+                                    React.createElement('td', {
+                                        key: `${keyBase}-t3`,
+                                        className: baseCell + ' ' + FONT_CLASS,
+                                        style: { ...subCellRightStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                    }, '')
+                                );
+                                return;
+                            }
+
                             if (!isMatchCompleted(matchResult)) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1367,7 +1430,7 @@ const CrossTable = ({
                                         key: `${keyBase}-s2`,
                                         className: baseCell + ' ' + FONT_CLASS,
                                         style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
-                                    }, ':'),   // VŽDY sa zobrazí ":"
+                                    }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
                                         className: baseCell + ' ' + FONT_CLASS,
@@ -1376,10 +1439,10 @@ const CrossTable = ({
                                 );
                                 return;
                             }
-                            
+
                             const hs = matchResult.homeScore ?? 0;
                             const as = matchResult.awayScore ?? 0;
-                            
+
                             if (hs === 0 && as === 0) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1391,7 +1454,7 @@ const CrossTable = ({
                                         key: `${keyBase}-z2`,
                                         className: baseCell + ' ' + FONT_CLASS,
                                         style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
-                                    }, ':'),   // VŽDY sa zobrazí ":"
+                                    }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
                                         className: baseCell + ' ' + FONT_CLASS,
@@ -1401,6 +1464,7 @@ const CrossTable = ({
                                 return;
                             }
 
+                            // Existujúci zápas – farba podľa isTransferred (pôvodná logika)
                             const bgColor = matchResult.isTransferred ? TRANSFERRED_BG : '';
 
                             const leftStyle = { ...subCellLeftStyle };
