@@ -380,49 +380,56 @@ const ExportApp = ({ userProfileData }) => {
     }, [selectedGroupType, exportHash]);
 
     useEffect(() => {
-        const hasMatchesNow = window.matchTracker?.getAllMatches?.()?.length > 0;
-        const mappingNow = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
-
-        if (hasMatchesNow || mappingNow) {
+        let resolved = false;
+    
+        const markReady = () => {
+            if (resolved) return;
+            resolved = true;
             setIsTrackerReady(true);
+        };
+    
+        const mappingReady = () =>
+            window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
+        const hasMatches = () =>
+            window.matchTracker?.getAllMatches?.()?.length > 0;
+    
+        // Ak už je všetko načítané pred mountom
+        if (mappingReady() && hasMatches()) {
+            markReady();
             return;
         }
-
-        const handleGroupTablesUpdated = (event) => {
-            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
-            if (hasMatches) {
-                setIsTrackerReady(true);
-            }
+    
+        const handleMappingReady = () => {
+            // Po evente ešte over, že aj zápasy sú načítané
+            if (hasMatches()) markReady();
         };
 
-        const handleMappingReady = (event) => {
-            setIsTrackerReady(true);
+        const handleGroupTablesUpdated = () => {
+            // Po evente ešte over, že aj mapovanie je hotové
+            if (mappingReady()) markReady();
         };
-
+    
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-
+    
         let attempts = 0;
-        const maxAttempts = 200;
+        const maxAttempts = 200; // 60 s
         const pollInterval = setInterval(() => {
             attempts++;
-
-            const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
-            const mappingReady = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
-            const teamManagerReady = window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
-
-            if (hasMatches || mappingReady || teamManagerReady) {
+    
+            // KĽÚČOVÁ ZMENA: vyžaduj OBOJE – mapping AJ matches
+            if (mappingReady() && hasMatches()) {
                 clearInterval(pollInterval);
-                setIsTrackerReady(true);
+                markReady();
                 return;
             }
-
+    
             if (attempts >= maxAttempts) {
                 clearInterval(pollInterval);
-                setIsTrackerReady(true);
+                markReady(); // fallback, aby sa niečo zobrazilo
             }
         }, 300);
-
+    
         return () => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
