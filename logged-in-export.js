@@ -422,7 +422,6 @@ const ExportApp = ({ userProfileData }) => {
             setIsTrackerReady(true);
         };
 
-        window.addEventListener('matchTrackerReady', handleTrackerReady);
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
 
