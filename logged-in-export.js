@@ -682,7 +682,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         borderRight: '1px solid #000000'
     };
 
-    // Diagonálna bunka – zlúčená (colSpan=3, rowSpan=1), s diagonálnou čiarou
+    // Diagonálna bunka – zlúčená (colSpan=3), s DVOMA diagonálami (X)
     const diagonalCellStyle = {
         width: CELL_WIDTH,
         minWidth: CELL_WIDTH,
@@ -690,7 +690,16 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         height: CELL_HEIGHT,
         minHeight: CELL_HEIGHT,
         maxHeight: CELL_HEIGHT,
-        background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #000000 50%, transparent calc(50% + 1px))',
+        background: `
+            linear-gradient(to bottom right,
+                transparent calc(50% - 1px),
+                #000000 50%,
+                transparent calc(50% + 1px)),
+            linear-gradient(to bottom left,
+                transparent calc(50% - 1px),
+                #000000 50%,
+                transparent calc(50% + 1px))
+        `,
         border: '1px solid #000000'
     };
 
@@ -915,7 +924,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         teams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
-                            // Diagonála – jedna zlúčená bunka s diagonálnou čiarou
+                            // Diagonála – jedna zlúčená bunka s DVOMA diagonálami (X)
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1070,9 +1079,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     );
 };
 
-/* ============================================================
-   SYNCHRONIZÁCIA E-MAILU + RENDER
-   ============================================================ */
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
