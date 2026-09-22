@@ -481,22 +481,66 @@ const ExportApp = ({ userProfileData }) => {
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
                 // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
+                //    🔥 DÔLEŽITÉ: asynchrónne načítanie cez matchTracker.getTeamNameByDisplayId
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
-                allMatches.forEach(m => {
+                // Pomocná async funkcia na získanie display názvu
+                const resolveTeamDisplayNameAsync = async (identifier, fallbackName) => {
+                    if (!identifier) return fallbackName || identifier;
+
+                    // 1) Už máme v cache?
+                    if (teamNamesFromMatches[identifier]) {
+                        return teamNamesFromMatches[identifier];
+                    }
+
+                    // 2) Skús matchTracker (async)
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            // Skús najprv s fallbackName (match.homeTeamName), potom s identifier
+                            const candidate = fallbackName || identifier;
+                            let mapped = await window.matchTracker.getTeamNameByDisplayId(candidate);
+                            if (mapped && mapped !== candidate) {
+                                return mapped;
+                            }
+                            // Ak fallback nefungoval, skús priamo identifier
+                            if (candidate !== identifier) {
+                                mapped = await window.matchTracker.getTeamNameByDisplayId(identifier);
+                                if (mapped && mapped !== identifier) {
+                                    return mapped;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[EXPORT] resolveTeamDisplayNameAsync error:', e);
+                        }
+                    }
+
+                    // 3) Fallback
+                    return fallbackName || identifier;
+                };
+
+                // Prejdeme všetky zápasy a asynchrónne načítame display názvy
+                for (const m of allMatches) {
                     if (m.homeTeamIdentifier && !teamNamesFromMatches[m.homeTeamIdentifier]) {
-                        teamNamesFromMatches[m.homeTeamIdentifier] =
-                            resolveTeamDisplayName(m.homeTeamIdentifier) ||
-                            m.homeTeamName ||
-                            m.homeTeamIdentifier;
+                        const displayName = await resolveTeamDisplayNameAsync(
+                            m.homeTeamIdentifier,
+                            m.homeTeamName
+                        );
+                        if (displayName) {
+                            teamNamesFromMatches[m.homeTeamIdentifier] = displayName;
+                        }
                     }
                     if (m.awayTeamIdentifier && !teamNamesFromMatches[m.awayTeamIdentifier]) {
-                        teamNamesFromMatches[m.awayTeamIdentifier] =
-                            resolveTeamDisplayName(m.awayTeamIdentifier) ||
-                            m.awayTeamName ||
-                            m.awayTeamIdentifier;
+                        const displayName = await resolveTeamDisplayNameAsync(
+                            m.awayTeamIdentifier,
+                            m.awayTeamName
+                        );
+                        if (displayName) {
+                            teamNamesFromMatches[m.awayTeamIdentifier] = displayName;
+                        }
                     }
-                });
+                }
+
+                console.log('[EXPORT] teamNamesFromMatches (po async načítaní):', teamNamesFromMatches);
 
                 // 6) Vytvoríme maticu vzájomných zápasov (matica pre konkrétnu skupinu)
                 const groupMatches = allMatches.filter(m => {
