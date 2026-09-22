@@ -327,7 +327,6 @@ const ExportApp = ({ userProfileData }) => {
                 }
             },
             (error) => {
-                console.error("Chyba pri načítavaní nastavení tabuľky:", error);
             }
         );
         return () => unsubscribe();
@@ -357,7 +356,6 @@ const ExportApp = ({ userProfileData }) => {
                 setIsLoadingCategories(false);
             },
             (error) => {
-                console.error("Chyba pri načítavaní kategórií:", error);
                 window.showGlobalNotification('Nastala chyba pri načítavaní kategórií.', 'error');
                 setIsLoadingCategories(false);
             }
@@ -373,7 +371,6 @@ const ExportApp = ({ userProfileData }) => {
                 }
             },
             (error) => {
-                console.error("Chyba pri načítavaní skupín:", error);
                 window.showGlobalNotification('Nastala chyba pri načítavaní skupín.', 'error');
             }
         );
@@ -410,29 +407,18 @@ const ExportApp = ({ userProfileData }) => {
         const mappingNow = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
 
         if (hasMatchesNow || mappingNow) {
-            console.log('[EXPORT] matchTracker je už pripravený (hasMatches =', hasMatchesNow, ', mapping =', mappingNow, ')');
             setIsTrackerReady(true);
             return;
         }
 
-        // Čakáme na udalosti
-        const handleTrackerReady = (event) => {
-            console.log('[EXPORT] ✅ Prijatá udalosť matchTrackerReady', event?.detail);
-            // NENASTAVUJEME HNEĎ – matchTrackerReady sa odošle skôr, než sú načítané zápasy.
-            // Počkáme ešte na groupTablesUpdated alebo na polling.
-        };
-
         const handleGroupTablesUpdated = (event) => {
-            console.log('[EXPORT] ✅ Prijatá udalosť groupTablesUpdated', event?.detail);
             const hasMatches = window.matchTracker?.getAllMatches?.()?.length > 0;
             if (hasMatches) {
-                console.log('[EXPORT] matchTracker má načítané zápasy (po groupTablesUpdated)');
                 setIsTrackerReady(true);
             }
         };
 
         const handleMappingReady = (event) => {
-            console.log('[EXPORT] ✅ Prijatá udalosť teamNameMappingReady', event?.detail);
             setIsTrackerReady(true);
         };
 
@@ -451,14 +437,12 @@ const ExportApp = ({ userProfileData }) => {
             const teamManagerReady = window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
 
             if (hasMatches || mappingReady || teamManagerReady) {
-                console.log(`[EXPORT] ✅ Fallback polling: pripravené po ${attempts} pokusoch (hasMatches=${hasMatches}, mapping=${mappingReady}, teamManager=${teamManagerReady})`);
                 clearInterval(pollInterval);
                 setIsTrackerReady(true);
                 return;
             }
 
             if (attempts >= maxAttempts) {
-                console.warn('[EXPORT] ⚠️ Fallback polling: timeout po 60s, pokračujem aj tak');
                 clearInterval(pollInterval);
                 setIsTrackerReady(true);
             }
@@ -482,12 +466,9 @@ const ExportApp = ({ userProfileData }) => {
         }
 
         if (!isTrackerReady) {
-            console.log('[EXPORT] ⏳ Čakám na pripravenosť matchTracker / teamNameMapping...');
             setLoadingTable(true);
             return;
         }
-
-        console.log('[EXPORT] 🚀 matchTracker je pripravený, spúšťam loadData()');
 
         let isCancelled = false;
         setLoadingTable(true);
@@ -562,8 +543,6 @@ const ExportApp = ({ userProfileData }) => {
                             teamNamesFromMatches[identifier] = data.teamName;
                         }
                     }
-                    console.log('[EXPORT] Použité mapovanie z window.__teamNameMapping:',
-                        Object.keys(window.__teamNameMapping).length, 'položiek');
                 }
 
                 // 5b) Cache z localStorage
@@ -578,10 +557,8 @@ const ExportApp = ({ userProfileData }) => {
                                     }
                                 }
                             });
-                            console.log('[EXPORT] Použitá cache z window.__internalReplacementCache');
                         }
                     } catch (e) {
-                        console.warn('[EXPORT] Chyba pri čítaní __internalReplacementCache:', e);
                     }
                 }
 
@@ -593,8 +570,6 @@ const ExportApp = ({ userProfileData }) => {
                         if (!m.categoryName || !m.groupName) return;
                         uniqueGroups.add(`${m.categoryName}|${m.groupName}`);
                     });
-
-                    console.log('[EXPORT] Nájdených skupín na spracovanie:', uniqueGroups.size);
 
                     let resolvedCount = 0;
 
@@ -614,10 +589,6 @@ const ExportApp = ({ userProfileData }) => {
                             }
                         } catch (e) { /* ignore */ }
                     }
-
-                    console.log('[EXPORT] Cez matchTracker.createGroupTable() vyriešených:', resolvedCount);
-                } else {
-                    console.warn('[EXPORT] ⚠️ matchTracker.createGroupTable NIE JE dostupný!');
                 }
 
                 // 5d) 🔥 FALLBACK: window.teamManager.getTeamNameByDisplayIdSync
@@ -648,15 +619,7 @@ const ExportApp = ({ userProfileData }) => {
                             } catch (e) { /* ignore */ }
                         }
                     }
-
-                    console.log('[EXPORT] Cez window.teamManager.getTeamNameByDisplayIdSync vyriešených:', resolvedCount);
-                } else {
-                    console.warn('[EXPORT] ⚠️ window.teamManager.getTeamNameByDisplayIdSync NIE JE dostupný!');
                 }
-
-                console.log('[EXPORT] teamNamesFromMatches (po načítaní):', teamNamesFromMatches);
-                console.log('[EXPORT] Ukážka 10 položiek:',
-                    Object.entries(teamNamesFromMatches).slice(0, 10));
 
                 // 6) groupMatches pre aktuálnu skupinu
                 const groupMatches = allMatches.filter(m => {
@@ -712,13 +675,6 @@ const ExportApp = ({ userProfileData }) => {
                 const categorySettings = categoriesData[categoryId] || {};
                 const carryOverEnabled = categorySettings.carryOverPoints === true;
 
-                console.log('%c=== [EXPORT] KROK 9: PRENOS ZÁPASOV ===', 'color: blue; font-weight: bold;');
-                console.log('[EXPORT] categoryName:', categoryName);
-                console.log('[EXPORT] groupName:', groupName);
-                console.log('[EXPORT] groupType:', groupType);
-                console.log('[EXPORT] carryOverEnabled:', carryOverEnabled);
-                console.log('[EXPORT] teams (aktuálna skupina):', teams.map(t => ({ id: t.id, name: t.name })));
-
                 const processedPairs = new Set();
 
                 groupMatches.forEach(m => {
@@ -737,9 +693,6 @@ const ExportApp = ({ userProfileData }) => {
                     const allAdvancedGroups = groupList
                         .filter(g => g.type === 'nadstavbová skupina')
                         .map(g => g.name);
-
-                    console.log('[EXPORT] allBaseGroups:', allBaseGroups);
-                    console.log('[EXPORT] allAdvancedGroups:', allAdvancedGroups);
 
                     let candidateCount = 0;
                     let transferredCount = 0;
@@ -769,29 +722,11 @@ const ExportApp = ({ userProfileData }) => {
 
                         candidateCount++;
 
-                        console.log(`%c[EXPORT] Kandidát #${candidateCount}`, 'color: green;', {
-                            matchId: m.id,
-                            fromGroup: m.groupName,
-                            homeTeamIdentifier: m.homeTeamIdentifier,
-                            awayTeamIdentifier: m.awayTeamIdentifier,
-                            homeTeamName,
-                            awayTeamName,
-                            homeScore: m.homeScore,
-                            awayScore: m.awayScore
-                        });
-
                         let homeTeam = null, awayTeam = null;
                         for (const team of teams) {
                             if (team.name === homeTeamName) homeTeam = team;
                             if (team.name === awayTeamName) awayTeam = team;
                         }
-
-                        console.log('[EXPORT] Nájdené tímy:', {
-                            homeTeam: homeTeam ? homeTeam.name : null,
-                            awayTeam: awayTeam ? awayTeam.name : null,
-                            hľadané: [homeTeamName, awayTeamName],
-                            dostupné: teams.map(t => t.name)
-                        });
 
                         if (!homeTeam || !awayTeam) {
                             skippedByTeamMatch++;
@@ -818,25 +753,9 @@ const ExportApp = ({ userProfileData }) => {
                                 fromGroup: m.groupName
                             };
                             transferredCount++;
-                            console.log('%c[EXPORT] ✅ PRENESENÝ:', 'color: green; font-weight: bold;', {
-                                fromGroup: m.groupName,
-                                home: homeTeam.name,
-                                away: awayTeam.name,
-                                score: `${hs}:${as}`
-                            });
                         }
                     });
-
-                    console.log('%c[EXPORT] === SÚHRN PRENOSU ===', 'color: blue; font-weight: bold;');
-                    console.log('[EXPORT] Kandidátov:', candidateCount);
-                    console.log('[EXPORT] Preskočených (tím sa nenašiel):', skippedByTeamMatch);
-                    console.log('%c[EXPORT] PRENESENÝCH ZÁPASOV: ' + transferredCount, 'color: green; font-weight: bold; font-size: 14px;');
-                } else {
-                    console.log('[EXPORT] ⚠️ Prenos sa NESPUSTIL (groupType/carryOver)');
                 }
-
-                // 10) Výpočet štatistík
-                console.log('%c=== [EXPORT] KROK 10: VÝPOČET ŠTATISTÍK ===', 'color: blue; font-weight: bold;');
 
                 const teamStatsMap = new Map();
                 teams.forEach(t => {
@@ -863,7 +782,6 @@ const ExportApp = ({ userProfileData }) => {
                     const a = m.awayTeamIdentifier;
                     if (!h || !a) return;
                     if (!teamStatsMap.has(h) || !teamStatsMap.has(a)) {
-                        console.warn('[EXPORT][STATS] ⚠️ Vlastný zápas – tím nie je v teamStatsMap:', { h, a });
                         return;
                     }
 
@@ -887,7 +805,6 @@ const ExportApp = ({ userProfileData }) => {
 
                     ownMatchesCounted++;
                 });
-                console.log('[EXPORT][STATS] Vlastné zápasy započítané:', ownMatchesCounted);
 
                 if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
                     let transferredCounted = 0;
@@ -923,20 +840,12 @@ const ExportApp = ({ userProfileData }) => {
                             transferredCounted++;
                         });
                     });
-
-                    console.log('%c[EXPORT][STATS] Prenesené zápasy započítané: ' + transferredCounted, 'color: green; font-weight: bold;');
                 }
 
                 teamStatsMap.forEach(t => {
                     t.goalDifference = t.goalsFor - t.goalsAgainst;
                 });
 
-                console.log('%c[EXPORT][STATS] Výsledné štatistiky tímov:', 'color: blue; font-weight: bold;');
-                Array.from(teamStatsMap.values()).forEach(t => {
-                    console.log(`  ${t.name}: Z=${t.played} V=${t.wins} R=${t.draws} P=${t.losses} Skóre=${t.goalsFor}:${t.goalsAgainst} +/-=${t.goalDifference} Body=${t.points}`);
-                });
-
-                // 11) Zoradenie
                 const matchesForComparison = [];
 
                 groupMatches.forEach(m => {
@@ -993,7 +902,6 @@ const ExportApp = ({ userProfileData }) => {
                 });
                 setLoadingTable(false);
             } catch (err) {
-                console.error("Chyba pri načítavaní tabuľky:", err);
                 if (!isCancelled) {
                     setErrorTable('Nepodarilo sa načítať tabuľku.');
                     setLoadingTable(false);
@@ -1608,7 +1516,6 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
                     }
                 }
             });
