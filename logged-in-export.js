@@ -160,8 +160,9 @@ const ExportApp = ({ userProfileData }) => {
     const [errorTable, setErrorTable] = useState(null);
 
     const [pointsForWin, setPointsForWin] = useState(3);
+    const [sortingConditions, setSortingConditions] = useState([]);
 
-    /* --------- Načítanie pointsForWin zo settings/table (real-time) --------- */
+    /* --------- Načítanie pointsForWin + sortingConditions zo settings/table (real-time) --------- */
     useEffect(() => {
         if (!window.db) return;
         const tableSettingsRef = doc(window.db, 'settings', 'table');
@@ -172,12 +173,14 @@ const ExportApp = ({ userProfileData }) => {
                     const data = docSnap.data();
                     const newPoints = data.pointsForWin !== undefined ? data.pointsForWin : 3;
                     setPointsForWin(newPoints);
+                    setSortingConditions(data.sortingConditions || []);
                 } else {
                     setPointsForWin(3);
+                    setSortingConditions([]);
                 }
             },
             (error) => {
-                console.error("Chyba pri načítavaní pointsForWin:", error);
+                console.error("Chyba pri načítavaní nastavení tabuľky:", error);
             }
         );
         return () => unsubscribe();
@@ -483,7 +486,8 @@ const ExportApp = ({ userProfileData }) => {
                     categoryName: exportedTable.categoryName,
                     groupName: exportedTable.groupName,
                     groupType: exportedTable.groupType,
-                    pointsForWin: pointsForWin
+                    pointsForWin: pointsForWin,
+                    sortingConditions: sortingConditions
                 }
             )
         );
@@ -632,7 +636,7 @@ const ExportApp = ({ userProfileData }) => {
 /* ============================================================
    KRÍŽOVÁ TABUĽKA
    ============================================================ */
-const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsForWin }) => {
+const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsForWin, sortingConditions }) => {
     if (!teams || teams.length === 0) {
         return React.createElement(
             'div',
@@ -649,7 +653,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const CELL_HEIGHT = '250px';
     const SUB_CELL_WIDTH = '83.33px';
 
-    // Spoločné štýly pre bunky
     const cellStyle = {
         width: CELL_WIDTH,
         minWidth: CELL_WIDTH,
@@ -666,12 +669,10 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         height: CELL_HEIGHT,
         minHeight: CELL_HEIGHT,
         maxHeight: CELL_HEIGHT,
-        // Biely rámik (vnútorná zvislá čiara medzi pod-bunkami)
         borderLeft: '1px solid #ffffff',
         borderRight: '1px solid #ffffff'
     };
 
-    // Vonkajší čierny rámik bunky (pre prvú a poslednú pod-bunku)
     const subCellLeftStyle = {
         ...subCellBaseStyle,
         borderLeft: '1px solid #000000'
@@ -682,7 +683,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         borderRight: '1px solid #000000'
     };
 
-    // Diagonálna bunka – zlúčená (colSpan=3), s DVOMA diagonálami (X)
     const diagonalCellStyle = {
         width: CELL_WIDTH,
         minWidth: CELL_WIDTH,
@@ -798,20 +798,85 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         });
     });
 
-    const rankedTeams = [...teams].sort((a, b) => {
-        const sa = teamStats[a.id];
-        const sb = teamStats[b.id];
-        if (sa.points !== sb.points) return sb.points - sa.points;
-        const diffA = sa.scored - sa.conceded;
-        const diffB = sb.scored - sb.conceded;
-        if (diffA !== diffB) return diffB - diffA;
-        if (sa.scored !== sb.scored) return sb.scored - sa.scored;
-        return a.name.localeCompare(b.name, 'sk');
-    });
+    /* ============================================================
+       PORADIE – POUŽIJEME FUNKCIU Z func-tables.js (createGroupTable)
+       ============================================================ */
+    let rankedTeams = [...teams];
+    let positionMap = {};
 
-    const positionMap = {};
-    rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
+    try {
+        if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
+            const tableFromFunc = window.matchTracker.createGroupTable(categoryName, groupName);
 
+            if (tableFromFunc && Array.isArray(tableFromFunc.teams) && tableFromFunc.teams.length > 0) {
+                // Vytvoríme mapovanie: názov tímu → poradie (1..N)
+                const nameToPosition = {};
+                tableFromFunc.teams.forEach((t, idx) => {
+                    if (t && t.name) {
+                        nameToPosition[t.name] = idx + 1;
+                    }
+                });
+
+                // Priradíme miesto každému tímu podľa názvu
+                teams.forEach((t) => {
+                    if (nameToPosition[t.name] !== undefined) {
+                        positionMap[t.id] = nameToPosition[t.name];
+                    }
+                });
+
+                // Zoradíme tímy podľa tohto miesta (aby aj poradie riadkov sedelo s poradím v tabuľke)
+                rankedTeams = [...teams].sort((a, b) => {
+                    const posA = positionMap[a.id] ?? 999;
+                    const posB = positionMap[b.id] ?? 999;
+                    return posA - posB;
+                });
+            } else {
+                // Fallback: jednoduché poradie
+                rankedTeams = [...teams].sort((a, b) => {
+                    const sa = teamStats[a.id];
+                    const sb = teamStats[b.id];
+                    if (sa.points !== sb.points) return sb.points - sa.points;
+                    const diffA = sa.scored - sa.conceded;
+                    const diffB = sb.scored - sb.conceded;
+                    if (diffA !== diffB) return diffB - diffA;
+                    if (sa.scored !== sb.scored) return sb.scored - sa.scored;
+                    return a.name.localeCompare(b.name, 'sk');
+                });
+                rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
+            }
+        } else {
+            // Fallback, ak window.matchTracker nie je dostupný
+            rankedTeams = [...teams].sort((a, b) => {
+                const sa = teamStats[a.id];
+                const sb = teamStats[b.id];
+                if (sa.points !== sb.points) return sb.points - sa.points;
+                const diffA = sa.scored - sa.conceded;
+                const diffB = sb.scored - sb.conceded;
+                if (diffA !== diffB) return diffB - diffA;
+                if (sa.scored !== sb.scored) return sb.scored - sa.scored;
+                return a.name.localeCompare(b.name, 'sk');
+            });
+            rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
+        }
+    } catch (err) {
+        console.error('Chyba pri použití createGroupTable pre poradie:', err);
+        // Fallback
+        rankedTeams = [...teams].sort((a, b) => {
+            const sa = teamStats[a.id];
+            const sb = teamStats[b.id];
+            if (sa.points !== sb.points) return sb.points - sa.points;
+            const diffA = sa.scored - sa.conceded;
+            const diffB = sb.scored - sb.conceded;
+            if (diffA !== diffB) return diffB - diffA;
+            if (sa.scored !== sb.scored) return sb.scored - sa.scored;
+            return a.name.localeCompare(b.name, 'sk');
+        });
+        rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
+    }
+
+    /* ============================================================
+       VYKRESLENIE
+       ============================================================ */
     return React.createElement(
         'div',
         { className: 'bg-white p-0 m-0' },
@@ -924,7 +989,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         teams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
-                            // Diagonála – jedna zlúčená bunka s DVOMA diagonálami (X)
+                            // Diagonála
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -961,7 +1026,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 return;
                             }
 
-                            // Neodohrané – v strede ":" (čierny), krajné prázdne
+                            // Neodohrané
                             if (!isMatchCompleted(matchResult)) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1058,7 +1123,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             }, stats.points === 0 ? '' : stats.points)
                         );
 
-                        // Miesto
+                        // Miesto – zobrazíme len ak tím odohral aspoň jeden zápas
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'position',
@@ -1079,6 +1144,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     );
 };
 
+/* ============================================================
+   SYNCHRONIZÁCIA E-MAILU + RENDER
+   ============================================================ */
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
