@@ -685,17 +685,13 @@ const ExportApp = ({ userProfileData }) => {
                 // ===== VYPOČÍTAJ NADSTAVBOVÉ TABUĽKY (presne ako calculateAdvancedGroupTable) =====
                 const calculateAdvancedGroupTable = (category, group, groupMatches, allBaseGroupTables, otherAdvancedMatches) => {
                     const groupTypeLocal = 'nadstavbová';
+                    
+                    // OPRAVA: nahraďte tento blok
                     let categoryIdLocal = null;
-                    for (const [catId, catName] of Object.entries(categoriesData)) {
+                    for (const [catId, catData] of Object.entries(categoriesData)) {
                         if (catData && catData.name === category) { categoryIdLocal = catId; break; }
                     }
-                    // fallback
-                    if (!categoryIdLocal) {
-                        for (const [catId, catData] of Object.entries(categoriesData)) {
-                            if (catData && catData.name === category) { categoryIdLocal = catId; break; }
-                        }
-                    }
-        
+                    
                     const categorySettingsLocal = categoriesData[categoryIdLocal] || {};
                     const carryOverEnabled = categorySettingsLocal.carryOverPoints === true;
         
