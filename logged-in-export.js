@@ -388,15 +388,33 @@ const ExportApp = ({ userProfileData }) => {
             setIsTrackerReady(true);
         };
 
-        // Aspoň JEDEN zdroj mien musí byť dostupný
         const trackerReady = () => {
-            const hasTracker = !!window.matchTracker
-                && typeof window.matchTracker.getTeamNameByDisplayId === 'function';
-            const hasManager = !!window.teamManager
-                && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function';
-            const hasMapping = !!(window.__teamNameMapping
-                && Object.keys(window.__teamNameMapping).length > 0);
-            return hasTracker || hasManager || hasMapping;
+            if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+                return false;
+            }
+        
+            // Skús otestovať, či matchTracker vie vyriešiť aspoň nejaký identifikátor
+            // (napr. z window.teamNames alebo __teamNameMapping)
+            const testIds = [
+                ...Object.keys(window.__teamNameMapping || {}),
+                ...Object.keys(window.teamNames || {})
+            ].slice(0, 5);
+        
+            if (testIds.length === 0) {
+                // Nemáme čo testovať – aspoň že matchTracker existuje
+                return true;
+            }
+        
+            for (const id of testIds) {
+                try {
+                    const mapped = window.matchTracker.getTeamNameByDisplayId(id);
+                    if (mapped && mapped !== id) {
+                        return true; // aspoň jeden sa vyriešil
+                    }
+                } catch (e) { }
+            }
+        
+            return false;
         };
 
         if (trackerReady()) {
