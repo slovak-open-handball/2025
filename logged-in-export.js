@@ -1549,7 +1549,7 @@ const CrossTable = ({
                                 key: 'points',
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: cellStyle
-                            }, stats && stats.points > 0 ? stats.points : '')
+                            }, stats && stats.played > 0 ? stats.points : '')
                         );
 
                         rowCells.push(
