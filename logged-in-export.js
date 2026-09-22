@@ -925,7 +925,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 {
                                     key: team.id,
                                     colSpan: 3,
-                                    className: baseThCell + ' px-3 py-2 text-xs font-bold',
+                                    className: baseThCell + ' px-3 py-2 text-[10px] leading-tight font-bold',
                                     style: cellStyle
                                 },
                                 team.name
@@ -978,7 +978,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 'th',
                                 {
                                     key: 'row-name',
-                                    className: baseThCell + ' px-3 py-2 text-sm font-semibold text-left',
+                                    className: baseThCell + ' px-3 py-2 text-[10px] leading-tight font-semibold text-left',
                                     style: cellStyle
                                 },
                                 rowTeam.name
