@@ -48,7 +48,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 /**
- * Skryje hlavičku a ľavé menu, ak URL obsahuje akýkoľvek hash.
+ * Skryje hlavičku, ľavé menu a export box, ak URL obsahuje akýkoľvek hash.
  */
 const hideHeaderAndMenuIfHash = () => {
     if (window.location.hash && window.location.hash.length > 0) {
@@ -70,16 +70,48 @@ const hideHeaderAndMenuIfHash = () => {
                 spacerDiv.style.display = 'none';
             }
         }
+        // Skryjeme aj samotný export box (root)
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+            rootElement.style.display = 'none';
+        }
+    } else {
+        // Ak hash nie je prítomný, všetko zobrazíme späť
+        const headerPlaceholder = document.getElementById('header-placeholder');
+        const menuPlaceholder = document.getElementById('menu-placeholder');
+        if (headerPlaceholder) {
+            headerPlaceholder.style.display = '';
+        }
+        if (menuPlaceholder) {
+            menuPlaceholder.style.display = '';
+        }
+        document.body.style.paddingTop = '64px';
+        const mainContentArea = document.getElementById('main-content-area');
+        if (mainContentArea) {
+            const spacerDiv = mainContentArea.querySelector('.flex-shrink-0.w-16');
+            if (spacerDiv) {
+                spacerDiv.style.display = '';
+            }
+        }
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+            rootElement.style.display = '';
+        }
     }
 };
 
-// Okamžite skryjeme hlavičku a menu, ak URL obsahuje hash
+// Okamžite skryjeme hlavičku, menu a export box, ak URL obsahuje hash
 hideHeaderAndMenuIfHash();
 
 // Počúvame na zmeny hash v URL (napr. pri navigácii v rámci SPA)
 window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
 const TemplateApp = ({ userProfileData }) => {
+    // Ak URL obsahuje hash, nevykreslíme nič
+    if (window.location.hash && window.location.hash.length > 0) {
+        return null;
+    }
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
