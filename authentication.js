@@ -125,7 +125,8 @@ const roleAccess = {
         'logged-in-teams-in-groups.html',
         'logged-in-template.html',
         'logged-in-tournament-settings.html',
-        'logged-in-users.html'
+        'logged-in-users.html',
+        'logged-in-export.html',
     ],
     hall: [
         'logged-in-my-data.html',
