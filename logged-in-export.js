@@ -48,14 +48,42 @@ const hideHeaderAndMenuIfHash = () => {
         if (headerPlaceholder) headerPlaceholder.style.display = 'none';
         if (menuPlaceholder) menuPlaceholder.style.display = 'none';
         document.body.style.paddingTop = '0';
+        document.body.style.margin = '0';
+        document.body.style.overflow = 'auto';
+
         if (spacerDiv) spacerDiv.style.display = 'none';
-        // POZOR: root už NEskrývame – chceme, aby sa vykreslil export tabuľky
+
+        // Odstránime všetky vonkajšie paddings/margins z main-content-area
+        if (mainContentArea) {
+            mainContentArea.style.padding = '0';
+            mainContentArea.style.margin = '0';
+            mainContentArea.style.display = 'block';
+        }
+        if (rootElement) {
+            rootElement.style.padding = '0';
+            rootElement.style.margin = '0';
+            rootElement.style.maxWidth = 'none';
+            rootElement.style.width = '100%';
+        }
     } else {
         if (headerPlaceholder) headerPlaceholder.style.display = '';
         if (menuPlaceholder) menuPlaceholder.style.display = '';
         document.body.style.paddingTop = '64px';
+        document.body.style.overflow = '';
+
         if (spacerDiv) spacerDiv.style.display = '';
-        if (rootElement) rootElement.style.display = '';
+        if (mainContentArea) {
+            mainContentArea.style.padding = '';
+            mainContentArea.style.margin = '';
+            mainContentArea.style.display = '';
+        }
+        if (rootElement) {
+            rootElement.style.padding = '';
+            rootElement.style.margin = '';
+            rootElement.style.maxWidth = '';
+            rootElement.style.width = '';
+            rootElement.style.display = '';
+        }
     }
 };
 
@@ -451,7 +479,7 @@ const ExportApp = ({ userProfileData }) => {
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
             'div',
-            { className: 'w-full max-w-7xl mx-auto px-4 py-6' },
+            { className: 'w-full p-0 m-0' },
 
             // Loading
             loadingTable && React.createElement(
@@ -463,7 +491,7 @@ const ExportApp = ({ userProfileData }) => {
             // Error
             errorTable && React.createElement(
                 'div',
-                { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center' },
+                { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
                 React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
             ),
 
@@ -485,15 +513,15 @@ const ExportApp = ({ userProfileData }) => {
     if (exportHash && exportHash.type === 'zapasy') {
         return React.createElement(
             'div',
-            { className: 'w-full max-w-7xl mx-auto px-4 py-6' },
+            { className: 'w-full p-0 m-0' },
             React.createElement(
                 'div',
-                { className: 'mb-6 text-center' },
+                { className: 'mb-6 text-center pt-6' },
                 React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale')
             ),
             React.createElement(
                 'div',
-                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl' },
+                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
                 React.createElement('p', { className: 'text-lg' }, 'Export zápasov – pripravované.')
             )
         );
@@ -768,17 +796,22 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
 
     return React.createElement(
         'div',
-        { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+        { className: 'bg-white rounded-none shadow-none border-0 p-0 m-0' },
 
         // Tabuľka
         React.createElement(
             'div',
-            { className: 'overflow-x-auto' },
+            { className: 'p-0 m-0' },
             React.createElement(
                 'table',
                 {
                     className: 'border-collapse',
-                    style: { tableLayout: 'fixed' } // FIXNÁ ŠÍRKA STĹPCOV
+                    style: {
+                        tableLayout: 'fixed',
+                        margin: 0,
+                        padding: 0,
+                        borderSpacing: 0
+                    }
                 },
 
                 // THEAD – iba jeden riadok s názvami tímov + Skóre / Body / Miesto
@@ -792,7 +825,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                         React.createElement(
                             'th',
                             {
-                                className: 'sticky left-0 z-10 bg-gray-100 border border-gray-300 px-3 py-2 text-center align-middle',
+                                className: 'bg-gray-100 border border-gray-300 px-3 py-2 text-center align-middle',
                                 style: cellStyle
                             },
                             React.createElement(
@@ -856,7 +889,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             React.createElement(
                                 'th',
                                 {
-                                    className: 'sticky left-0 z-10 border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 text-left align-middle bg-gray-100',
+                                    className: 'border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 text-left align-middle bg-gray-100',
                                     style: cellStyle
                                 },
                                 rowTeam.name
