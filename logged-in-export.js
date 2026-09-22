@@ -139,6 +139,31 @@ const ExportApp = ({ userProfileData }) => {
     const [loadingTable, setLoadingTable] = useState(false);
     const [errorTable, setErrorTable] = useState(null);
 
+    // Body za výhru – načítané z DB
+    const [pointsForWin, setPointsForWin] = useState(3);
+
+    /* --------- Načítanie pointsForWin zo settings/table (real-time) --------- */
+    useEffect(() => {
+        if (!window.db) return;
+        const tableSettingsRef = doc(window.db, 'settings', 'table');
+        const unsubscribe = onSnapshot(
+            tableSettingsRef,
+            (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const newPoints = data.pointsForWin !== undefined ? data.pointsForWin : 3;
+                    setPointsForWin(newPoints);
+                } else {
+                    setPointsForWin(3);
+                }
+            },
+            (error) => {
+                console.error("Chyba pri načítavaní pointsForWin:", error);
+            }
+        );
+        return () => unsubscribe();
+    }, []);
+
     /* --------- Načítanie kategórií a skupín (len keď NIE je hash) --------- */
     useEffect(() => {
         if (exportHash) return; // pri hash-i nepotrebujeme select boxy
@@ -462,7 +487,8 @@ const ExportApp = ({ userProfileData }) => {
                     matrix: exportedTable.matrix,
                     categoryName: exportedTable.categoryName,
                     groupName: exportedTable.groupName,
-                    groupType: exportedTable.groupType
+                    groupType: exportedTable.groupType,
+                    pointsForWin: pointsForWin
                 }
             )
         );
@@ -614,7 +640,7 @@ const ExportApp = ({ userProfileData }) => {
 /* ============================================================
    KRÍŽOVÁ TABUĽKA
    ============================================================ */
-const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
+const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsForWin }) => {
     if (!teams || teams.length === 0) {
         return React.createElement(
             'div',
@@ -624,6 +650,8 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
     }
 
     const groupTypeLabel = groupType === 'nadstavbová skupina' ? 'NADSTAVBOVÁ' : 'ZÁKLADNÁ';
+    const winPoints = (pointsForWin !== undefined && pointsForWin !== null) ? pointsForWin : 3;
+    const drawPoints = 1;
 
     /**
      * Získa výsledok zápasu medzi dvoma tímami z pohľadu riadkového tímu.
@@ -663,7 +691,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
 
     /**
      * Spočíta štatistiky pre každý tím (len z jeho pohľadu, teda každý zápas raz).
-     * Vracia mapu: teamId -> { scored, conceded, wins, draws, losses, points, played }
      */
     const teamStats = {};
     teams.forEach(t => {
@@ -678,7 +705,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
         };
     });
 
-    // Prejdeme všetky zápasy v matici, aby sme započítali iba raz každý zápas
     const processedPairs = new Set();
 
     teams.forEach(rowTeam => {
@@ -698,7 +724,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
             const hs = result.homeScore ?? 0;
             const as = result.awayScore ?? 0;
 
-            // rowTeam = domáci v tomto zobrazení, colTeam = hostia
             const row = teamStats[rowTeam.id];
             const col = teamStats[colTeam.id];
 
@@ -712,17 +737,17 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
 
             if (hs > as) {
                 row.wins += 1;
-                row.points += 3;
+                row.points += winPoints;
                 col.losses += 1;
             } else if (hs < as) {
                 col.wins += 1;
-                col.points += 3;
+                col.points += winPoints;
                 row.losses += 1;
             } else {
                 row.draws += 1;
                 col.draws += 1;
-                row.points += 1;
-                col.points += 1;
+                row.points += drawPoints;
+                col.points += drawPoints;
             }
         });
     });
@@ -774,7 +799,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                 React.createElement(
                     'thead',
                     null,
-                    // Prvý riadok hlavičky – zlúčené bunky "Súperi" + nové stĺpce
                     React.createElement(
                         'tr',
                         { className: 'bg-gray-200' },
@@ -819,11 +843,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                             'Miesto'
                         )
                     ),
-                    // Druhý riadok hlavičky – názvy tímov v stĺpcoch
                     React.createElement(
                         'tr',
                         { className: 'bg-gray-100' },
-                        // Prázdny roh (pokračovanie)
                         React.createElement(
                             'th',
                             {
@@ -831,7 +853,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                             },
                             ''
                         ),
-                        // Názvy tímov v stĺpcoch
                         teams.map((team) =>
                             React.createElement(
                                 'th',
@@ -843,7 +864,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                 team.name
                             )
                         ),
-                        // Prázdne bunky pre Skóre / Body / Miesto (aby hlavička sedela)
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, ''),
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, ''),
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50' }, '')
@@ -861,7 +881,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                         return React.createElement(
                             'tr',
                             { key: rowTeam.id, className: rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50' },
-                            // Hlavička riadku
                             React.createElement(
                                 'th',
                                 {
@@ -870,7 +889,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                 },
                                 rowTeam.name
                             ),
-                            // Bunky so súpermi
                             teams.map((colTeam) => {
                                 if (rowTeam.id === colTeam.id) {
                                     return React.createElement(
@@ -926,7 +944,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                     `${hs}:${as}`
                                 );
                             }),
-                            // Skóre
                             React.createElement(
                                 'td',
                                 {
@@ -934,7 +951,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                 },
                                 `${stats.scored}:${stats.conceded}`
                             ),
-                            // Body
                             React.createElement(
                                 'td',
                                 {
@@ -942,7 +958,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                                 },
                                 stats.points
                             ),
-                            // Miesto
                             React.createElement(
                                 'td',
                                 {
@@ -978,7 +993,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType }) => {
                 'neodohrané / neexistuje'
             ),
             React.createElement('span', { className: 'ml-auto text-gray-400' },
-                'Body: 3 za výhru, 1 za remízu'
+                `Body: ${winPoints} za výhru, ${drawPoints} za remízu`
             )
         )
     );
