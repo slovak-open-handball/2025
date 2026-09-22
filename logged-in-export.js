@@ -448,7 +448,6 @@ const ExportApp = ({ userProfileData }) => {
         }, 300);
 
         return () => {
-            window.removeEventListener('matchTrackerReady', handleTrackerReady);
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
             clearInterval(pollInterval);
