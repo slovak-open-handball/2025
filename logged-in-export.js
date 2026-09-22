@@ -498,7 +498,7 @@ const ExportApp = ({ userProfileData }) => {
 
                 if (!categoryId) {
                     if (!isCancelled) {
-                        setErrorTable(`Kategória "${exportHash.categoryName}" sa nenašla.`);
+                        setErrorTable(`Kategória ${exportHash.categoryName} sa nenašla.`);
                         setLoadingTable(false);
                     }
                     return;
@@ -517,7 +517,7 @@ const ExportApp = ({ userProfileData }) => {
 
                 if (!foundGroup) {
                     if (!isCancelled) {
-                        setErrorTable(`Skupina "${exportHash.groupName}" sa v kategórii "${categoryName}" nenašla.`);
+                        setErrorTable(`Skupina ${exportHash.groupName} sa v kategórii ${categoryName} nenašla.`);
                         setLoadingTable(false);
                     }
                     return;
