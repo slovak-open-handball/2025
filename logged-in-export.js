@@ -106,6 +106,22 @@ hideHeaderAndMenuIfHash();
 // Počúvame na zmeny hash v URL (napr. pri navigácii v rámci SPA)
 window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
+/**
+ * Pomocná funkcia - nahradí všetky medzery znakom '-'
+ */
+const spacesToDashes = (str) => {
+    if (!str) return '';
+    return str.replace(/\s+/g, '-');
+};
+
+/**
+ * Pomocná funkcia - nahradí všetky znaky '-' znakom ' ' (medzera)
+ */
+const dashesToSpaces = (str) => {
+    if (!str) return '';
+    return str.replace(/-/g, ' ');
+};
+
 const ExportApp = ({ userProfileData }) => {
     // Ak URL obsahuje hash, nevykreslíme nič
     if (window.location.hash && window.location.hash.length > 0) {
@@ -230,7 +246,14 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
                 return;
             }
-            const hash = `tabulky/${selectedCategoryId}/${encodeURIComponent(selectedGroupType)}/${encodeURIComponent(selectedGroupName)}`;
+            // Získame názov kategórie podľa ID
+            const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+            const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
+            // Nahradíme medzery znakom '-'
+            const categoryNameSafe = spacesToDashes(categoryName);
+            const groupTypeSafe = spacesToDashes(selectedGroupType);
+            const groupNameSafe = spacesToDashes(selectedGroupName);
+            const hash = `tabulky/${categoryNameSafe}/${groupTypeSafe}/${groupNameSafe}`;
             const url = `logged-in-export.html#${hash}`;
             window.open(url, '_blank');
             return;
@@ -408,6 +431,10 @@ const ExportApp = ({ userProfileData }) => {
         )
     );
 };
+
+// Export pomocných funkcií, aby boli dostupné aj pri parsovaní hashu v novej karte
+window.spacesToDashes = spacesToDashes;
+window.dashesToSpaces = dashesToSpaces;
 
 
 // Premenná na sledovanie, či bol poslucháč už nastavený
