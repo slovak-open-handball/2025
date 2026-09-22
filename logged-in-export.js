@@ -552,7 +552,8 @@ const ExportApp = ({ userProfileData }) => {
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
                 // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
-                //    🔥 POUŽIJEME matchTracker.getTeamNameByDisplayId SYNCHRÓNNE pre každý identifier
+                //    🔥 POUŽIJEME window.matchTracker.createGroupTable() pre KAŽDÚ skupinu
+                //    – tá vracia tabuľku s tímami, ktoré MAJÚ SPRÁVNE display názvy
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
                 // 5a) Použijeme window.__teamNameMapping (z func-tables.js), ak existuje
@@ -585,41 +586,51 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
-                // 5c) 🔥 KĽÚČOVÉ: Pre KAŽDÝ identifier v zápasoch zavoláme SYNCHRÓNNE
-                //     matchTracker.getTeamNameByDisplayId(identifier)
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                // 5c) 🔥 KĽÚČOVÉ: Použijeme window.matchTracker.createGroupTable() pre každú skupinu
+                //     – tá vracia tabuľku s tímami, ktoré už majú správne display názvy
+                if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
+
+                    // Zozbierame všetky unikátne kombinácie (kategória, skupina) z allMatches
+                    const uniqueGroups = new Set();
+                    allMatches.forEach(m => {
+                        if (m.isPlacementMatch) return;
+                        if (!m.categoryName || !m.groupName) return;
+                        uniqueGroups.add(`${m.categoryName}|${m.groupName}`);
+                    });
+
+                    console.log('[EXPORT] Nájdených skupín na spracovanie:', uniqueGroups.size);
+
                     let resolvedCount = 0;
 
-                    for (const match of allMatches) {
-                        // HOME
-                        if (match.homeTeamIdentifier && !teamNamesFromMatches[match.homeTeamIdentifier]) {
-                            try {
-                                const mapped = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                                if (mapped && mapped !== match.homeTeamIdentifier) {
-                                    teamNamesFromMatches[match.homeTeamIdentifier] = mapped;
-                                    resolvedCount++;
-                                }
-                            } catch (e) { /* ignore */ }
-                        }
+                    for (const groupKey of uniqueGroups) {
+                        const [catName, grpName] = groupKey.split('|');
 
-                        // AWAY
-                        if (match.awayTeamIdentifier && !teamNamesFromMatches[match.awayTeamIdentifier]) {
-                            try {
-                                const mapped = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                                if (mapped && mapped !== match.awayTeamIdentifier) {
-                                    teamNamesFromMatches[match.awayTeamIdentifier] = mapped;
+                        try {
+                            const table = window.matchTracker.createGroupTable(catName, grpName);
+                            if (!table || !table.teams) continue;
+
+                            // Pre každý tím v tabuľke: table.teams[i].id je IDENTIFIER, table.teams[i].name je DISPLAY NAME
+                            for (const team of table.teams) {
+                                if (!team || !team.id || !team.name) continue;
+                                // Uložíme identifier → displayName
+                                if (!teamNamesFromMatches[team.id]) {
+                                    teamNamesFromMatches[team.id] = team.name;
                                     resolvedCount++;
                                 }
-                            } catch (e) { /* ignore */ }
+                            }
+                        } catch (e) {
+                            // Tichý fallback – skupina ešte nemusí byť 100% dokončená
                         }
                     }
 
-                    console.log('[EXPORT] Cez matchTracker.getTeamNameByDisplayId (sync) vyriešených:', resolvedCount);
+                    console.log('[EXPORT] Cez matchTracker.createGroupTable() vyriešených:', resolvedCount);
                 } else {
-                    console.warn('[EXPORT] ⚠️ matchTracker.getTeamNameByDisplayId NIE JE dostupný!');
+                    console.warn('[EXPORT] ⚠️ matchTracker.createGroupTable NIE JE dostupný!');
                 }
 
                 console.log('[EXPORT] teamNamesFromMatches (po načítaní):', teamNamesFromMatches);
+                console.log('[EXPORT] Ukážka 10 položiek:',
+                    Object.entries(teamNamesFromMatches).slice(0, 10));
 
                 // 6) Vytvoríme maticu vzájomných zápasov (matica pre konkrétnu skupinu)
                 const groupMatches = allMatches.filter(m => {
