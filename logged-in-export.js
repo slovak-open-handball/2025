@@ -1235,24 +1235,27 @@ const CrossTable = ({
      *  - nejde o ten istý tím (rôzne id)
      *  - v matrix neexistuje záznam pre túto dvojicu (t.j. nie je to vlastný zápas)
      */
-    const isTransferredByLastChar = (rowTeam, colTeam) => {
-        if (!rowTeam || !colTeam) return false;
-        if (rowTeam.id === colTeam.id) return false;
-
-        const rowChar = getLastChar(rowTeam);
-        const colChar = getLastChar(colTeam);
-
-        if (!rowChar || !colChar) return false;
-        if (!/[A-Z]/.test(rowChar) || !/[A-Z]/.test(colChar)) return false;
-        if (rowChar !== colChar) return false;
-
-        // Ak existuje priamy alebo reverzný záznam v matrix, nejde o prenos
-        const direct = matrix?.[rowTeam.id]?.[colTeam.id];
-        const reversed = matrix?.[colTeam.id]?.[rowTeam.id];
-        if (direct || reversed) return false;
-
-        return true;
-    };
+     const isTransferredByLastChar = (rowTeam, colTeam) => {
+         // Heuristika sa aplikuje LEN pre nadstavbové skupiny
+         if (groupType !== 'nadstavbová skupina') return false;
+     
+         if (!rowTeam || !colTeam) return false;
+         if (rowTeam.id === colTeam.id) return false;
+     
+         const rowChar = getLastChar(rowTeam);
+         const colChar = getLastChar(colTeam);
+     
+         if (!rowChar || !colChar) return false;
+         if (!/[A-Z]/.test(rowChar) || !/[A-Z]/.test(colChar)) return false;
+         if (rowChar !== colChar) return false;
+     
+         // Ak existuje priamy alebo reverzný záznam v matrix, nejde o prenos
+         const direct = matrix?.[rowTeam.id]?.[colTeam.id];
+         const reversed = matrix?.[colTeam.id]?.[rowTeam.id];
+         if (direct || reversed) return false;
+     
+         return true;
+     };
 
     const getMatchResult = (rowTeamId, colTeamId) => {
         const direct = matrix?.[rowTeamId]?.[colTeamId];
