@@ -711,14 +711,19 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const TRANSFERRED_BG = '#f3f4f6';
 
     /**
-     * Pomocná funkcia – prevedie identifikátor tímu na jeho display názov
-     * (napr. "U12 D 1A" → "HK Slovan Duslo Šaľa A")
-     * Skúša najprv window.matchTracker, potom window.teamNames, potom fallback.
+     * Prevedie identifikátor tímu (napr. "U12 D 1A") na display názov
+     * (napr. "HK Slovan Duslo Šaľa A").
+     * Skúša window.teamNames, potom window.matchTracker, potom fallback.
      */
     const resolveTeamName = (identifier) => {
         if (!identifier) return '???';
 
-        // 1) window.matchTracker.getTeamNameByDisplayId (najspoľahlivejšie)
+        // 1) window.teamNames (najrýchlejšie a spoľahlivé)
+        if (window.teamNames && window.teamNames[identifier]) {
+            return window.teamNames[identifier];
+        }
+
+        // 2) window.matchTracker.getTeamNameByDisplayId (ak je k dispozícii)
         if (
             window.matchTracker &&
             typeof window.matchTracker.getTeamNameByDisplayId === 'function'
@@ -727,11 +732,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
                 if (mapped && mapped !== identifier) return mapped;
             } catch (e) { /* ignore */ }
-        }
-
-        // 2) window.teamNames
-        if (window.teamNames && window.teamNames[identifier]) {
-            return window.teamNames[identifier];
         }
 
         // 3) getDisplayTeamName (fallback)
@@ -848,10 +848,40 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 const allMatches = [];
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
-                // Názvy tímov, ktoré sú v aktuálnej nadstavbovej skupine
-                // (toto sú UŽ ZMAPOVANÉ názvy, pretože `teams` prišli z ExportApp)
+                // 🔥 KĽÚČOVÁ ZMENA:
+                // Vytvoríme si VLASTNÉ mapovanie identifier → displayName
+                // na základe teamNames (rovnako ako tables.js pri loadTeamNames)
+                // a na základe zápasov, ktoré už máme v matrix.
+
                 const teamNamesSet = new Set();
                 teams.forEach(t => { if (t.name) teamNamesSet.add(t.name); });
+
+                // Pomocná funkcia – mapovanie identifikátora na názov
+                const resolveIdentifierToName = (identifier) => {
+                    if (!identifier) return null;
+
+                    // 1) window.teamNames
+                    if (window.teamNames && window.teamNames[identifier]) {
+                        return window.teamNames[identifier];
+                    }
+
+                    // 2) matchTracker
+                    if (
+                        window.matchTracker &&
+                        typeof window.matchTracker.getTeamNameByDisplayId === 'function'
+                    ) {
+                        try {
+                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
+                            if (mapped && mapped !== identifier) return mapped;
+                        } catch (e) { /* ignore */ }
+                    }
+
+                    // 3) fallback
+                    const fallback = getDisplayTeamName(identifier);
+                    if (fallback && fallback !== identifier) return fallback;
+
+                    return identifier;
+                };
 
                 const newMatrix = {};
                 const newPairKeys = new Set();
@@ -873,9 +903,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                     const isBase = allBaseGroups.some(bg => normalizeName(bg) === normalizeName(m.groupName));
                     if (!isBase) return;
 
-                    // 🔥 POUŽIJEME resolveTeamName namiesto manuálneho fallbacku
-                    const homeName = resolveTeamName(m.homeTeamIdentifier);
-                    const awayName = resolveTeamName(m.awayTeamIdentifier);
+                    // 🔥 POUŽIJEME LOKÁLNU FUNKCIU
+                    const homeName = resolveIdentifierToName(m.homeTeamIdentifier);
+                    const awayName = resolveIdentifierToName(m.awayTeamIdentifier);
 
                     if (!homeName || !awayName) return;
 
@@ -920,9 +950,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                     if (!isAdvanced) return;
                     if (normalizeName(m.groupName) === currentGroupNorm) return;
 
-                    // 🔥 POUŽIJEME resolveTeamName
-                    const homeName = resolveTeamName(m.homeTeamIdentifier);
-                    const awayName = resolveTeamName(m.awayTeamIdentifier);
+                    // 🔥 POUŽIJEME LOKÁLNU FUNKCIU
+                    const homeName = resolveIdentifierToName(m.homeTeamIdentifier);
+                    const awayName = resolveIdentifierToName(m.awayTeamIdentifier);
 
                     if (!homeName || !awayName) return;
 
