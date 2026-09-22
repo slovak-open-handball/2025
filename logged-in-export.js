@@ -846,6 +846,7 @@ const ExportApp = ({ userProfileData }) => {
                 });
                 setLoadingTable(false);
             } catch (err) {
+                console.error('[EXPORT] loadData error:', err);
                 if (!isCancelled) {
                     setErrorTable('Nepodarilo sa načítať tabuľku.');
                     setLoadingTable(false);
