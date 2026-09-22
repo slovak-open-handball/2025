@@ -1314,7 +1314,7 @@ const CrossTable = ({
                         React.createElement('th', {
                             className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                             style: cellStyle
-                        }, 'Miesto v skupine')
+                        }, 'Miesto v\u00A0skupine')
                     )
                 ),
 
