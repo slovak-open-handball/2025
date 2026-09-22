@@ -587,6 +587,35 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
+                // Pomocná funkcia na získanie najaktuálnejšieho mena tímu
+                const getFreshTeamName = (identifier) => {
+                    if (!identifier) return identifier;
+                
+                    if (teamNamesFromMatches[identifier]) return teamNamesFromMatches[identifier];
+                
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
+                            if (mapped && mapped !== identifier) {
+                                teamNamesFromMatches[identifier] = mapped;
+                                return mapped;
+                            }
+                        } catch (e) { }
+                    }
+                
+                    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        try {
+                            const mapped = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                            if (mapped && mapped !== identifier) {
+                                teamNamesFromMatches[identifier] = mapped;
+                                return mapped;
+                            }
+                        } catch (e) { }
+                    }
+                
+                    return identifier;
+                };
+
                 const groupMatches = allMatches.filter(m => {
                     if (m.isPlacementMatch) return false;
                     let mCatName = m.categoryName;
@@ -603,18 +632,23 @@ const ExportApp = ({ userProfileData }) => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
                         teamsMap.set(m.homeTeamIdentifier, {
                             id: m.homeTeamIdentifier,
-                            name: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier
+                            name: getFreshTeamName(m.homeTeamIdentifier)
                         });
                     }
                     if (m.awayTeamIdentifier && !teamsMap.has(m.awayTeamIdentifier)) {
                         teamsMap.set(m.awayTeamIdentifier, {
                             id: m.awayTeamIdentifier,
-                            name: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier
+                            name: getFreshTeamName(m.awayTeamIdentifier)
                         });
                     }
                 });
 
                 const teams = Array.from(teamsMap.values());
+
+                teams.forEach(t => {
+                    const fresh = getFreshTeamName(t.id);
+                    if (fresh && fresh !== t.id) t.name = fresh;
+                });
 
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
@@ -681,20 +715,21 @@ const ExportApp = ({ userProfileData }) => {
 
                         const homeTeamName = teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier;
                         const awayTeamName = teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier;
-
+                        
                         candidateCount++;
-
-                        let homeTeam = null, awayTeam = null;
-                        for (const team of teams) {
-                            if (team.name === homeTeamName) homeTeam = team;
-                            if (team.name === awayTeamName) awayTeam = team;
-                        }
-
+                        
+                        // Párovanie PREDOVŠETKÝM podľa ID (identifier), fallback podľa mena
+                        let homeTeam = teams.find(t => t.id === m.homeTeamIdentifier);
+                        let awayTeam = teams.find(t => t.id === m.awayTeamIdentifier);
+                        
+                        if (!homeTeam) homeTeam = teams.find(t => t.name === homeTeamName);
+                        if (!awayTeam) awayTeam = teams.find(t => t.name === awayTeamName);
+                        
                         if (!homeTeam || !awayTeam) {
                             skippedByTeamMatch++;
                             return;
                         }
-
+                        
                         const h = homeTeam.id;
                         const a = awayTeam.id;
 
