@@ -4,9 +4,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-/* ============================================================
-   GLOBÁLNA NOTIFIKÁCIA
-   ============================================================ */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -32,9 +29,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-/* ============================================================
-   SKRYTIE HLAVIČKY / MENU PRI HASHI
-   ============================================================ */
 const hideHeaderAndMenuIfHash = () => {
     const hasHash = window.location.hash && window.location.hash.length > 0;
 
@@ -89,9 +83,6 @@ const hideHeaderAndMenuIfHash = () => {
 hideHeaderAndMenuIfHash();
 window.addEventListener('hashchange', hideHeaderAndMenuIfHash);
 
-/* ============================================================
-   POMOCNÉ FUNKCIE PRE URL
-   ============================================================ */
 const spacesToDashes = (str) => (!str ? '' : str.replace(/\s+/g, '-'));
 const dashesToSpaces = (str) => (!str ? '' : str.replace(/-/g, ' '));
 window.spacesToDashes = spacesToDashes;
@@ -120,9 +111,6 @@ const parseExportHash = () => {
     return null;
 };
 
-/* ============================================================
-   POMOCNÉ FUNKCIE PRE TABUĽKU
-   ============================================================ */
 const normalizeName = (name) => {
     if (!name) return '';
     return name
@@ -141,9 +129,6 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
-/**
- * Vyrieši display názov tímu z identifikátora (napr. "U12 D 1A" → "HK Slovan Duslo Šaľa A").
- */
 const resolveTeamDisplayName = (identifier) => {
     if (!identifier) return '???';
 
@@ -158,7 +143,7 @@ const resolveTeamDisplayName = (identifier) => {
         try {
             const mapped = window.matchTracker.getTeamNameByDisplayId(identifier);
             if (mapped && mapped !== identifier) return mapped;
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
     }
 
     const fallback = getDisplayTeamName(identifier);
@@ -286,9 +271,6 @@ const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
     return teamA.name.localeCompare(teamB.name);
 };
 
-/* ============================================================
-   HLAVNÝ KOMPONENT
-   ============================================================ */
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
@@ -309,7 +291,6 @@ const ExportApp = ({ userProfileData }) => {
     const [pointsForWin, setPointsForWin] = useState(3);
     const [sortingConditions, setSortingConditions] = useState([]);
 
-    /* --------- Načítanie pointsForWin + sortingConditions zo settings/table --------- */
     useEffect(() => {
         if (!window.db) return;
         const tableSettingsRef = doc(window.db, 'settings', 'table');
@@ -332,7 +313,6 @@ const ExportApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    /* --------- Načítanie kategórií a skupín --------- */
     useEffect(() => {
         if (exportHash) return;
         if (selectedOption !== 'tabulky') return;
@@ -381,7 +361,6 @@ const ExportApp = ({ userProfileData }) => {
         };
     }, [selectedOption, exportHash]);
 
-    /* --------- Reset select boxov --------- */
     useEffect(() => {
         if (exportHash) return;
         setSelectedCategoryId('');
@@ -400,9 +379,7 @@ const ExportApp = ({ userProfileData }) => {
         setSelectedGroupName('');
     }, [selectedGroupType, exportHash]);
 
-    /* --------- Čakanie na pripravenosť matchTracker / teamNameMapping --------- */
     useEffect(() => {
-        // Ak už je matchTracker pripravený A má načítané zápasy, nastavíme hneď
         const hasMatchesNow = window.matchTracker?.getAllMatches?.()?.length > 0;
         const mappingNow = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
 
@@ -425,7 +402,6 @@ const ExportApp = ({ userProfileData }) => {
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
 
-        // Fallback: polling každých 300 ms, max 60 sekúnd
         let attempts = 0;
         const maxAttempts = 200;
         const pollInterval = setInterval(() => {
@@ -454,9 +430,6 @@ const ExportApp = ({ userProfileData }) => {
         };
     }, []);
 
-    /* ============================================================
-       NAČÍTANIE TABUĽKY PRE HASH
-       ============================================================ */
     useEffect(() => {
         if (!exportHash || exportHash.type !== 'tabulky') {
             setExportedTable(null);
@@ -474,7 +447,6 @@ const ExportApp = ({ userProfileData }) => {
 
         const loadData = async () => {
             try {
-                // 1) Načítame settings/categories a settings/groups
                 const [categoriesSnap, groupsSnap] = await Promise.all([
                     getDoc(doc(window.db, 'settings', 'categories')),
                     getDoc(doc(window.db, 'settings', 'groups'))
@@ -483,7 +455,6 @@ const ExportApp = ({ userProfileData }) => {
                 const categoriesData = categoriesSnap.exists() ? categoriesSnap.data() : {};
                 const groupsData = groupsSnap.exists() ? groupsSnap.data() : {};
 
-                // 2) Nájdeme categoryId podľa názvu kategórie z URL
                 let categoryId = null;
                 let categoryName = exportHash.categoryName;
                 const targetCategoryNorm = normalizeName(exportHash.categoryName);
@@ -504,7 +475,6 @@ const ExportApp = ({ userProfileData }) => {
                     return;
                 }
 
-                // 3) Nájdeme skupinu v rámci kategórie
                 const groupList = groupsData[categoryId] || [];
                 const targetGroupNorm = normalizeName(exportHash.groupName);
                 let foundGroup = null;
@@ -526,15 +496,12 @@ const ExportApp = ({ userProfileData }) => {
                 const groupName = foundGroup.name;
                 const groupType = foundGroup.type;
 
-                // 4) Načítame všetky zápasy
                 const matchesSnap = await getDocs(collection(window.db, 'matches'));
                 const allMatches = [];
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
-                // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
-                // 5a) window.__teamNameMapping (z func-tables.js)
                 if (window.__teamNameMapping && typeof window.__teamNameMapping === 'object') {
                     for (const [identifier, data] of Object.entries(window.__teamNameMapping)) {
                         if (data && data.teamName && !teamNamesFromMatches[identifier]) {
@@ -543,7 +510,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
-                // 5b) Cache z localStorage
                 if (window.__internalReplacementCache) {
                     try {
                         const cache = window.__internalReplacementCache.get?.();
@@ -560,7 +526,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 }
 
-                // 5c) matchTracker.createGroupTable() pre každú skupinu
                 if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
                     const uniqueGroups = new Set();
                     allMatches.forEach(m => {
@@ -585,17 +550,14 @@ const ExportApp = ({ userProfileData }) => {
                                     resolvedCount++;
                                 }
                             }
-                        } catch (e) { /* ignore */ }
+                        } catch (e) { }
                     }
                 }
 
-                // 5d) 🔥 FALLBACK: window.teamManager.getTeamNameByDisplayIdSync
-                //     – nezávislé od matchesData vo func-tables.js
                 if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                     let resolvedCount = 0;
 
                     for (const match of allMatches) {
-                        // HOME
                         if (match.homeTeamIdentifier && !teamNamesFromMatches[match.homeTeamIdentifier]) {
                             try {
                                 const mapped = window.teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
@@ -603,10 +565,9 @@ const ExportApp = ({ userProfileData }) => {
                                     teamNamesFromMatches[match.homeTeamIdentifier] = mapped;
                                     resolvedCount++;
                                 }
-                            } catch (e) { /* ignore */ }
+                            } catch (e) { }
                         }
 
-                        // AWAY
                         if (match.awayTeamIdentifier && !teamNamesFromMatches[match.awayTeamIdentifier]) {
                             try {
                                 const mapped = window.teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
@@ -614,12 +575,11 @@ const ExportApp = ({ userProfileData }) => {
                                     teamNamesFromMatches[match.awayTeamIdentifier] = mapped;
                                     resolvedCount++;
                                 }
-                            } catch (e) { /* ignore */ }
+                            } catch (e) { }
                         }
                     }
                 }
 
-                // 6) groupMatches pre aktuálnu skupinu
                 const groupMatches = allMatches.filter(m => {
                     if (m.isPlacementMatch) return false;
                     let mCatName = m.categoryName;
@@ -631,7 +591,6 @@ const ExportApp = ({ userProfileData }) => {
                         && normalizeName(m.groupName) === normalizeName(groupName);
                 });
 
-                // 7) Zoznam tímov
                 const teamsMap = new Map();
                 groupMatches.forEach(m => {
                     if (m.homeTeamIdentifier && !teamsMap.has(m.homeTeamIdentifier)) {
@@ -650,7 +609,6 @@ const ExportApp = ({ userProfileData }) => {
 
                 const teams = Array.from(teamsMap.values());
 
-                // 8) Matica – vlastné zápasy skupiny
                 const matrix = {};
                 teams.forEach(t => { matrix[t.id] = {}; });
 
@@ -669,7 +627,6 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 });
 
-                // 9) Prenos zápasov
                 const categorySettings = categoriesData[categoryId] || {};
                 const carryOverEnabled = categorySettings.carryOverPoints === true;
 
@@ -956,9 +913,6 @@ const ExportApp = ({ userProfileData }) => {
         window.open(`logged-in-export.html#${selectedOption}`, '_blank');
     };
 
-    /* ============================================================
-       VYKRESLENIE
-       ============================================================ */
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
             'div',
@@ -1009,9 +963,6 @@ const ExportApp = ({ userProfileData }) => {
         );
     }
 
-    /* ============================================================
-       KLASICKÝ EXPORT BOX (bez hashu)
-       ============================================================ */
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -1132,9 +1083,6 @@ const ExportApp = ({ userProfileData }) => {
     );
 };
 
-/* ============================================================
-   KRÍŽOVÁ TABUĽKA (maticová)
-   ============================================================ */
 const CrossTable = ({
     teams,
     sortedTeams,
@@ -1216,27 +1164,14 @@ const CrossTable = ({
 
     const TRANSFERRED_BG = '#f3f4f6';
 
-    /* ------------------------------------------------------------
-       POMOCNÉ FUNKCIE PRE ROZPOZNANIE PRENESENÉHO ZÁPASU
-       PODĽA POSLEDNÉHO ZNAKU NÁZVU TÍMU
-       ------------------------------------------------------------ */
     const getLastChar = (team) => {
         if (!team || !team.name) return '';
         const trimmed = String(team.name).trim();
         if (trimmed.length === 0) return '';
         return trimmed.charAt(trimmed.length - 1).toUpperCase();
     };
-
-    /**
-     * Vráti true, ak ide o "prenesený" zápas rozpoznaný len podľa posledného znaku.
-     * Podmienky:
-     *  - posledný znak oboch tímov je písmeno A-Z
-     *  - posledné znaky sa rovnajú
-     *  - nejde o ten istý tím (rôzne id)
-     *  - v matrix neexistuje záznam pre túto dvojicu (t.j. nie je to vlastný zápas)
-     */
+   
      const isTransferredByLastChar = (rowTeam, colTeam) => {
-         // Heuristika sa aplikuje LEN pre nadstavbové skupiny
          if (groupType !== 'nadstavbová skupina') return false;
      
          if (!rowTeam || !colTeam) return false;
@@ -1249,7 +1184,6 @@ const CrossTable = ({
          if (!/[A-Z]/.test(rowChar) || !/[A-Z]/.test(colChar)) return false;
          if (rowChar !== colChar) return false;
      
-         // Ak existuje priamy alebo reverzný záznam v matrix, nejde o prenos
          const direct = matrix?.[rowTeam.id]?.[colTeam.id];
          const reversed = matrix?.[colTeam.id]?.[rowTeam.id];
          if (direct || reversed) return false;
@@ -1383,7 +1317,6 @@ const CrossTable = ({
                         orderedTeams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
-                            // Diagonála
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1398,12 +1331,9 @@ const CrossTable = ({
 
                             const matchResult = getMatchResult(rowTeam.id, colTeam.id);
 
-                            // 🔥 NOVÉ: Ak bunka nie je v matrix a posledné znaky sa rovnajú → podfarbiť
                             const transferredByChar = isTransferredByLastChar(rowTeam, colTeam);
 
                             if (!isMatchCompleted(matchResult) && transferredByChar) {
-                                // Rovnaká logika ako pri isTransferred – vnútorné orámovanie
-                                // sa nastaví na farbu pozadia, aby nevznikli biele čiary
                                 const tLeftStyle = { ...subCellLeftStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
                                 const tMiddleStyle = { ...subCellBaseStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
                                 const tRightStyle = { ...subCellRightStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
@@ -1478,7 +1408,6 @@ const CrossTable = ({
                                 return;
                             }
 
-                            // Existujúci zápas – farba podľa isTransferred (pôvodná logika)
                             const bgColor = matchResult.isTransferred ? TRANSFERRED_BG : '';
 
                             const leftStyle = { ...subCellLeftStyle };
@@ -1496,7 +1425,6 @@ const CrossTable = ({
                                 rightStyle.borderLeft = `1px solid ${bgColor}`;
                             }
 
-                            // ĽAVÁ BUNKA – skóre domáceho tímu (v riadku) → zarovnané vpravo
                             rowCells.push(
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
@@ -1517,7 +1445,6 @@ const CrossTable = ({
                         });
 
                         const showTotals = stats && stats.played > 0;
-                        // Skóre – ľavá bunka (strely) vpravo, pravá bunka (obdržané) vľavo
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
@@ -1564,17 +1491,12 @@ const CrossTable = ({
     );
 };
 
-/* ============================================================
-   SYNCHRONIZÁCIA E-MAILU + RENDER
-   ============================================================ */
 let isEmailSyncListenerSetup = false;
 
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
-    // Ak URL obsahuje hash a ide o logged-in-export.html, vykreslíme ExportApp
-    // aj bez prihlásenia (userProfileData = null)
     const hasHashInUrl = window.location.hash && window.location.hash.length > 1;
     const isExportPage = window.location.pathname.endsWith('logged-in-export.html');
     const shouldRenderExportWithoutUser = isExportPage && hasHashInUrl;
