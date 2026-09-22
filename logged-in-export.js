@@ -97,10 +97,6 @@ const dashesToSpaces = (str) => (!str ? '' : str.replace(/-/g, ' '));
 window.spacesToDashes = spacesToDashes;
 window.dashesToSpaces = dashesToSpaces;
 
-/**
- * Parsovanie hashu:
- *   #tabulky/<categoryName>/<groupName>
- */
 const parseExportHash = () => {
     const hash = window.location.hash;
     if (!hash || hash === '#') return null;
@@ -187,7 +183,7 @@ const ExportApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    /* --------- Načítanie kategórií a skupín (len keď NIE je hash) --------- */
+    /* --------- Načítanie kategórií a skupín --------- */
     useEffect(() => {
         if (exportHash) return;
 
@@ -648,10 +644,12 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
     const winPoints = (pointsForWin !== undefined && pointsForWin !== null) ? pointsForWin : 3;
     const drawPoints = 1;
 
-    // FIXNÁ ŠÍRKA A VÝŠKA BUNKY = 250px
+    // FIXNÉ ROZMERY
     const CELL_WIDTH = '250px';
     const CELL_HEIGHT = '250px';
+    const SUB_CELL_WIDTH = '83.33px';
 
+    // Spoločné štýly pre bunky
     const cellStyle = {
         width: CELL_WIDTH,
         minWidth: CELL_WIDTH,
@@ -661,17 +659,41 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         maxHeight: CELL_HEIGHT
     };
 
-    const SUB_CELL_WIDTH = '83.33px';
     const subCellBaseStyle = {
         width: SUB_CELL_WIDTH,
         minWidth: SUB_CELL_WIDTH,
         maxWidth: SUB_CELL_WIDTH,
         height: CELL_HEIGHT,
         minHeight: CELL_HEIGHT,
-        maxHeight: CELL_HEIGHT
+        maxHeight: CELL_HEIGHT,
+        // Biely rámik (vnútorná zvislá čiara medzi pod-bunkami)
+        borderLeft: '1px solid #ffffff',
+        borderRight: '1px solid #ffffff'
     };
 
-    // Spoločná trieda pre všetky bunky: čierny rámik + čierny text
+    // Vonkajší čierny rámik bunky (pre prvú a poslednú pod-bunku)
+    const subCellLeftStyle = {
+        ...subCellBaseStyle,
+        borderLeft: '1px solid #000000'
+    };
+
+    const subCellRightStyle = {
+        ...subCellBaseStyle,
+        borderRight: '1px solid #000000'
+    };
+
+    // Diagonálna bunka – zlúčená (colSpan=3, rowSpan=1), s diagonálnou čiarou
+    const diagonalCellStyle = {
+        width: CELL_WIDTH,
+        minWidth: CELL_WIDTH,
+        maxWidth: CELL_WIDTH,
+        height: CELL_HEIGHT,
+        minHeight: CELL_HEIGHT,
+        maxHeight: CELL_HEIGHT,
+        background: 'linear-gradient(to bottom right, transparent calc(50% - 1px), #000000 50%, transparent calc(50% + 1px))',
+        border: '1px solid #000000'
+    };
+
     const baseCell = 'border border-black text-black align-middle text-center';
     const baseThCell = 'border border-black text-black align-middle text-center bg-white';
 
@@ -889,27 +911,18 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             )
                         );
 
-                        // Bunky súperov – 3 pod-bunky
+                        // Bunky súperov
                         teams.forEach((colTeam) => {
                             const keyBase = `${rowTeam.id}-${colTeam.id}`;
 
-                            // Diagonála
+                            // Diagonála – jedna zlúčená bunka s diagonálnou čiarou
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
                                     React.createElement('td', {
-                                        key: `${keyBase}-d1`,
-                                        className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
-                                    }, ''),
-                                    React.createElement('td', {
-                                        key: `${keyBase}-d2`,
-                                        className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
-                                    }, ''),
-                                    React.createElement('td', {
-                                        key: `${keyBase}-d3`,
-                                        className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        key: `${keyBase}-diag`,
+                                        colSpan: 3,
+                                        className: 'text-center align-middle',
+                                        style: diagonalCellStyle
                                     }, '')
                                 );
                                 return;
@@ -923,7 +936,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                     React.createElement('td', {
                                         key: `${keyBase}-e1`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-e2`,
@@ -933,29 +946,29 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                     React.createElement('td', {
                                         key: `${keyBase}-e3`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellRightStyle
                                     }, '')
                                 );
                                 return;
                             }
 
-                            // Neodohrané – v strednej bunke ":" (ak je to jediná bunka)
+                            // Neodohrané – v strede ":" (čierny), krajné prázdne
                             if (!isMatchCompleted(matchResult)) {
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-s1`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-s2`,
-                                        className: baseCell + ' text-lg font-bold',
+                                        className: baseCell + ' text-2xl font-bold',
                                         style: subCellBaseStyle
-                                    }, ''),
+                                    }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellRightStyle
                                     }, '')
                                 );
                                 return;
@@ -964,13 +977,13 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             const hs = matchResult.homeScore ?? 0;
                             const as = matchResult.awayScore ?? 0;
 
-                            // Obe skóre sú nulové → nezobrazovať
+                            // Obe skóre nulové → nič
                             if (hs === 0 && as === 0) {
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-z1`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-z2`,
@@ -980,7 +993,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
                                         className: baseCell + ' text-xs',
-                                        style: subCellBaseStyle
+                                        style: subCellRightStyle
                                     }, '')
                                 );
                                 return;
@@ -991,7 +1004,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
                                     className: baseCell + ' text-2xl font-bold',
-                                    style: subCellBaseStyle,
+                                    style: subCellLeftStyle,
                                     title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
                                 }, hs),
                                 React.createElement('td', {
@@ -1002,18 +1015,18 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
                                     className: baseCell + ' text-2xl font-bold',
-                                    style: subCellBaseStyle
+                                    style: subCellRightStyle
                                 }, as)
                             );
                         });
 
-                        // Skóre – ak sú obe hodnoty 0, bunky necháme prázdne
+                        // Skóre – 3 pod-bunky
                         const showTotals = !(stats.scored === 0 && stats.conceded === 0);
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
                                 className: baseCell + ' text-2xl font-mono font-bold',
-                                style: subCellBaseStyle
+                                style: subCellLeftStyle
                             }, showTotals ? stats.scored : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
@@ -1023,11 +1036,11 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             React.createElement('td', {
                                 key: 'total-conceded',
                                 className: baseCell + ' text-2xl font-mono font-bold',
-                                style: subCellBaseStyle
+                                style: subCellRightStyle
                             }, showTotals ? stats.conceded : '')
                         );
 
-                        // Body – ak sú 0, bunka ostáva prázdna
+                        // Body
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'points',
@@ -1036,9 +1049,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             }, stats.points === 0 ? '' : stats.points)
                         );
 
-                        // Miesto – zobrazíme len ak tím odohral aspoň jeden zápas a nie je posledný... 
-                        // Používateľ žiadal odstrániť hodnotu miesta, ak je nula. 
-                        // Miesto je 1..N, nikdy nie 0. Ak teda odohral 0 zápasov, miesto nezobrazíme.
+                        // Miesto
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'position',
