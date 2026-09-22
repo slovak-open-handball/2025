@@ -1361,17 +1361,17 @@ const CrossTable = ({
                                     React.createElement('td', {
                                         key: `${keyBase}-s1`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellLeftStyle
+                                        style: { ...subCellLeftStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-s2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellBaseStyle
+                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellRightStyle
+                                        style: { ...subCellRightStyle, color: '#000', backgroundColor: '#fff' }
                                     }, '')
                                 );
                                 return;
@@ -1385,17 +1385,17 @@ const CrossTable = ({
                                     React.createElement('td', {
                                         key: `${keyBase}-z1`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellLeftStyle
+                                        style: { ...subCellLeftStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-z2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellBaseStyle
+                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: subCellRightStyle
+                                        style: { ...subCellRightStyle, color: '#000', backgroundColor: '#fff' }
                                     }, '')
                                 );
                                 return;
