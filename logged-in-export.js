@@ -1418,11 +1418,12 @@ const CrossTable = ({
                                 rightStyle.borderLeft = `1px solid ${bgColor}`;
                             }
 
+                            // ĽAVÁ BUNKA – skóre domáceho tímu (v riadku) → zarovnané vpravo
                             rowCells.push(
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: leftStyle
+                                    style: { ...leftStyle, textAlign: 'right', paddingRight: '10px' }
                                 }, hs),
                                 React.createElement('td', {
                                     key: `${keyBase}-m`,
@@ -1432,17 +1433,18 @@ const CrossTable = ({
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: rightStyle
+                                    style: { ...rightStyle, textAlign: 'left', paddingLeft: '10px' }
                                 }, as)
                             );
                         });
 
                         const showTotals = stats && !(stats.goalsFor === 0 && stats.goalsAgainst === 0);
+                        // Skóre – ľavá bunka (strely) vpravo, pravá bunka (obdržané) vľavo
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
-                                className: baseCell + ' ' + FONT_CLASS ,
-                                style: subCellLeftStyle
+                                className: baseCell + ' ' + FONT_CLASS,
+                                style: { ...subCellLeftStyle, textAlign: 'right', paddingRight: '10px' }
                             }, stats && showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
@@ -1452,7 +1454,7 @@ const CrossTable = ({
                             React.createElement('td', {
                                 key: 'total-conceded',
                                 className: baseCell + ' ' + FONT_CLASS,
-                                style: subCellRightStyle
+                                style: { ...subCellRightStyle, textAlign: 'left', paddingLeft: '10px' }
                             }, stats && showTotals ? stats.goalsAgainst : '')
                         );
 
