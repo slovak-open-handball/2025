@@ -549,11 +549,34 @@ const ExportApp = ({ userProfileData }) => {
                 });
 
                 // 9) Prenos zápasov – základné skupiny + iné nadstavbové skupiny
+                //    🔥 OPRAVA: párovanie tímov podľa NÁZVU (rovnako ako tables.js)
                 const categorySettings = categoriesData[categoryId] || {};
                 const carryOverEnabled = categorySettings.carryOverPoints === true;
 
-                // Matica tímov podľa ID
-                const teamsById = new Map(teams.map(t => [t.id, t]));
+                // Pomocná funkcia na nájdenie tímu v aktuálnej skupine podľa názvu
+                const findTeamByName = (name) => {
+                    if (!name) return null;
+                    const targetNorm = normalizeName(name);
+                    for (const team of teams) {
+                        if (normalizeName(team.name) === targetNorm) return team;
+                    }
+                    return null;
+                };
+
+                // Pomocná funkcia na získanie display názvu tímu zo zápasu
+                const getMatchTeamDisplayName = (match, side) => {
+                    if (side === 'home') {
+                        return teamNamesFromMatches[match.homeTeamIdentifier]
+                            || resolveTeamDisplayName(match.homeTeamIdentifier)
+                            || match.homeTeamName
+                            || match.homeTeamIdentifier;
+                    } else {
+                        return teamNamesFromMatches[match.awayTeamIdentifier]
+                            || resolveTeamDisplayName(match.awayTeamIdentifier)
+                            || match.awayTeamName
+                            || match.awayTeamIdentifier;
+                    }
+                };
 
                 const processedPairs = new Set();
 
@@ -594,13 +617,20 @@ const ExportApp = ({ userProfileData }) => {
                         );
                         if (!isBase && !isOtherAdvanced) return;
 
-                        // 🔥 KĽÚČOVÉ: pracujeme s ID tímu (nie s názvom)
-                        const h = m.homeTeamIdentifier;
-                        const a = m.awayTeamIdentifier;
-                        if (!h || !a) return;
+                        // 🔥 KĽÚČOVÉ: pracujeme s NÁZVOM tímu (nie len s ID),
+                        //    pretože ID tímov z iných skupín nemusia byť v teamsById.
+                        const homeTeamName = getMatchTeamDisplayName(m, 'home');
+                        const awayTeamName = getMatchTeamDisplayName(m, 'away');
+                        if (!homeTeamName || !awayTeamName) return;
 
-                        // Oba tímy musia byť v aktuálnej skupine
-                        if (!teamsById.has(h) || !teamsById.has(a)) return;
+                        // Nájdeme oba tímy v aktuálnej skupine podľa názvu
+                        const homeTeam = findTeamByName(homeTeamName);
+                        const awayTeam = findTeamByName(awayTeamName);
+                        if (!homeTeam || !awayTeam) return;
+
+                        // Použijeme ID z aktuálnej skupiny
+                        const h = homeTeam.id;
+                        const a = awayTeam.id;
 
                         const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
                         if (processedPairs.has(pairKey)) return;
@@ -616,7 +646,8 @@ const ExportApp = ({ userProfileData }) => {
                                 homeScore: hs,
                                 awayScore: as,
                                 status: 'completed',
-                                isTransferred: true
+                                isTransferred: true,
+                                fromGroup: m.groupName
                             };
                         }
                     });
@@ -703,11 +734,49 @@ const ExportApp = ({ userProfileData }) => {
                 });
 
                 // 11) Zoradenie tímov
-                const matchesForComparison = groupMatches.map(m => ({
-                    ...m,
-                    homeTeamName: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier,
-                    awayTeamName: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier,
-                }));
+                //     Pre head-to-head porovnanie použijeme všetky zápasy,
+                //     ktoré sa týkajú tímov v tejto skupine (vlastné + prenesené).
+                const matchesForComparison = [];
+
+                // Vlastné zápasy
+                groupMatches.forEach(m => {
+                    matchesForComparison.push({
+                        ...m,
+                        homeTeamName: teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier,
+                        awayTeamName: teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier,
+                    });
+                });
+
+                // Prenesené zápasy (aby head-to-head fungoval aj pre prenesené vzájomné zápasy)
+                if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
+                    Object.keys(matrix).forEach(h => {
+                        Object.keys(matrix[h] || {}).forEach(a => {
+                            const cell = matrix[h][a];
+                            if (!cell || !cell.isTransferred) return;
+                            // overíme, či už nie je vo vlastných zápasoch
+                            const alreadyIncluded = matchesForComparison.some(m =>
+                                (m.homeTeamIdentifier === h && m.awayTeamIdentifier === a) ||
+                                (m.homeTeamIdentifier === a && m.awayTeamIdentifier === h)
+                            );
+                            if (alreadyIncluded) return;
+
+                            const homeTeamName = teams.find(t => t.id === h)?.name || h;
+                            const awayTeamName = teams.find(t => t.id === a)?.name || a;
+
+                            matchesForComparison.push({
+                                id: `transferred_${h}_${a}`,
+                                homeTeamIdentifier: h,
+                                awayTeamIdentifier: a,
+                                homeTeamName: homeTeamName,
+                                awayTeamName: awayTeamName,
+                                homeScore: cell.homeScore ?? 0,
+                                awayScore: cell.awayScore ?? 0,
+                                status: 'completed',
+                                isTransferred: true
+                            });
+                        });
+                    });
+                }
 
                 const sortedStats = Array.from(teamStatsMap.values()).sort((a, b) =>
                     compareTeams(a, b, matchesForComparison, sortingConditions)
