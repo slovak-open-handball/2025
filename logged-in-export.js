@@ -703,6 +703,9 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         border: '1px solid #000000'
     };
 
+    // Zjednotená veľkosť písma pre VŠETKY texty
+    const FONT_CLASS = 'text-2xl font-bold';
+
     const baseCell = 'border border-black text-black align-middle text-center';
     const baseThCell = 'border border-black text-black align-middle text-center bg-white';
 
@@ -809,7 +812,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
             const tableFromFunc = window.matchTracker.createGroupTable(categoryName, groupName);
 
             if (tableFromFunc && Array.isArray(tableFromFunc.teams) && tableFromFunc.teams.length > 0) {
-                // Vytvoríme mapovanie: názov tímu → poradie (1..N)
                 const nameToPosition = {};
                 tableFromFunc.teams.forEach((t, idx) => {
                     if (t && t.name) {
@@ -817,21 +819,18 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                     }
                 });
 
-                // Priradíme miesto každému tímu podľa názvu
                 teams.forEach((t) => {
                     if (nameToPosition[t.name] !== undefined) {
                         positionMap[t.id] = nameToPosition[t.name];
                     }
                 });
 
-                // Zoradíme tímy podľa tohto miesta (aby aj poradie riadkov sedelo s poradím v tabuľke)
                 rankedTeams = [...teams].sort((a, b) => {
                     const posA = positionMap[a.id] ?? 999;
                     const posB = positionMap[b.id] ?? 999;
                     return posA - posB;
                 });
             } else {
-                // Fallback: jednoduché poradie
                 rankedTeams = [...teams].sort((a, b) => {
                     const sa = teamStats[a.id];
                     const sb = teamStats[b.id];
@@ -845,7 +844,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                 rankedTeams.forEach((t, idx) => { positionMap[t.id] = idx + 1; });
             }
         } else {
-            // Fallback, ak window.matchTracker nie je dostupný
             rankedTeams = [...teams].sort((a, b) => {
                 const sa = teamStats[a.id];
                 const sb = teamStats[b.id];
@@ -860,7 +858,6 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
         }
     } catch (err) {
         console.error('Chyba pri použití createGroupTable pre poradie:', err);
-        // Fallback
         rankedTeams = [...teams].sort((a, b) => {
             const sa = teamStats[a.id];
             const sb = teamStats[b.id];
@@ -903,7 +900,7 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                     React.createElement(
                         'tr',
                         null,
-                        // Roh
+                        // Roh – kategória + skupina (zjednotená veľkosť)
                         React.createElement(
                             'th',
                             {
@@ -914,47 +911,47 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             React.createElement(
                                 'div',
                                 { className: 'flex flex-col items-center justify-center leading-tight' },
-                                React.createElement('span', { className: 'text-sm font-bold text-black' }, categoryName),
-                                React.createElement('span', { className: 'text-xs font-medium text-black mt-0.5' }, groupName)
+                                React.createElement('span', { className: FONT_CLASS + ' text-black' }, categoryName),
+                                React.createElement('span', { className: FONT_CLASS + ' text-black mt-1' }, groupName)
                             )
                         ),
-                        // Názvy tímov – colSpan 3
+                        // Názvy tímov – colSpan 3 (zjednotená veľkosť)
                         teams.map((team) =>
                             React.createElement(
                                 'th',
                                 {
                                     key: team.id,
                                     colSpan: 3,
-                                    className: baseThCell + ' px-3 py-2 text-[10px] leading-tight font-bold',
+                                    className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                     style: cellStyle
                                 },
                                 team.name
                             )
                         ),
-                        // Skóre – colSpan 3
+                        // Skóre – colSpan 3 (zjednotená veľkosť)
                         React.createElement(
                             'th',
                             {
                                 colSpan: 3,
-                                className: baseThCell + ' px-3 py-2 text-xs font-bold uppercase tracking-wider',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
                                 style: cellStyle
                             },
                             'Skóre'
                         ),
-                        // Body
+                        // Body (zjednotená veľkosť)
                         React.createElement(
                             'th',
                             {
-                                className: baseThCell + ' px-3 py-2 text-xs font-bold uppercase tracking-wider',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
                                 style: cellStyle
                             },
                             'Body'
                         ),
-                        // Miesto
+                        // Miesto (zjednotená veľkosť)
                         React.createElement(
                             'th',
                             {
-                                className: baseThCell + ' px-3 py-2 text-xs font-bold uppercase tracking-wider',
+                                className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' uppercase',
                                 style: cellStyle
                             },
                             'Miesto'
@@ -972,13 +969,13 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
 
                         const rowCells = [];
 
-                        // Názov riadkového tímu
+                        // Názov riadkového tímu (zjednotená veľkosť)
                         rowCells.push(
                             React.createElement(
                                 'th',
                                 {
                                     key: 'row-name',
-                                    className: baseThCell + ' px-3 py-2 text-[10px] leading-tight font-semibold text-left',
+                                    className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' text-left',
                                     style: cellStyle
                                 },
                                 rowTeam.name
@@ -1009,17 +1006,17 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-e1`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-e2`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellBaseStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-e3`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellRightStyle
                                     }, '')
                                 );
@@ -1031,17 +1028,17 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-s1`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-s2`,
-                                        className: baseCell + ' text-2xl font-bold',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellBaseStyle
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellRightStyle
                                     }, '')
                                 );
@@ -1056,17 +1053,17 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-z1`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-z2`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellBaseStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
-                                        className: baseCell + ' text-xs',
+                                        className: baseCell + ' ' + FONT_CLASS,
                                         style: subCellRightStyle
                                     }, '')
                                 );
@@ -1077,57 +1074,57 @@ const CrossTable = ({ teams, matrix, categoryName, groupName, groupType, pointsF
                             rowCells.push(
                                 React.createElement('td', {
                                     key: `${keyBase}-l`,
-                                    className: baseCell + ' text-2xl font-bold',
+                                    className: baseCell + ' ' + FONT_CLASS,
                                     style: subCellLeftStyle,
                                     title: `${rowTeam.name} (domáci) vs ${colTeam.name} (hostia)`
                                 }, hs),
                                 React.createElement('td', {
                                     key: `${keyBase}-m`,
-                                    className: baseCell + ' text-2xl font-bold',
+                                    className: baseCell + ' ' + FONT_CLASS,
                                     style: subCellBaseStyle
                                 }, ':'),
                                 React.createElement('td', {
                                     key: `${keyBase}-r`,
-                                    className: baseCell + ' text-2xl font-bold',
+                                    className: baseCell + ' ' + FONT_CLASS,
                                     style: subCellRightStyle
                                 }, as)
                             );
                         });
 
-                        // Skóre – 3 pod-bunky
+                        // Skóre – 3 pod-bunky (zjednotená veľkosť)
                         const showTotals = !(stats.scored === 0 && stats.conceded === 0);
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored',
-                                className: baseCell + ' text-2xl font-mono font-bold',
+                                className: baseCell + ' ' + FONT_CLASS + ' font-mono',
                                 style: subCellLeftStyle
                             }, showTotals ? stats.scored : ''),
                             React.createElement('td', {
                                 key: 'total-colon',
-                                className: baseCell + ' text-2xl font-bold',
+                                className: baseCell + ' ' + FONT_CLASS,
                                 style: subCellBaseStyle
                             }, showTotals ? ':' : ''),
                             React.createElement('td', {
                                 key: 'total-conceded',
-                                className: baseCell + ' text-2xl font-mono font-bold',
+                                className: baseCell + ' ' + FONT_CLASS + ' font-mono',
                                 style: subCellRightStyle
                             }, showTotals ? stats.conceded : '')
                         );
 
-                        // Body
+                        // Body (zjednotená veľkosť)
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'points',
-                                className: baseCell + ' text-2xl font-bold',
+                                className: baseCell + ' ' + FONT_CLASS,
                                 style: cellStyle
                             }, stats.points === 0 ? '' : stats.points)
                         );
 
-                        // Miesto – zobrazíme len ak tím odohral aspoň jeden zápas
+                        // Miesto (zjednotená veľkosť)
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'position',
-                                className: baseCell + ' text-2xl font-bold',
+                                className: baseCell + ' ' + FONT_CLASS,
                                 style: cellStyle
                             }, stats.played === 0 ? '' : position)
                         );
