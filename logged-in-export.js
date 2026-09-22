@@ -481,66 +481,70 @@ const ExportApp = ({ userProfileData }) => {
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
                 // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
-                //    🔥 DÔLEŽITÉ: asynchrónne načítanie cez matchTracker.getTeamNameByDisplayId
+                //    🔥 PRESNE AKO V tables.js – cez matchTracker.getTeamNameByDisplayId
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
 
-                // Pomocná async funkcia na získanie display názvu
-                const resolveTeamDisplayNameAsync = async (identifier, fallbackName) => {
-                    if (!identifier) return fallbackName || identifier;
+                // Ak window.teamNames je prázdne, načítame asynchrónne
+                if (Object.keys(teamNamesFromMatches).length === 0 &&
+                    window.matchTracker &&
+                    typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
 
-                    // 1) Už máme v cache?
-                    if (teamNamesFromMatches[identifier]) {
-                        return teamNamesFromMatches[identifier];
-                    }
+                    console.log('[EXPORT] window.teamNames je prázdne, načítavam cez matchTracker...');
 
-                    // 2) Skús matchTracker (async)
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            // Skús najprv s fallbackName (match.homeTeamName), potom s identifier
-                            const candidate = fallbackName || identifier;
-                            let mapped = await window.matchTracker.getTeamNameByDisplayId(candidate);
-                            if (mapped && mapped !== candidate) {
-                                return mapped;
-                            }
-                            // Ak fallback nefungoval, skús priamo identifier
-                            if (candidate !== identifier) {
-                                mapped = await window.matchTracker.getTeamNameByDisplayId(identifier);
-                                if (mapped && mapped !== identifier) {
-                                    return mapped;
+                    for (const match of allMatches) {
+                        let categoryName = match.categoryName;
+                        if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
+                            categoryName = categoriesData[match.categoryId].name;
+                        }
+                        if (!categoryName) continue;
+
+                        if (match.homeTeamIdentifier) {
+                            const currentDisplayName = teamNamesFromMatches[match.homeTeamIdentifier]
+                                || getDisplayTeamName(match.homeTeamIdentifier);
+
+                            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                                try {
+                                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                                    if (newName && newName !== currentDisplayName) {
+                                        teamNamesFromMatches[match.homeTeamIdentifier] = newName;
+                                    } else if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
+                                        teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
+                                    }
+                                } catch (err) {
+                                    if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
+                                        teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
+                                    }
                                 }
+                            } else if (!teamNamesFromMatches[match.homeTeamIdentifier]) {
+                                teamNamesFromMatches[match.homeTeamIdentifier] = currentDisplayName;
                             }
-                        } catch (e) {
-                            console.warn('[EXPORT] resolveTeamDisplayNameAsync error:', e);
                         }
-                    }
 
-                    // 3) Fallback
-                    return fallbackName || identifier;
-                };
+                        if (match.awayTeamIdentifier) {
+                            const currentDisplayName = teamNamesFromMatches[match.awayTeamIdentifier]
+                                || getDisplayTeamName(match.awayTeamIdentifier);
 
-                // Prejdeme všetky zápasy a asynchrónne načítame display názvy
-                for (const m of allMatches) {
-                    if (m.homeTeamIdentifier && !teamNamesFromMatches[m.homeTeamIdentifier]) {
-                        const displayName = await resolveTeamDisplayNameAsync(
-                            m.homeTeamIdentifier,
-                            m.homeTeamName
-                        );
-                        if (displayName) {
-                            teamNamesFromMatches[m.homeTeamIdentifier] = displayName;
-                        }
-                    }
-                    if (m.awayTeamIdentifier && !teamNamesFromMatches[m.awayTeamIdentifier]) {
-                        const displayName = await resolveTeamDisplayNameAsync(
-                            m.awayTeamIdentifier,
-                            m.awayTeamName
-                        );
-                        if (displayName) {
-                            teamNamesFromMatches[m.awayTeamIdentifier] = displayName;
+                            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                                try {
+                                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                                    if (newName && newName !== currentDisplayName) {
+                                        teamNamesFromMatches[match.awayTeamIdentifier] = newName;
+                                    } else if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
+                                        teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
+                                    }
+                                } catch (err) {
+                                    if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
+                                        teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
+                                    }
+                                }
+                            } else if (!teamNamesFromMatches[match.awayTeamIdentifier]) {
+                                teamNamesFromMatches[match.awayTeamIdentifier] = currentDisplayName;
+                            }
                         }
                     }
                 }
 
-                console.log('[EXPORT] teamNamesFromMatches (po async načítaní):', teamNamesFromMatches);
+                console.log('[EXPORT] teamNamesFromMatches (po načítaní):', teamNamesFromMatches);
 
                 // 6) Vytvoríme maticu vzájomných zápasov (matica pre konkrétnu skupinu)
                 const groupMatches = allMatches.filter(m => {
@@ -593,7 +597,7 @@ const ExportApp = ({ userProfileData }) => {
                 });
 
                 // 9) Prenos zápasov – základné skupiny + iné nadstavbové skupiny
-                //    🔥 OPRAVA: párovanie tímov podľa NÁZVU (rovnako ako tables.js)
+                //    🔥 PRESNE AKO V tables.js: párovanie podľa teamNames[match.homeTeamIdentifier]
                 const categorySettings = categoriesData[categoryId] || {};
                 const carryOverEnabled = categorySettings.carryOverPoints === true;
 
@@ -602,35 +606,7 @@ const ExportApp = ({ userProfileData }) => {
                 console.log('[EXPORT] groupName:', groupName);
                 console.log('[EXPORT] groupType:', groupType);
                 console.log('[EXPORT] carryOverEnabled:', carryOverEnabled);
-                console.log('[EXPORT] categorySettings:', categorySettings);
                 console.log('[EXPORT] teams (aktuálna skupina):', teams.map(t => ({ id: t.id, name: t.name })));
-                console.log('[EXPORT] počet groupMatches:', groupMatches.length);
-                console.log('[EXPORT] počet allMatches:', allMatches.length);
-
-                // Pomocná funkcia na nájdenie tímu v aktuálnej skupine podľa názvu
-                const findTeamByName = (name) => {
-                    if (!name) return null;
-                    const targetNorm = normalizeName(name);
-                    for (const team of teams) {
-                        if (normalizeName(team.name) === targetNorm) return team;
-                    }
-                    return null;
-                };
-
-                // Pomocná funkcia na získanie display názvu tímu zo zápasu
-                const getMatchTeamDisplayName = (match, side) => {
-                    if (side === 'home') {
-                        return teamNamesFromMatches[match.homeTeamIdentifier]
-                            || resolveTeamDisplayName(match.homeTeamIdentifier)
-                            || match.homeTeamName
-                            || match.homeTeamIdentifier;
-                    } else {
-                        return teamNamesFromMatches[match.awayTeamIdentifier]
-                            || resolveTeamDisplayName(match.awayTeamIdentifier)
-                            || match.awayTeamName
-                            || match.awayTeamIdentifier;
-                    }
-                };
 
                 const processedPairs = new Set();
 
@@ -644,9 +620,6 @@ const ExportApp = ({ userProfileData }) => {
                     processedPairs.add(pairKey);
                 });
 
-                console.log('[EXPORT] processedPairs (vlastné zápasy) – počet:', processedPairs.size);
-                console.log('[EXPORT] processedPairs obsah:', Array.from(processedPairs));
-
                 if (groupType === 'nadstavbová skupina' && carryOverEnabled) {
                     const allBaseGroups = groupList
                         .filter(g => g.type === 'základná skupina')
@@ -659,12 +632,12 @@ const ExportApp = ({ userProfileData }) => {
                     console.log('[EXPORT] allAdvancedGroups:', allAdvancedGroups);
 
                     let candidateCount = 0;
-                    let skippedByCategory = 0;
-                    let skippedByGroup = 0;
-                    let skippedByTeamMatch = 0;
-                    let skippedByPair = 0;
                     let transferredCount = 0;
+                    let skippedByTeamMatch = 0;
 
+                    // 🔥 ROVNAKÝ PRÍSTUP AKO V tables.js:
+                    //    - používame teamNamesFromMatches[identifier] na získanie display názvu
+                    //    - hľadáme tím v teams podľa zhody display názvu
                     allMatches.forEach(m => {
                         if (m.isPlacementMatch) return;
                         if (m.status !== 'completed') return;
@@ -674,10 +647,7 @@ const ExportApp = ({ userProfileData }) => {
                             mCatName = categoriesData[m.categoryId].name;
                         }
                         if (!mCatName) return;
-                        if (normalizeName(mCatName) !== normalizeName(categoryName)) {
-                            skippedByCategory++;
-                            return;
-                        }
+                        if (normalizeName(mCatName) !== normalizeName(categoryName)) return;
                         if (!m.groupName) return;
 
                         const isBase = allBaseGroups.some(bg => normalizeName(bg) === normalizeName(m.groupName));
@@ -685,20 +655,17 @@ const ExportApp = ({ userProfileData }) => {
                             normalizeName(ag) === normalizeName(m.groupName) &&
                             normalizeName(ag) !== normalizeName(groupName)
                         );
-                        if (!isBase && !isOtherAdvanced) {
-                            skippedByGroup++;
-                            return;
-                        }
+                        if (!isBase && !isOtherAdvanced) return;
+
+                        // 🔥 KĽÚČOVÉ – presne ako v tables.js:
+                        const homeTeamName = teamNamesFromMatches[m.homeTeamIdentifier] || m.homeTeamIdentifier;
+                        const awayTeamName = teamNamesFromMatches[m.awayTeamIdentifier] || m.awayTeamIdentifier;
 
                         candidateCount++;
 
-                        // 🔥 KĽÚČOVÉ: pracujeme s NÁZVOM tímu (nie len s ID)
-                        const homeTeamName = getMatchTeamDisplayName(m, 'home');
-                        const awayTeamName = getMatchTeamDisplayName(m, 'away');
-
-                        console.log(`%c[EXPORT] Kandidát na prenos #${candidateCount}`, 'color: green;', {
+                        console.log(`%c[EXPORT] Kandidát #${candidateCount}`, 'color: green;', {
                             matchId: m.id,
-                            groupName: m.groupName,
+                            fromGroup: m.groupName,
                             homeTeamIdentifier: m.homeTeamIdentifier,
                             awayTeamIdentifier: m.awayTeamIdentifier,
                             homeTeamName,
@@ -707,25 +674,21 @@ const ExportApp = ({ userProfileData }) => {
                             awayScore: m.awayScore
                         });
 
-                        if (!homeTeamName || !awayTeamName) {
-                            console.warn('[EXPORT] ⚠️ Chýba homeTeamName alebo awayTeamName – preskočené');
-                            return;
+                        // Nájdeme tímy v aktuálnej skupine podľa display názvu
+                        let homeTeam = null, awayTeam = null;
+                        for (const team of teams) {
+                            if (team.name === homeTeamName) homeTeam = team;
+                            if (team.name === awayTeamName) awayTeam = team;
                         }
 
-                        // Nájdeme oba tímy v aktuálnej skupine podľa názvu
-                        const homeTeam = findTeamByName(homeTeamName);
-                        const awayTeam = findTeamByName(awayTeamName);
-
-                        console.log('[EXPORT] Nájdené tímy v aktuálnej skupine:', {
-                            homeTeam: homeTeam ? { id: homeTeam.id, name: homeTeam.name } : null,
-                            awayTeam: awayTeam ? { id: awayTeam.id, name: awayTeam.name } : null
+                        console.log('[EXPORT] Nájdené tímy:', {
+                            homeTeam: homeTeam ? homeTeam.name : null,
+                            awayTeam: awayTeam ? awayTeam.name : null,
+                            hľadané: [homeTeamName, awayTeamName],
+                            dostupné: teams.map(t => t.name)
                         });
 
                         if (!homeTeam || !awayTeam) {
-                            console.warn('[EXPORT] ⚠️ homeTeam alebo awayTeam sa nenašiel podľa názvu – preskočené');
-                            console.warn('[EXPORT]    homeTeamName hľadané:', homeTeamName);
-                            console.warn('[EXPORT]    awayTeamName hľadané:', awayTeamName);
-                            console.warn('[EXPORT]    Dostupné názvy v teams:', teams.map(t => t.name));
                             skippedByTeamMatch++;
                             return;
                         }
@@ -735,17 +698,19 @@ const ExportApp = ({ userProfileData }) => {
                         const a = awayTeam.id;
 
                         const pairKey = h < a ? `${h}|${a}` : `${a}|${h}`;
-                        if (processedPairs.has(pairKey)) {
-                            console.log('[EXPORT] ⏭️ Pár už spracovaný (pairKey):', pairKey);
-                            skippedByPair++;
-                            return;
-                        }
+                        if (processedPairs.has(pairKey)) return;
                         processedPairs.add(pairKey);
 
-                        const hs = m.homeScore ?? 0;
-                        const as = m.awayScore ?? 0;
+                        let hs = m.homeScore || 0;
+                        let as = m.awayScore || 0;
 
-                        // Pridáme do matice ako prenesený zápas
+                        // Ak je 0:0 a máme match.id, skús z eventov
+                        if (hs === 0 && as === 0 && m.id) {
+                            const events = window.matchTracker?.getEvents?.(m.id) || [];
+                            // getCurrentScoreFromEvents nie je definovaná v logged-in-export.js
+                            // použijeme priamo m.homeScore/m.awayScore
+                        }
+
                         if (!matrix[h]) matrix[h] = {};
                         if (!matrix[h][a]) {
                             matrix[h][a] = {
@@ -756,31 +721,21 @@ const ExportApp = ({ userProfileData }) => {
                                 fromGroup: m.groupName
                             };
                             transferredCount++;
-                            console.log('%c[EXPORT] ✅ PRENESENÝ ZÁPAS:', 'color: green; font-weight: bold;', {
+                            console.log('%c[EXPORT] ✅ PRENESENÝ:', 'color: green; font-weight: bold;', {
                                 fromGroup: m.groupName,
-                                toGroup: groupName,
                                 home: homeTeam.name,
                                 away: awayTeam.name,
-                                score: `${hs}:${as}`,
-                                matrixKey: `${h}[${a}]`
+                                score: `${hs}:${as}`
                             });
-                        } else {
-                            console.log('[EXPORT] ⏭️ Bunka matrix už existuje:', `${h}[${a}]`);
                         }
                     });
 
                     console.log('%c[EXPORT] === SÚHRN PRENOSU ===', 'color: blue; font-weight: bold;');
-                    console.log('[EXPORT] Kandidátov (completed, správna kat, správna skupina):', candidateCount);
-                    console.log('[EXPORT] Preskočených podľa kategórie:', skippedByCategory);
-                    console.log('[EXPORT] Preskočených podľa skupiny:', skippedByGroup);
-                    console.log('[EXPORT] Preskočených (tím sa nenašiel podľa názvu):', skippedByTeamMatch);
-                    console.log('[EXPORT] Preskočených (pár už spracovaný):', skippedByPair);
+                    console.log('[EXPORT] Kandidátov:', candidateCount);
+                    console.log('[EXPORT] Preskočených (tím sa nenašiel):', skippedByTeamMatch);
                     console.log('%c[EXPORT] PRENESENÝCH ZÁPASOV: ' + transferredCount, 'color: green; font-weight: bold; font-size: 14px;');
-                    console.log('[EXPORT] Výsledná matrix:', JSON.parse(JSON.stringify(matrix)));
                 } else {
-                    console.log('[EXPORT] ⚠️ Prenos sa NESPUSTIL. Dôvod:');
-                    console.log('[EXPORT]    groupType === "nadstavbová skupina"?', groupType === 'nadstavbová skupina');
-                    console.log('[EXPORT]    carryOverEnabled?', carryOverEnabled);
+                    console.log('[EXPORT] ⚠️ Prenos sa NESPUSTIL (groupType/carryOver)');
                 }
 
                 // 10) Výpočet štatistík pre poradie
