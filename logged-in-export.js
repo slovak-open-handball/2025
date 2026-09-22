@@ -1367,7 +1367,7 @@ const CrossTable = ({
                                         key: `${keyBase}-s2`,
                                         className: baseCell + ' ' + FONT_CLASS,
                                         style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
-                                    }, ':'),
+                                    }, ':'),   // VŽDY sa zobrazí ":"
                                     React.createElement('td', {
                                         key: `${keyBase}-s3`,
                                         className: baseCell + ' ' + FONT_CLASS,
@@ -1376,10 +1376,10 @@ const CrossTable = ({
                                 );
                                 return;
                             }
-
+                            
                             const hs = matchResult.homeScore ?? 0;
                             const as = matchResult.awayScore ?? 0;
-
+                            
                             if (hs === 0 && as === 0) {
                                 rowCells.push(
                                     React.createElement('td', {
@@ -1391,7 +1391,7 @@ const CrossTable = ({
                                         key: `${keyBase}-z2`,
                                         className: baseCell + ' ' + FONT_CLASS,
                                         style: { ...subCellBaseStyle, color: '#000', backgroundColor: '#fff' }
-                                    }, ':'),
+                                    }, ':'),   // VŽDY sa zobrazí ":"
                                     React.createElement('td', {
                                         key: `${keyBase}-z3`,
                                         className: baseCell + ' ' + FONT_CLASS,
