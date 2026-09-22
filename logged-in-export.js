@@ -298,6 +298,8 @@ const compareTeams = (teamA, teamB, groupMatches, sortingConditions) => {
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
+    const [isTrackerReady, setIsTrackerReady] = useState(false);
+
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
@@ -407,6 +409,66 @@ const ExportApp = ({ userProfileData }) => {
         setSelectedGroupName('');
     }, [selectedGroupType, exportHash]);
 
+   /* --------- Čakanie na pripravenosť matchTracker / teamNameMapping --------- */
+    useEffect(() => {
+        // Ak už je matchTracker pripravený, nastavíme hneď
+        if (window.matchTracker && window.matchTracker.isDataReady && window.matchTracker.isDataReady()) {
+            console.log('[EXPORT] matchTracker je už pripravený (isDataReady = true)');
+            setIsTrackerReady(true);
+            return;
+        }
+
+        // Ak už existuje mapovanie tímov, nastavíme hneď
+        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+            console.log('[EXPORT] teamNameMapping už existuje, nastavujem isTrackerReady = true');
+            setIsTrackerReady(true);
+            return;
+        }
+
+        // Inak čakáme na udalosti
+        const handleTrackerReady = (event) => {
+            console.log('[EXPORT] ✅ Prijatá udalosť matchTrackerReady', event?.detail);
+            setIsTrackerReady(true);
+        };
+
+        const handleMappingReady = (event) => {
+            console.log('[EXPORT] ✅ Prijatá udalosť teamNameMappingReady', event?.detail);
+            setIsTrackerReady(true);
+        };
+
+        window.addEventListener('matchTrackerReady', handleTrackerReady);
+        window.addEventListener('teamNameMappingReady', handleMappingReady);
+
+        // Fallback: polling každých 500 ms, max 60 sekúnd
+        let attempts = 0;
+        const maxAttempts = 120;
+        const pollInterval = setInterval(() => {
+            attempts++;
+
+            const dataReady = window.matchTracker?.isDataReady?.();
+            const mappingReady = window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0;
+
+            if (dataReady || mappingReady) {
+                console.log(`[EXPORT] ✅ Fallback polling: pripravené po ${attempts} pokusoch`);
+                clearInterval(pollInterval);
+                setIsTrackerReady(true);
+                return;
+            }
+
+            if (attempts >= maxAttempts) {
+                console.warn('[EXPORT] ⚠️ Fallback polling: timeout po 60s, pokračujem aj tak');
+                clearInterval(pollInterval);
+                setIsTrackerReady(true);
+            }
+        }, 500);
+
+        return () => {
+            window.removeEventListener('matchTrackerReady', handleTrackerReady);
+            window.removeEventListener('teamNameMappingReady', handleMappingReady);
+            clearInterval(pollInterval);
+        };
+    }, []);
+
     /* ============================================================
        NAČÍTANIE TABUĽKY PRE HASH
        (rovnaká logika ako tables.js – calculateGroupTable / calculateAdvancedGroupTable)
@@ -416,6 +478,15 @@ const ExportApp = ({ userProfileData }) => {
             setExportedTable(null);
             return;
         }
+
+        // 🔥 KĽÚČOVÉ: Počkáme, kým matchTracker / teamNameMapping nie je pripravený
+        if (!isTrackerReady) {
+            console.log('[EXPORT] ⏳ Čakám na pripravenosť matchTracker / teamNameMapping...');
+            setLoadingTable(true);
+            return;
+        }
+
+        console.log('[EXPORT] 🚀 matchTracker je pripravený, spúšťam loadData()');
 
         let isCancelled = false;
         setLoadingTable(true);
@@ -480,9 +551,42 @@ const ExportApp = ({ userProfileData }) => {
                 const allMatches = [];
                 matchesSnap.forEach(d => allMatches.push({ id: d.id, ...d.data() }));
 
-                // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
+                                // 5) Vytvoríme "teamNames" mapovanie (identifier → displayName)
                 //    🔥 PRESNE AKO V tables.js – cez matchTracker.getTeamNameByDisplayId
+                //    + použijeme aj window.__teamNameMapping z func-tables.js
                 const teamNamesFromMatches = { ...(window.teamNames || {}) };
+
+                // 🔥 Ak existuje window.__teamNameMapping (z func-tables.js), použijeme ho
+                if (window.__teamNameMapping && typeof window.__teamNameMapping === 'object') {
+                    for (const [identifier, data] of Object.entries(window.__teamNameMapping)) {
+                        if (data && data.teamName && !teamNamesFromMatches[identifier]) {
+                            teamNamesFromMatches[identifier] = data.teamName;
+                        }
+                    }
+                    console.log('[EXPORT] Použité mapovanie z window.__teamNameMapping:', 
+                        Object.keys(window.__teamNameMapping).length, 'položiek');
+                }
+
+                // 🔥 Ak existuje aj cache (localStorage), použijeme ju tiež
+                if (window.__internalReplacementCache) {
+                    try {
+                        const cache = window.__internalReplacementCache.get?.();
+                        if (cache && typeof cache.forEach === 'function') {
+                            cache.forEach((value, key) => {
+                                // key je "category|groupLetter|position"
+                                // value obsahuje { teamName, displayId, ... }
+                                if (value && value.displayId && value.teamName) {
+                                    if (!teamNamesFromMatches[value.displayId]) {
+                                        teamNamesFromMatches[value.displayId] = value.teamName;
+                                    }
+                                }
+                            });
+                            console.log('[EXPORT] Použitá cache z window.__internalReplacementCache');
+                        }
+                    } catch (e) {
+                        console.warn('[EXPORT] Chyba pri čítaní __internalReplacementCache:', e);
+                    }
+                }
 
                 // Ak window.teamNames je prázdne, načítame asynchrónne
                 if (Object.keys(teamNamesFromMatches).length === 0 &&
@@ -927,7 +1031,7 @@ const ExportApp = ({ userProfileData }) => {
         loadData();
 
         return () => { isCancelled = true; };
-    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, pointsForWin, sortingConditions]);
+   }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, pointsForWin, sortingConditions, isTrackerReady]);
 
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
