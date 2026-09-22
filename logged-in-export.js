@@ -1402,21 +1402,32 @@ const CrossTable = ({
                             const transferredByChar = isTransferredByLastChar(rowTeam, colTeam);
 
                             if (!isMatchCompleted(matchResult) && transferredByChar) {
+                                // Rovnaká logika ako pri isTransferred – vnútorné orámovanie
+                                // sa nastaví na farbu pozadia, aby nevznikli biele čiary
+                                const tLeftStyle = { ...subCellLeftStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
+                                const tMiddleStyle = { ...subCellBaseStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
+                                const tRightStyle = { ...subCellRightStyle, color: '#000', backgroundColor: TRANSFERRED_BG };
+                            
+                                tLeftStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                tMiddleStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                                tMiddleStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                tRightStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                            
                                 rowCells.push(
                                     React.createElement('td', {
                                         key: `${keyBase}-t1`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellLeftStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                        style: tLeftStyle
                                     }, ''),
                                     React.createElement('td', {
                                         key: `${keyBase}-t2`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellBaseStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                        style: tMiddleStyle
                                     }, ':'),
                                     React.createElement('td', {
                                         key: `${keyBase}-t3`,
                                         className: baseCell + ' ' + FONT_CLASS,
-                                        style: { ...subCellRightStyle, color: '#000', backgroundColor: TRANSFERRED_BG }
+                                        style: tRightStyle
                                     }, '')
                                 );
                                 return;
