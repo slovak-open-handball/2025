@@ -250,10 +250,10 @@ const ExportApp = ({ userProfileData }) => {
             const selectedCategory = categories.find(c => c.id === selectedCategoryId);
             const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
             // Nahradíme medzery znakom '-'
+            // Typ skupiny sa do URL neukladá
             const categoryNameSafe = spacesToDashes(categoryName);
-            const groupTypeSafe = spacesToDashes(selectedGroupType);
             const groupNameSafe = spacesToDashes(selectedGroupName);
-            const hash = `tabulky/${categoryNameSafe}/${groupTypeSafe}/${groupNameSafe}`;
+            const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
             const url = `logged-in-export.html#${hash}`;
             window.open(url, '_blank');
             return;
