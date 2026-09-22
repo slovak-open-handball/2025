@@ -116,6 +116,7 @@ const ExportApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
+    const [selectedGroupType, setSelectedGroupType] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
@@ -173,33 +174,50 @@ const ExportApp = ({ userProfileData }) => {
         };
     }, [selectedOption]);
 
-    // Reset vybraných hodnôt pri zmene typu exportu
+    // Reset všetkých vybraných hodnôt pri zmene typu exportu
     useEffect(() => {
         setSelectedCategoryId('');
+        setSelectedGroupType('');
         setSelectedGroupName('');
     }, [selectedOption]);
 
-    // Reset skupiny pri zmene kategórie
+    // Reset typu skupiny a skupiny pri zmene kategórie
     useEffect(() => {
+        setSelectedGroupType('');
         setSelectedGroupName('');
     }, [selectedCategoryId]);
 
-    // Dostupné skupiny pre vybranú kategóriu (zoradené: základné, potom nadstavbové)
-    const availableGroups = selectedCategoryId
-        ? (groups[selectedCategoryId] || [])
-            .slice()
-            .sort((a, b) => {
-                if (a.type !== b.type) {
-                    return a.type === 'základná skupina' ? -1 : 1;
-                }
-                return a.name.localeCompare(b.name);
-            })
+    // Reset konkrétnej skupiny pri zmene typu skupiny
+    useEffect(() => {
+        setSelectedGroupName('');
+    }, [selectedGroupType]);
+
+    // Dostupné typy skupín pre vybranú kategóriu (unikátne, zoradené: základná, nadstavbová)
+    const availableGroupTypes = selectedCategoryId
+        ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
+            if (a === b) return 0;
+            return a === 'základná skupina' ? -1 : 1;
+        })
         : [];
+
+    // Dostupné skupiny pre vybranú kategóriu a typ skupiny
+    const availableGroups = (selectedCategoryId && selectedGroupType)
+        ? (groups[selectedCategoryId] || [])
+            .filter(g => g.type === selectedGroupType)
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+
+    // Formátovanie názvu typu pre zobrazenie (prvé písmeno veľké)
+    const formatGroupType = (type) => {
+        if (!type) return '';
+        return type.charAt(0).toUpperCase() + type.slice(1);
+    };
 
     // Podmienka pre aktivovanie tlačidla
     const isGenerateDisabled =
         !selectedOption ||
-        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupName));
+        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType || !selectedGroupName));
 
     const handleGenerate = () => {
         if (!selectedOption) {
@@ -208,11 +226,11 @@ const ExportApp = ({ userProfileData }) => {
         }
 
         if (selectedOption === 'tabulky') {
-            if (!selectedCategoryId || !selectedGroupName) {
-                window.showGlobalNotification('Prosím, vyberte kategóriu aj skupinu.', 'error');
+            if (!selectedCategoryId || !selectedGroupType || !selectedGroupName) {
+                window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
                 return;
             }
-            const hash = `tabulky/${selectedCategoryId}/${encodeURIComponent(selectedGroupName)}`;
+            const hash = `tabulky/${selectedCategoryId}/${encodeURIComponent(selectedGroupType)}/${encodeURIComponent(selectedGroupName)}`;
             const url = `logged-in-export.html#${hash}`;
             window.open(url, '_blank');
             return;
@@ -260,7 +278,7 @@ const ExportApp = ({ userProfileData }) => {
                     )
                 ),
 
-                // Ak je vybrané "Tabuľky" - zobrazíme kategórie a skupiny
+                // Ak je vybrané "Tabuľky" - zobrazíme kategórie, typ skupiny a skupinu
                 selectedOption === 'tabulky' && React.createElement(
                     React.Fragment,
                     null,
@@ -297,7 +315,44 @@ const ExportApp = ({ userProfileData }) => {
                         )
                     ),
 
-                    // Select box - skupina
+                    // Select box - typ skupiny
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-2' },
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'group-type-option', className: 'text-sm font-medium text-gray-700' },
+                            'Vyberte typ skupiny'
+                        ),
+                        React.createElement(
+                            'select',
+                            {
+                                id: 'group-type-option',
+                                value: selectedGroupType,
+                                onChange: (e) => setSelectedGroupType(e.target.value),
+                                disabled: !selectedCategoryId || availableGroupTypes.length === 0,
+                                className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedCategoryId || availableGroupTypes.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
+                            },
+                            React.createElement(
+                                'option',
+                                { value: '' },
+                                !selectedCategoryId
+                                    ? '-- Najprv vyberte kategóriu --'
+                                    : (availableGroupTypes.length === 0
+                                        ? '-- Žiadne typy skupín --'
+                                        : '-- Vyberte typ skupiny --')
+                            ),
+                            availableGroupTypes.map((type, idx) =>
+                                React.createElement(
+                                    'option',
+                                    { key: `${type}-${idx}`, value: type },
+                                    formatGroupType(type)
+                                )
+                            )
+                        )
+                    ),
+
+                    // Select box - konkrétna skupina
                     React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
@@ -312,14 +367,14 @@ const ExportApp = ({ userProfileData }) => {
                                 id: 'group-option',
                                 value: selectedGroupName,
                                 onChange: (e) => setSelectedGroupName(e.target.value),
-                                disabled: !selectedCategoryId || availableGroups.length === 0,
-                                className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedCategoryId || availableGroups.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
+                                disabled: !selectedGroupType || availableGroups.length === 0,
+                                className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(!selectedGroupType || availableGroups.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
                             },
                             React.createElement(
                                 'option',
                                 { value: '' },
-                                !selectedCategoryId
-                                    ? '-- Najprv vyberte kategóriu --'
+                                !selectedGroupType
+                                    ? '-- Najprv vyberte typ skupiny --'
                                     : (availableGroups.length === 0
                                         ? '-- Žiadne skupiny --'
                                         : '-- Vyberte skupinu --')
@@ -328,7 +383,7 @@ const ExportApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'option',
                                     { key: `${group.name}-${idx}`, value: group.name },
-                                    `${group.name} (${group.type})`
+                                    group.name
                                 )
                             )
                         )
