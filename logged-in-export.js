@@ -306,9 +306,24 @@ const exportTableToPdf = async (categoryName, groupName) => {
 // EXPORT ZOZNAMU ZÁPASOV DO PDF
 // ============================================================
 const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, formatTimeFn) => {
+    // Pomocná funkcia na inkrementáciu batch countera
+    // Zavolá sa VŽDY – pri úspechu, chybe, aj pri predčasnom return
+    const markBatchCompleted = () => {
+        try {
+            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+            if (isActive) {
+                let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+                completed++;
+                sessionStorage.setItem('pdfBatchCompleted', String(completed));
+                sessionStorage.setItem('pdfBatchLastLabel', hallName || '');
+            }
+        } catch (e) { }
+    };
+
     const element = document.getElementById('matches-pdf-export-target');
     if (!element) {
         window.showGlobalNotification('Zoznam zápasov ešte nie je načítaný.', 'error');
+        markBatchCompleted();
         return;
     }
 
@@ -317,6 +332,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
     if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
         window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        markBatchCompleted();
         return;
     }
 
@@ -365,9 +381,16 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
         } catch (e) { }
 
         window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
+
+        // PO NOVOM: inkrementuj batch counter po úspešnom uložení
+        markBatchCompleted();
     } catch (err) {
         console.error('[PDF zápasy] ❌ Chyba pri PDF exporte:', err);
         window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
+
+        // PO NOVOM: inkrementuj batch counter aj pri chybe,
+        // aby sa batch nikdy nezasekol
+        markBatchCompleted();
     }
 };
 
@@ -1512,7 +1535,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         });
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [matches]);
-
         
     // Auto-download PDF pri otvorení s ?download=1 (len raz)
     useEffect(() => {
@@ -1521,7 +1543,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     
         if (!shouldAutoDownload) return;
         if (loading) return;
-        if (matchesByDay.length === 0) return;
     
         const storageKey = `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
     
@@ -1535,6 +1556,19 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         try {
             sessionStorage.setItem(storageKey, '1');
         } catch (e) { }
+    
+        // Ak hala nemá žiadne zápasy → iba inkrementujeme batch counter a skončíme
+        if (matchesByDay.length === 0) {
+            try {
+                const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+                if (isActive) {
+                    let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+                    completed++;
+                    sessionStorage.setItem('pdfBatchCompleted', String(completed));
+                }
+            } catch (e) { }
+            return;
+        }
     
         const timer = setTimeout(() => {
             exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime);
