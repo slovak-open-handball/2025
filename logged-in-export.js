@@ -187,7 +187,7 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
 };
 
-const downloadMatchesPdfViaHiddenIframe = (hash, hallName) => {
+const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
@@ -209,7 +209,9 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName) => {
 
     document.body.appendChild(iframe);
 
-    window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
+    if (!silent) {
+        window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
+    }
 };
 
 const exportTableToPdf = async (categoryName, groupName) => {
@@ -867,7 +869,7 @@ const ExportApp = ({ userProfileData }) => {
                     } catch (e) { }
         
                     setTimeout(() => {
-                        downloadMatchesPdfViaHiddenIframe(hash, hall.name);
+                        downloadMatchesPdfViaHiddenIframe(hash, hall.name, true);
                     }, index * 3000);
                 });
         
