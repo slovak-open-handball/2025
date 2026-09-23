@@ -1278,6 +1278,42 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         return rawTeamName;
     };
 
+    // Zobrazenie ID tímu:
+    // - pre zápasy v základných skupinách vráti pôvodné ID (bez mapovania)
+    // - pre všetky ostatné zápasy (nadstavbové, playoff, o umiestnenie) pošle ID do teamManager.getTeamNameByDisplayIdSync(...)
+    const getDisplayIdForMatch = (match, rawTeamName) => {
+        if (!rawTeamName) return '';
+    
+        // Zistíme, či ide o zápas v základnej skupine
+        const categoryGroups = groupsData[match.categoryId] || [];
+        const foundGroup = match.groupName ? categoryGroups.find(g => g.name === match.groupName) : null;
+    
+        const isBasicGroupMatch =
+            foundGroup &&
+            foundGroup.type === 'základná skupina' &&
+            !match.isPlacementMatch &&
+            !isEliminationMatch(match);
+    
+        // Pre základné skupiny vrátime pôvodné ID
+        if (isBasicGroupMatch) {
+            return rawTeamName;
+        }
+    
+        // Pre všetky ostatné zápasy zavoláme teamManager
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                const mapped = window.teamManager.getTeamNameByDisplayIdSync(rawTeamName);
+                if (mapped && mapped !== rawTeamName) {
+                    return mapped;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    
+        return rawTeamName;
+    };
+
     const getCategoryColor = (categoryId) => {
         if (!categoryId || !categoryDrawColors[categoryId]) return '#3B82F6';
         return categoryDrawColors[categoryId];
@@ -1587,7 +1623,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                            React.createElement(
                                                'td',
                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' }, match.homeTeamIdentifier || '')
+                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
+                                                   getDisplayIdForMatch(match, match.homeTeamIdentifier)
+                                               )
                                            ),
                                            
                                            // Domáci
@@ -1629,7 +1667,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                            React.createElement(
                                                'td',
                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' }, match.awayTeamIdentifier || '')
+                                               React.createElement('span', { className: 'font-mono text-xs text-gray-500' },
+                                                   getDisplayIdForMatch(match, match.awayTeamIdentifier)
+                                               )
                                            ),
                                            
                                            // Info
