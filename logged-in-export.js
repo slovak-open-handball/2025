@@ -444,38 +444,48 @@ const ExportApp = ({ userProfileData }) => {
 
                 try {
                     const element = tableRef.current;
-
-                    // 1. Vyrenderujeme tabuľku do canvasu
+                
+                    // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
+                    const rect = element.getBoundingClientRect();
+                    const cssWidth = rect.width;
+                    const cssHeight = rect.height;
+                
+                    // 2. Vyrenderujeme do canvasu s scale=2 (vyššia kvalita)
                     const canvas = await html2canvasFn(element, {
-                        scale: 2,               // vyššia kvalita
+                        scale: 2,
                         useCORS: true,
                         logging: false,
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        // Dôležité: nastavíme šírku a výšku presne podľa elementu
+                        width: cssWidth,
+                        height: cssHeight,
+                        windowWidth: cssWidth,
+                        windowHeight: cssHeight
                     });
 
-                    // 2. Rozmery canvasu v pixeloch
-                    const imgWidthPx = canvas.width;
-                    const imgHeightPx = canvas.height;
-
-                    // 3. Prevod px → mm (96 DPI = 0.264583 mm/px), deleno 2 kvôli scale=2
+                    // 3. Prevod CSS px → mm (96 DPI = 0.264583 mm/px)
+                    // POZOR: použijeme cssWidth/cssHeight, NIE canvas.width/canvas.height,
+                    // pretože canvas.width je 2x väčší (scale=2) a museli by sme deliť 2.
+                    // cssWidth je presná šírka v CSS px, ktorú vidí používateľ.
                     const pxToMm = 0.264583;
-                    const pdfWidthMm = (imgWidthPx * pxToMm) / 2;
-                    const pdfHeightMm = (imgHeightPx * pxToMm) / 2;
-
-                    // 4. Vytvoríme PDF s VLASTNOU veľkosťou (nie A4)
+                    const pdfWidthMm = cssWidth * pxToMm;
+                    const pdfHeightMm = cssHeight * pxToMm;
+                
+                    // 4. Vytvoríme PDF s vlastnou veľkosťou
                     const pdf = new jsPDFClass({
                         orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
                         unit: 'mm',
                         format: [pdfWidthMm, pdfHeightMm]
                     });
 
-                    // 5. Vložíme obrázok na celú stránku
+                    // 5. Vložíme obrázok – canvas má 2x väčšie rozmery, ale my ho škálujeme
+                    //    na pdfWidthMm × pdfHeightMm, takže kvalita je zachovaná
                     const imgData = canvas.toDataURL('image/png');
                     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
-
+                
                     // 6. Uložíme
                     pdf.save(fileName);
-
+                
                     window.showGlobalNotification('PDF bolo uložené.', 'success');
                 } catch (err) {
                     console.error('Chyba pri PDF exporte:', err);
