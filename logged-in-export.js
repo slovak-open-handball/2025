@@ -182,28 +182,9 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
+    // V downloadPdfViaHiddenIframe
     iframe.onload = () => {
         console.log('[iframe] načítaný:', iframe.src);
-
-        // ===== APLIKUJ ZOOM V IFRAME =====
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            const iframeWin = iframe.contentWindow;
-
-            // Nastavíme zoom priamo na <html> element v iframe
-            iframeDoc.documentElement.style.zoom = PDF_ZOOM; // napr. 1.75 pre 175 %
-            
-            // Voliteľne: nastavíme aj transform scale, ak zoom nefunguje
-            // iframeDoc.documentElement.style.transform = `scale(${PDF_ZOOM})`;
-            // iframeDoc.documentElement.style.transformOrigin = 'top left';
-            // iframeDoc.documentElement.style.width = (100 / PDF_ZOOM) + '%';
-            // iframeDoc.documentElement.style.height = (100 / PDF_ZOOM) + '%';
-
-            console.log('[iframe] zoom aplikovaný:', PDF_ZOOM);
-        } catch (e) {
-            console.error('[iframe] Nepodarilo sa aplikovať zoom:', e);
-        }
-
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
@@ -233,6 +214,14 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
 
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
+
+    iframe.onload = () => {
+        setTimeout(() => {
+            try {
+                document.body.removeChild(iframe);
+            } catch (e) { }
+        }, 20000);
+    };
 
     document.body.appendChild(iframe);
 
@@ -266,7 +255,7 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
     window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
 
-    const scaleToUse = fixedDpr || PDF_DEVICE_PIXEL_RATIO;
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
 
     try {
         const rect = element.getBoundingClientRect();
@@ -366,7 +355,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
     window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
 
     // Pevný scale (priorita: parameter → konštanta → 1.5)
-    const scaleToUse = fixedDpr || PDF_DEVICE_PIXEL_RATIO;
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
 
     try {
         const rect = element.getBoundingClientRect();
@@ -451,7 +440,6 @@ const ExportApp = ({ userProfileData }) => {
         const urlParams = new URLSearchParams(window.location.search);
         const fz = parseFloat(urlParams.get('fixedZoom')) || 1.0;
         if (fz === 1.0) return;
-        document.documentElement.style.zoom = fz;
         console.log('[ExportApp] zoom aplikovaný:', fz);
     }, []);
 
@@ -1311,13 +1299,22 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     // Čítanie pevných hodnôt z URL (nastavené rodičovským oknom)
     // ============================================================
     const urlParams = new URLSearchParams(window.location.search);
-    const fixedZoom = parseFloat(urlParams.get('fixedZoom')) || 1.0;
-    const fixedDpr = parseFloat(urlParams.get('fixedDpr')) || 1.5;
+    const fixedZoom = React.useMemo(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return parseFloat(urlParams.get('fixedZoom')) || 1.0;
+    }, []);
+
+    const fixedDpr = React.useMemo(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return parseFloat(urlParams.get('fixedDpr')) || 1.5;
+    }, []);
 
     useEffect(() => {
         if (!fixedZoom || fixedZoom === 1.0) return;
         // Aplikuj zoom na <html> element
-        document.documentElement.style.zoom = fixedZoom;
+        document.documentElement.style.transform = `scale(${fixedZoom})`;
+        document.documentElement.style.transformOrigin = 'top left';
+        document.documentElement.style.width = (100 / fixedZoom) + '%';
         console.log('[MatchesExportView] zoom aplikovaný:', fixedZoom);
     }, [fixedZoom]);
 
