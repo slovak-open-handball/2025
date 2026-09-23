@@ -372,8 +372,13 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
         window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
 
         try {
-            if (window.__pdfBatchTracker) {
-                window.__pdfBatchTracker.markCompleted();
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: true,
+                    label: label,
+                    fileName: fileName
+                }, '*');
             }
         } catch (e) { }
     } catch (err) {
