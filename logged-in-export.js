@@ -1381,178 +1381,193 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         'div',
         { className: 'w-full p-0 m-0' },
 
-        // Hlavička – zobrazí názov haly z URL (nie ID)
+        // PDF EXPORT TARGET – celý obsah sa použije pri generovaní PDF
         React.createElement(
             'div',
-            { className: 'mb-6 text-center pt-6' },
-            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale'),
-            React.createElement(
-                'div',
-                { className: 'flex items-center justify-center gap-2 mt-1' },
-                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
-                React.createElement('span', { className: 'text-gray-600' }, hallName || hallNameFromUrl || 'Športová hala')
-            )
-        ),
+            {
+                id: 'matches-pdf-export-target',
+                style: {
+                    display: 'inline-block',
+                    width: '100%',
+                    padding: '20px',
+                    backgroundColor: '#ffffff'
+                }
+            },
 
-        matchesByDay.length === 0 ?
+            // Hlavička
             React.createElement(
                 'div',
-                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
-                React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
-                React.createElement('p', { className: 'text-lg' }, 'Pre túto halu nie sú naplánované žiadne zápasy.')
-            ) :
-            React.createElement(
-                'div',
-                { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white m-4' },
+                { className: 'mb-6 text-center pt-6' },
+                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale'),
                 React.createElement(
-                    'table',
-                    { className: 'min-w-full divide-y divide-gray-200' },
+                    'div',
+                    { className: 'flex items-center justify-center gap-2 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
+                    React.createElement('span', { className: 'text-gray-600' }, hallName || hallNameFromUrl || 'Športová hala')
+                )
+            ),
+
+            // Tabuľka
+            matchesByDay.length === 0 ?
+                React.createElement(
+                    'div',
+                    { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
+                    React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
+                    React.createElement('p', { className: 'text-lg' }, 'Pre túto halu nie sú naplánované žiadne zápasy.')
+                ) :
+                React.createElement(
+                    'div',
+                    { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white m-4' },
                     React.createElement(
-                        'thead',
-                        { className: 'bg-gray-50' },
+                        'table',
+                        { className: 'min-w-full divide-y divide-gray-200' },
                         React.createElement(
-                            'tr',
-                            null,
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
-                            React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
-                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
-                        )
-                    ),
-                    React.createElement(
-                        'tbody',
-                        { className: 'divide-y divide-gray-100' },
-                        matchesByDay.map((dayGroup, dayIndex) => {
-                            const rows = [];
-
-                            rows.push(
-                                React.createElement(
-                                    'tr',
-                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
-                                    React.createElement(
-                                        'td',
-                                        { colSpan: 5, className: 'px-4 py-4 text-left' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-2' },
-                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
-                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, formatDateHeader(dayGroup.date))
-                                        )
-                                    )
-                                )
-                            );
-
-                            dayGroup.matches.forEach((match, matchIndex) => {
-                                const homeTeamDisplay = match.homeTeamIdentifier || '???';
-                                const awayTeamDisplay = match.awayTeamIdentifier || '???';
-
-                                const categoryColor = getCategoryColor(match.categoryId);
-                                const lighterCategoryColor = getLighterColor(categoryColor);
-
-                                const infoTags = [];
-
-                                if (match.matchType && !match.isPlacementMatch) {
-                                    const isElim = isEliminationMatch(match);
-                                    const colors = isElim
-                                        ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
-                                        : getGroupColors(match.groupName, match.categoryId);
-                                    infoTags.push(
-                                        React.createElement('span', {
-                                            key: 'type',
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                            style: { backgroundColor: colors.backgroundColor, color: colors.textColor, fontWeight: '500' }
-                                        }, match.matchType)
-                                    );
-                                }
-
-                                if (match.isPlacementMatch) {
-                                    infoTags.push(
-                                        React.createElement('span', {
-                                            key: 'placement',
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                            style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
-                                        }, `o ${match.placementRank}. miesto`)
-                                    );
-                                }
-
-                                if (match.groupName && !match.isPlacementMatch) {
-                                    const isElim = isEliminationMatch(match);
-                                    const groupColors = isElim
-                                        ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
-                                        : getGroupColors(match.groupName, match.categoryId);
-                                    infoTags.push(
-                                        React.createElement('span', {
-                                            key: 'group',
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                            style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
-                                        }, match.groupName)
-                                    );
-                                }
-
-                                let categoryDisplayTag = match.categoryName;
-                                if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
-                                    categoryDisplayTag = categoriesData[match.categoryId];
-                                }
-
-                                if (categoryDisplayTag) {
-                                    infoTags.push(
-                                        React.createElement('span', {
-                                            key: 'category',
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                            style: { backgroundColor: lighterCategoryColor, color: categoryColor, fontWeight: '500' }
-                                        }, categoryDisplayTag)
-                                    );
-                                }
+                            'thead',
+                            { className: 'bg-gray-50' },
+                            React.createElement(
+                                'tr',
+                                null,
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            { className: 'divide-y divide-gray-100' },
+                            matchesByDay.map((dayGroup, dayIndex) => {
+                                const rows = [];
 
                                 rows.push(
                                     React.createElement(
                                         'tr',
-                                        { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
-
+                                        { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                         React.createElement(
                                             'td',
-                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            { colSpan: 5, className: 'px-4 py-4 text-left' },
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center gap-1' },
-                                                React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, formatTime(match.scheduledTime))
+                                                { className: 'flex items-center gap-2' },
+                                                React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
+                                                React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, formatDateHeader(dayGroup.date))
                                             )
-                                        ),
-
-                                        React.createElement(
-                                            'td',
-                                            { className: 'px-4 py-3 whitespace-nowrap text-right' },
-                                            React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
-                                        ),
-
-                                        React.createElement(
-                                            'td',
-                                            { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                            React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
-                                        ),
-
-                                        React.createElement(
-                                            'td',
-                                            { className: 'px-4 py-3 whitespace-nowrap text-left' },
-                                            React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
-                                        ),
-
-                                        React.createElement(
-                                            'td',
-                                            { className: 'px-4 py-3' },
-                                            React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
                                         )
                                     )
                                 );
-                            });
 
-                            return rows;
-                        }).flat()
+                                dayGroup.matches.forEach((match, matchIndex) => {
+                                    const homeTeamDisplay = match.homeTeamIdentifier || '???';
+                                    const awayTeamDisplay = match.awayTeamIdentifier || '???';
+
+                                    const categoryColor = getCategoryColor(match.categoryId);
+                                    const lighterCategoryColor = getLighterColor(categoryColor);
+
+                                    const infoTags = [];
+
+                                    if (match.matchType && !match.isPlacementMatch) {
+                                        const isElim = isEliminationMatch(match);
+                                        const colors = isElim
+                                            ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
+                                            : getGroupColors(match.groupName, match.categoryId);
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'type',
+                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                style: { backgroundColor: colors.backgroundColor, color: colors.textColor, fontWeight: '500' }
+                                            }, match.matchType)
+                                        );
+                                    }
+
+                                    if (match.isPlacementMatch) {
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'placement',
+                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
+                                            }, `o ${match.placementRank}. miesto`)
+                                        );
+                                    }
+
+                                    if (match.groupName && !match.isPlacementMatch) {
+                                        const isElim = isEliminationMatch(match);
+                                        const groupColors = isElim
+                                            ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
+                                            : getGroupColors(match.groupName, match.categoryId);
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'group',
+                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
+                                            }, match.groupName)
+                                        );
+                                    }
+
+                                    let categoryDisplayTag = match.categoryName;
+                                    if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
+                                        categoryDisplayTag = categoriesData[match.categoryId];
+                                    }
+
+                                    if (categoryDisplayTag) {
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'category',
+                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                                style: { backgroundColor: lighterCategoryColor, color: categoryColor, fontWeight: '500' }
+                                            }, categoryDisplayTag)
+                                        );
+                                    }
+
+                                    rows.push(
+                                        React.createElement(
+                                            'tr',
+                                            { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap' },
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-1' },
+                                                    React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                                    React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, formatTime(match.scheduledTime))
+                                                )
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-right' },
+                                                React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                                                React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
+                                            ),
+
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3' },
+                                                React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
+                                            )
+                                        )
+                                    );
+                                });
+
+                                return rows;
+                            }).flat()
+                        )
                     )
                 )
-            )
+        )
     );
 };
 
