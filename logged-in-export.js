@@ -1279,39 +1279,57 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     };
 
     // Zobrazenie ID tímu:
-    // - pre zápasy v základných skupinách vráti pôvodné ID (bez mapovania)
+    // - pre zápasy v základných skupinách vráti pôvodné ID (bez mapovania) s odstráneným názvom kategórie
     // - pre všetky ostatné zápasy (nadstavbové, playoff, o umiestnenie) pošle ID do teamManager.getTeamNameByDisplayIdSync(...)
+    //   a následne z výsledku odstráni názov kategórie
     const getDisplayIdForMatch = (match, rawTeamName) => {
         if (!rawTeamName) return '';
-    
+
+        // Zistíme názov kategórie pre tento zápas
+        let categoryName = match.categoryName;
+        if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
+            categoryName = categoriesData[match.categoryId];
+        }
+
+        // Pomocná funkcia – odstráni názov kategórie zo začiatku reťazca
+        const stripCategoryPrefix = (value) => {
+            if (!value) return '';
+            if (!categoryName) return value;
+            const prefix = categoryName + ' ';
+            if (value.startsWith(prefix)) {
+                return value.substring(prefix.length).trim();
+            }
+            return value;
+        };
+
         // Zistíme, či ide o zápas v základnej skupine
         const categoryGroups = groupsData[match.categoryId] || [];
         const foundGroup = match.groupName ? categoryGroups.find(g => g.name === match.groupName) : null;
-    
+
         const isBasicGroupMatch =
             foundGroup &&
             foundGroup.type === 'základná skupina' &&
             !match.isPlacementMatch &&
             !isEliminationMatch(match);
-    
-        // Pre základné skupiny vrátime pôvodné ID
+
+        // Pre základné skupiny vrátime pôvodné ID bez názvu kategórie
         if (isBasicGroupMatch) {
-            return rawTeamName;
+            return stripCategoryPrefix(rawTeamName);
         }
-    
+
         // Pre všetky ostatné zápasy zavoláme teamManager
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             try {
                 const mapped = window.teamManager.getTeamNameByDisplayIdSync(rawTeamName);
                 if (mapped && mapped !== rawTeamName) {
-                    return mapped;
+                    return stripCategoryPrefix(mapped);
                 }
             } catch (e) {
                 // ignore
             }
         }
-    
-        return rawTeamName;
+
+        return stripCategoryPrefix(rawTeamName);
     };
 
     const getCategoryColor = (categoryId) => {
