@@ -137,6 +137,10 @@ const parseExportHash = () => {
     }
 
     if (parts[0] === 'zapasy') {
+        // Ak je v hashi aj ID haly: #zapasy/<hallId>
+        if (parts.length >= 2) {
+            return { type: 'zapasy', hallId: decodeURIComponent(parts[1]) };
+        }
         return { type: 'zapasy' };
     }
 
@@ -279,6 +283,11 @@ const ExportApp = ({ userProfileData }) => {
     const [selectedGroupType, setSelectedGroupType] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+    const [halls, setHalls] = useState([]);
+    const [selectedHallId, setSelectedHallId] = useState('');
+    const [isLoadingHalls, setIsLoadingHalls] = useState(false);
+    const [hallsLoaded, setHallsLoaded] = useState(false);
 
     // Dáta z Firestore
     const [userTeams, setUserTeams] = useState([]);
@@ -433,6 +442,38 @@ const ExportApp = ({ userProfileData }) => {
         setAllTeams([...userTeams, ...globalTeamsList]);
     }, [userTeams, superstructureTeams]);
 
+    // ============================================================
+    // NAČÍTANIE ZOZNAMU ŠPORTOVÝCH HÁL (kolekcia 'places')
+    // ============================================================
+    useEffect(() => {
+        if (!window.db) return;
+        if (selectedOption !== 'zapasy') return;
+        if (hallsLoaded) return;
+    
+        setIsLoadingHalls(true);
+    
+        const placesRef = collection(window.db, 'places');
+        const unsubscribe = onSnapshot(placesRef, (snapshot) => {
+            const loadedHalls = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                loadedHalls.push({
+                    id: docSnap.id,
+                    name: data.name || 'Športová hala'
+                });
+            });
+            loadedHalls.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
+            setHalls(loadedHalls);
+            setIsLoadingHalls(false);
+            setHallsLoaded(true);
+        }, (error) => {
+            console.error('[Export] Chyba pri načítaní hál:', error);
+            setIsLoadingHalls(false);
+        });
+    
+        return () => unsubscribe();
+    }, [selectedOption, hallsLoaded]);
+
     // DataLoading = false, keď sú načítané VŠETKY potrebné kolekcie
     const dataLoading = !(categoriesLoaded && groupsLoaded && usersLoaded && superstructureLoaded);
 
@@ -458,6 +499,7 @@ const ExportApp = ({ userProfileData }) => {
         setSelectedCategoryId('');
         setSelectedGroupType('');
         setSelectedGroupName('');
+        setSelectedHallId('');
     }, [selectedOption, exportHash]);
 
     useEffect(() => {
@@ -615,7 +657,8 @@ const ExportApp = ({ userProfileData }) => {
 
     const isGenerateDisabled =
         !selectedOption ||
-        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType));
+        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType)) ||
+        (selectedOption === 'zapasy' && !selectedHallId);
 
     const handleGenerate = () => {
         if (!selectedOption) {
@@ -697,10 +740,20 @@ const ExportApp = ({ userProfileData }) => {
         }
     
         // ===== ZÁPASY V ŠPORTOVEJ HALE =====
-        // Vždy otvoríme novú kartu
-        try {
-            sessionStorage.removeItem('pdfAutoDownloaded');
-        } catch (e) { }
+        if (selectedOption === 'zapasy') {
+            if (!selectedHallId) {
+                window.showGlobalNotification('Prosím, vyberte športovú halu.', 'error');
+                return;
+            }
+        
+            try {
+                sessionStorage.removeItem('pdfAutoDownloaded');
+            } catch (e) { }
+        
+            const hash = `zapasy/${encodeURIComponent(selectedHallId)}`;
+            window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+            return;
+        }
 
         window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
     };
@@ -827,21 +880,31 @@ const ExportApp = ({ userProfileData }) => {
         );
     }
 
+    // ============================================================
+    // EXPORT ZÁPASOV PRE KONKRÉTNU HALU (bez výsledkov)
+    // ============================================================
     if (exportHash && exportHash.type === 'zapasy') {
-        return React.createElement(
-            'div',
-            { className: 'w-full p-0 m-0' },
-            React.createElement(
+        const hallId = exportHash.hallId || null;
+    
+        // Ak chýba hallId v hashi, zobrazíme chybu
+        if (!hallId) {
+            return React.createElement(
                 'div',
-                { className: 'mb-6 text-center pt-6' },
-                React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale')
-            ),
-            React.createElement(
-                'div',
-                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
-                React.createElement('p', { className: 'text-lg' }, 'Export zápasov – pripravované.')
-            )
-        );
+                { className: 'w-full p-0 m-0' },
+                React.createElement(
+                    'div',
+                    { className: 'mb-6 text-center pt-6' },
+                    React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale')
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
+                    React.createElement('p', { className: 'text-red-700 font-medium' }, 'Chýba ID športovej haly v URL.')
+                )
+            );
+        }
+    
+        return React.createElement(MatchesExportView, { hallId });
     }
 
     return React.createElement(
@@ -874,6 +937,27 @@ const ExportApp = ({ userProfileData }) => {
                         React.createElement('option', { value: '' }, '-- Vyberte možnosť --'),
                         React.createElement('option', { value: 'zapasy' }, 'Zápasy v športovej hale'),
                         React.createElement('option', { value: 'tabulky' }, 'Tabuľky')
+                    )
+                ),
+
+                selectedOption === 'zapasy' && React.createElement(
+                    'div',
+                    { className: 'flex flex-col gap-2' },
+                    React.createElement('label', { htmlFor: 'hall-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte športovú halu'),
+                    React.createElement(
+                        'select',
+                        {
+                            id: 'hall-option',
+                            value: selectedHallId,
+                            onChange: (e) => setSelectedHallId(e.target.value),
+                            disabled: isLoadingHalls || halls.length === 0,
+                            className: `w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-700 ${(isLoadingHalls || halls.length === 0) ? 'cursor-not-allowed opacity-60' : ''}`
+                        },
+                        React.createElement('option', { value: '' },
+                            isLoadingHalls ? '-- Načítavam haly... --'
+                                : (halls.length === 0 ? '-- Žiadne haly --' : '-- Vyberte halu --')
+                        ),
+                        halls.map(hall => React.createElement('option', { key: hall.id, value: hall.id }, hall.name))
                     )
                 ),
 
@@ -995,6 +1079,441 @@ const ExportApp = ({ userProfileData }) => {
                 )
             )
         )
+    );
+};
+
+// ============================================================
+// KOMPONENT: Export zápasov pre konkrétnu halu (bez výsledkov)
+// ============================================================
+const MatchesExportView = ({ hallId }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [hallName, setHallName] = useState('');
+    const [matches, setMatches] = useState([]);
+    const [teamNames, setTeamNames] = useState({});
+    const [categoriesData, setCategoriesData] = useState({});
+    const [groupsData, setGroupsData] = useState({});
+    const [categoryDrawColors, setCategoryDrawColors] = useState({});
+
+    // Načítanie názvu haly
+    useEffect(() => {
+        if (!window.db || !hallId) return;
+        const loadHall = async () => {
+            try {
+                const hallRef = doc(window.db, 'places', hallId);
+                const hallSnap = await getDoc(hallRef);
+                if (hallSnap.exists()) {
+                    setHallName(hallSnap.data().name || 'Športová hala');
+                } else {
+                    setHallName('Športová hala');
+                }
+            } catch (e) {
+                setHallName('Športová hala');
+            }
+        };
+        loadHall();
+    }, [hallId]);
+
+    // Načítanie kategórií, skupín, farieb
+    useEffect(() => {
+        if (!window.db) return;
+
+        const unsubCats = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
+            const categories = {};
+            const colors = {};
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                Object.entries(data).forEach(([catId, catData]) => {
+                    if (catData && catData.name) {
+                        categories[catId] = catData.name;
+                        if (catData.drawColor) colors[catId] = catData.drawColor;
+                    }
+                });
+            }
+            setCategoriesData(categories);
+            setCategoryDrawColors(colors);
+            window.categoriesData = categories;
+            window.categoryDrawColors = colors;
+        });
+
+        const unsubGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
+            const groups = docSnap.exists() ? docSnap.data() : {};
+            setGroupsData(groups);
+            window.groupsData = groups;
+        });
+
+        return () => {
+            unsubCats();
+            unsubGroups();
+        };
+    }, []);
+
+    // Načítanie zápasov pre konkrétnu halu (onSnapshot pre live update)
+    useEffect(() => {
+        if (!window.db || !hallId) return;
+
+        setLoading(true);
+
+        const matchesRef = collection(window.db, 'matches');
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const hallMatches = [];
+            snapshot.forEach((docSnap) => {
+                const match = { id: docSnap.id, ...docSnap.data() };
+                if (match.hallId === hallId) {
+                    hallMatches.push(match);
+                }
+            });
+
+            hallMatches.sort((a, b) => {
+                if (!a.scheduledTime) return 1;
+                if (!b.scheduledTime) return -1;
+                try {
+                    return a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime();
+                } catch (e) {
+                    return 0;
+                }
+            });
+
+            setMatches(hallMatches);
+            setLoading(false);
+        }, (err) => {
+            console.error('[Export zápasy] Chyba:', err);
+            setError('Nepodarilo sa načítať zápasy.');
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [hallId]);
+
+    // Načítanie mien tímov (bez výsledkov – len názvy)
+    useEffect(() => {
+        if (!matches.length) return;
+
+        const processNames = async () => {
+            const names = {};
+
+            for (const match of matches) {
+                let categoryName = match.categoryName;
+                if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
+                    categoryName = categoriesData[match.categoryId];
+                }
+
+                if (match.homeTeamIdentifier) {
+                    if (window.matchTracker?.getTeamNameByDisplayIdSync) {
+                        try {
+                            const syncName = window.matchTracker.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                            names[match.homeTeamIdentifier] = syncName || match.homeTeamIdentifier;
+                        } catch (e) {
+                            names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
+                        }
+                    } else {
+                        names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
+                    }
+                }
+
+                if (match.awayTeamIdentifier) {
+                    if (window.matchTracker?.getTeamNameByDisplayIdSync) {
+                        try {
+                            const syncName = window.matchTracker.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+                            names[match.awayTeamIdentifier] = syncName || match.awayTeamIdentifier;
+                        } catch (e) {
+                            names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
+                        }
+                    } else {
+                        names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
+                    }
+                }
+            }
+
+            setTeamNames(names);
+        };
+
+        processNames();
+    }, [matches, categoriesData]);
+
+    // Pomocné funkcie pre farby
+    const getCategoryColor = (categoryId) => {
+        if (!categoryId || !categoryDrawColors[categoryId]) return '#3B82F6';
+        return categoryDrawColors[categoryId];
+    };
+
+    const getLighterColor = (color) => {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.8));
+        const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.8));
+        const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.8));
+        return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+    };
+
+    const isEliminationMatch = (match) => {
+        if (match.isPlacementMatch) return true;
+        if (match.matchType === 'Playoff' || match.matchType === 'Semifinále' ||
+            match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
+            match.matchType === 'Osemfinále' ||
+            (match.matchType && match.matchType.includes('finále')) ||
+            (match.matchType && match.matchType.includes('miesto'))) {
+            return true;
+        }
+        return false;
+    };
+
+    const getGroupColors = (groupName, categoryId) => {
+        const defaultColors = { backgroundColor: '#DCFCE7', textColor: '#166534' };
+        if (!groupsData || !categoryId) return defaultColors;
+        const categoryGroups = groupsData[categoryId] || [];
+        const foundGroup = categoryGroups.find(g => g.name === groupName);
+        if (foundGroup) {
+            if (foundGroup.type === 'nadstavbová skupina') {
+                return { backgroundColor: '#DBEAFE', textColor: '#1E40AF' };
+            }
+            if (foundGroup.type === 'základná skupina') {
+                return { backgroundColor: '#DCFCE7', textColor: '#166534' };
+            }
+        }
+        return defaultColors;
+    };
+
+    const formatDateHeader = (date) => {
+        const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+        const dayName = days[date.getDay()];
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${dayName} ${day}. ${month}. ${year}`;
+    };
+
+    const formatTime = (timestamp) => {
+        if (!timestamp) return '--:--';
+        try {
+            const date = timestamp.toDate();
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        } catch (e) {
+            return '--:--';
+        }
+    };
+
+    // Rozdelenie zápasov podľa dní
+    const matchesByDay = React.useMemo(() => {
+        const groups = {};
+        matches.forEach(match => {
+            if (!match.scheduledTime) return;
+            try {
+                const date = match.scheduledTime.toDate();
+                const dateKey = date.toDateString();
+                if (!groups[dateKey]) {
+                    groups[dateKey] = { date, matches: [] };
+                }
+                groups[dateKey].matches.push(match);
+            } catch (e) { }
+        });
+        return Object.values(groups).sort((a, b) => a.date - b.date);
+    }, [matches]);
+
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center py-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+        );
+    }
+
+    if (error) {
+        return React.createElement(
+            'div',
+            { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
+            React.createElement('p', { className: 'text-red-700 font-medium' }, error)
+        );
+    }
+
+    return React.createElement(
+        'div',
+        { className: 'w-full p-0 m-0' },
+
+        // Hlavička
+        React.createElement(
+            'div',
+            { className: 'mb-6 text-center pt-6' },
+            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy v športovej hale'),
+            React.createElement(
+                'div',
+                { className: 'flex items-center justify-center gap-2 mt-1' },
+                React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
+                React.createElement('span', { className: 'text-gray-600' }, hallName || 'Športová hala')
+            )
+        ),
+
+        // Tabuľka
+        matchesByDay.length === 0 ?
+            React.createElement(
+                'div',
+                { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
+                React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
+                React.createElement('p', { className: 'text-lg' }, 'Pre túto halu nie sú naplánované žiadne zápasy.')
+            ) :
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white m-4' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full divide-y divide-gray-200' },
+                    React.createElement(
+                        'thead',
+                        { className: 'bg-gray-50' },
+                        React.createElement(
+                            'tr',
+                            null,
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                            React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        { className: 'divide-y divide-gray-100' },
+                        matchesByDay.map((dayGroup, dayIndex) => {
+                            const rows = [];
+
+                            // Riadok s dňom
+                            rows.push(
+                                React.createElement(
+                                    'tr',
+                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                                    React.createElement(
+                                        'td',
+                                        { colSpan: 5, className: 'px-4 py-4 text-left' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
+                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, formatDateHeader(dayGroup.date))
+                                        )
+                                    )
+                                )
+                            );
+
+                            // Zápasy v danom dni
+                            dayGroup.matches.forEach((match, matchIndex) => {
+                                const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match.homeTeamIdentifier || '???';
+                                const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match.awayTeamIdentifier || '???';
+
+                                const categoryColor = getCategoryColor(match.categoryId);
+                                const lighterCategoryColor = getLighterColor(categoryColor);
+
+                                const infoTags = [];
+
+                                if (match.matchType && !match.isPlacementMatch) {
+                                    const isElim = isEliminationMatch(match);
+                                    const colors = isElim
+                                        ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
+                                        : getGroupColors(match.groupName, match.categoryId);
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'type',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: { backgroundColor: colors.backgroundColor, color: colors.textColor, fontWeight: '500' }
+                                        }, match.matchType)
+                                    );
+                                }
+
+                                if (match.isPlacementMatch) {
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'placement',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
+                                        }, `o ${match.placementRank}. miesto`)
+                                    );
+                                }
+
+                                if (match.groupName && !match.isPlacementMatch) {
+                                    const isElim = isEliminationMatch(match);
+                                    const groupColors = isElim
+                                        ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
+                                        : getGroupColors(match.groupName, match.categoryId);
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'group',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
+                                        }, match.groupName)
+                                    );
+                                }
+
+                                let categoryDisplayTag = match.categoryName;
+                                if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
+                                    categoryDisplayTag = categoriesData[match.categoryId];
+                                }
+
+                                if (categoryDisplayTag) {
+                                    infoTags.push(
+                                        React.createElement('span', {
+                                            key: 'category',
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: { backgroundColor: lighterCategoryColor, color: categoryColor, fontWeight: '500' }
+                                        }, categoryDisplayTag)
+                                    );
+                                }
+
+                                rows.push(
+                                    React.createElement(
+                                        'tr',
+                                        { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
+
+                                        // Čas
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-1' },
+                                                React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                                React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, formatTime(match.scheduledTime))
+                                            )
+                                        ),
+
+                                        // Domáci
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap text-right' },
+                                            React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
+                                        ),
+
+                                        // VS (bez skóre)
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                            React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
+                                        ),
+
+                                        // Hostia
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap text-left' },
+                                            React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
+                                        ),
+
+                                        // Info
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3' },
+                                            React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
+                                        )
+                                    )
+                                );
+                            });
+
+                            return rows;
+                        }).flat()
+                    )
+                )
+            )
     );
 };
 
