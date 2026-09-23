@@ -851,37 +851,6 @@ const ExportApp = ({ userProfileData }) => {
         dataLoadingRef.current = dataLoading;
     }, [dataLoading]);
     
-    // Auto-download PDF pri otvorení s ?download=1 (len raz)
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const shouldAutoDownload = urlParams.get('download') === '1';
-
-        if (!shouldAutoDownload) return;
-        if (loading) return;
-        if (matchesByDay.length === 0) return;
-
-        // Unikátny kľúč podľa hallName, aby sa neopakovalo
-        const storageKey = `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
-
-        let alreadyDownloaded = false;
-        try {
-            alreadyDownloaded = sessionStorage.getItem(storageKey) === '1';
-        } catch (e) { }
-
-        if (alreadyDownloaded) return;
-
-        try {
-            sessionStorage.setItem(storageKey, '1');
-        } catch (e) { }
-
-        // Krátke oneskorenie, aby sa stihol vykresliť DOM
-        const timer = setTimeout(() => {
-            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime);
-        }, 800);
-
-        return () => clearTimeout(timer);
-    }, [loading, matchesByDay, hallName, hallNameFromUrl]);
-    
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
             'div',
@@ -1361,6 +1330,36 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         });
         return Object.values(groups).sort((a, b) => a.date - b.date);
     }, [matches]);
+
+        
+    // Auto-download PDF pri otvorení s ?download=1 (len raz)
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldAutoDownload = urlParams.get('download') === '1';
+    
+        if (!shouldAutoDownload) return;
+        if (loading) return;
+        if (matchesByDay.length === 0) return;
+    
+        const storageKey = `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
+    
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem(storageKey) === '1';
+        } catch (e) { }
+    
+        if (alreadyDownloaded) return;
+    
+        try {
+            sessionStorage.setItem(storageKey, '1');
+        } catch (e) { }
+    
+        const timer = setTimeout(() => {
+            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime);
+        }, 800);
+    
+        return () => clearTimeout(timer);
+    }, [loading, matchesByDay, hallName, hallNameFromUrl]);
 
     if (loading) {
         return React.createElement(
