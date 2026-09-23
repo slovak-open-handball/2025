@@ -13,7 +13,7 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const PDF_IFRAME_WIDTH = 1920; 
 const PDF_IFRAME_HEIGHT = 1080;
 const PDF_ZOOM = 1.0; 
-const PDF_DEVICE_PIXEL_RATIO = 4.0;
+const PDF_DEVICE_PIXEL_RATIO = 2.0;
 
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
