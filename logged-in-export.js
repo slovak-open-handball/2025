@@ -1232,33 +1232,38 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     }, [hallId]);
 
     // Zobrazenie názvu tímu:
-    // - pre zápasy v základných skupinách použije teamManager.getTeamNameByDisplayIdSync(...)
-    // - pre ostatné zápasy vráti pôvodný názov
+    // - pre zápasy v skupinách (základná AJ nadstavbová) použije teamManager.getTeamNameByDisplayIdSync(...)
+    // - pre ostatné zápasy (playoff, o umiestnenie, bez skupiny) vráti pôvodný názov
     const getDisplayTeamNameForMatch = (match, rawTeamName) => {
         if (!rawTeamName) return '???';
 
-        // Zistíme, či ide o zápas v základnej skupine
-        const isBasicGroupMatch =
-            match.groupName &&
-            !match.isPlacementMatch &&
-            (() => {
-                const categoryGroups = groupsData[match.categoryId] || [];
-                const foundGroup = categoryGroups.find(g => g.name === match.groupName);
-                return foundGroup && foundGroup.type === 'základná skupina';
-            })();
-
-        if (!isBasicGroupMatch) {
+        // Musí ísť o zápas v skupine (nie playoff / nie o umiestnenie)
+        if (!match.groupName || match.isPlacementMatch) {
             return rawTeamName;
         }
 
-        // Pre základné skupiny použijeme teamManager
+        // Musí ísť o zápas v základnej ALEBO nadstavbovej skupine
+        const categoryGroups = groupsData[match.categoryId] || [];
+        const foundGroup = categoryGroups.find(g => g.name === match.groupName);
+
+        const isGroupMatch =
+            foundGroup &&
+            (foundGroup.type === 'základná skupina' || foundGroup.type === 'nadstavbová skupina');
+
+        if (!isGroupMatch) {
+            return rawTeamName;
+        }
+
+        // Použijeme teamManager
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             try {
                 const mapped = window.teamManager.getTeamNameByDisplayIdSync(rawTeamName);
                 if (mapped && mapped !== rawTeamName) {
                     return mapped;
                 }
-            } catch (e) { }
+            } catch (e) {
+                // ignore
+            }
         }
 
         return rawTeamName;
