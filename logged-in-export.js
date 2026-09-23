@@ -122,11 +122,7 @@ const normalizeName = (name) => {
         .trim();
 };
 
-// ============================================================
-// Skrytý iframe na stiahnutie PDF bez zobrazenia tabuľky
-// ============================================================
 const downloadPdfViaHiddenIframe = (hash) => {
-    // Vytvoríme skrytý iframe
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
@@ -135,16 +131,16 @@ const downloadPdfViaHiddenIframe = (hash) => {
     iframe.style.height = '1px';
     iframe.style.border = '0';
     iframe.style.visibility = 'hidden';
+    // NOVÉ: Unikátny názov iframe
+    iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1#${hash}`;
 
-    // Po načítaní iframe sa PDF stiahne (iframe je skrytý)
     iframe.onload = () => {
-        // Po 15 sekundách iframe odstránime (PDF by malo byť stiahnuté)
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
             } catch (e) { /* ignore */ }
-        }, 15000);
+        }, 20000);
     };
 
     document.body.appendChild(iframe);
