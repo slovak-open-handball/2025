@@ -273,6 +273,73 @@ const exportTableToPdf = async (categoryName, groupName) => {
     }
 };
 
+// ============================================================
+// EXPORT ZOZNAMU ZÁPASOV DO PDF
+// ============================================================
+const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, formatTimeFn) => {
+    const element = document.getElementById('matches-pdf-export-target');
+    if (!element) {
+        window.showGlobalNotification('Zoznam zápasov ešte nie je načítaný.', 'error');
+        return;
+    }
+
+    const html2canvasFn = window.html2canvas;
+    const jsPDFClass = window.jspdf?.jsPDF;
+
+    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        return;
+    }
+
+    const safeHallName = (hallName || 'sportova-hala').replace(/\s+/g, '-');
+    const fileName = `Zapasy_${safeHallName}.pdf`;
+
+    window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
+
+    try {
+        const rect = element.getBoundingClientRect();
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
+
+        const canvas = await html2canvasFn(element, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: cssWidth,
+            height: cssHeight,
+            windowWidth: cssWidth,
+            windowHeight: cssHeight
+        });
+
+        const pxToMm = 0.264583;
+        const pdfWidthMm = cssWidth * pxToMm;
+        const pdfHeightMm = cssHeight * pxToMm;
+
+        const pdf = new jsPDFClass({
+            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidthMm, pdfHeightMm]
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+        pdf.save(fileName);
+
+        // Skryť hlavičku a menu počas PDF (ak treba)
+        try {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) { }
+
+        window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
+    } catch (err) {
+        console.error('[PDF zápasy] ❌ Chyba pri PDF exporte:', err);
+        window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
+    }
+};
+
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
@@ -784,59 +851,36 @@ const ExportApp = ({ userProfileData }) => {
         dataLoadingRef.current = dataLoading;
     }, [dataLoading]);
     
-    // Auto-download beží IBA RAZ pri mounte
+    // Auto-download PDF pri otvorení s ?download=1 (len raz)
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-    
+
         if (!shouldAutoDownload) return;
-    
-        // NOVÉ: Unikátny kľúč podľa aktuálneho hash
-        const currentHash = window.location.hash || '';
-        const storageKey = currentHash ? `pdfAutoDownloaded_${currentHash}` : 'pdfAutoDownloaded';
-    
+        if (loading) return;
+        if (matchesByDay.length === 0) return;
+
+        // Unikátny kľúč podľa hallName, aby sa neopakovalo
+        const storageKey = `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
+
         let alreadyDownloaded = false;
         try {
             alreadyDownloaded = sessionStorage.getItem(storageKey) === '1';
         } catch (e) { }
-    
+
         if (alreadyDownloaded) return;
-    
-        // Nastavíme flag OKAMŽITE, aby druhé spustenie v StrictMode preskočilo
+
         try {
             sessionStorage.setItem(storageKey, '1');
         } catch (e) { }
-    
-        // Polling mechanizmus
-        let attempts = 0;
-        const maxAttempts = 100;
-    
-        const poll = () => {
-            attempts++;
-            const table = exportedTableRef.current;
-            const loading = dataLoadingRef.current;
-            const element = document.getElementById('pdf-export-target');
-    
-            if (table && !loading && element) {
-                setTimeout(() => {
-                    exportTableToPdf(table.categoryName, table.groupName);
-                }, 500);
-                return;
-            }
-    
-            if (attempts >= maxAttempts) {
-                try {
-                    sessionStorage.removeItem(storageKey);
-                } catch (e) { }
-                window.showGlobalNotification('Nepodarilo sa načítať tabuľku pre PDF export.', 'error');
-                return;
-            }
-    
-            setTimeout(poll, 100);
-        };
-    
-        setTimeout(poll, 100);
-    }, []);
+
+        // Krátke oneskorenie, aby sa stihol vykresliť DOM
+        const timer = setTimeout(() => {
+            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime);
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [loading, matchesByDay, hallName, hallNameFromUrl]);
     
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
