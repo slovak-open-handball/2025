@@ -1021,20 +1021,20 @@ const ExportApp = ({ userProfileData }) => {
             // Ak je vybraná konkrétna hala → správanie ako doteraz
             const selectedHall = halls.find(h => h.id === selectedHallId);
             const hallName = selectedHall ? selectedHall.name : selectedHallId;
-        
+
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-        
+
             const hallNameSafe = spacesToDashes(hallName);
             const hash = `zapasy/${encodeURIComponent(hallNameSafe)}`;
-        
+
             try {
                 sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallName}`);
                 sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallNameSafe}`);
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-        
+            
             if (showPreview) {
                 window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             } else {
