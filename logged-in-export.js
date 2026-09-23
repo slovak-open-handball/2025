@@ -1463,33 +1463,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         );
     }
 
-    // Pomocná funkcia pre vytvorenie info tagu (vložte pred return v MatchesExportView)
-    const createInfoTag = (key, text, bgColor, textColor) => {
-        return React.createElement(
-            'div',
-            {
-                key: key,
-                style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: bgColor,
-                    color: textColor,
-                    fontWeight: '500',
-                    fontSize: '11px',
-                    borderRadius: '9999px',
-                    padding: '2px 8px',
-                    height: '18px',
-                    boxSizing: 'border-box',
-                    whiteSpace: 'nowrap',
-                    lineHeight: '1',
-                    margin: '0'
-                }
-            },
-            text
-        );
-    };
-
     return React.createElement(
         'div',
         { className: 'w-full p-0 m-0' },
@@ -1603,11 +1576,49 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         const colors = isElim
                                             ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
                                             : getGroupColors(match.groupName, match.categoryId);
-                                        infoTags.push(createInfoTag('type', match.matchType, colors.backgroundColor, colors.textColor));
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'type',
+                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: colors.backgroundColor,
+                                                    color: colors.textColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-block',
+                                                    height: '20px',
+                                                    lineHeight: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
+                                                }
+                                            }, match.matchType)
+                                        );
                                     }
 
                                     if (match.isPlacementMatch) {
-                                        infoTags.push(createInfoTag('placement', `o ${match.placementRank}. miesto`, '#F3E8FF', '#6B21A5'));
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'placement',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: '#F3E8FF',
+                                                    color: '#6B21A5',
+                                                    fontWeight: '500',
+                                                    display: 'inline-block',
+                                                    height: '20px',
+                                                    lineHeight: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
+                                                }
+                                            }, `o ${match.placementRank}. miesto`)
+                                        );
                                     }
 
                                     if (match.groupName && !match.isPlacementMatch) {
@@ -1615,15 +1626,54 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         const groupColors = isElim
                                             ? { backgroundColor: '#F3E8FF', textColor: '#6B21A5' }
                                             : getGroupColors(match.groupName, match.categoryId);
-                                        infoTags.push(createInfoTag('group', match.groupName, groupColors.backgroundColor, groupColors.textColor));
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'group',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: groupColors.backgroundColor,
+                                                    color: groupColors.textColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-block',
+                                                    height: '20px',
+                                                    lineHeight: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
+                                                }
+                                            }, match.groupName)
+                                        );
                                     }
 
                                     let categoryDisplayTag = match.categoryName;
                                     if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
                                         categoryDisplayTag = categoriesData[match.categoryId];
                                     }
+
                                     if (categoryDisplayTag) {
-                                        infoTags.push(createInfoTag('category', categoryDisplayTag, lighterCategoryColor, categoryColor));
+                                        infoTags.push(
+                                            React.createElement('span', {
+                                                key: 'category',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: lighterCategoryColor,
+                                                    color: categoryColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-block',
+                                                    height: '20px',
+                                                    lineHeight: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
+                                                }
+                                            }, categoryDisplayTag)
+                                        );
                                     }
 
                                     rows.push(
@@ -1700,14 +1750,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                            React.createElement(
                                                'td',
                                                { className: 'px-4 py-3' },
-                                               React.createElement('div', { 
-                                                   style: { 
-                                                       display: 'flex', 
-                                                       flexDirection: 'column', 
-                                                       gap: '4px',
-                                                       alignItems: 'flex-start'
-                                                   } 
-                                               }, infoTags)
+                                               React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
                                            )
                                         )
                                     );
