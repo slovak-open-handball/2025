@@ -522,50 +522,64 @@ const ExportApp = ({ userProfileData }) => {
         exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
     };
     
-    // ============================================================
-    // AUTO-DOWNLOAD po otvorení novej karty s ?download=1
-    // ============================================================
+    // Uchovávame si referenciu na aktuálne dáta
+    const exportedTableRef = React.useRef(null);
+    const dataLoadingRef = React.useRef(true);
+    
+    // Aktualizujeme ref pri každej zmene
+    useEffect(() => {
+        exportedTableRef.current = exportedTable;
+    }, [exportedTable]);
+    
+    useEffect(() => {
+        dataLoadingRef.current = dataLoading;
+    }, [dataLoading]);
+    
+    // Auto-download beží IBA RAZ pri mounte
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
     
         if (!shouldAutoDownload) return;
-        if (!exportedTable) return;
-        if (dataLoading) return;
         if (hasAutoDownloadedRef.current) return;
     
-        hasAutoDownloadedRef.current = true;
+        // Polling mechanizmus, ktorý sleduje, kedy sú dáta aj DOM pripravené
+        let attempts = 0;
+        const maxAttempts = 100; // 10 sekúnd
     
-        // Spustíme download až po dokončení renderu tabuľky
-        // Použijeme requestAnimationFrame + setTimeout, aby sme mali istotu,
-        // že DOM element 'pdf-export-target' už existuje
-        const tryDownload = (attempt = 0) => {
+        const poll = () => {
+            attempts++;
+            const table = exportedTableRef.current;
+            const loading = dataLoadingRef.current;
             const element = document.getElementById('pdf-export-target');
-            console.log('[AUTO-DOWNLOAD] pokus', attempt, 'element:', !!element);
     
-            if (element) {
-                // Element existuje, spustíme download
-                console.log('[AUTO-DOWNLOAD] element nájdený, spúšťam PDF export');
+            console.log('[AUTO-DOWNLOAD] poll', attempts, { 
+                hasTable: !!table, 
+                loading, 
+                hasElement: !!element 
+            });
+    
+            if (table && !loading && element) {
+                hasAutoDownloadedRef.current = true;
                 setTimeout(() => {
-                    exportTableToPdf(exportedTable.categoryName, exportedTable.groupName);
+                    exportTableToPdf(table.categoryName, table.groupName);
                 }, 500);
-            } else if (attempt < 50) {
-                // Skúsime znova o 100ms
-                setTimeout(() => tryDownload(attempt + 1), 100);
-            } else {
-                hasAutoDownloadedRef.current = false;
-                console.error('[AUTO-DOWNLOAD] element sa nenašiel');
-                window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
+                return;
             }
+    
+            if (attempts >= maxAttempts) {
+                window.showGlobalNotification('Nepodarilo sa načítať tabuľku pre PDF export.', 'error');
+                return;
+            }
+    
+            setTimeout(poll, 100);
         };
     
-        // Prvý pokus spustíme až po dokončení aktuálneho renderu
-        setTimeout(() => tryDownload(0), 0);
+        setTimeout(poll, 100);
     
-        // POZOR: Žiadny cleanup – download beží nezávisle od useEffect
-        // Nechceme, aby sa zrušil pri re-renderi
-    }, [exportedTable, dataLoading]);
-
+        // Žiadny cleanup – polling beží nezávisle
+    }, []); // ← PRÁZDNE ZÁVISLOSTI
+    
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
             'div',
