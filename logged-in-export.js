@@ -205,6 +205,15 @@ const exportTableToPdf = async (categoryName, groupName) => {
         pdf.save(fileName);
 
         try {
+            const currentHash = window.location.hash || '';
+            if (currentHash) {
+                sessionStorage.setItem(`pdfAutoDownloaded_${currentHash}`, '1');
+            }
+            // Fallback pre starý kľúč
+            sessionStorage.setItem('pdfAutoDownloaded', '1');
+        } catch (e) { /* ignore */ }
+
+        try {
             const newUrl = window.location.pathname + window.location.hash;
             window.history.replaceState({}, '', newUrl);
         } catch (e) { /* ignore */ }
@@ -574,18 +583,24 @@ const ExportApp = ({ userProfileData }) => {
                         downloadPdfViaHiddenIframe(hash);
                     }
                 } else {
-                    // Hromadné generovanie pre všetky skupiny – vždy cez skryté iframy
-                    // (bez náhľadu, aby sa neotváralo veľa kariet naraz)
+                    // Hromadné generovanie pre všetky skupiny
                     groupsToProcess.forEach((groupName, index) => {
                         const groupNameSafe = spacesToDashes(groupName);
                         const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-        
-                        // Malé oneskorenie medzi jednotlivými iframe, aby sa nestrieľali naraz
+                
+                        // NOVÉ: Vyčistíme flag pre tento konkrétny hash
+                        try {
+                            sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
+                            sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
+                            sessionStorage.removeItem(`pdfAutoDownloaded`);
+                        } catch (e) { /* ignore */ }
+                
+                        // Oneskorenie medzi jednotlivými iframe
                         setTimeout(() => {
                             downloadPdfViaHiddenIframe(hash);
-                        }, index * 2000); // 2 sekundy medzi skupinami
+                        }, index * 3000); // 3 sekundy medzi skupinami (aby sa stihli stiahnuť)
                     });
-        
+                
                     window.showGlobalNotification(
                         `Generujem PDF pre ${groupsToProcess.length} skupín. Prosím čakajte...`,
                         'info'
@@ -627,33 +642,27 @@ const ExportApp = ({ userProfileData }) => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
     
-        // NOVÉ: Skontrolujeme aj sessionStorage flag pre "download in place"
-        let shouldDownloadInPlace = false;
+        if (!shouldAutoDownload) return;
+    
+        // NOVÉ: Unikátny kľúč podľa aktuálneho hash
+        const currentHash = window.location.hash || '';
+        const storageKey = currentHash ? `pdfAutoDownloaded_${currentHash}` : 'pdfAutoDownloaded';
+    
+        let alreadyDownloaded = false;
         try {
-            shouldDownloadInPlace = sessionStorage.getItem('pdfDownloadInPlace') === '1';
-            if (shouldDownloadInPlace) {
-                sessionStorage.removeItem('pdfDownloadInPlace');
-            }
+            alreadyDownloaded = sessionStorage.getItem(storageKey) === '1';
         } catch (e) { /* ignore */ }
     
-        if (!shouldAutoDownload && !shouldDownloadInPlace) return;
+        if (alreadyDownloaded) return;
     
-        // Ak ide o downloadInPlace, preskočíme sessionStorage kontrolu pre pdfAutoDownloaded
-        if (shouldAutoDownload) {
-            let alreadyDownloaded = false;
-            try {
-                alreadyDownloaded = sessionStorage.getItem('pdfAutoDownloaded') === '1';
-            } catch (e) { /* ignore */ }
-            if (alreadyDownloaded) return;
-    
-            try {
-                sessionStorage.setItem('pdfAutoDownloaded', '1');
-            } catch (e) { /* ignore */ }
-        }
+        // Nastavíme flag OKAMŽITE, aby druhé spustenie v StrictMode preskočilo
+        try {
+            sessionStorage.setItem(storageKey, '1');
+        } catch (e) { /* ignore */ }
     
         // Polling mechanizmus
         let attempts = 0;
-        const maxAttempts = 100; // 10 sekúnd
+        const maxAttempts = 100;
     
         const poll = () => {
             attempts++;
@@ -665,7 +674,7 @@ const ExportApp = ({ userProfileData }) => {
                 hasTable: !!table,
                 loading,
                 hasElement: !!element,
-                shouldDownloadInPlace
+                storageKey
             });
     
             if (table && !loading && element) {
@@ -677,7 +686,7 @@ const ExportApp = ({ userProfileData }) => {
     
             if (attempts >= maxAttempts) {
                 try {
-                    sessionStorage.removeItem('pdfAutoDownloaded');
+                    sessionStorage.removeItem(storageKey);
                 } catch (e) { /* ignore */ }
                 window.showGlobalNotification('Nepodarilo sa načítať tabuľku pre PDF export.', 'error');
                 return;
