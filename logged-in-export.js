@@ -318,7 +318,7 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
     window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
 
-    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
 
     try {
         const rect = element.getBoundingClientRect();
@@ -436,7 +436,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
     window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
 
     // Pevný scale (priorita: parameter → konštanta → 1.5)
-    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
+    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
 
     try {
         const rect = element.getBoundingClientRect();
