@@ -555,17 +555,17 @@ const ExportApp = ({ userProfileData }) => {
                 (exportedTable.teams && exportedTable.teams.length > 0)
                     ? React.createElement(
                         'div',
-                        { ref: tableRef, className: 'pdf-export-wrapper' },
-                        React.createElement(CrossTable, {
-                            teams: exportedTable.teams,
-                            sortedTeams: exportedTable.sortedTeams,
-                            matrix: exportedTable.matrix,
-                            categoryName: exportedTable.categoryName,
-                            groupName: exportedTable.groupName,
-                            groupType: exportedTable.groupType,
-                            teamNamesFromMatches: exportedTable.teamNamesFromMatches,
-                            carryOverEnabled: exportedTable.carryOverEnabled
-                        })
+                        { 
+                            ref: tableRef, 
+                            className: 'pdf-export-wrapper',
+                            style: { 
+                                display: 'inline-block',
+                                width: 'max-content',
+                                padding: '10px',
+                                backgroundColor: '#ffffff'
+                            }
+                        },
+                        React.createElement(CrossTable, { ... })
                     )
                     : React.createElement(
                         'div',
