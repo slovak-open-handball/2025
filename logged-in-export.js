@@ -269,10 +269,21 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
     console.log('[exportTableToPdf] ZAVOLANÉ:', { categoryName, groupName, fixedDpr });
     
     const element = document.getElementById('pdf-export-target');
-    console.log('[exportTableToPdf] element pdf-export-target:', !!element, element ? `rect=${element.getBoundingClientRect().width}×${element.getBoundingClientRect().height}` : '');
+    console.log('[exportTableToPdf] element pdf-export-target:', !!element);
     
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
+        // PO NOVOM: pošli postMessage aj pri tomto return
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: `${categoryName} - ${groupName}`,
+                    error: 'Element pdf-export-target sa nenašiel'
+                }, '*');
+            }
+        } catch (e) { }
         return;
     }
 
@@ -281,6 +292,17 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
     if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
         window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        // PO NOVOM: pošli postMessage
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: `${categoryName} - ${groupName}`,
+                    error: 'PDF knižnice nie sú načítané'
+                }, '*');
+            }
+        } catch (e) { }
         return;
     }
 
