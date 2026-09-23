@@ -122,15 +122,6 @@ const normalizeName = (name) => {
         .trim();
 };
 
-// Pomocná funkcia na extrahovanie čistého názvu tímu (bez kategórie)
-const getCleanTeamName = (teamName, categoryName) => {
-    if (!teamName) return '';
-    if (categoryName && teamName.startsWith(categoryName + ' ')) {
-        return teamName.substring(categoryName.length + 1).trim();
-    }
-    return teamName;
-};
-
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
@@ -142,58 +133,125 @@ const ExportApp = ({ userProfileData }) => {
     const [selectedGroupName, setSelectedGroupName] = useState('');
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
-    const [exportedTable, setExportedTable] = useState(null);
-    const [loadingTable, setLoadingTable] = useState(false);
-    const [errorTable, setErrorTable] = useState(null);
+    // Dáta z Firestore (rovnako ako v logged-in-teams-in-groups.js)
+    const [allTeams, setAllTeams] = useState([]);
+    const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
+    const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
+    const [dataLoading, setDataLoading] = useState(true);
 
-    // Načítanie kategórií a skupín pre selectboxy
+    // ============================================================
+    // LISTENERY PRE FIREESTORE (rovnaké ako v logged-in-teams-in-groups.js)
+    // ============================================================
+    useEffect(() => {
+        if (!window.db) return;
+
+        const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
+            let userTeamsList = [];
+            querySnapshot.forEach((docSnap) => {
+                const userData = docSnap.data();
+                if (userData && userData.teams) {
+                    Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
+                        if (Array.isArray(teamArray)) {
+                            teamArray.forEach(team => {
+                                if (team.teamName) {
+                                    const hasGroup = team.groupName && team.groupName.trim() !== '';
+                                    userTeamsList.push({
+                                        uid: docSnap.id,
+                                        category: categoryName,
+                                        id: team.id,
+                                        teamName: team.teamName,
+                                        groupName: team.groupName || null,
+                                        order: hasGroup ? (team.order ?? 0) : null,
+                                        isSuperstructureTeam: false,
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            setUserTeams(userTeamsList);
+        });
+
+        const unsubscribeSuperstructure = onSnapshot(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')), (docSnap) => {
+            setSuperstructureTeams(docSnap.exists() ? docSnap.data() : {});
+        });
+
+        const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
+            const categoryIdToName = {};
+            if (docSnap.exists()) {
+                const categoryData = docSnap.data();
+                Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
+                    if (categoryObject && categoryObject.name) {
+                        categoryIdToName[categoryId] = categoryObject.name;
+                    }
+                });
+            }
+            setCategoryIdToNameMap(categoryIdToName);
+        });
+
+        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
+            const groupsByCategoryId = {};
+            if (docSnap.exists()) {
+                const groupData = docSnap.data();
+                Object.entries(groupData).forEach(([categoryId, groupArray]) => {
+                    if (Array.isArray(groupArray)) {
+                        groupsByCategoryId[categoryId] = groupArray.map(group => ({
+                            name: group.name,
+                            type: group.type
+                        }));
+                    }
+                });
+            }
+            setAllGroupsByCategoryId(groupsByCategoryId);
+        });
+
+        return () => {
+            unsubscribeUsers();
+            unsubscribeSuperstructure();
+            unsubscribeCategories();
+            unsubscribeGroups();
+        };
+    }, []);
+
+    // Pomocné stavy pre surové dáta
+    const [userTeams, setUserTeams] = useState([]);
+    const [superstructureTeams, setSuperstructureTeams] = useState({});
+
+    // Spojenie userTeams + superstructureTeams do allTeams (rovnako ako v logged-in-teams-in-groups.js)
+    useEffect(() => {
+        const globalTeamsList = Object.entries(superstructureTeams).flatMap(([categoryName, teamArray]) =>
+            (teamArray || []).map(team => ({
+                uid: 'global',
+                category: categoryName,
+                id: team.id || crypto.randomUUID(),
+                teamName: team.teamName,
+                groupName: team.groupName || null,
+                order: team.groupName ? (team.order ?? 0) : null,
+                isSuperstructureTeam: true
+            }))
+        );
+        setAllTeams([...userTeams, ...globalTeamsList]);
+        setDataLoading(false);
+    }, [userTeams, superstructureTeams]);
+
+    // ============================================================
+    // NAČÍTANIE PRE SELECTBOXY (len ak nie je hash)
+    // ============================================================
     useEffect(() => {
         if (exportHash) return;
         if (selectedOption !== 'tabulky') return;
 
-        setIsLoadingCategories(true);
-
-        const unsubscribeCategories = onSnapshot(
-            doc(window.db, 'settings', 'categories'),
-            (docSnap) => {
-                if (docSnap.exists()) {
-                    const categoriesData = docSnap.data();
-                    const loadedCategories = Object.keys(categoriesData).map(id => ({
-                        id: id,
-                        name: categoriesData[id].name
-                    }));
-                    loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
-                    setCategories(loadedCategories);
-                } else {
-                    setCategories([]);
-                }
-                setIsLoadingCategories(false);
-            },
-            (error) => {
-                window.showGlobalNotification('Nastala chyba pri načítavaní kategórií.', 'error');
-                setIsLoadingCategories(false);
-            }
-        );
-
-        const unsubscribeGroups = onSnapshot(
-            doc(window.db, 'settings', 'groups'),
-            (docSnap) => {
-                if (docSnap.exists()) {
-                    setGroups(docSnap.data());
-                } else {
-                    setGroups({});
-                }
-            },
-            (error) => {
-                window.showGlobalNotification('Nastala chyba pri načítavaní skupín.', 'error');
-            }
-        );
-
-        return () => {
-            unsubscribeCategories();
-            unsubscribeGroups();
-        };
-    }, [selectedOption, exportHash]);
+        // Kategórie a skupiny už máme z listenerov
+        const loadedCategories = Object.keys(categoryIdToNameMap).map(id => ({
+            id: id,
+            name: categoryIdToNameMap[id]
+        }));
+        loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
+        setCategories(loadedCategories);
+        setGroups(allGroupsByCategoryId);
+        setIsLoadingCategories(false);
+    }, [selectedOption, exportHash, categoryIdToNameMap, allGroupsByCategoryId]);
 
     useEffect(() => {
         if (exportHash) return;
@@ -213,173 +271,117 @@ const ExportApp = ({ userProfileData }) => {
         setSelectedGroupName('');
     }, [selectedGroupType, exportHash]);
 
-    // Hlavné načítanie tabuľky - tímy z users + superstructureGroups
+    // ============================================================
+    // VYTVORENIE TABUĽKY PRE EXPORT
+    // ============================================================
+    const [exportedTable, setExportedTable] = useState(null);
+    const [loadingTable, setLoadingTable] = useState(false);
+    const [errorTable, setErrorTable] = useState(null);
+
     useEffect(() => {
         if (!exportHash || exportHash.type !== 'tabulky') {
             setExportedTable(null);
             return;
         }
 
-        let isCancelled = false;
-        setLoadingTable(true);
-        setErrorTable(null);
+        if (dataLoading) {
+            setLoadingTable(true);
+            return;
+        }
 
-        const loadData = async () => {
-            try {
-                const [categoriesSnap, groupsSnap] = await Promise.all([
-                    getDoc(doc(window.db, 'settings', 'categories')),
-                    getDoc(doc(window.db, 'settings', 'groups'))
-                ]);
+        // 1. Nájdeme kategóriu
+        let categoryId = null;
+        let categoryName = exportHash.categoryName;
+        const targetCategoryNorm = normalizeName(exportHash.categoryName);
 
-                const categoriesData = categoriesSnap.exists() ? categoriesSnap.data() : {};
-                const groupsData = groupsSnap.exists() ? groupsSnap.data() : {};
-
-                // 1. Nájdeme kategóriu
-                let categoryId = null;
-                let categoryName = exportHash.categoryName;
-                const targetCategoryNorm = normalizeName(exportHash.categoryName);
-
-                for (const [catId, catData] of Object.entries(categoriesData)) {
-                    if (catData && catData.name && normalizeName(catData.name) === targetCategoryNorm) {
-                        categoryId = catId;
-                        categoryName = catData.name;
-                        break;
-                    }
-                }
-
-                if (!categoryId) {
-                    if (!isCancelled) {
-                        setErrorTable(`Kategória ${exportHash.categoryName} sa nenašla.`);
-                        setLoadingTable(false);
-                    }
-                    return;
-                }
-
-                // 2. Nájdeme skupinu
-                const groupList = groupsData[categoryId] || [];
-                const targetGroupNorm = normalizeName(exportHash.groupName);
-                let foundGroup = null;
-                for (const g of groupList) {
-                    if (g && g.name && normalizeName(g.name) === targetGroupNorm) {
-                        foundGroup = g;
-                        break;
-                    }
-                }
-
-                if (!foundGroup) {
-                    if (!isCancelled) {
-                        setErrorTable(`Skupina ${exportHash.groupName} sa v kategórii ${categoryName} nenašla.`);
-                        setLoadingTable(false);
-                    }
-                    return;
-                }
-
-                const groupName = foundGroup.name;
-                const groupType = foundGroup.type;
-
-                // 3. Načítame VŠETKY tímy - z users aj superstructureGroups
-                const allTeams = [];
-
-                // 3a. Používateľské tímy
-                const usersSnap = await getDocs(collection(window.db, 'users'));
-                usersSnap.forEach((userDoc) => {
-                    const userData = userDoc.data();
-                    if (userData && userData.teams) {
-                        Object.entries(userData.teams).forEach(([catName, teamArray]) => {
-                            if (Array.isArray(teamArray)) {
-                                teamArray.forEach(team => {
-                                    if (team.teamName) {
-                                        const hasGroup = team.groupName && team.groupName.trim() !== '';
-                                        allTeams.push({
-                                            uid: userDoc.id,
-                                            category: catName,
-                                            id: team.id,
-                                            teamName: team.teamName,
-                                            groupName: team.groupName || null,
-                                            order: hasGroup ? (team.order ?? 0) : null,
-                                            isSuperstructureTeam: false,
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-
-                // 3b. Superstructure tímy (globálne)
-                const superstructureSnap = await getDoc(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')));
-                if (superstructureSnap.exists()) {
-                    const superstructureData = superstructureSnap.data() || {};
-                    Object.entries(superstructureData).forEach(([catName, teamArray]) => {
-                        (teamArray || []).forEach(team => {
-                            allTeams.push({
-                                uid: 'global',
-                                category: catName,
-                                id: team.id || crypto.randomUUID(),
-                                teamName: team.teamName,
-                                groupName: team.groupName || null,
-                                order: team.groupName ? (team.order ?? 0) : null,
-                                isSuperstructureTeam: true
-                            });
-                        });
-                    });
-                }
-
-                // 4. Vyfiltrujeme tímy pre našu kategóriu a skupinu
-                const teamsInGroup = allTeams.filter(t => 
-                    normalizeName(t.category) === normalizeName(categoryName) &&
-                    t.groupName &&
-                    normalizeName(t.groupName) === normalizeName(groupName)
-                );
-
-                // Zoradíme podľa order
-                teamsInGroup.sort((a, b) => {
-                    const oa = typeof a.order === 'number' ? a.order : Infinity;
-                    const ob = typeof b.order === 'number' ? b.order : Infinity;
-                    return oa - ob;
-                });
-
-                // 5. Pripravíme si tímy pre tabuľku (s čistými názvami)
-                const teamsForTable = teamsInGroup.map(t => {
-                    let displayName = t.teamName;
-                    // Pre superstructure tímy odstránime prefix kategórie
-                    if (t.isSuperstructureTeam && t.category && displayName.startsWith(t.category + ' ')) {
-                        displayName = displayName.substring(t.category.length + 1).trim();
-                    }
-                    return {
-                        id: t.id,
-                        name: displayName,
-                        fullName: t.teamName,
-                        order: t.order,
-                        isSuperstructureTeam: t.isSuperstructureTeam
-                    };
-                });
-
-                if (isCancelled) return;
-
-                setExportedTable({
-                    categoryName,
-                    groupName,
-                    groupType,
-                    teams: teamsForTable,
-                    sortedTeams: teamsForTable,
-                    matrix: {},
-                    teamNamesFromMatches: {}
-                });
-                setLoadingTable(false);
-            } catch (err) {
-                console.error("Chyba pri načítavaní tabuľky:", err);
-                if (!isCancelled) {
-                    setErrorTable('Nepodarilo sa načítať tabuľku.');
-                    setLoadingTable(false);
-                }
+        for (const [catId, catName] of Object.entries(categoryIdToNameMap)) {
+            if (normalizeName(catName) === targetCategoryNorm) {
+                categoryId = catId;
+                categoryName = catName;
+                break;
             }
-        };
+        }
 
-        loadData();
+        if (!categoryId) {
+            setErrorTable(`Kategória ${exportHash.categoryName} sa nenašla.`);
+            setLoadingTable(false);
+            return;
+        }
 
-        return () => { isCancelled = true; };
-    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName]);
+        // 2. Nájdeme skupinu
+        const groupList = allGroupsByCategoryId[categoryId] || [];
+        const targetGroupNorm = normalizeName(exportHash.groupName);
+        let foundGroup = null;
+        for (const g of groupList) {
+            if (g && g.name && normalizeName(g.name) === targetGroupNorm) {
+                foundGroup = g;
+                break;
+            }
+        }
+
+        if (!foundGroup) {
+            setErrorTable(`Skupina ${exportHash.groupName} sa v kategórii ${categoryName} nenašla.`);
+            setLoadingTable(false);
+            return;
+        }
+
+        const groupName = foundGroup.name;
+        const groupType = foundGroup.type;
+
+        // 3. Vyfiltrujeme tímy pre našu kategóriu a skupinu
+        // POZOR: Toto je kľúčová časť - používame allTeams, ktoré obsahujú userTeams + superstructureTeams
+        const teamsInGroup = allTeams.filter(t => {
+            // Kategória musí sedieť
+            if (normalizeName(t.category) !== normalizeName(categoryName)) return false;
+            // Musí mať skupinu
+            if (!t.groupName) return false;
+            // Skupina musí sedieť
+            if (normalizeName(t.groupName) !== normalizeName(groupName)) return false;
+            return true;
+        });
+
+        // Zoradíme podľa order
+        teamsInGroup.sort((a, b) => {
+            const oa = typeof a.order === 'number' ? a.order : Infinity;
+            const ob = typeof b.order === 'number' ? b.order : Infinity;
+            return oa - ob;
+        });
+
+        // 4. Pripravíme si tímy pre tabuľku (s čistými názvami)
+        const teamsForTable = teamsInGroup.map(t => {
+            let displayName = t.teamName;
+            // Pre superstructure tímy odstránime prefix kategórie
+            if (t.isSuperstructureTeam && t.category && displayName.startsWith(t.category + ' ')) {
+                displayName = displayName.substring(t.category.length + 1).trim();
+            }
+            return {
+                id: t.id,
+                name: displayName,
+                fullName: t.teamName,
+                order: t.order,
+                isSuperstructureTeam: t.isSuperstructureTeam
+            };
+        });
+
+        setExportedTable({
+            categoryName,
+            groupName,
+            groupType,
+            teams: teamsForTable,
+            sortedTeams: teamsForTable,
+            matrix: {},
+            teamNamesFromMatches: {}
+        });
+        setLoadingTable(false);
+    }, [
+        exportHash && exportHash.type,
+        exportHash && exportHash.categoryName,
+        exportHash && exportHash.groupName,
+        allTeams,
+        categoryIdToNameMap,
+        allGroupsByCategoryId,
+        dataLoading
+    ]);
 
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
@@ -430,7 +432,7 @@ const ExportApp = ({ userProfileData }) => {
             'div',
             { className: 'w-full p-0 m-0' },
 
-            loadingTable && React.createElement(
+            (loadingTable || dataLoading) && React.createElement(
                 'div',
                 { className: 'flex justify-center items-center py-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
@@ -442,7 +444,7 @@ const ExportApp = ({ userProfileData }) => {
                 React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
             ),
 
-            !loadingTable && !errorTable && exportedTable && (
+            !loadingTable && !dataLoading && !errorTable && exportedTable && (
                 (exportedTable.teams && exportedTable.teams.length > 0)
                     ? React.createElement(CrossTable, {
                         teams: exportedTable.teams,
