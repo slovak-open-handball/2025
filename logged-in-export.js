@@ -1635,7 +1635,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         }, 800);
     
         return () => clearTimeout(timer);
-    }, [loading, matchesByDay, hallName, hallNameFromUrl]);
+    }, [loading, matchesByDay, hallName, hallNameFromUrl, fixedDpr]);
 
     if (loading) {
         return React.createElement(
