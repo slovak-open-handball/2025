@@ -759,12 +759,16 @@ const ExportApp = ({ userProfileData }) => {
         dataLoading
     ]);
 
+    // Použijeme useRef namiesto sessionStorage – useRef sa resetuje pri každom mounte
+    const autoDownloadTriggeredRef = React.useRef(false);
+    
     useEffect(() => {
         console.log('[tabulky auto-download] useEffect spustený:', {
             exportHashType: exportHash?.type,
             dataLoading,
             hasExportedTable: !!exportedTable,
             teamsCount: exportedTable?.teams?.length,
+            alreadyTriggered: autoDownloadTriggeredRef.current,
         });
     
         if (!exportHash || exportHash.type !== 'tabulky') return;
@@ -774,31 +778,24 @@ const ExportApp = ({ userProfileData }) => {
     
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-        
+    
         console.log('[tabulky auto-download] shouldAutoDownload:', shouldAutoDownload);
     
         if (!shouldAutoDownload) return;
     
-        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
-        let alreadyDownloaded = false;
-        try {
-            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
-        } catch (e) { }
-    
-        console.log('[tabulky auto-download] alreadyDownloaded:', alreadyDownloaded);
-    
-        if (alreadyDownloaded) return;
-    
-        try {
-            sessionStorage.setItem(hashKey, '1');
-        } catch (e) { }
+        // useRef – zabráni viacnásobnému spusteniu v rámci jedného mountu
+        if (autoDownloadTriggeredRef.current) {
+            console.log('[tabulky auto-download] UŽ BOLO SPUSTENÉ, preskakujem');
+            return;
+        }
+        autoDownloadTriggeredRef.current = true;
     
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
     
         const timer = setTimeout(() => {
             console.log('[tabulky auto-download] ⏰ TIMER SA SPUSTIL, volám exportTableToPdf');
             exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
-        }, 1500);  // Zvýšené z 800 na 1500 ms
+        }, 1500);
     
         return () => {
             console.log('[tabulky auto-download] cleanup – ruším timer');
