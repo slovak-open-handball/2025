@@ -457,6 +457,7 @@ const ExportApp = ({ userProfileData }) => {
             const loadedHalls = [];
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                if (data.type !== 'sportova_hala') return;
                 loadedHalls.push({
                     id: docSnap.id,
                     name: data.name || 'Športová hala'
