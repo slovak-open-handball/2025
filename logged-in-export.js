@@ -70,6 +70,26 @@ window.showGlobalNotification = (message, type = 'success') => {
     }
 };
 
+// ============================================================
+// LISTENER PRE SPRÁVY Z IFRAME
+// ============================================================
+window.addEventListener('message', (event) => {
+    // Prijímame len správy, ktoré majú náš typ
+    if (!event.data || event.data.type !== 'PDF_EXPORT_COMPLETED') return;
+
+    const { success, label, fileName, error } = event.data;
+
+    if (success) {
+        // Zobraz zelenú notifikáciu o úspechu
+        window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+    } else {
+        // Zobraz červenú notifikáciu o chybe
+        window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
+    }
+
+    console.log('[parent] Prijatá správa z iframe:', event.data);
+});
+
 const hideHeaderAndMenuIfHash = () => {
     const hasHash = window.location.hash && window.location.hash.length > 0;
 
@@ -322,6 +342,18 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
     } catch (err) {
         console.error('[PDF] ❌ Chyba pri PDF exporte:', label, err);
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
+    
+        // PO NOVOM: pošli správu do parent okna aj pri chybe
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: false,
+                    label: label,
+                    error: String(err)
+                }, '*');
+            }
+        } catch (e) { }
     }
 };
 
