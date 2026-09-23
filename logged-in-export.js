@@ -756,8 +756,7 @@ const ExportApp = ({ userProfileData }) => {
 
     const isGenerateDisabled =
         !selectedOption ||
-        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType)) ||
-        (selectedOption === 'zapasy' && !selectedHallId);
+        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType));
 
     const handleGenerate = () => {
         if (!selectedOption) {
@@ -840,12 +839,46 @@ const ExportApp = ({ userProfileData }) => {
     
         // ===== ZÁPASY V ŠPORTOVEJ HALE =====
         if (selectedOption === 'zapasy') {
+            // Ak nie je vybraná konkrétna hala → hromadné generovanie pre všetky haly
             if (!selectedHallId) {
-                window.showGlobalNotification('Prosím, vyberte športovú halu.', 'error');
+                if (halls.length === 0) {
+                    window.showGlobalNotification('Nie sú načítané žiadne športové haly.', 'error');
+                    return;
+                }
+        
+                try {
+                    sessionStorage.removeItem('pdfAutoDownloaded');
+                } catch (e) { }
+        
+                try {
+                    sessionStorage.setItem('pdfBatchTotal', String(halls.length));
+                    sessionStorage.setItem('pdfBatchCompleted', '0');
+                    sessionStorage.setItem('pdfBatchActive', '1');
+                } catch (e) { }
+        
+                halls.forEach((hall, index) => {
+                    const hallNameSafe = spacesToDashes(hall.name);
+                    const hash = `zapasy/${encodeURIComponent(hallNameSafe)}`;
+        
+                    try {
+                        sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hall.name}`);
+                        sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallNameSafe}`);
+                        sessionStorage.removeItem('pdfAutoDownloaded');
+                    } catch (e) { }
+        
+                    setTimeout(() => {
+                        downloadMatchesPdfViaHiddenIframe(hash, hall.name);
+                    }, index * 3000);
+                });
+        
+                window.showGlobalNotification(
+                    `Generujem PDF pre ${halls.length} športových hál. Prosím čakajte`,
+                    'info'
+                );
                 return;
             }
         
-            // Nájdeme názov haly podľa vybraného ID
+            // Ak je vybraná konkrétna hala → správanie ako doteraz
             const selectedHall = halls.find(h => h.id === selectedHallId);
             const hallName = selectedHall ? selectedHall.name : selectedHallId;
         
@@ -853,11 +886,9 @@ const ExportApp = ({ userProfileData }) => {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
         
-            // V URL bude názov haly s pomlčkami namiesto medzier
             const hallNameSafe = spacesToDashes(hallName);
             const hash = `zapasy/${encodeURIComponent(hallNameSafe)}`;
         
-            // Vymažeme sessionStorage flagy pre túto halu, aby sa auto-download spustil znova
             try {
                 sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallName}`);
                 sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallNameSafe}`);
@@ -865,10 +896,8 @@ const ExportApp = ({ userProfileData }) => {
             } catch (e) { }
         
             if (showPreview) {
-                // Zaškrtnuté → otvorí novú kartu s náhľadom, PDF sa stiahne automaticky
                 window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             } else {
-                // Nezaškrtnuté → PDF sa vygeneruje a stiahne priamo v tejto karte
                 downloadMatchesPdfViaHiddenIframe(hash, hallName);
             }
             return;
@@ -1020,7 +1049,7 @@ const ExportApp = ({ userProfileData }) => {
                         },
                         React.createElement('option', { value: '' },
                             isLoadingHalls ? '-- Načítavam haly... --'
-                                : (halls.length === 0 ? '-- Žiadne haly --' : '-- Vyberte halu --')
+                                : (halls.length === 0 ? '-- Žiadne haly --' : '-- Všetky haly (hromadne) --')
                         ),
                         halls.map(hall => React.createElement('option', { key: hall.id, value: hall.id }, hall.name))
                     )
@@ -1093,6 +1122,14 @@ const ExportApp = ({ userProfileData }) => {
                             )
                         )
                     )
+                ),
+
+                selectedOption === 'zapasy' && !selectedHallId && halls.length > 0 && React.createElement(
+                    'div',
+                    { className: 'p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700' },
+                    React.createElement('span', { className: 'font-semibold' }, 'Hromadné generovanie:'),
+                    ' ',
+                    `Vygenerujú sa PDF pre všetky športové haly (${halls.length}).`
                 ),
 
                 selectedOption === 'tabulky' && selectedCategoryId && selectedGroupType && !selectedGroupName && React.createElement(
