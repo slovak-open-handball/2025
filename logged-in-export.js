@@ -523,7 +523,7 @@ const ExportApp = ({ userProfileData }) => {
 
     const isGenerateDisabled =
         !selectedOption ||
-        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType || !selectedGroupName));
+        (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType));
 
         const handleGenerate = () => {
             if (!selectedOption) {
@@ -531,8 +531,8 @@ const ExportApp = ({ userProfileData }) => {
                 return;
             }
             if (selectedOption === 'tabulky') {
-                if (!selectedCategoryId || !selectedGroupType || !selectedGroupName) {
-                    window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
+                if (!selectedCategoryId || !selectedGroupType) {
+                    window.showGlobalNotification('Prosím, vyberte kategóriu a typ skupiny.', 'error');
                     return;
                 }
         
@@ -544,19 +544,56 @@ const ExportApp = ({ userProfileData }) => {
                 const selectedCategory = categories.find(c => c.id === selectedCategoryId);
                 const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
                 const categoryNameSafe = spacesToDashes(categoryName);
-                const groupNameSafe = spacesToDashes(selectedGroupName);
-                const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
         
-                if (showPreview) {
-                    // Zaškrtnuté – otvorí novú kartu s náhľadom + PDF sa stiahne tam
-                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                // Zistíme, ktoré skupiny spracovať
+                let groupsToProcess = [];
+        
+                if (selectedGroupName) {
+                    // Konkrétna skupina
+                    groupsToProcess = [selectedGroupName];
                 } else {
-                    // Nezaškrtnuté – PDF sa stiahne priamo v tejto karte BEZ zobrazenia tabuľky
-                    // Použijeme skrytý iframe, ktorý načíta stránku a stiahne PDF
-                    downloadPdfViaHiddenIframe(hash);
+                    // Všetky skupiny daného typu v kategórii
+                    groupsToProcess = (groups[selectedCategoryId] || [])
+                        .filter(g => g.type === selectedGroupType)
+                        .map(g => g.name);
+                }
+        
+                if (groupsToProcess.length === 0) {
+                    window.showGlobalNotification('Nenašli sa žiadne skupiny pre vybraný typ.', 'error');
+                    return;
+                }
+        
+                // Ak je vybraná konkrétna skupina, rešpektujeme checkbox showPreview
+                if (selectedGroupName) {
+                    const groupNameSafe = spacesToDashes(selectedGroupName);
+                    const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
+        
+                    if (showPreview) {
+                        window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                    } else {
+                        downloadPdfViaHiddenIframe(hash);
+                    }
+                } else {
+                    // Hromadné generovanie pre všetky skupiny – vždy cez skryté iframy
+                    // (bez náhľadu, aby sa neotváralo veľa kariet naraz)
+                    groupsToProcess.forEach((groupName, index) => {
+                        const groupNameSafe = spacesToDashes(groupName);
+                        const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
+        
+                        // Malé oneskorenie medzi jednotlivými iframe, aby sa nestrieľali naraz
+                        setTimeout(() => {
+                            downloadPdfViaHiddenIframe(hash);
+                        }, index * 2000); // 2 sekundy medzi skupinami
+                    });
+        
+                    window.showGlobalNotification(
+                        `Generujem PDF pre ${groupsToProcess.length} skupín. Prosím čakajte...`,
+                        'info'
+                    );
                 }
                 return;
             }
+        
             // Pre zápasy
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
@@ -822,8 +859,16 @@ const ExportApp = ({ userProfileData }) => {
                     )
                 ),
 
+                selectedOption === 'tabulky' && selectedCategoryId && selectedGroupType && !selectedGroupName && React.createElement(
+                    'div',
+                    { className: 'p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700' },
+                    React.createElement('span', { className: 'font-semibold' }, 'ℹ️ Hromadné generovanie:'),
+                    ' ',
+                    `Vygenerujú sa PDF pre všetky skupiny typu "${formatGroupType(selectedGroupType)}" v kategórii.`
+                ),
+
                 // Náhľad checkbox – zobrazí sa len ak je vybraný typ exportu
-                selectedOption && React.createElement(
+                selectedOption && selectedGroupName && React.createElement(
                     'div',
                     { className: 'flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200' },
                     React.createElement('input', {
