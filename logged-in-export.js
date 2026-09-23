@@ -6,6 +6,15 @@ const { useState, useEffect } = React;
 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
+// ============================================================
+// PEVNÉ ROZMERY PRE PDF GENEROVANIE
+// Tieto hodnoty sa použijú vždy, bez ohľadu na okno používateľa
+// ============================================================
+const PDF_IFRAME_WIDTH = 1920; 
+const PDF_IFRAME_HEIGHT = 1080;
+const PDF_ZOOM = 1.0; 
+const PDF_DEVICE_PIXEL_RATIO = 1.5;
+
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -161,15 +170,11 @@ const normalizeName = (name) => {
 const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     const iframe = document.createElement('iframe');
 
-    // Presné rozmery podľa hlavnej stránky
-    const targetWidth = window.innerWidth;
-    const targetHeight = window.innerHeight;
-
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    iframe.style.width = targetWidth + 'px';
-    iframe.style.height = targetHeight + 'px';
+    iframe.style.width = PDF_IFRAME_WIDTH + 'px';
+    iframe.style.height = PDF_IFRAME_HEIGHT + 'px';
     iframe.style.border = '0';
     iframe.style.visibility = 'visible';
     iframe.style.pointerEvents = 'none';
@@ -177,7 +182,7 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     iframe.style.opacity = '0';
 
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
-    iframe.src = `logged-in-export.html?download=1#${hash}`;
+    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
     iframe.onload = () => {
         setTimeout(() => {
@@ -198,26 +203,19 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
 const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     const iframe = document.createElement('iframe');
 
-    // Presné rozmery podľa hlavnej stránky
-    const targetWidth = window.innerWidth;   // 758 px
-    const targetHeight = window.innerHeight; // 540 px
-
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    iframe.style.width = targetWidth + 'px';
-    iframe.style.height = targetHeight + 'px';
+    iframe.style.width = PDF_IFRAME_WIDTH + 'px';
+    iframe.style.height = PDF_IFRAME_HEIGHT + 'px';
     iframe.style.border = '0';
-
-    // DÔLEŽITÉ: 'visible' namiesto 'hidden', aby html2canvas videl obsah.
-    // Iframe je aj tak mimo obrazovky (top: -10000px), takže ho používateľ nevidí.
     iframe.style.visibility = 'visible';
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
-    iframe.style.opacity = '0';   // úplne priehľadný, ale stále renderovaný
+    iframe.style.opacity = '0';
 
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
-    iframe.src = `logged-in-export.html?download=1#${hash}`;
+    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
     iframe.onload = () => {
         setTimeout(() => {
@@ -234,7 +232,7 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     }
 };
 
-const exportTableToPdf = async (categoryName, groupName) => {
+const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
     const element = document.getElementById('pdf-export-target');
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
@@ -259,13 +257,15 @@ const exportTableToPdf = async (categoryName, groupName) => {
 
     window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
 
+    const scaleToUse = fixedDpr || PDF_DEVICE_PIXEL_RATIO;
+
     try {
         const rect = element.getBoundingClientRect();
         const cssWidth = rect.width;
         const cssHeight = rect.height;
 
         const canvas = await html2canvasFn(element, {
-            scale: 2,
+            scale: scaleToUse,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
@@ -274,7 +274,7 @@ const exportTableToPdf = async (categoryName, groupName) => {
             windowWidth: cssWidth,
             windowHeight: cssHeight,
             foreignObjectRendering: false,
-            allowTaint: true   
+            allowTaint: true
         });
 
         const pxToMm = 0.264583;
@@ -322,12 +322,7 @@ const exportTableToPdf = async (categoryName, groupName) => {
     }
 };
 
-// ============================================================
-// EXPORT ZOZNAMU ZÁPASOV DO PDF
-// ============================================================
-const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, formatTimeFn) => {
-    // Pomocná funkcia na inkrementáciu batch countera
-    // Zavolá sa VŽDY – pri úspechu, chybe, aj pri predčasnom return
+const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
     const markBatchCompleted = () => {
         try {
             const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
@@ -361,13 +356,16 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
     window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
 
+    // Pevný scale (priorita: parameter → konštanta → 1.5)
+    const scaleToUse = fixedDpr || PDF_DEVICE_PIXEL_RATIO;
+
     try {
         const rect = element.getBoundingClientRect();
         const cssWidth = rect.width;
         const cssHeight = rect.height;
 
         const canvas = await html2canvasFn(element, {
-            scale: 2,
+            scale: scaleToUse,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
@@ -376,7 +374,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
             windowWidth: cssWidth,
             windowHeight: cssHeight,
             foreignObjectRendering: false,
-            allowTaint: true   
+            allowTaint: true
         });
 
         const pxToMm = 0.264583;
@@ -394,22 +392,16 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
         pdf.save(fileName);
 
-        // Skryť hlavičku a menu počas PDF (ak treba)
         try {
             const newUrl = window.location.pathname + window.location.hash;
             window.history.replaceState({}, '', newUrl);
         } catch (e) { }
 
         window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
-
-        // PO NOVOM: inkrementuj batch counter po úspešnom uložení
         markBatchCompleted();
     } catch (err) {
         console.error('[PDF zápasy] ❌ Chyba pri PDF exporte:', err);
         window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
-
-        // PO NOVOM: inkrementuj batch counter aj pri chybe,
-        // aby sa batch nikdy nezasekol
         markBatchCompleted();
     }
 };
@@ -952,7 +944,7 @@ const ExportApp = ({ userProfileData }) => {
     };
     
     const handleExportPdf = () => {
-        exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
+        exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName, PDF_DEVICE_PIXEL_RATIO);
     };
         
     // Uchovávame si referenciu na aktuálne dáta
@@ -1262,6 +1254,13 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         paddingBottom: '12px',
         boxSizing: 'border-box'
     };
+
+    // ============================================================
+    // Čítanie pevných hodnôt z URL (nastavené rodičovským oknom)
+    // ============================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const fixedZoom = parseFloat(urlParams.get('fixedZoom')) || 1.0;
+    const fixedDpr = parseFloat(urlParams.get('fixedDpr')) || 1.5;
 
     // Načítanie haly podľa názvu z URL
     useEffect(() => {
@@ -1591,7 +1590,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         }
     
         const timer = setTimeout(() => {
-            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime);
+            exportMatchesToPdf(hallName || hallNameFromUrl, matchesByDay, formatDateHeader, formatTime, fixedDpr);
         }, 800);
     
         return () => clearTimeout(timer);
