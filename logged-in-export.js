@@ -575,7 +575,16 @@ const ExportApp = ({ userProfileData }) => {
                                 backgroundColor: '#ffffff'
                             }
                         },
-                        React.createElement(CrossTable, { ... })
+                        React.createElement(CrossTable, {
+                            teams: exportedTable.teams,
+                            sortedTeams: exportedTable.sortedTeams,
+                            matrix: exportedTable.matrix,
+                            categoryName: exportedTable.categoryName,
+                            groupName: exportedTable.groupName,
+                            groupType: exportedTable.groupType,
+                            teamNamesFromMatches: exportedTable.teamNamesFromMatches,
+                            carryOverEnabled: exportedTable.carryOverEnabled
+                        })
                     )
                     : React.createElement(
                         'div',
@@ -794,17 +803,10 @@ const CrossTable = ({
         height: CELL_HEIGHT,
         minHeight: CELL_HEIGHT,
         maxHeight: CELL_HEIGHT,
-        background: `
-            linear-gradient(to bottom right,
-                transparent calc(50% - 1px),
-                #000000 50%,
-                transparent calc(50% + 1px)),
-            linear-gradient(to bottom left,
-                transparent calc(50% - 1px),
-                #000000 50%,
-                transparent calc(50% + 1px))
-        `,
-        border: '1px solid #000000'
+        border: '1px solid #000000',
+        position: 'relative',
+        padding: 0,
+        overflow: 'hidden'
     };
 
     const FONT_CLASS = 'text-2xl font-bold';
@@ -949,7 +951,38 @@ const CrossTable = ({
                                         colSpan: 3,
                                         className: 'text-center align-middle',
                                         style: diagonalCellStyle
-                                    }, '')
+                                    },
+                                        React.createElement(
+                                            'svg',
+                                            {
+                                                width: '100%',
+                                                height: '100%',
+                                                viewBox: '0 0 100 100',
+                                                preserveAspectRatio: 'none',
+                                                style: { display: 'block', width: '100%', height: '100%' }
+                                            },
+                                            // Diagonála zľava-hore → vpravo-dole
+                                            React.createElement('line', {
+                                                x1: 0,
+                                                y1: 0,
+                                                x2: 100,
+                                                y2: 100,
+                                                stroke: '#000000',
+                                                strokeWidth: 1,
+                                                vectorEffect: 'non-scaling-stroke'
+                                            }),
+                                            // Diagonála zľava-dole → vpravo-hore
+                                            React.createElement('line', {
+                                                x1: 0,
+                                                y1: 100,
+                                                x2: 100,
+                                                y2: 0,
+                                                stroke: '#000000',
+                                                strokeWidth: 1,
+                                                vectorEffect: 'non-scaling-stroke'
+                                            })
+                                        )
+                                    )
                                 );
                                 return;
                             }
