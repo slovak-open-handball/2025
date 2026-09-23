@@ -1323,10 +1323,8 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
 
     useEffect(() => {
         if (!fixedZoom || fixedZoom === 1.0) return;
-        // Aplikuj zoom na <html> element
-        document.documentElement.style.transform = `scale(${fixedZoom})`;
-        document.documentElement.style.transformOrigin = 'top left';
-        document.documentElement.style.width = (100 / fixedZoom) + '%';
+        // Použi CSS zoom (funguje spoľahlivejšie ako transform na <html>)
+        document.documentElement.style.zoom = fixedZoom;
         console.log('[MatchesExportView] zoom aplikovaný:', fixedZoom);
     }, [fixedZoom]);
 
