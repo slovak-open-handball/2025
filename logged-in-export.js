@@ -13,6 +13,7 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.id = 'global-notification';
         document.body.appendChild(notificationElement);
     }
+
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
@@ -21,14 +22,43 @@ window.showGlobalNotification = (message, type = 'success') => {
         case 'info':    typeClasses = 'bg-blue-500 text-white'; break;
         default:        typeClasses = 'bg-gray-700 text-white';
     }
-    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    notificationElement.textContent = message;
-    setTimeout(() => {
-        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
-    }, 10);
-    setTimeout(() => {
+
+    // Zrušíme všetky predchádzajúce časovače, aby stará info správa
+    // nezmizla počas zobrazovania novej
+    if (window.__globalNotificationHideTimer) {
+        clearTimeout(window.__globalNotificationHideTimer);
+        window.__globalNotificationHideTimer = null;
+    }
+    if (window.__globalNotificationShowTimer) {
+        clearTimeout(window.__globalNotificationShowTimer);
+        window.__globalNotificationShowTimer = null;
+    }
+
+    // Ak ide o novú správu (iný text alebo typ), najprv schováme aktuálnu
+    const currentText = notificationElement.textContent || '';
+    const isSameMessage = currentText === message && notificationElement.dataset.notifType === type;
+
+    if (!isSameMessage) {
+        // Rýchle schovanie starej správy
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    }, 5000);
+    }
+
+    // Nastavíme nový text a typ
+    notificationElement.textContent = message;
+    notificationElement.dataset.notifType = type;
+
+    // Zobrazíme správu (s malým oneskorením, aby prebehla animácia)
+    window.__globalNotificationShowTimer = setTimeout(() => {
+        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
+    }, isSameMessage ? 10 : 60);
+
+    // Automatické skrytie LEN pre success/error/default.
+    // Info správa zostáva, kým ju nenahradí iná správa.
+    if (type !== 'info') {
+        window.__globalNotificationHideTimer = setTimeout(() => {
+            notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+        }, 5000);
+    }
 };
 
 const hideHeaderAndMenuIfHash = () => {
