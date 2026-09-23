@@ -1351,6 +1351,24 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     };
 
     // ============================================================
+    // APLIKOVANIE ZOOMU 175 % PRI NAČÍTANÍ ZOZNAMU ZÁPASOV Z URL
+    // ============================================================
+    useEffect(() => {
+        // Použijeme fixný zoom 1.75 (175 %)
+        const zoomValue = 1.75;
+        
+        // Aplikujeme zoom na <html> element
+        document.documentElement.style.zoom = zoomValue;
+        
+        console.log('[MatchesExportView] zoom aplikovaný:', zoomValue);
+        
+        // Cleanup pri odmountovaní – vrátime zoom na 1
+        return () => {
+            document.documentElement.style.zoom = '';
+        };
+    }, []);
+
+    // ============================================================
     // Čítanie pevných hodnôt z URL (nastavené rodičovským oknom)
     // ============================================================
     const urlParams = new URLSearchParams(window.location.search);
