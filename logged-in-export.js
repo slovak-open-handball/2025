@@ -139,6 +139,8 @@ const ExportApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
+    // NOVÉ: Mapa carryOverPoints pre kategórie
+    const [categoryCarryOverPoints, setCategoryCarryOverPoints] = useState({});
 
     // Flagy pre inicializáciu listenerov
     const [categoriesLoaded, setCategoriesLoaded] = useState(false);
@@ -188,15 +190,19 @@ const ExportApp = ({ userProfileData }) => {
 
         const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
             const categoryIdToName = {};
+            const carryOverMap = {};
             if (docSnap.exists()) {
                 const categoryData = docSnap.data();
                 Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
                     if (categoryObject && categoryObject.name) {
                         categoryIdToName[categoryId] = categoryObject.name;
+                        // NOVÉ: Načítame carryOverPoints pre každú kategóriu
+                        carryOverMap[categoryId] = categoryObject.carryOverPoints === true;
                     }
                 });
             }
             setCategoryIdToNameMap(categoryIdToName);
+            setCategoryCarryOverPoints(carryOverMap);
             setCategoriesLoaded(true);
         });
 
@@ -331,6 +337,8 @@ const ExportApp = ({ userProfileData }) => {
 
         const groupName = foundGroup.name;
         const groupType = foundGroup.type;
+        // NOVÉ: Zistíme, či je pre kategóriu zapnuté prenášanie vzájomných zápasov
+        const carryOverEnabled = categoryCarryOverPoints[categoryId] === true;
 
         // 3. Vyfiltrujeme tímy pre našu kategóriu a skupinu
         const teamsInGroup = allTeams.filter(t => {
@@ -368,7 +376,9 @@ const ExportApp = ({ userProfileData }) => {
             teams: teamsForTable,
             sortedTeams: teamsForTable,
             matrix: {},
-            teamNamesFromMatches: {}
+            teamNamesFromMatches: {},
+            // NOVÉ: Preposlanie carryOverEnabled do CrossTable
+            carryOverEnabled
         });
         setErrorTable(null);
     }, [
@@ -378,6 +388,7 @@ const ExportApp = ({ userProfileData }) => {
         allTeams,
         categoryIdToNameMap,
         allGroupsByCategoryId,
+        categoryCarryOverPoints,
         dataLoading
     ]);
 
@@ -451,7 +462,8 @@ const ExportApp = ({ userProfileData }) => {
                         categoryName: exportedTable.categoryName,
                         groupName: exportedTable.groupName,
                         groupType: exportedTable.groupType,
-                        teamNamesFromMatches: exportedTable.teamNamesFromMatches
+                        teamNamesFromMatches: exportedTable.teamNamesFromMatches,
+                        carryOverEnabled: exportedTable.carryOverEnabled
                     })
                     : React.createElement(
                         'div',
@@ -606,7 +618,8 @@ const CrossTable = ({
     categoryName,
     groupName,
     groupType,
-    teamNamesFromMatches
+    teamNamesFromMatches,
+    carryOverEnabled
 }) => {
     if (!teams || teams.length === 0) {
         return React.createElement(
@@ -687,7 +700,7 @@ const CrossTable = ({
     const baseThCell = 'border border-black text-black align-middle text-center bg-white';
 
     // Sivá farba pre podfarbenie
-    const TRANSFERRED_BG = '#d1d5db'; // sivá
+    const TRANSFERRED_BG = '#d1d5db';
 
     const getStats = (teamId) => {
         if (!sortedTeams) return null;
@@ -700,7 +713,6 @@ const CrossTable = ({
         return idx === -1 ? '' : idx + 1;
     };
 
-    // Získanie posledného znaku z názvu tímu
     const getLastChar = (team) => {
         if (!team || !team.name) return '';
         const trimmed = String(team.name).trim();
@@ -708,8 +720,10 @@ const CrossTable = ({
         return trimmed.charAt(trimmed.length - 1).toUpperCase();
     };
 
-    // Kontrola, či sa má bunka podfarbiť - iba pre nadstavbové skupiny
+    // UPRAVENÉ: Podfarbí len ak je zapnuté carryOverEnabled
     const shouldHighlightCell = (rowTeam, colTeam) => {
+        // NOVÉ: Ak nie je zapnuté prenášanie vzájomných zápasov, nepodfarbujeme
+        if (carryOverEnabled !== true) return false;
         if (groupType !== 'nadstavbová skupina') return false;
         if (!rowTeam || !colTeam) return false;
         if (rowTeam.id === colTeam.id) return false;
@@ -821,27 +835,22 @@ const CrossTable = ({
                                 return;
                             }
 
-                            // Zistíme, či sa má bunka podfarbiť
                             const highlight = shouldHighlightCell(rowTeam, colTeam);
 
-                            // Pripravíme štýly pre podbunky
                             const leftStyle = { ...subCellLeftStyle };
                             const middleStyle = { ...subCellMiddleStyle };
                             const rightStyle = { ...subCellRightStyle };
 
                             if (highlight) {
-                                // Sivé podfarbenie
                                 leftStyle.backgroundColor = TRANSFERRED_BG;
                                 middleStyle.backgroundColor = TRANSFERRED_BG;
                                 rightStyle.backgroundColor = TRANSFERRED_BG;
 
-                                // Sivé vnútorné orámovania (medzi podbunkami)
                                 leftStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
                                 middleStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
                                 middleStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
                                 rightStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
                             } else {
-                                // Biele pozadie
                                 leftStyle.backgroundColor = '#fff';
                                 middleStyle.backgroundColor = '#fff';
                                 rightStyle.backgroundColor = '#fff';
