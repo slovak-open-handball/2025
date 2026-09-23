@@ -763,14 +763,6 @@ const ExportApp = ({ userProfileData }) => {
     const autoDownloadTriggeredRef = React.useRef(false);
     
     useEffect(() => {
-        console.log('[tabulky auto-download] useEffect spustený:', {
-            exportHashType: exportHash?.type,
-            dataLoading,
-            hasExportedTable: !!exportedTable,
-            teamsCount: exportedTable?.teams?.length,
-            alreadyTriggered: autoDownloadTriggeredRef.current,
-        });
-    
         if (!exportHash || exportHash.type !== 'tabulky') return;
         if (dataLoading) return;
         if (!exportedTable) return;
@@ -779,28 +771,27 @@ const ExportApp = ({ userProfileData }) => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
     
-        console.log('[tabulky auto-download] shouldAutoDownload:', shouldAutoDownload);
-    
         if (!shouldAutoDownload) return;
     
-        // useRef – zabráni viacnásobnému spusteniu v rámci jedného mountu
-        if (autoDownloadTriggeredRef.current) {
-            console.log('[tabulky auto-download] UŽ BOLO SPUSTENÉ, preskakujem');
-            return;
-        }
-        autoDownloadTriggeredRef.current = true;
+        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
+        } catch (e) { }
+    
+        if (alreadyDownloaded) return;
+    
+        try {
+            sessionStorage.setItem(hashKey, '1');
+        } catch (e) { }
     
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
     
         const timer = setTimeout(() => {
-            console.log('[tabulky auto-download] ⏰ TIMER SA SPUSTIL, volám exportTableToPdf');
             exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
         }, 1500);
     
-        return () => {
-            console.log('[tabulky auto-download] cleanup – ruším timer');
-            clearTimeout(timer);
-        };
+        return () => clearTimeout(timer);
     }, [exportHash, dataLoading, exportedTable]);
 
     // ============================================================
@@ -881,13 +872,19 @@ const ExportApp = ({ userProfileData }) => {
             if (selectedGroupName) {
                 const groupNameSafe = spacesToDashes(selectedGroupName);
                 const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-    
+            
+                // Vymaž VŠETKY staré flagy pre túto tabuľku
                 try {
-                    sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
-                    sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
-                    sessionStorage.removeItem('pdfAutoDownloaded');
+                    const keysToRemove = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && key.startsWith('tabulkyPdfAutoDownloaded_')) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(k => sessionStorage.removeItem(k));
                 } catch (e) { }
-        
+            
                 if (showPreview) {
                     window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                 } else {
