@@ -400,12 +400,12 @@ const ExportApp = ({ userProfileData }) => {
         if (exportHash && exportHash.type === 'tabulky' && exportedTable) {
             const { categoryName, groupName } = exportedTable;
             if (categoryName && groupName) {
-                document.title = `${categoryName} - ${groupName} | SOH 2025`;
+                document.title = `SOH 2025 | ${categoryName} - ${groupName}`;
             } else if (categoryName) {
-                document.title = `${categoryName} | SOH 2025`;
+                document.title = `SOH 2025 | ${categoryName}`;
             }
         } else if (exportHash && exportHash.type === 'zapasy') {
-            document.title = 'Zápasy v športovej hale | SOH 2025';
+            document.title = 'SOH 2025 | Zápasy v športovej hale';
         } else {
             // Ak nie je hash (alebo iný typ), vrátime predvolený titulok
             document.title = 'SOH 2025 - Export';
