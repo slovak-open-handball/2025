@@ -190,6 +190,8 @@ const exportTableToPdf = async (categoryName, groupName) => {
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
+    const [showPreview, setShowPreview] = useState(false);
+
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
@@ -505,7 +507,7 @@ const ExportApp = ({ userProfileData }) => {
                     return;
                 }
         
-                // NOVÉ: Vyčistíme flag, aby nová karta mohla znova stiahnuť PDF
+                // Vyčistíme flag, aby nová karta mohla znova stiahnuť PDF
                 try {
                     sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { /* ignore */ }
@@ -515,13 +517,35 @@ const ExportApp = ({ userProfileData }) => {
                 const categoryNameSafe = spacesToDashes(categoryName);
                 const groupNameSafe = spacesToDashes(selectedGroupName);
                 const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-                window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+        
+                if (showPreview) {
+                    // Zaškrtnuté – otvorí novú kartu s náhľadom + PDF sa stiahne tam
+                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                } else {
+                    // Nezaškrtnuté – otvorí novú kartu bez downloadu (bez ?download=1)
+                    // PDF sa stiahne priamo v aktuálnej karte po vygenerovaní tabuľky
+                    // Ale keďže aktuálna karta je "selectbox" stránka (nemá hash),
+                    // musíme najprv prejsť na hash a potom spustiť download
+                    // Riešenie: nastavíme flag do sessionStorage a presmerujeme na hash v tej istej karte
+                    try {
+                        sessionStorage.setItem('pdfDownloadInPlace', '1');
+                    } catch (e) { /* ignore */ }
+                    window.location.href = `logged-in-export.html#${hash}`;
+                }
                 return;
             }
+            // Pre zápasy
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { /* ignore */ }
-            window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+            if (showPreview) {
+                window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+            } else {
+                try {
+                    sessionStorage.setItem('pdfDownloadInPlace', '1');
+                } catch (e) { /* ignore */ }
+                window.location.href = `logged-in-export.html#${selectedOption}`;
+            }
         };
 
     const handleExportPdf = () => {
@@ -546,20 +570,29 @@ const ExportApp = ({ userProfileData }) => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
     
-        if (!shouldAutoDownload) return;
-    
-        // NOVÉ: Skontrolujeme sessionStorage (prežije StrictMode aj refresh)
-        let alreadyDownloaded = false;
+        // NOVÉ: Skontrolujeme aj sessionStorage flag pre "download in place"
+        let shouldDownloadInPlace = false;
         try {
-            alreadyDownloaded = sessionStorage.getItem('pdfAutoDownloaded') === '1';
+            shouldDownloadInPlace = sessionStorage.getItem('pdfDownloadInPlace') === '1';
+            if (shouldDownloadInPlace) {
+                sessionStorage.removeItem('pdfDownloadInPlace');
+            }
         } catch (e) { /* ignore */ }
     
-        if (alreadyDownloaded) return;
+        if (!shouldAutoDownload && !shouldDownloadInPlace) return;
     
-        // Hneď označíme (aby druhé spustenie v StrictMode preskočilo)
-        try {
-            sessionStorage.setItem('pdfAutoDownloaded', '1');
-        } catch (e) { /* ignore */ }
+        // Ak ide o downloadInPlace, preskočíme sessionStorage kontrolu pre pdfAutoDownloaded
+        if (shouldAutoDownload) {
+            let alreadyDownloaded = false;
+            try {
+                alreadyDownloaded = sessionStorage.getItem('pdfAutoDownloaded') === '1';
+            } catch (e) { /* ignore */ }
+            if (alreadyDownloaded) return;
+    
+            try {
+                sessionStorage.setItem('pdfAutoDownloaded', '1');
+            } catch (e) { /* ignore */ }
+        }
     
         // Polling mechanizmus
         let attempts = 0;
@@ -571,10 +604,11 @@ const ExportApp = ({ userProfileData }) => {
             const loading = dataLoadingRef.current;
             const element = document.getElementById('pdf-export-target');
     
-            console.log('[AUTO-DOWNLOAD] poll', attempts, { 
-                hasTable: !!table, 
-                loading, 
-                hasElement: !!element 
+            console.log('[AUTO-DOWNLOAD] poll', attempts, {
+                hasTable: !!table,
+                loading,
+                hasElement: !!element,
+                shouldDownloadInPlace
             });
     
             if (table && !loading && element) {
@@ -585,7 +619,6 @@ const ExportApp = ({ userProfileData }) => {
             }
     
             if (attempts >= maxAttempts) {
-                // Ak sa nepodarilo, reset flag aby to mohol používateľ skúsiť znova
                 try {
                     sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { /* ignore */ }
@@ -597,7 +630,7 @@ const ExportApp = ({ userProfileData }) => {
         };
     
         setTimeout(poll, 100);
-    }, []); // ← PRÁZDNE ZÁVISLOSTI
+    }, []);
     
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
@@ -765,6 +798,32 @@ const ExportApp = ({ userProfileData }) => {
                             availableGroups.map((group, idx) =>
                                 React.createElement('option', { key: `${group.name}-${idx}`, value: group.name }, group.name)
                             )
+                        )
+                    )
+                ),
+
+                // Náhľad checkbox – zobrazí sa len ak je vybraný typ exportu
+                selectedOption && React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'show-preview-checkbox',
+                        checked: showPreview,
+                        onChange: (e) => setShowPreview(e.target.checked),
+                        className: 'w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer'
+                    }),
+                    React.createElement(
+                        'label',
+                        {
+                            htmlFor: 'show-preview-checkbox',
+                            className: 'text-sm font-medium text-gray-700 cursor-pointer select-none'
+                        },
+                        React.createElement('span', { className: 'font-semibold' }, 'Zobraziť náhľad'),
+                        React.createElement('span', { className: 'block text-xs text-gray-500 mt-0.5' },
+                            showPreview
+                                ? 'Otvorí sa nová karta s tabuľkou a PDF sa automaticky stiahne.'
+                                : 'PDF sa stiahne priamo v tejto karte (bez otvorenia novej karty).'
                         )
                     )
                 ),
