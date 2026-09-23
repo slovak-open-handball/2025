@@ -82,6 +82,16 @@ window.addEventListener('message', (event) => {
     if (success) {
         // Zobraz zelenú notifikáciu o úspechu
         window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: true,
+                    label: label,
+                    fileName: fileName
+                }, '*');
+            }
+        } catch (e) { }
     } else {
         // Zobraz červenú notifikáciu o chybe
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
@@ -436,6 +446,16 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
         window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
         markBatchCompleted();
+        try {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'PDF_EXPORT_COMPLETED',
+                    success: true,
+                    label: fileName,
+                    fileName: fileName
+                }, '*');
+            }
+        } catch (e) { }
     } catch (err) {
         console.error('[PDF zápasy] ❌ Chyba pri PDF exporte:', err);
         window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
