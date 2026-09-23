@@ -122,7 +122,7 @@ const normalizeName = (name) => {
         .trim();
 };
 
-const downloadPdfViaHiddenIframe = (hash) => {
+const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
@@ -131,7 +131,6 @@ const downloadPdfViaHiddenIframe = (hash) => {
     iframe.style.height = '1px';
     iframe.style.border = '0';
     iframe.style.visibility = 'hidden';
-    // NOVÉ: Unikátny názov iframe
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1#${hash}`;
 
@@ -144,10 +143,14 @@ const downloadPdfViaHiddenIframe = (hash) => {
     };
 
     document.body.appendChild(iframe);
-    window.showGlobalNotification('Generujem PDF...', 'info');
+
+    // NOVÉ: Notifikácia obsahuje konkrétnu kategóriu a skupinu
+    const label = groupName
+        ? `${categoryName} - ${groupName}`
+        : categoryName || 'neznáma kategória';
+    window.showGlobalNotification(`Generujem PDF pre: ${label}...`, 'info');
 };
 
-// Mimo komponenty ExportApp – definujte pomocnú funkciu
 const exportTableToPdf = async (categoryName, groupName) => {
     const element = document.getElementById('pdf-export-target');
     if (!element) {
@@ -167,7 +170,11 @@ const exportTableToPdf = async (categoryName, groupName) => {
     const safeGroup = (groupName || 'skupina').replace(/\s+/g, '-');
     const fileName = `${safeCategory}_${safeGroup}.pdf`;
 
-    window.showGlobalNotification('Generujem PDF...', 'info');
+    const label = groupName
+        ? `${categoryName} - ${groupName}`
+        : categoryName || 'neznáma kategória';
+
+    window.showGlobalNotification(`Generujem PDF pre: ${label}...`, 'info');
 
     try {
         const rect = element.getBoundingClientRect();
@@ -205,7 +212,6 @@ const exportTableToPdf = async (categoryName, groupName) => {
             if (currentHash) {
                 sessionStorage.setItem(`pdfAutoDownloaded_${currentHash}`, '1');
             }
-            // Fallback pre starý kľúč
             sessionStorage.setItem('pdfAutoDownloaded', '1');
         } catch (e) { /* ignore */ }
 
@@ -214,10 +220,11 @@ const exportTableToPdf = async (categoryName, groupName) => {
             window.history.replaceState({}, '', newUrl);
         } catch (e) { /* ignore */ }
 
-        window.showGlobalNotification('PDF bolo uložené.', 'success');
+        // NOVÉ: Notifikácia obsahuje konkrétnu kategóriu a skupinu
+        window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
     } catch (err) {
         console.error('Chyba pri PDF exporte:', err);
-        window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
+        window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
     }
 };
 
@@ -541,7 +548,6 @@ const ExportApp = ({ userProfileData }) => {
                     return;
                 }
         
-                // Vyčistíme flag, aby nová karta mohla znova stiahnuť PDF
                 try {
                     sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { /* ignore */ }
@@ -554,10 +560,8 @@ const ExportApp = ({ userProfileData }) => {
                 let groupsToProcess = [];
         
                 if (selectedGroupName) {
-                    // Konkrétna skupina
                     groupsToProcess = [selectedGroupName];
                 } else {
-                    // Všetky skupiny daného typu v kategórii
                     groupsToProcess = (groups[selectedCategoryId] || [])
                         .filter(g => g.type === selectedGroupType)
                         .map(g => g.name);
@@ -576,29 +580,29 @@ const ExportApp = ({ userProfileData }) => {
                     if (showPreview) {
                         window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                     } else {
-                        downloadPdfViaHiddenIframe(hash);
+                        // NOVÉ: Odovzdáme categoryName a groupName
+                        downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
                     }
                 } else {
                     // Hromadné generovanie pre všetky skupiny
                     groupsToProcess.forEach((groupName, index) => {
                         const groupNameSafe = spacesToDashes(groupName);
                         const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-                
-                        // NOVÉ: Vyčistíme flag pre tento konkrétny hash
+        
                         try {
                             sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
                             sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
                             sessionStorage.removeItem(`pdfAutoDownloaded`);
                         } catch (e) { /* ignore */ }
-                
-                        // Oneskorenie medzi jednotlivými iframe
+        
+                        // NOVÉ: Odovzdáme categoryName a groupName
                         setTimeout(() => {
-                            downloadPdfViaHiddenIframe(hash);
-                        }, index * 3000); // 3 sekundy medzi skupinami (aby sa stihli stiahnuť)
+                            downloadPdfViaHiddenIframe(hash, categoryName, groupName);
+                        }, index * 3000);
                     });
-                
+        
                     window.showGlobalNotification(
-                        `Generujem PDF pre ${groupsToProcess.length} skupín. Prosím čakajte...`,
+                        `Generujem PDF pre ${groupsToProcess.length} skupín v kategórii "${categoryName}" typu "${formatGroupType(selectedGroupType)}". Prosím čakajte...`,
                         'info'
                     );
                 }
@@ -612,7 +616,7 @@ const ExportApp = ({ userProfileData }) => {
             if (showPreview) {
                 window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
             } else {
-                downloadPdfViaHiddenIframe(selectedOption);
+                downloadPdfViaHiddenIframe(selectedOption, 'Zápasy', null);
             }
         };
 
