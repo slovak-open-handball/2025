@@ -1124,6 +1124,18 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     const [groupsData, setGroupsData] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
 
+    const INFO_TAG_STYLE_BASE = {
+        fontWeight: '500',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '20px',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+        paddingBottom: '8px',
+        boxSizing: 'border-box'
+    };
+
     // Načítanie haly podľa názvu z URL
     useEffect(() => {
         if (!window.db || !hallNameFromUrl) return;
@@ -1571,6 +1583,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
 
                                     const infoTags = [];
 
+                                    // Typ zápasu (matchType)
                                     if (match.matchType && !match.isPlacementMatch) {
                                         const isElim = isEliminationMatch(match);
                                         const colors = isElim
@@ -1580,43 +1593,23 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             React.createElement('span', {
                                                 key: 'type',
                                                 className: 'text-xs px-2 rounded-full whitespace-nowrap',
-                                                style: {
-                                                    backgroundColor: colors.backgroundColor,
-                                                    color: colors.textColor,
-                                                    fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    height: '20px',
-                                                    paddingLeft: '8px',
-                                                    paddingRight: '8px',
-                                                    boxSizing: 'border-box'
-                                                }
+                                                style: { ...INFO_TAG_STYLE_BASE, backgroundColor: colors.backgroundColor, color: colors.textColor }
                                             }, match.matchType)
                                         );
                                     }
-
+                                    
+                                    // Umiestnenie (placement)
                                     if (match.isPlacementMatch) {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'placement',
                                                 className: 'text-xs rounded-full whitespace-nowrap',
-                                                style: {
-                                                    backgroundColor: '#F3E8FF',
-                                                    color: '#6B21A5',
-                                                    fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    height: '20px',
-                                                    paddingLeft: '8px',
-                                                    paddingRight: '8px',
-                                                    boxSizing: 'border-box'
-                                                }
+                                                style: { ...INFO_TAG_STYLE_BASE, backgroundColor: '#F3E8FF', color: '#6B21A5' }
                                             }, `o ${match.placementRank}. miesto`)
                                         );
                                     }
-
+                                    
+                                    // Skupina (groupName)
                                     if (match.groupName && !match.isPlacementMatch) {
                                         const isElim = isEliminationMatch(match);
                                         const groupColors = isElim
@@ -1626,22 +1619,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             React.createElement('span', {
                                                 key: 'group',
                                                 className: 'text-xs rounded-full whitespace-nowrap',
-                                                style: {
-                                                    backgroundColor: groupColors.backgroundColor,
-                                                    color: groupColors.textColor,
-                                                    fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    height: '20px',
-                                                    paddingLeft: '8px',
-                                                    paddingRight: '8px',
-                                                    boxSizing: 'border-box'
-                                                }
+                                                style: { ...INFO_TAG_STYLE_BASE, backgroundColor: groupColors.backgroundColor, color: groupColors.textColor }
                                             }, match.groupName)
                                         );
                                     }
-
+                                    
+                                    // Kategória (categoryDisplayTag)
                                     let categoryDisplayTag = match.categoryName;
                                     if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
                                         categoryDisplayTag = categoriesData[match.categoryId];
@@ -1652,18 +1635,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                             React.createElement('span', {
                                                 key: 'category',
                                                 className: 'text-xs rounded-full whitespace-nowrap',
-                                                style: {
-                                                    backgroundColor: lighterCategoryColor,
-                                                    color: categoryColor,
-                                                    fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    height: '20px',
-                                                    paddingLeft: '8px',
-                                                    paddingRight: '8px',
-                                                    boxSizing: 'border-box'
-                                                }
+                                                style: { ...INFO_TAG_STYLE_BASE, backgroundColor: lighterCategoryColor, color: categoryColor }
                                             }, categoryDisplayTag)
                                         );
                                     }
