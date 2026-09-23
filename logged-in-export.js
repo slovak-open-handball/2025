@@ -6,6 +6,28 @@ const { useState, useEffect } = React;
 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
+window.__pdfBatchTracker = {
+    total: 0,
+    completed: 0,
+    reset: function(total) {
+        this.total = total;
+        this.completed = 0;
+    },
+    markCompleted: function() {
+        this.completed++;
+        // Ak sme dokončili všetky, zobrazíme zelenú správu
+        if (this.total > 0 && this.completed >= this.total) {
+            window.showGlobalNotification(
+                `Generovanie dokončené (${this.completed}/${this.total} PDF)`,
+                'success'
+            );
+            // Reset
+            this.total = 0;
+            this.completed = 0;
+        }
+    }
+};
+
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -220,8 +242,13 @@ const exportTableToPdf = async (categoryName, groupName) => {
             window.history.replaceState({}, '', newUrl);
         } catch (e) { /* ignore */ }
 
-        // NOVÉ: Notifikácia obsahuje konkrétnu kategóriu a skupinu
         window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+
+        try {
+            if (window.__pdfBatchTracker) {
+                window.__pdfBatchTracker.markCompleted();
+            }
+        } catch (e) { /* ignore */ }
     } catch (err) {
         console.error('Chyba pri PDF exporte:', err);
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
@@ -584,6 +611,12 @@ const ExportApp = ({ userProfileData }) => {
                         downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
                     }
                 } else {
+                    try {
+                        if (window.__pdfBatchTracker) {
+                            window.__pdfBatchTracker.reset(groupsToProcess.length);
+                        }
+                    } catch (e) { /* ignore */ }
+                    
                     // Hromadné generovanie pre všetky skupiny
                     groupsToProcess.forEach((groupName, index) => {
                         const groupNameSafe = spacesToDashes(groupName);
