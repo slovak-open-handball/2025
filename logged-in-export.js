@@ -160,16 +160,22 @@ const normalizeName = (name) => {
 
 const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     const iframe = document.createElement('iframe');
+
+    // Presné rozmery podľa hlavnej stránky
+    const targetWidth = window.innerWidth;
+    const targetHeight = window.innerHeight;
+
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    
-    // DÔLEŽITÉ: reálne rozmery pre správne vykreslenie obsahu
-    iframe.style.width = window.innerWidth + 'px';
-    iframe.style.height = window.innerHeight + 'px';
-    
+    iframe.style.width = targetWidth + 'px';
+    iframe.style.height = targetHeight + 'px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
+    iframe.style.visibility = 'visible';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-1';
+    iframe.style.opacity = '0';
+
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1#${hash}`;
 
@@ -191,17 +197,25 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
 
 const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     const iframe = document.createElement('iframe');
+
+    // Presné rozmery podľa hlavnej stránky
+    const targetWidth = window.innerWidth;   // 758 px
+    const targetHeight = window.innerHeight; // 540 px
+
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    
-    // DÔLEŽITÉ: nastav reálne rozmery, aby sa obsah v iframe vykreslil
-    // rovnako ako v hlavnom okne (inak html2canvas vidí len 1×1 px)
-    iframe.style.width = window.innerWidth + 'px';
-    iframe.style.height = window.innerHeight + 'px';
-    
+    iframe.style.width = targetWidth + 'px';
+    iframe.style.height = targetHeight + 'px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
+
+    // DÔLEŽITÉ: 'visible' namiesto 'hidden', aby html2canvas videl obsah.
+    // Iframe je aj tak mimo obrazovky (top: -10000px), takže ho používateľ nevidí.
+    iframe.style.visibility = 'visible';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-1';
+    iframe.style.opacity = '0';   // úplne priehľadný, ale stále renderovaný
+
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1#${hash}`;
 
