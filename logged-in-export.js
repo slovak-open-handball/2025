@@ -87,9 +87,9 @@ window.addEventListener('message', (event) => {
                 const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
 
                 if (total > 0 && completed >= total) {
-                    window.showGlobalNotification(`Generovanie dokončené (${completed}/${total})`, 'success');
+                    window.showGlobalNotification(`Generovanie dokončené`, 'success');
                 } else {
-                    window.showGlobalNotification(`PDF bolo uložené: ${label} (${completed}/${total})`, 'success');
+                    window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
                 }
             } else {
                 // Jednotlivé PDF (nie batch)
