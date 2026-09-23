@@ -1498,7 +1498,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),
                         
                                 // Domáci
-                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
+                                React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),
                         
                                 // Skóre (colSpan 3)
                                 React.createElement(
@@ -1508,7 +1508,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                 ),
                         
                                 // Hostia
-                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                                React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Názov tímu'),
                         
                                 // ID hostia
                                 React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'ID'),
