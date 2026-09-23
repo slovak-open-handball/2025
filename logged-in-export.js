@@ -265,11 +265,11 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
-            width: cssWidth,
-            height: cssHeight,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
+            width: cssWidth,
+            height: cssHeight,
             windowWidth: cssWidth,
             windowHeight: cssHeight,
             foreignObjectRendering: false,
@@ -367,11 +367,11 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
         
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
-            width: cssWidth,
-            height: cssHeight,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
+            width: cssWidth,
+            height: cssHeight,
             windowWidth: cssWidth,
             windowHeight: cssHeight,
             foreignObjectRendering: false,
