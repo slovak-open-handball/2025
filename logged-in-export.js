@@ -1132,7 +1132,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         height: '20px',
         paddingLeft: '8px',
         paddingRight: '8px',
-        paddingBottom: '8px',
+        paddingBottom: '10px',
         boxSizing: 'border-box'
     };
 
