@@ -124,6 +124,7 @@ const normalizeName = (name) => {
 
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
+    const hasAutoDownloadedRef = React.useRef(false);
 
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
@@ -535,16 +536,23 @@ const ExportApp = ({ userProfileData }) => {
         if (!exportedTable) return;
         if (dataLoading) return;
 
+        // NOVÉ: Ak už bolo auto-download spustené, preskočíme
+        // (zabraňuje dvojitému stiahnutiu v React StrictMode)
+        if (hasAutoDownloadedRef.current) return;
+    
         // Počkáme, kým sa DOM element 'pdf-export-target' vykreslí
-        // (musí byť v DOM, inak html2canvas nenájde element)
         let attempts = 0;
-        const maxAttempts = 50; // 50 × 100ms = 5s max
+        const maxAttempts = 50;
         const interval = setInterval(() => {
             attempts++;
             const element = document.getElementById('pdf-export-target');
     
             if (element) {
                 clearInterval(interval);
+    
+                // NOVÉ: Označíme, že sme už auto-download spustili
+                hasAutoDownloadedRef.current = true;
+    
                 // Ešte chvíľu počkáme, aby sa tabuľka stihla vykresliť
                 setTimeout(() => {
                     handleExportPdf();
