@@ -1272,12 +1272,7 @@ const ExportApp = ({ userProfileData }) => {
                     `Vygenerujú sa PDF pre všetky skupiny typu "${formatGroupType(selectedGroupType)}" v kategórii.`
                 ),
 
-                // Náhľad checkbox – zobrazí sa pri vybranej skupine (tabulky)
-                // alebo pri vybranej športovej hale (zapasy)
-                selectedOption && (
-                    (selectedOption === 'tabulky' && selectedGroupName) ||
-                    (selectedOption === 'zapasy' && selectedHallId)
-                ) && React.createElement(
+                selectedOption === 'tabulky' && selectedGroupName && React.createElement(
                     'div',
                     { className: 'flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200' },
                     React.createElement('input', {
