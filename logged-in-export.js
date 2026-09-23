@@ -145,7 +145,7 @@ const ExportApp = ({ userProfileData }) => {
     const [categoriesLoaded, setCategoriesLoaded] = useState(false);
     const [groupsLoaded, setGroupsLoaded] = useState(false);
     const [usersLoaded, setUsersLoaded] = useState(false);
-    const [superstructureLoaded, setSuperstructureLoaded] = useState(false);
+    const [superstructureLoaded, setSuperstructureLoaded] = useState(false);    
 
     // ============================================================
     // LISTENERY PRE FIRESTORE
@@ -444,10 +444,12 @@ const ExportApp = ({ userProfileData }) => {
             const categoryNameSafe = spacesToDashes(categoryName);
             const groupNameSafe = spacesToDashes(selectedGroupName);
             const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-            window.open(`logged-in-export.html#${hash}`, '_blank');
+            // NOVÉ: ?download=1 – nová karta po načítaní automaticky stiahne PDF
+            window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             return;
         }
-        window.open(`logged-in-export.html#${selectedOption}`, '_blank');
+        // Pre zápasy tiež ?download=1 (ak by v budúcnosti mali PDF)
+        window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
     };
 
     // ============================================================
@@ -520,6 +522,41 @@ const ExportApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
         }
     };
+
+    // ============================================================
+    // AUTO-DOWNLOAD po otvorení novej karty s ?download=1
+    // ============================================================
+    useEffect(() => {
+        // Skontrolujeme, či je v URL ?download=1
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldAutoDownload = urlParams.get('download') === '1';
+    
+        if (!shouldAutoDownload) return;
+        if (!exportedTable) return;
+        if (dataLoading) return;
+
+        // Počkáme, kým sa DOM element 'pdf-export-target' vykreslí
+        // (musí byť v DOM, inak html2canvas nenájde element)
+        let attempts = 0;
+        const maxAttempts = 50; // 50 × 100ms = 5s max
+        const interval = setInterval(() => {
+            attempts++;
+            const element = document.getElementById('pdf-export-target');
+    
+            if (element) {
+                clearInterval(interval);
+                // Ešte chvíľu počkáme, aby sa tabuľka stihla vykresliť
+                setTimeout(() => {
+                    handleExportPdf();
+                }, 300);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
+            }
+        }, 100);
+    
+        return () => clearInterval(interval);
+    }, [exportedTable, dataLoading]);
 
     if (exportHash && exportHash.type === 'tabulky') {
         return React.createElement(
