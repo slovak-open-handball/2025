@@ -406,97 +406,6 @@ const ExportApp = ({ userProfileData }) => {
         }
     }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, exportedTable]);
 
-    // ============================================================
-    // PDF EXPORT cez klávesovú skratku Ctrl+S – vlastná veľkosť stránky
-    // ============================================================
-    useEffect(() => {
-        if (!exportHash || exportHash.type !== 'tabulky') return;
-
-        const handleKeyDown = async (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Použijeme ID namiesto ref
-                const element = document.getElementById('pdf-export-target');
-        
-                if (!element) {
-                    window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
-                    return;
-                }
-
-                const html2canvasFn = window.html2canvas;
-                const jsPDFClass = window.jspdf?.jsPDF;
-
-                if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
-                    window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
-                    return;
-                }
-
-                const categoryName = exportedTable?.categoryName || 'kategoria';
-                const groupName = exportedTable?.groupName || 'skupina';
-                const safeCategory = categoryName.replace(/\s+/g, '-');
-                const safeGroup = groupName.replace(/\s+/g, '-');
-                const fileName = `${safeCategory}_${safeGroup}.pdf`;
-
-                window.showGlobalNotification('Generujem PDF...', 'info');
-
-                try {                
-                    // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
-                    const rect = element.getBoundingClientRect();
-                    const cssWidth = rect.width;
-                    const cssHeight = rect.height;
-                
-                    // 2. Vyrenderujeme do canvasu s scale=2 (vyššia kvalita)
-                    const canvas = await html2canvasFn(element, {
-                        scale: 2,
-                        useCORS: true,
-                        logging: false,
-                        backgroundColor: '#ffffff',
-                        // Dôležité: nastavíme šírku a výšku presne podľa elementu
-                        width: cssWidth,
-                        height: cssHeight,
-                        windowWidth: cssWidth,
-                        windowHeight: cssHeight
-                    });
-
-                    // 3. Prevod CSS px → mm (96 DPI = 0.264583 mm/px)
-                    // POZOR: použijeme cssWidth/cssHeight, NIE canvas.width/canvas.height,
-                    // pretože canvas.width je 2x väčší (scale=2) a museli by sme deliť 2.
-                    // cssWidth je presná šírka v CSS px, ktorú vidí používateľ.
-                    const pxToMm = 0.264583;
-                    const pdfWidthMm = cssWidth * pxToMm;
-                    const pdfHeightMm = cssHeight * pxToMm;
-                
-                    // 4. Vytvoríme PDF s vlastnou veľkosťou
-                    const pdf = new jsPDFClass({
-                        orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
-                        unit: 'mm',
-                        format: [pdfWidthMm, pdfHeightMm]
-                    });
-
-                    // 5. Vložíme obrázok – canvas má 2x väčšie rozmery, ale my ho škálujeme
-                    //    na pdfWidthMm × pdfHeightMm, takže kvalita je zachovaná
-                    const imgData = canvas.toDataURL('image/png');
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
-                
-                    // 6. Uložíme
-                    pdf.save(fileName);
-                
-                    window.showGlobalNotification('PDF bolo uložené.', 'success');
-                } catch (err) {
-                    console.error('Chyba pri PDF exporte:', err);
-                    window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [exportHash && exportHash.type, exportedTable]);
-
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
             if (a === b) return 0;
@@ -539,6 +448,77 @@ const ExportApp = ({ userProfileData }) => {
             return;
         }
         window.open(`logged-in-export.html#${selectedOption}`, '_blank');
+    };
+
+    // ============================================================
+    // PDF EXPORT – volané kliknutím na tlačidlo
+    // ============================================================
+    const handleExportPdf = async () => {
+        const element = document.getElementById('pdf-export-target');
+    
+        if (!element) {
+            window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
+            return;
+        }
+    
+        const html2canvasFn = window.html2canvas;
+        const jsPDFClass = window.jspdf?.jsPDF;
+    
+        if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+            window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+            return;
+        }
+
+        const categoryName = exportedTable?.categoryName || 'kategoria';
+        const groupName = exportedTable?.groupName || 'skupina';
+        const safeCategory = categoryName.replace(/\s+/g, '-');
+        const safeGroup = groupName.replace(/\s+/g, '-');
+        const fileName = `${safeCategory}_${safeGroup}.pdf`;
+    
+        window.showGlobalNotification('Generujem PDF...', 'info');
+    
+        try {
+            // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
+            const rect = element.getBoundingClientRect();
+            const cssWidth = rect.width;
+            const cssHeight = rect.height;
+    
+            // 2. Vyrenderujeme do canvasu s scale=2 (vyššia kvalita)
+            const canvas = await html2canvasFn(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                width: cssWidth,
+                height: cssHeight,
+                windowWidth: cssWidth,
+                windowHeight: cssHeight
+            });
+
+            // 3. Prevod CSS px → mm (96 DPI = 0.264583 mm/px)
+            const pxToMm = 0.264583;
+            const pdfWidthMm = cssWidth * pxToMm;
+            const pdfHeightMm = cssHeight * pxToMm;
+
+            // 4. Vytvoríme PDF s vlastnou veľkosťou
+            const pdf = new jsPDFClass({
+                orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+                unit: 'mm',
+                format: [pdfWidthMm, pdfHeightMm]
+            });
+
+            // 5. Vložíme obrázok
+            const imgData = canvas.toDataURL('image/png');
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+            // 6. Uložíme
+            pdf.save(fileName);
+    
+            window.showGlobalNotification('PDF bolo uložené.', 'success');
+        } catch (err) {
+            console.error('Chyba pri PDF exporte:', err);
+            window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
+        }
     };
 
     if (exportHash && exportHash.type === 'tabulky') {
