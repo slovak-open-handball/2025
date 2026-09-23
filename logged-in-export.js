@@ -416,7 +416,7 @@ const ExportApp = ({ userProfileData }) => {
 
         const handleKeyDown = async (e) => {
             // Ctrl+S alebo Cmd+S (Mac)
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 e.stopPropagation();
 
