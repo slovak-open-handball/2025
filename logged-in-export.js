@@ -1263,46 +1263,23 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         return () => unsubscribe();
     }, [hallId]);
 
-    // Načítanie mien tímov
+    // Načítanie mien tímov – BEZ mapovania (pôvodné názvy zo zápasov)
     useEffect(() => {
         if (!matches.length) return;
 
-        const processNames = async () => {
-            const names = {};
+        const names = {};
 
-            for (const match of matches) {
-                if (match.homeTeamIdentifier) {
-                    if (window.matchTracker?.getTeamNameByDisplayIdSync) {
-                        try {
-                            const syncName = window.matchTracker.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                            names[match.homeTeamIdentifier] = syncName || match.homeTeamIdentifier;
-                        } catch (e) {
-                            names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
-                        }
-                    } else {
-                        names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
-                    }
-                }
-
-                if (match.awayTeamIdentifier) {
-                    if (window.matchTracker?.getTeamNameByDisplayIdSync) {
-                        try {
-                            const syncName = window.matchTracker.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
-                            names[match.awayTeamIdentifier] = syncName || match.awayTeamIdentifier;
-                        } catch (e) {
-                            names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
-                        }
-                    } else {
-                        names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
-                    }
-                }
+        for (const match of matches) {
+            if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
+                names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
             }
+            if (match.awayTeamIdentifier && !names[match.awayTeamIdentifier]) {
+                names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
+            }
+        }
 
-            setTeamNames(names);
-        };
-
-        processNames();
-    }, [matches, categoriesData]);
+        setTeamNames(names);
+    }, [matches]);
 
     const getCategoryColor = (categoryId) => {
         if (!categoryId || !categoryDrawColors[categoryId]) return '#3B82F6';
@@ -1468,8 +1445,8 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                             );
 
                             dayGroup.matches.forEach((match, matchIndex) => {
-                                const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match.homeTeamIdentifier || '???';
-                                const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match.awayTeamIdentifier || '???';
+                                const homeTeamDisplay = match.homeTeamIdentifier || '???';
+                                const awayTeamDisplay = match.awayTeamIdentifier || '???';
 
                                 const categoryColor = getCategoryColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
