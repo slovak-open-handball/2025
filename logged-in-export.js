@@ -70,34 +70,37 @@ window.showGlobalNotification = (message, type = 'success') => {
     }
 };
 
-// ============================================================
-// LISTENER PRE SPRÁVY Z IFRAME
-// ============================================================
 window.addEventListener('message', (event) => {
-    // Prijímame len správy, ktoré majú náš typ
     if (!event.data || event.data.type !== 'PDF_EXPORT_COMPLETED') return;
 
-    const { success, label, fileName, error } = event.data;
+    const { success, label } = event.data;
 
     if (success) {
-        // Zobraz zelenú notifikáciu o úspechu
-        window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+        // Inkrementuj batch counter
         try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: true,
-                    label: label,
-                    fileName: fileName
-                }, '*');
+            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+            if (isActive) {
+                let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+                completed++;
+                sessionStorage.setItem('pdfBatchCompleted', String(completed));
+
+                const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
+
+                if (total > 0 && completed >= total) {
+                    window.showGlobalNotification(`Generovanie dokončené (${completed}/${total})`, 'success');
+                } else {
+                    window.showGlobalNotification(`PDF bolo uložené: ${label} (${completed}/${total})`, 'success');
+                }
+            } else {
+                // Jednotlivé PDF (nie batch)
+                window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
             }
-        } catch (e) { }
+        } catch (e) {
+            window.showGlobalNotification(`PDF bolo uložené: ${label}`, 'success');
+        }
     } else {
-        // Zobraz červenú notifikáciu o chybe
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
     }
-
-    console.log('[parent] Prijatá správa z iframe:', event.data);
 });
 
 const hideHeaderAndMenuIfHash = () => {
