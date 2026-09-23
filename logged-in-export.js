@@ -184,6 +184,7 @@ const exportTableToPdf = async (categoryName, groupName) => {
 
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
+    const hasAutoDownloadedRef = React.useRef(false);
 
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
@@ -515,8 +516,6 @@ const ExportApp = ({ userProfileData }) => {
     const handleExportPdf = () => {
         exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
     };
-
-    const hasAutoDownloadedRef = React.useRef(false);
     
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
