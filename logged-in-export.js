@@ -159,13 +159,13 @@ const ExportApp = ({ userProfileData }) => {
                 if (userData && userData.teams) {
                     Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
                         if (Array.isArray(teamArray)) {
-                            teamArray.forEach(team => {
+                            teamArray.forEach((team, teamIndex) => {
                                 if (team.teamName) {
                                     const hasGroup = team.groupName && team.groupName.trim() !== '';
                                     userTeamsList.push({
                                         uid: docSnap.id,
                                         category: categoryName,
-                                        id: team.id || `${docSnap.id}_${categoryName}_${team.teamName}`,  // ← FALLBACK
+                                        id: team.id || `${docSnap.id}_${categoryName}_${team.teamName}_${teamIndex}`,
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
                                         order: hasGroup ? (team.order ?? 0) : null,
@@ -228,10 +228,10 @@ const ExportApp = ({ userProfileData }) => {
     // Spojenie userTeams + superstructureTeams do allTeams
     useEffect(() => {
         const globalTeamsList = Object.entries(superstructureTeams).flatMap(([categoryName, teamArray]) =>
-            (teamArray || []).map(team => ({
+            (teamArray || []).map((team, teamIndex) => ({
                 uid: 'global',
                 category: categoryName,
-                id: team.id || `global_${categoryName}_${team.teamName}`,  // ← FALLBACK
+                id: team.id || `global_${categoryName}_${team.teamName}_${teamIndex}`,
                 teamName: team.teamName,
                 groupName: team.groupName || null,
                 order: team.groupName ? (team.order ?? 0) : null,
@@ -291,7 +291,6 @@ const ExportApp = ({ userProfileData }) => {
             return;
         }
 
-        // Počkať, kým sú načítané všetky potrebné dáta
         if (dataLoading) {
             return;
         }
@@ -341,7 +340,6 @@ const ExportApp = ({ userProfileData }) => {
             return true;
         });
 
-        // Zoradíme podľa order
         teamsInGroup.sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
             const ob = typeof b.order === 'number' ? b.order : Infinity;
@@ -688,6 +686,9 @@ const CrossTable = ({
     const baseCell = 'border border-black text-black align-middle text-center';
     const baseThCell = 'border border-black text-black align-middle text-center bg-white';
 
+    // Sivá farba pre podfarbenie
+    const TRANSFERRED_BG = '#d1d5db'; // sivá
+
     const getStats = (teamId) => {
         if (!sortedTeams) return null;
         return sortedTeams.find(t => t.id === teamId) || null;
@@ -697,6 +698,30 @@ const CrossTable = ({
         if (!sortedTeams) return '';
         const idx = sortedTeams.findIndex(t => t.id === teamId);
         return idx === -1 ? '' : idx + 1;
+    };
+
+    // Získanie posledného znaku z názvu tímu
+    const getLastChar = (team) => {
+        if (!team || !team.name) return '';
+        const trimmed = String(team.name).trim();
+        if (trimmed.length === 0) return '';
+        return trimmed.charAt(trimmed.length - 1).toUpperCase();
+    };
+
+    // Kontrola, či sa má bunka podfarbiť - iba pre nadstavbové skupiny
+    const shouldHighlightCell = (rowTeam, colTeam) => {
+        if (groupType !== 'nadstavbová skupina') return false;
+        if (!rowTeam || !colTeam) return false;
+        if (rowTeam.id === colTeam.id) return false;
+
+        const rowChar = getLastChar(rowTeam);
+        const colChar = getLastChar(colTeam);
+
+        if (!rowChar || !colChar) return false;
+        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(rowChar)) return false;
+        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(colChar)) return false;
+
+        return rowChar === colChar;
     };
 
     return React.createElement(
@@ -732,11 +757,11 @@ const CrossTable = ({
                                 React.createElement('span', { className: FONT_CLASS + ' text-black mt-1' }, groupName)
                             )
                         ),
-                        orderedTeams.map((team) =>
+                        orderedTeams.map((team, teamIdx) =>
                             React.createElement(
                                 'th',
                                 {
-                                    key: team.id,
+                                    key: `${team.id}_${teamIdx}`,
                                     colSpan: 3,
                                     className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
                                     style: cellStyle
@@ -763,7 +788,7 @@ const CrossTable = ({
                 React.createElement(
                     'tbody',
                     null,
-                    orderedTeams.map((rowTeam) => {
+                    orderedTeams.map((rowTeam, rowIdx) => {
                         const stats = getStats(rowTeam.id);
                         const position = getPosition(rowTeam.id);
 
@@ -773,7 +798,7 @@ const CrossTable = ({
                             React.createElement(
                                 'th',
                                 {
-                                    key: 'row-name-' + rowTeam.id,
+                                    key: 'row-name-' + rowTeam.id + '-' + rowIdx,
                                     className: baseThCell + ' px-3 py-2 ' + FONT_CLASS + ' text-left',
                                     style: cellStyle
                                 },
@@ -781,8 +806,8 @@ const CrossTable = ({
                             )
                         );
 
-                        orderedTeams.forEach((colTeam) => {
-                            const keyBase = `${rowTeam.id}-${colTeam.id}`;
+                        orderedTeams.forEach((colTeam, colIdx) => {
+                            const keyBase = `${rowTeam.id}-${colTeam.id}-${rowIdx}-${colIdx}`;
 
                             if (rowTeam.id === colTeam.id) {
                                 rowCells.push(
@@ -796,21 +821,47 @@ const CrossTable = ({
                                 return;
                             }
 
+                            // Zistíme, či sa má bunka podfarbiť
+                            const highlight = shouldHighlightCell(rowTeam, colTeam);
+
+                            // Pripravíme štýly pre podbunky
+                            const leftStyle = { ...subCellLeftStyle };
+                            const middleStyle = { ...subCellMiddleStyle };
+                            const rightStyle = { ...subCellRightStyle };
+
+                            if (highlight) {
+                                // Sivé podfarbenie
+                                leftStyle.backgroundColor = TRANSFERRED_BG;
+                                middleStyle.backgroundColor = TRANSFERRED_BG;
+                                rightStyle.backgroundColor = TRANSFERRED_BG;
+
+                                // Sivé vnútorné orámovania (medzi podbunkami)
+                                leftStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                middleStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                                middleStyle.borderRight = `1px solid ${TRANSFERRED_BG}`;
+                                rightStyle.borderLeft = `1px solid ${TRANSFERRED_BG}`;
+                            } else {
+                                // Biele pozadie
+                                leftStyle.backgroundColor = '#fff';
+                                middleStyle.backgroundColor = '#fff';
+                                rightStyle.backgroundColor = '#fff';
+                            }
+
                             rowCells.push(
                                 React.createElement('td', {
                                     key: `${keyBase}-s1`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: { ...subCellLeftStyle, color: '#000', backgroundColor: '#fff' }
+                                    style: { ...leftStyle, color: '#000' }
                                 }, ''),
                                 React.createElement('td', {
                                     key: `${keyBase}-s2`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: { ...subCellMiddleStyle, color: '#000', backgroundColor: '#fff' }
+                                    style: { ...middleStyle, color: '#000' }
                                 }, ':'),
                                 React.createElement('td', {
                                     key: `${keyBase}-s3`,
                                     className: baseCell + ' ' + FONT_CLASS,
-                                    style: { ...subCellRightStyle, color: '#000', backgroundColor: '#fff' }
+                                    style: { ...rightStyle, color: '#000' }
                                 }, '')
                             );
                         });
@@ -818,17 +869,17 @@ const CrossTable = ({
                         const showTotals = stats && stats.played > 0;
                         rowCells.push(
                             React.createElement('td', {
-                                key: 'total-scored',
+                                key: 'total-scored-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: { ...subCellLeftStyle, textAlign: 'right', paddingRight: '10px' }
                             }, showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
-                                key: 'total-colon',
+                                key: 'total-colon-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: subCellMiddleStyle
                             }, ':'), 
                             React.createElement('td', {
-                                key: 'total-conceded',
+                                key: 'total-conceded-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: { ...subCellRightStyle, textAlign: 'left', paddingLeft: '10px' }
                             }, showTotals ? stats.goalsAgainst : '')
@@ -836,7 +887,7 @@ const CrossTable = ({
 
                         rowCells.push(
                             React.createElement('td', {
-                                key: 'points',
+                                key: 'points-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: cellStyle
                             }, stats && stats.played > 0 ? stats.points : '')
@@ -844,7 +895,7 @@ const CrossTable = ({
 
                         rowCells.push(
                             React.createElement('td', {
-                                key: 'position',
+                                key: 'position-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
                                 style: cellStyle
                             }, stats && stats.played > 0 ? position : '')
@@ -852,7 +903,7 @@ const CrossTable = ({
 
                         return React.createElement(
                             'tr',
-                            { key: rowTeam.id },
+                            { key: rowTeam.id + '-' + rowIdx },
                             rowCells
                         );
                     })
