@@ -122,6 +122,35 @@ const normalizeName = (name) => {
         .trim();
 };
 
+// ============================================================
+// Skrytý iframe na stiahnutie PDF bez zobrazenia tabuľky
+// ============================================================
+const downloadPdfViaHiddenIframe = (hash) => {
+    // Vytvoríme skrytý iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.src = `logged-in-export.html?download=1#${hash}`;
+
+    // Po načítaní iframe sa PDF stiahne (iframe je skrytý)
+    iframe.onload = () => {
+        // Po 15 sekundách iframe odstránime (PDF by malo byť stiahnuté)
+        setTimeout(() => {
+            try {
+                document.body.removeChild(iframe);
+            } catch (e) { /* ignore */ }
+        }, 15000);
+    };
+
+    document.body.appendChild(iframe);
+    window.showGlobalNotification('Generujem PDF...', 'info');
+};
+
 // Mimo komponenty ExportApp – definujte pomocnú funkciu
 const exportTableToPdf = async (categoryName, groupName) => {
     const element = document.getElementById('pdf-export-target');
@@ -522,15 +551,9 @@ const ExportApp = ({ userProfileData }) => {
                     // Zaškrtnuté – otvorí novú kartu s náhľadom + PDF sa stiahne tam
                     window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                 } else {
-                    // Nezaškrtnuté – otvorí novú kartu bez downloadu (bez ?download=1)
-                    // PDF sa stiahne priamo v aktuálnej karte po vygenerovaní tabuľky
-                    // Ale keďže aktuálna karta je "selectbox" stránka (nemá hash),
-                    // musíme najprv prejsť na hash a potom spustiť download
-                    // Riešenie: nastavíme flag do sessionStorage a presmerujeme na hash v tej istej karte
-                    try {
-                        sessionStorage.setItem('pdfDownloadInPlace', '1');
-                    } catch (e) { /* ignore */ }
-                    window.location.href = `logged-in-export.html#${hash}`;
+                    // Nezaškrtnuté – PDF sa stiahne priamo v tejto karte BEZ zobrazenia tabuľky
+                    // Použijeme skrytý iframe, ktorý načíta stránku a stiahne PDF
+                    downloadPdfViaHiddenIframe(hash);
                 }
                 return;
             }
@@ -541,10 +564,7 @@ const ExportApp = ({ userProfileData }) => {
             if (showPreview) {
                 window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
             } else {
-                try {
-                    sessionStorage.setItem('pdfDownloadInPlace', '1');
-                } catch (e) { /* ignore */ }
-                window.location.href = `logged-in-export.html#${selectedOption}`;
+                downloadPdfViaHiddenIframe(selectedOption);
             }
         };
 
