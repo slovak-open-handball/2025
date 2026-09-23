@@ -851,23 +851,15 @@ const ExportApp = ({ userProfileData }) => {
         if (dataLoading) return;
         if (!exportedTable) return;
         if (!exportedTable.teams || exportedTable.teams.length === 0) return;
-    
+
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-    
+
         if (!shouldAutoDownload) return;
     
-        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
-        let alreadyDownloaded = false;
-        try {
-            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
-        } catch (e) { }
-    
-        if (alreadyDownloaded) return;
-    
-        try {
-            sessionStorage.setItem(hashKey, '1');
-        } catch (e) { }
+        // useRef – resetuje sa pri každom mounte iframe
+        if (autoDownloadTriggeredRef.current) return;
+        autoDownloadTriggeredRef.current = true;
     
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
     
