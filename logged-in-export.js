@@ -443,12 +443,7 @@ const ExportApp = ({ userProfileData }) => {
 
                 window.showGlobalNotification('Generujem PDF...', 'info');
 
-                try {
-                    if (!element) {
-                        window.showGlobalNotification('Element tabuľky sa nenašiel.', 'error');
-                        return;
-                    }
-                
+                try {                
                     // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
                     const rect = element.getBoundingClientRect();
                     const cssWidth = rect.width;
