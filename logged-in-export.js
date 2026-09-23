@@ -219,7 +219,6 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName, silent = fals
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}&instanceId=${encodeURIComponent(uniqueId)}#${hash}`;
 
     iframe.onload = () => {
-        console.log('[iframe] načítaný:', iframe.src);
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
@@ -267,11 +266,8 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     }
 };
 
-const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
-    console.log('[exportTableToPdf] ZAVOLANÉ:', { categoryName, groupName, fixedDpr });
-    
+const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {    
     const element = document.getElementById('pdf-export-target');
-    console.log('[exportTableToPdf] element pdf-export-target:', !!element);
     
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
@@ -384,10 +380,8 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
             }
         } catch (e) { }
     } catch (err) {
-        console.error('[PDF] ❌ Chyba pri PDF exporte:', label, err);
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
     
-        // PO NOVOM: pošli správu do parent okna aj pri chybe
         try {
             if (window.parent !== window) {
                 window.parent.postMessage({
@@ -491,7 +485,6 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
             }
         } catch (e) { }
     } catch (err) {
-        console.error('[PDF zápasy] ❌ Chyba pri PDF exporte:', err);
         window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
         markBatchCompleted();
     }
@@ -694,7 +687,6 @@ const ExportApp = ({ userProfileData }) => {
             setIsLoadingHalls(false);
             setHallsLoaded(true);
         }, (error) => {
-            console.error('[Export] Chyba pri načítaní hál:', error);
             setIsLoadingHalls(false);
         });
     
@@ -1390,7 +1382,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                     setLoading(false);
                 }
             } catch (e) {
-                console.error('[Export zápasy] Chyba pri hľadaní haly:', e);
                 setError('Nepodarilo sa nájsť športovú halu.');
                 setLoading(false);
             }
@@ -1462,7 +1453,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
             setMatches(hallMatches);
             setLoading(false);
         }, (err) => {
-            console.error('[Export zápasy] Chyba:', err);
             setError('Nepodarilo sa načítať zápasy.');
             setLoading(false);
         });
@@ -1656,14 +1646,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-
-        console.log('[MatchesExportView] auto-download useEffect:', {
-            shouldAutoDownload,
-            loading,
-            matchesByDayLength: matchesByDay.length,
-            hallNameFromUrl,
-            fixedDpr
-        });
     
         if (!shouldAutoDownload) return;
         if (loading) return;
