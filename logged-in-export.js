@@ -437,41 +437,6 @@ const ExportApp = ({ userProfileData }) => {
     const [superstructureLoaded, setSuperstructureLoaded] = useState(false);    
 
     // ============================================================
-    // AUTO-DOWNLOAD PDF PRE TABUĽKY
-    // ============================================================
-    useEffect(() => {
-        if (!exportHash || exportHash.type !== 'tabulky') return;
-        if (dataLoading) return;
-        if (!exportedTable) return;
-        if (!exportedTable.teams || exportedTable.teams.length === 0) return;
-    
-        const urlParams = new URLSearchParams(window.location.search);
-        const shouldAutoDownload = urlParams.get('download') === '1';
-    
-        if (!shouldAutoDownload) return;
-    
-        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
-        let alreadyDownloaded = false;
-        try {
-            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
-        } catch (e) { }
-    
-        if (alreadyDownloaded) return;
-    
-        try {
-            sessionStorage.setItem(hashKey, '1');
-        } catch (e) { }
-    
-        const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
-    
-        const timer = setTimeout(() => {
-            exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
-        }, 800);
-    
-        return () => clearTimeout(timer);
-    }, [exportHash, dataLoading, exportedTable]);
-
-    // ============================================================
     // Sledovanie dokončenia hromadného generovania PDF
     // ============================================================
     useEffect(() => {
@@ -786,6 +751,41 @@ const ExportApp = ({ userProfileData }) => {
         categoryCarryOverPoints,
         dataLoading
     ]);
+
+    // ============================================================
+    // AUTO-DOWNLOAD PDF PRE TABUĽKY
+    // ============================================================
+    useEffect(() => {
+        if (!exportHash || exportHash.type !== 'tabulky') return;
+        if (dataLoading) return;
+        if (!exportedTable) return;
+        if (!exportedTable.teams || exportedTable.teams.length === 0) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldAutoDownload = urlParams.get('download') === '1';
+
+        if (!shouldAutoDownload) return;
+
+        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
+        } catch (e) { }
+
+        if (alreadyDownloaded) return;
+
+        try {
+            sessionStorage.setItem(hashKey, '1');
+        } catch (e) { }
+
+        const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
+
+        const timer = setTimeout(() => {
+            exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [exportHash, dataLoading, exportedTable]);
 
     // ============================================================
     // Nastavenie titulku karty podľa kategórie a skupiny
