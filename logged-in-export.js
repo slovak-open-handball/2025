@@ -6,28 +6,6 @@ const { useState, useEffect } = React;
 
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
-window.__pdfBatchTracker = {
-    total: 0,
-    completed: 0,
-    reset: function(total) {
-        this.total = total;
-        this.completed = 0;
-    },
-    markCompleted: function() {
-        this.completed++;
-        // Ak sme dokončili všetky, zobrazíme zelenú správu
-        if (this.total > 0 && this.completed >= this.total) {
-            window.showGlobalNotification(
-                `Generovanie dokončené (${this.completed}/${this.total} PDF)`,
-                'success'
-            );
-            // Reset
-            this.total = 0;
-            this.completed = 0;
-        }
-    }
-};
-
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -230,11 +208,14 @@ const exportTableToPdf = async (categoryName, groupName) => {
         pdf.save(fileName);
 
         try {
+            // Zvýšime počítadlo dokončených PDF v sessionStorage
             const currentHash = window.location.hash || '';
-            if (currentHash) {
-                sessionStorage.setItem(`pdfAutoDownloaded_${currentHash}`, '1');
-            }
-            sessionStorage.setItem('pdfAutoDownloaded', '1');
+            let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+            completedCount++;
+            sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
+        
+            // Uložíme aj posledný label pre info
+            sessionStorage.setItem('pdfBatchLastLabel', label);
         } catch (e) { /* ignore */ }
 
         try {
@@ -282,6 +263,38 @@ const ExportApp = ({ userProfileData }) => {
     const [usersLoaded, setUsersLoaded] = useState(false);
     const [superstructureLoaded, setSuperstructureLoaded] = useState(false);    
 
+    // ============================================================
+    // Sledovanie dokončenia hromadného generovania PDF
+    // ============================================================
+    useEffect(() => {
+        const checkBatchCompletion = () => {
+            try {
+                const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+                if (!isActive) return;
+    
+                const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
+                const completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+    
+                if (total > 0 && completed >= total) {
+                    window.showGlobalNotification(
+                        `Generovanie dokončené (${completed}/${total} PDF)`,
+                        'success'
+                    );
+                    // Reset
+                    sessionStorage.removeItem('pdfBatchTotal');
+                    sessionStorage.removeItem('pdfBatchCompleted');
+                    sessionStorage.removeItem('pdfBatchActive');
+                    sessionStorage.removeItem('pdfBatchLastLabel');
+                }
+            } catch (e) { /* ignore */ }
+        };
+    
+        // Sledujeme každých 500 ms
+        const interval = setInterval(checkBatchCompletion, 500);
+    
+        return () => clearInterval(interval);
+    }, []);
+    
     // ============================================================
     // LISTENERY PRE FIRESTORE
     // ============================================================
@@ -612,9 +625,9 @@ const ExportApp = ({ userProfileData }) => {
                     }
                 } else {
                     try {
-                        if (window.__pdfBatchTracker) {
-                            window.__pdfBatchTracker.reset(groupsToProcess.length);
-                        }
+                        sessionStorage.setItem('pdfBatchTotal', String(groupsToProcess.length));
+                        sessionStorage.setItem('pdfBatchCompleted', '0');
+                        sessionStorage.setItem('pdfBatchActive', '1');
                     } catch (e) { /* ignore */ }
                     
                     // Hromadné generovanie pre všetky skupiny
