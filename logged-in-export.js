@@ -525,28 +525,36 @@ const ExportApp = ({ userProfileData }) => {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-    
+        console.log('[AUTO-DOWNLOAD] useEffect spustený', {
+            shouldAutoDownload,
+            hasExportedTable: !!exportedTable,
+            dataLoading,
+            alreadyDownloaded: hasAutoDownloadedRef.current
+        });
+
         if (!shouldAutoDownload) return;
         if (!exportedTable) return;
         if (dataLoading) return;
-    
-        // Ak už bolo auto-download spustené, preskočíme
         if (hasAutoDownloadedRef.current) return;
         hasAutoDownloadedRef.current = true;
-    
+
         let attempts = 0;
         const maxAttempts = 50;
         const interval = setInterval(() => {
             attempts++;
             const element = document.getElementById('pdf-export-target');
+            console.log('[AUTO-DOWNLOAD] pokus', attempts, 'element:', !!element);
+    
             if (element) {
                 clearInterval(interval);
+                console.log('[AUTO-DOWNLOAD] element nájdený, spúšťam PDF export');
                 setTimeout(() => {
                     exportTableToPdf(exportedTable.categoryName, exportedTable.groupName);
                 }, 500);
             } else if (attempts >= maxAttempts) {
                 clearInterval(interval);
-                hasAutoDownloadedRef.current = false; // reset pre ďalší pokus
+                hasAutoDownloadedRef.current = false;
+                console.error('[AUTO-DOWNLOAD] element sa nenašiel');
                 window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
             }
         }, 100);
