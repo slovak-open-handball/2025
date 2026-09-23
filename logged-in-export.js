@@ -12,7 +12,7 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 // ============================================================
 const PDF_IFRAME_WIDTH = 1920; 
 const PDF_IFRAME_HEIGHT = 1080;
-const PDF_ZOOM = 1.0; 
+const PDF_ZOOM = 1.75; 
 const PDF_DEVICE_PIXEL_RATIO = 2.0;
 
 window.showGlobalNotification = (message, type = 'success') => {
@@ -230,12 +230,20 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     iframe.style.border = '0';
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
-    // ŽIADNE opacity ani visibility: hidden!
 
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
     iframe.onload = () => {
+        // ===== APLIKUJ ZOOM V IFRAME =====
+        try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.documentElement.style.zoom = PDF_ZOOM;
+            console.log('[iframe zápasy] zoom aplikovaný:', PDF_ZOOM);
+        } catch (e) {
+            console.error('[iframe zápasy] Nepodarilo sa aplikovať zoom:', e);
+        }
+
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
