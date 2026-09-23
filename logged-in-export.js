@@ -1,5 +1,5 @@
 // logged-in-export.js
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
@@ -131,16 +131,23 @@ const ExportApp = ({ userProfileData }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [selectedGroupType, setSelectedGroupType] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
-    const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-    // Dáta z Firestore (rovnako ako v logged-in-teams-in-groups.js)
+    // Dáta z Firestore
+    const [userTeams, setUserTeams] = useState([]);
+    const [superstructureTeams, setSuperstructureTeams] = useState({});
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
-    const [dataLoading, setDataLoading] = useState(true);
+
+    // Flagy pre inicializáciu listenerov
+    const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+    const [groupsLoaded, setGroupsLoaded] = useState(false);
+    const [usersLoaded, setUsersLoaded] = useState(false);
+    const [superstructureLoaded, setSuperstructureLoaded] = useState(false);
 
     // ============================================================
-    // LISTENERY PRE FIREESTORE (rovnaké ako v logged-in-teams-in-groups.js)
+    // LISTENERY PRE FIRESTORE
     // ============================================================
     useEffect(() => {
         if (!window.db) return;
@@ -171,10 +178,12 @@ const ExportApp = ({ userProfileData }) => {
                 }
             });
             setUserTeams(userTeamsList);
+            setUsersLoaded(true);
         });
 
         const unsubscribeSuperstructure = onSnapshot(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')), (docSnap) => {
             setSuperstructureTeams(docSnap.exists() ? docSnap.data() : {});
+            setSuperstructureLoaded(true);
         });
 
         const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
@@ -188,6 +197,7 @@ const ExportApp = ({ userProfileData }) => {
                 });
             }
             setCategoryIdToNameMap(categoryIdToName);
+            setCategoriesLoaded(true);
         });
 
         const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
@@ -204,6 +214,7 @@ const ExportApp = ({ userProfileData }) => {
                 });
             }
             setAllGroupsByCategoryId(groupsByCategoryId);
+            setGroupsLoaded(true);
         });
 
         return () => {
@@ -214,11 +225,7 @@ const ExportApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // Pomocné stavy pre surové dáta
-    const [userTeams, setUserTeams] = useState([]);
-    const [superstructureTeams, setSuperstructureTeams] = useState({});
-
-    // Spojenie userTeams + superstructureTeams do allTeams (rovnako ako v logged-in-teams-in-groups.js)
+    // Spojenie userTeams + superstructureTeams do allTeams
     useEffect(() => {
         const globalTeamsList = Object.entries(superstructureTeams).flatMap(([categoryName, teamArray]) =>
             (teamArray || []).map(team => ({
@@ -232,8 +239,10 @@ const ExportApp = ({ userProfileData }) => {
             }))
         );
         setAllTeams([...userTeams, ...globalTeamsList]);
-        setDataLoading(false);
     }, [userTeams, superstructureTeams]);
+
+    // DataLoading = false, keď sú načítané VŠETKY potrebné kolekcie
+    const dataLoading = !(categoriesLoaded && groupsLoaded && usersLoaded && superstructureLoaded);
 
     // ============================================================
     // NAČÍTANIE PRE SELECTBOXY (len ak nie je hash)
@@ -242,7 +251,6 @@ const ExportApp = ({ userProfileData }) => {
         if (exportHash) return;
         if (selectedOption !== 'tabulky') return;
 
-        // Kategórie a skupiny už máme z listenerov
         const loadedCategories = Object.keys(categoryIdToNameMap).map(id => ({
             id: id,
             name: categoryIdToNameMap[id]
@@ -275,7 +283,6 @@ const ExportApp = ({ userProfileData }) => {
     // VYTVORENIE TABUĽKY PRE EXPORT
     // ============================================================
     const [exportedTable, setExportedTable] = useState(null);
-    const [loadingTable, setLoadingTable] = useState(false);
     const [errorTable, setErrorTable] = useState(null);
 
     useEffect(() => {
@@ -284,8 +291,8 @@ const ExportApp = ({ userProfileData }) => {
             return;
         }
 
+        // Počkať, kým sú načítané všetky potrebné dáta
         if (dataLoading) {
-            setLoadingTable(true);
             return;
         }
 
@@ -304,7 +311,6 @@ const ExportApp = ({ userProfileData }) => {
 
         if (!categoryId) {
             setErrorTable(`Kategória ${exportHash.categoryName} sa nenašla.`);
-            setLoadingTable(false);
             return;
         }
 
@@ -321,7 +327,6 @@ const ExportApp = ({ userProfileData }) => {
 
         if (!foundGroup) {
             setErrorTable(`Skupina ${exportHash.groupName} sa v kategórii ${categoryName} nenašla.`);
-            setLoadingTable(false);
             return;
         }
 
@@ -329,13 +334,9 @@ const ExportApp = ({ userProfileData }) => {
         const groupType = foundGroup.type;
 
         // 3. Vyfiltrujeme tímy pre našu kategóriu a skupinu
-        // POZOR: Toto je kľúčová časť - používame allTeams, ktoré obsahujú userTeams + superstructureTeams
         const teamsInGroup = allTeams.filter(t => {
-            // Kategória musí sedieť
             if (normalizeName(t.category) !== normalizeName(categoryName)) return false;
-            // Musí mať skupinu
             if (!t.groupName) return false;
-            // Skupina musí sedieť
             if (normalizeName(t.groupName) !== normalizeName(groupName)) return false;
             return true;
         });
@@ -347,10 +348,9 @@ const ExportApp = ({ userProfileData }) => {
             return oa - ob;
         });
 
-        // 4. Pripravíme si tímy pre tabuľku (s čistými názvami)
+        // 4. Pripravíme si tímy pre tabuľku
         const teamsForTable = teamsInGroup.map(t => {
             let displayName = t.teamName;
-            // Pre superstructure tímy odstránime prefix kategórie
             if (t.isSuperstructureTeam && t.category && displayName.startsWith(t.category + ' ')) {
                 displayName = displayName.substring(t.category.length + 1).trim();
             }
@@ -372,7 +372,7 @@ const ExportApp = ({ userProfileData }) => {
             matrix: {},
             teamNamesFromMatches: {}
         });
-        setLoadingTable(false);
+        setErrorTable(null);
     }, [
         exportHash && exportHash.type,
         exportHash && exportHash.categoryName,
@@ -432,19 +432,19 @@ const ExportApp = ({ userProfileData }) => {
             'div',
             { className: 'w-full p-0 m-0' },
 
-            (loadingTable || dataLoading) && React.createElement(
+            dataLoading && React.createElement(
                 'div',
                 { className: 'flex justify-center items-center py-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
             ),
 
-            errorTable && React.createElement(
+            !dataLoading && errorTable && React.createElement(
                 'div',
                 { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
                 React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
             ),
 
-            !loadingTable && !dataLoading && !errorTable && exportedTable && (
+            !dataLoading && !errorTable && exportedTable && (
                 (exportedTable.teams && exportedTable.teams.length > 0)
                     ? React.createElement(CrossTable, {
                         teams: exportedTable.teams,
