@@ -1448,7 +1448,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                 null,
                                 React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
                                 React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
-                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Skóre'),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-8' }, ''),
+                                React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12' }, 'Skóre'),
                                 React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
                                 React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
                             )
@@ -1465,7 +1467,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                         React.createElement(
                                             'td',
-                                            { colSpan: 5, className: 'px-4 py-4 text-left' },
+                                            { colSpan: 7, className: 'px-4 py-4 text-left' },
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
@@ -1560,10 +1562,25 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                 React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                             ),
 
+                                            // Skóre domáci
                                             React.createElement(
                                                 'td',
                                                 { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                                React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
+                                                React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
+                                            ),
+
+                                            // Dvojbodka
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, ':')
+                                            ),
+                                            
+                                            // Skóre hostia
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                                React.createElement('span', { className: 'font-bold text-gray-800 text-sm' }, '')
                                             ),
 
                                             React.createElement(
@@ -1571,12 +1588,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                 { className: 'px-4 py-3 whitespace-nowrap text-left' },
                                                 React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                             ),
-
-                                            React.createElement(
-                                                'td',
-                                                { className: 'px-4 py-3' },
-                                                React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
-                                            )
                                         )
                                     );
                                 });
