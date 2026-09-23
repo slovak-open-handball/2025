@@ -464,6 +464,14 @@ const ExportApp = ({ userProfileData }) => {
     const [usersLoaded, setUsersLoaded] = useState(false);
     const [superstructureLoaded, setSuperstructureLoaded] = useState(false);    
 
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fz = parseFloat(urlParams.get('fixedZoom')) || 1.0;
+        if (fz === 1.0) return;
+        document.documentElement.style.zoom = fz;
+        console.log('[ExportApp] zoom aplikovaný:', fz);
+    }, []);
+
     // ============================================================
     // Sledovanie dokončenia hromadného generovania PDF
     // ============================================================
@@ -1322,6 +1330,13 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     const urlParams = new URLSearchParams(window.location.search);
     const fixedZoom = parseFloat(urlParams.get('fixedZoom')) || 1.0;
     const fixedDpr = parseFloat(urlParams.get('fixedDpr')) || 1.5;
+
+    useEffect(() => {
+        if (!fixedZoom || fixedZoom === 1.0) return;
+        // Aplikuj zoom na <html> element
+        document.documentElement.style.zoom = fixedZoom;
+        console.log('[MatchesExportView] zoom aplikovaný:', fixedZoom);
+    }, [fixedZoom]);
 
     // Načítanie haly podľa názvu z URL
     useEffect(() => {
