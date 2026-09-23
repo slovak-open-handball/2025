@@ -1018,7 +1018,6 @@ const ExportApp = ({ userProfileData }) => {
                 return;
             }
         
-            // Ak je vybraná konkrétna hala → generovanie PDF pre jednu halu
             const selectedHall = halls.find(h => h.id === selectedHallId);
             const hallName = selectedHall ? selectedHall.name : selectedHallId;
         
@@ -1035,11 +1034,8 @@ const ExportApp = ({ userProfileData }) => {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
         
-            if (showPreview) {
-                window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
-            } else {
-                downloadMatchesPdfViaHiddenIframe(hash, hallName);
-            }
+            // VŽDY otvor novú kartu (bez ohľadu na showPreview)
+            window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             return;
         }
 
@@ -1273,11 +1269,7 @@ const ExportApp = ({ userProfileData }) => {
                 ),
 
                 // Náhľad checkbox – zobrazí sa pri vybranej skupine (tabulky)
-                // alebo pri vybranej športovej hale (zapasy)
-                selectedOption && (
-                    (selectedOption === 'tabulky' && selectedGroupName) ||
-                    (selectedOption === 'zapasy' && selectedHallId)
-                ) && React.createElement(
+                selectedOption === 'tabulky' && selectedGroupName && React.createElement(
                     'div',
                     { className: 'flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200' },
                     React.createElement('input', {
