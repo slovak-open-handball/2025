@@ -1735,7 +1735,8 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                     display: 'inline-block',
                     width: '100%',
                     padding: '20px',
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    zoom: 1.75
                 }
             },
 
