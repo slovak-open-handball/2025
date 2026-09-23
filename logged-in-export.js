@@ -163,8 +163,11 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
+    
+    // DÔLEŽITÉ: reálne rozmery pre správne vykreslenie obsahu
+    iframe.style.width = window.innerWidth + 'px';
+    iframe.style.height = window.innerHeight + 'px';
+    
     iframe.style.border = '0';
     iframe.style.visibility = 'hidden';
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
@@ -180,7 +183,6 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
 
     document.body.appendChild(iframe);
 
-    // NOVÉ: Notifikácia obsahuje konkrétnu kategóriu a skupinu
     const label = groupName
         ? `${categoryName} - ${groupName}`
         : categoryName || 'neznáma kategória';
@@ -192,8 +194,12 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     iframe.style.position = 'fixed';
     iframe.style.top = '-10000px';
     iframe.style.left = '-10000px';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
+    
+    // DÔLEŽITÉ: nastav reálne rozmery, aby sa obsah v iframe vykreslil
+    // rovnako ako v hlavnom okne (inak html2canvas vidí len 1×1 px)
+    iframe.style.width = window.innerWidth + 'px';
+    iframe.style.height = window.innerHeight + 'px';
+    
     iframe.style.border = '0';
     iframe.style.visibility = 'hidden';
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
