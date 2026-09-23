@@ -443,7 +443,12 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Generujem PDF...', 'info');
 
                 try {
-                    const element = tableRef.current;
+                    const element = document.getElementById('pdf-export-target');
+
+                    if (!element) {
+                        window.showGlobalNotification('Element tabuľky sa nenašiel.', 'error');
+                        return;
+                    }
                 
                     // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
                     const rect = element.getBoundingClientRect();
@@ -566,7 +571,7 @@ const ExportApp = ({ userProfileData }) => {
                     ? React.createElement(
                         'div',
                         { 
-                            ref: tableRef, 
+                            id: 'pdf-export-target', 
                             className: 'pdf-export-wrapper',
                             style: { 
                                 display: 'inline-block',
