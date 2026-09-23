@@ -170,16 +170,18 @@ const normalizeName = (name) => {
 const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     const iframe = document.createElement('iframe');
 
+    // Iframe musí byť renderovaný, ale mimo viditeľnej časti obrazovky.
+    // NESMIE mať opacity: 0 ani visibility: hidden, inak html2canvas
+    // v iframe vráti prázdny výsledok.
     iframe.style.position = 'fixed';
-    iframe.style.top = '-10000px';
-    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.left = '-9999px';          // mimo obrazovky vľavo
     iframe.style.width = PDF_IFRAME_WIDTH + 'px';
     iframe.style.height = PDF_IFRAME_HEIGHT + 'px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'visible';
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
-    iframe.style.opacity = '0';
+    // ŽIADNE opacity ani visibility: hidden!
 
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
@@ -204,15 +206,14 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     const iframe = document.createElement('iframe');
 
     iframe.style.position = 'fixed';
-    iframe.style.top = '-10000px';
-    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.left = '-9999px';
     iframe.style.width = PDF_IFRAME_WIDTH + 'px';
     iframe.style.height = PDF_IFRAME_HEIGHT + 'px';
     iframe.style.border = '0';
-    iframe.style.visibility = 'visible';
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
-    iframe.style.opacity = '0';
+    // ŽIADNE opacity ani visibility: hidden!
 
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
