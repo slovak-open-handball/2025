@@ -305,7 +305,7 @@ const ExportApp = ({ userProfileData }) => {
                     });
     
                     window.showGlobalNotification(
-                        `Generovanie dokončené (${completed}/${total} PDF)`,
+                        `Generovanie dokončené`,
                         'success'
                     );
     
@@ -961,7 +961,7 @@ const ExportApp = ({ userProfileData }) => {
                 selectedOption === 'tabulky' && selectedCategoryId && selectedGroupType && !selectedGroupName && React.createElement(
                     'div',
                     { className: 'p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700' },
-                    React.createElement('span', { className: 'font-semibold' }, 'ℹ️ Hromadné generovanie:'),
+                    React.createElement('span', { className: 'font-semibold' }, 'Hromadné generovanie:'),
                     ' ',
                     `Vygenerujú sa PDF pre všetky skupiny typu "${formatGroupType(selectedGroupType)}" v kategórii.`
                 ),
