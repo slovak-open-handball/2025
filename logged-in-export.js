@@ -124,6 +124,8 @@ const normalizeName = (name) => {
 
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
+    // NOVÉ: ref na tabuľku pre PDF export
+    const tableRef = React.useRef(null);
 
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
@@ -139,7 +141,6 @@ const ExportApp = ({ userProfileData }) => {
     const [allTeams, setAllTeams] = useState([]);
     const [categoryIdToNameMap, setCategoryIdToNameMap] = useState({});
     const [allGroupsByCategoryId, setAllGroupsByCategoryId] = useState({});
-    // NOVÉ: Mapa carryOverPoints pre kategórie
     const [categoryCarryOverPoints, setCategoryCarryOverPoints] = useState({});
 
     // Flagy pre inicializáciu listenerov
@@ -196,7 +197,6 @@ const ExportApp = ({ userProfileData }) => {
                 Object.entries(categoryData).forEach(([categoryId, categoryObject]) => {
                     if (categoryObject && categoryObject.name) {
                         categoryIdToName[categoryId] = categoryObject.name;
-                        // NOVÉ: Načítame carryOverPoints pre každú kategóriu
                         carryOverMap[categoryId] = categoryObject.carryOverPoints === true;
                     }
                 });
@@ -337,7 +337,6 @@ const ExportApp = ({ userProfileData }) => {
 
         const groupName = foundGroup.name;
         const groupType = foundGroup.type;
-        // NOVÉ: Zistíme, či je pre kategóriu zapnuté prenášanie vzájomných zápasov
         const carryOverEnabled = categoryCarryOverPoints[categoryId] === true;
 
         // 3. Vyfiltrujeme tímy pre našu kategóriu a skupinu
@@ -377,7 +376,6 @@ const ExportApp = ({ userProfileData }) => {
             sortedTeams: teamsForTable,
             matrix: {},
             teamNamesFromMatches: {},
-            // NOVÉ: Preposlanie carryOverEnabled do CrossTable
             carryOverEnabled
         });
         setErrorTable(null);
@@ -393,10 +391,9 @@ const ExportApp = ({ userProfileData }) => {
     ]);
 
     // ============================================================
-    // NOVÉ: Nastavenie titulku karty podľa kategórie a skupiny
+    // Nastavenie titulku karty podľa kategórie a skupiny
     // ============================================================
     useEffect(() => {
-        // Ak je v URL hash a tabuľka je načítaná, nastavíme titulok
         if (exportHash && exportHash.type === 'tabulky' && exportedTable) {
             const { categoryName, groupName } = exportedTable;
             if (categoryName && groupName) {
@@ -407,10 +404,91 @@ const ExportApp = ({ userProfileData }) => {
         } else if (exportHash && exportHash.type === 'zapasy') {
             document.title = 'SOH 2025 | Zápasy v športovej hale';
         } else {
-            // Ak nie je hash (alebo iný typ), vrátime predvolený titulok
             document.title = 'SOH 2025 - Export';
         }
     }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, exportedTable]);
+
+    // ============================================================
+    // PDF EXPORT cez klávesovú skratku Ctrl+S – vlastná veľkosť stránky
+    // ============================================================
+    useEffect(() => {
+        if (!exportHash || exportHash.type !== 'tabulky') return;
+
+        const handleKeyDown = async (e) => {
+            // Ctrl+S alebo Cmd+S (Mac)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (!tableRef.current) {
+                    window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
+                    return;
+                }
+
+                // Podpora pre html2canvas + jspdf.umd.js
+                const html2canvasFn = window.html2canvas;
+                const jsPDFClass = window.jspdf?.jsPDF;
+
+                if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+                    window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+                    return;
+                }
+
+                const categoryName = exportedTable?.categoryName || 'kategoria';
+                const groupName = exportedTable?.groupName || 'skupina';
+                const safeCategory = categoryName.replace(/\s+/g, '-');
+                const safeGroup = groupName.replace(/\s+/g, '-');
+                const fileName = `${safeCategory}_${safeGroup}.pdf`;
+
+                window.showGlobalNotification('Generujem PDF...', 'info');
+
+                try {
+                    const element = tableRef.current;
+
+                    // 1. Vyrenderujeme tabuľku do canvasu
+                    const canvas = await html2canvasFn(element, {
+                        scale: 2,               // vyššia kvalita
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+
+                    // 2. Rozmery canvasu v pixeloch
+                    const imgWidthPx = canvas.width;
+                    const imgHeightPx = canvas.height;
+
+                    // 3. Prevod px → mm (96 DPI = 0.264583 mm/px), deleno 2 kvôli scale=2
+                    const pxToMm = 0.264583;
+                    const pdfWidthMm = (imgWidthPx * pxToMm) / 2;
+                    const pdfHeightMm = (imgHeightPx * pxToMm) / 2;
+
+                    // 4. Vytvoríme PDF s VLASTNOU veľkosťou (nie A4)
+                    const pdf = new jsPDFClass({
+                        orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+                        unit: 'mm',
+                        format: [pdfWidthMm, pdfHeightMm]
+                    });
+
+                    // 5. Vložíme obrázok na celú stránku
+                    const imgData = canvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+                    // 6. Uložíme
+                    pdf.save(fileName);
+
+                    window.showGlobalNotification('PDF bolo uložené.', 'success');
+                } catch (err) {
+                    console.error('Chyba pri PDF exporte:', err);
+                    window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [exportHash && exportHash.type, exportedTable]);
 
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
@@ -475,16 +553,20 @@ const ExportApp = ({ userProfileData }) => {
 
             !dataLoading && !errorTable && exportedTable && (
                 (exportedTable.teams && exportedTable.teams.length > 0)
-                    ? React.createElement(CrossTable, {
-                        teams: exportedTable.teams,
-                        sortedTeams: exportedTable.sortedTeams,
-                        matrix: exportedTable.matrix,
-                        categoryName: exportedTable.categoryName,
-                        groupName: exportedTable.groupName,
-                        groupType: exportedTable.groupType,
-                        teamNamesFromMatches: exportedTable.teamNamesFromMatches,
-                        carryOverEnabled: exportedTable.carryOverEnabled
-                    })
+                    ? React.createElement(
+                        'div',
+                        { ref: tableRef, className: 'pdf-export-wrapper' },
+                        React.createElement(CrossTable, {
+                            teams: exportedTable.teams,
+                            sortedTeams: exportedTable.sortedTeams,
+                            matrix: exportedTable.matrix,
+                            categoryName: exportedTable.categoryName,
+                            groupName: exportedTable.groupName,
+                            groupType: exportedTable.groupType,
+                            teamNamesFromMatches: exportedTable.teamNamesFromMatches,
+                            carryOverEnabled: exportedTable.carryOverEnabled
+                        })
+                    )
                     : React.createElement(
                         'div',
                         { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
@@ -722,7 +804,7 @@ const CrossTable = ({
     // Sivá farba pre podfarbenie
     const TRANSFERRED_BG = '#d1d5db';
 
-    // NOVÉ: Hrubšie orámovanie
+    // Hrubšie orámovanie
     const THICK_BORDER = '3px solid #000000';
 
     const getStats = (teamId) => {
@@ -753,7 +835,7 @@ const CrossTable = ({
         const colChar = getLastChar(colTeam);
 
         if (!rowChar || !colChar) return false;
-        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚÚŮÝŽ]/.test(rowChar)) return false;
+        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(rowChar)) return false;
         if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(colChar)) return false;
 
         return rowChar === colChar;
@@ -774,7 +856,6 @@ const CrossTable = ({
                         margin: 0, 
                         padding: 0, 
                         borderSpacing: 0,
-                        // NOVÉ: Hrubšie vonkajšie orámovanie celej tabuľky
                         border: THICK_BORDER
                     }
                 },
@@ -811,7 +892,6 @@ const CrossTable = ({
                                 team.name
                             )
                         ),
-                        // NOVÉ: "Skóre" hlavička s hrubším borderLeft (medzi posledným tímom a Skóre)
                         React.createElement('th', {
                             colSpan: 3,
                             className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
@@ -905,7 +985,6 @@ const CrossTable = ({
                         });
 
                         const showTotals = stats && stats.played > 0;
-                        // NOVÉ: Hrubší borderLeft na prvom "Skóre" stĺpci v tele tabuľky
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored-' + rowIdx,
