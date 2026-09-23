@@ -124,8 +124,6 @@ const normalizeName = (name) => {
 
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
-    // NOVÉ: ref na tabuľku pre PDF export
-    const tableRef = React.useRef(null);
 
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
