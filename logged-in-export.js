@@ -259,7 +259,6 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
     try {
         const rect = element.getBoundingClientRect();
-        const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
 
         const cssWidth = rect.width;
         const cssHeight = rect.height;
@@ -767,14 +766,23 @@ const ExportApp = ({ userProfileData }) => {
     // AUTO-DOWNLOAD PDF PRE TABUĽKY
     // ============================================================
     useEffect(() => {
+        console.log('[tabulky auto-download] useEffect spustený:', {
+            exportHashType: exportHash?.type,
+            dataLoading,
+            hasExportedTable: !!exportedTable,
+            teamsCount: exportedTable?.teams?.length,
+        });
+    
         if (!exportHash || exportHash.type !== 'tabulky') return;
         if (dataLoading) return;
         if (!exportedTable) return;
         if (!exportedTable.teams || exportedTable.teams.length === 0) return;
-
+    
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-
+        
+        console.log('[tabulky auto-download] shouldAutoDownload:', shouldAutoDownload);
+    
         if (!shouldAutoDownload) return;
 
         const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
