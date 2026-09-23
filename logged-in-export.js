@@ -174,6 +174,7 @@ const exportTableToPdf = async (categoryName, groupName) => {
         ? `${categoryName} - ${groupName}`
         : categoryName || 'neznáma kategória';
 
+    console.log('[PDF] ▶ Začínam generovať:', label);
     window.showGlobalNotification(`Generujem PDF pre: ${label}...`, 'info');
 
     try {
@@ -207,15 +208,24 @@ const exportTableToPdf = async (categoryName, groupName) => {
 
         pdf.save(fileName);
 
+        // ===== POČÍTADLÁ =====
         try {
-            // Zvýšime počítadlo dokončených PDF v sessionStorage
             const currentHash = window.location.hash || '';
             let completedCount = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
             completedCount++;
             sessionStorage.setItem('pdfBatchCompleted', String(completedCount));
-        
-            // Uložíme aj posledný label pre info
             sessionStorage.setItem('pdfBatchLastLabel', label);
+
+            const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
+            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
+
+            console.log('[PDF] ✅ Dokončené:', {
+                label,
+                hash: currentHash,
+                completed: completedCount,
+                total,
+                isActive
+            });
         } catch (e) { /* ignore */ }
 
         try {
@@ -231,7 +241,7 @@ const exportTableToPdf = async (categoryName, groupName) => {
             }
         } catch (e) { /* ignore */ }
     } catch (err) {
-        console.error('Chyba pri PDF exporte:', err);
+        console.error('[PDF] ❌ Chyba pri PDF exporte:', label, err);
         window.showGlobalNotification(`Nepodarilo sa vytvoriť PDF pre: ${label}`, 'error');
     }
 };
@@ -270,21 +280,45 @@ const ExportApp = ({ userProfileData }) => {
         const checkBatchCompletion = () => {
             try {
                 const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
-                if (!isActive) return;
-    
+                
+                // Logy vždy, keď je batch aktívny
                 const total = parseInt(sessionStorage.getItem('pdfBatchTotal') || '0', 10);
                 const completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
+                const lastLabel = sessionStorage.getItem('pdfBatchLastLabel') || '-';
+    
+                if (isActive) {
+                    console.log('[BATCH] stav:', {
+                        isActive,
+                        total,
+                        completed,
+                        lastLabel,
+                        chyba: total - completed
+                    });
+                }
+    
+                if (!isActive) return;
     
                 if (total > 0 && completed >= total) {
+                    console.log('[BATCH] ✅ Dokončené! Zobrazujem zelenú správu.', {
+                        total,
+                        completed
+                    });
+    
                     window.showGlobalNotification(
                         `Generovanie dokončené (${completed}/${total} PDF)`,
                         'success'
                     );
-                    // Reset
-                    sessionStorage.removeItem('pdfBatchTotal');
-                    sessionStorage.removeItem('pdfBatchCompleted');
-                    sessionStorage.removeItem('pdfBatchActive');
-                    sessionStorage.removeItem('pdfBatchLastLabel');
+    
+                    // Reset až po krátkej pauze, aby polling nezachytil medzistav
+                    setTimeout(() => {
+                        try {
+                            sessionStorage.removeItem('pdfBatchTotal');
+                            sessionStorage.removeItem('pdfBatchCompleted');
+                            sessionStorage.removeItem('pdfBatchActive');
+                            sessionStorage.removeItem('pdfBatchLastLabel');
+                            console.log('[BATCH] 🧹 Resetované flagy.');
+                        } catch (e) { /* ignore */ }
+                    }, 2000);
                 }
             } catch (e) { /* ignore */ }
         };
@@ -577,110 +611,114 @@ const ExportApp = ({ userProfileData }) => {
         !selectedOption ||
         (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType));
 
-        const handleGenerate = () => {
-            if (!selectedOption) {
-                window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
+    const handleGenerate = () => {
+        if (!selectedOption) {
+            window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
+            return;
+        }
+        if (selectedOption === 'tabulky') {
+            if (!selectedCategoryId || !selectedGroupType) {
+                window.showGlobalNotification('Prosím, vyberte kategóriu a typ skupiny.', 'error');
                 return;
             }
-            if (selectedOption === 'tabulky') {
-                if (!selectedCategoryId || !selectedGroupType) {
-                    window.showGlobalNotification('Prosím, vyberte kategóriu a typ skupiny.', 'error');
-                    return;
-                }
-        
-                try {
-                    sessionStorage.removeItem('pdfAutoDownloaded');
-                } catch (e) { /* ignore */ }
-        
-                const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-                const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
-                const categoryNameSafe = spacesToDashes(categoryName);
-        
-                // Zistíme, ktoré skupiny spracovať
-                let groupsToProcess = [];
-        
-                if (selectedGroupName) {
-                    groupsToProcess = [selectedGroupName];
-                } else {
-                    groupsToProcess = (groups[selectedCategoryId] || [])
-                        .filter(g => g.type === selectedGroupType)
-                        .map(g => g.name);
-                }
-        
-                if (groupsToProcess.length === 0) {
-                    window.showGlobalNotification('Nenašli sa žiadne skupiny pre vybraný typ.', 'error');
-                    return;
-                }
-        
-                // Ak je vybraná konkrétna skupina, rešpektujeme checkbox showPreview
-                if (selectedGroupName) {
-                    const groupNameSafe = spacesToDashes(selectedGroupName);
-                    const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-                
-                    // NOVÉ: Odstrániť aj hash-špecifický kľúč
-                    try {
-                        sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
-                        sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
-                        sessionStorage.removeItem('pdfAutoDownloaded');
-                    } catch (e) { /* ignore */ }
-                
-                    if (showPreview) {
-                        window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
-                    } else {
-                        downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
-                    }
-                } else {
-                    try {
-                        sessionStorage.setItem('pdfBatchTotal', String(groupsToProcess.length));
-                        sessionStorage.setItem('pdfBatchCompleted', '0');
-                        sessionStorage.setItem('pdfBatchActive', '1');
-                    } catch (e) { /* ignore */ }
-                    
-                    // Hromadné generovanie pre všetky skupiny
-                    groupsToProcess.forEach((groupName, index) => {
-                        const groupNameSafe = spacesToDashes(groupName);
-                        const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-        
-                        try {
-                            sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
-                            sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
-                            sessionStorage.removeItem(`pdfAutoDownloaded`);
-                        } catch (e) { /* ignore */ }
-        
-                        // NOVÉ: Odovzdáme categoryName a groupName
-                        setTimeout(() => {
-                            downloadPdfViaHiddenIframe(hash, categoryName, groupName);
-                        }, index * 3000);
-                    });
-        
-                    window.showGlobalNotification(
-                        `Generujem PDF pre ${groupsToProcess.length} skupín v kategórii "${categoryName}" typu "${formatGroupType(selectedGroupType)}". Prosím čakajte...`,
-                        'info'
-                    );
-                }
-                return;
-            }
-        
-            // Pre zápasy
+    
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { /* ignore */ }
-            if (showPreview) {
-                window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+    
+            const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+            const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
+            const categoryNameSafe = spacesToDashes(categoryName);
+    
+            let groupsToProcess = [];
+    
+            if (selectedGroupName) {
+                groupsToProcess = [selectedGroupName];
             } else {
-                downloadPdfViaHiddenIframe(selectedOption, 'Zápasy', null);
+                groupsToProcess = (groups[selectedCategoryId] || [])
+                    .filter(g => g.type === selectedGroupType)
+                    .map(g => g.name);
             }
-        };
-
-    const handleExportPdf = () => {
-        exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
+    
+            if (groupsToProcess.length === 0) {
+                window.showGlobalNotification('Nenašli sa žiadne skupiny pre vybraný typ.', 'error');
+                return;
+            }
+    
+            if (selectedGroupName) {
+                const groupNameSafe = spacesToDashes(selectedGroupName);
+                const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
+    
+                try {
+                    sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
+                    sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
+                    sessionStorage.removeItem('pdfAutoDownloaded');
+                } catch (e) { /* ignore */ }
+    
+                console.log('[GENERATE] Jedna skupina:', { categoryName, selectedGroupName, hash });
+    
+                if (showPreview) {
+                    window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                } else {
+                    downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
+                }
+            } else {
+                try {
+                    sessionStorage.setItem('pdfBatchTotal', String(groupsToProcess.length));
+                    sessionStorage.setItem('pdfBatchCompleted', '0');
+                    sessionStorage.setItem('pdfBatchActive', '1');
+                } catch (e) { /* ignore */ }
+    
+                console.log('[GENERATE] ▶ Štart hromadného generovania:', {
+                    categoryName,
+                    groupType: selectedGroupType,
+                    pocetSkupin: groupsToProcess.length,
+                    skupiny: groupsToProcess
+                });
+    
+                groupsToProcess.forEach((groupName, index) => {
+                    const groupNameSafe = spacesToDashes(groupName);
+                    const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
+    
+                    try {
+                        sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
+                        sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
+                        sessionStorage.removeItem('pdfAutoDownloaded');
+                    } catch (e) { /* ignore */ }
+    
+                    setTimeout(() => {
+                        console.log(`[GENERATE] ▶ Iframe ${index + 1}/${groupsToProcess.length}:`, groupName);
+                        downloadPdfViaHiddenIframe(hash, categoryName, groupName);
+                    }, index * 3000);
+                });
+    
+                window.showGlobalNotification(
+                    `Generujem PDF pre ${groupsToProcess.length} skupín v kategórii "${categoryName}" typu "${formatGroupType(selectedGroupType)}". Prosím čakajte...`,
+                    'info'
+                );
+            }
+            return;
+        }
+    
+        try {
+            sessionStorage.removeItem('pdfAutoDownloaded');
+        } catch (e) { /* ignore */ }
+        if (showPreview) {
+            window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+        } else {
+            downloadPdfViaHiddenIframe(selectedOption, 'Zápasy', null);
+        }
     };
     
-    // Uchovávame si referenciu na aktuálne dáta
-    const exportedTableRef = React.useRef(null);
-    const dataLoadingRef = React.useRef(true);
-    
-    // Aktualizujeme ref pri každej zmene
+        const handleExportPdf = () => {
+            exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
+        };
+        
+        // Uchovávame si referenciu na aktuálne dáta
+        const exportedTableRef = React.useRef(null);
+        const dataLoadingRef = React.useRef(true);
+        
+        // Aktualizujeme ref pri každej zmene
     useEffect(() => {
         exportedTableRef.current = exportedTable;
     }, [exportedTable]);
