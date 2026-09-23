@@ -522,44 +522,48 @@ const ExportApp = ({ userProfileData }) => {
         exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
     };
     
+    // ============================================================
+    // AUTO-DOWNLOAD po otvorení novej karty s ?download=1
+    // ============================================================
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-        console.log('[AUTO-DOWNLOAD] useEffect spustený', {
-            shouldAutoDownload,
-            hasExportedTable: !!exportedTable,
-            dataLoading,
-            alreadyDownloaded: hasAutoDownloadedRef.current
-        });
-
+    
         if (!shouldAutoDownload) return;
         if (!exportedTable) return;
         if (dataLoading) return;
         if (hasAutoDownloadedRef.current) return;
+    
         hasAutoDownloadedRef.current = true;
-
-        let attempts = 0;
-        const maxAttempts = 50;
-        const interval = setInterval(() => {
-            attempts++;
+    
+        // Spustíme download až po dokončení renderu tabuľky
+        // Použijeme requestAnimationFrame + setTimeout, aby sme mali istotu,
+        // že DOM element 'pdf-export-target' už existuje
+        const tryDownload = (attempt = 0) => {
             const element = document.getElementById('pdf-export-target');
-            console.log('[AUTO-DOWNLOAD] pokus', attempts, 'element:', !!element);
+            console.log('[AUTO-DOWNLOAD] pokus', attempt, 'element:', !!element);
     
             if (element) {
-                clearInterval(interval);
+                // Element existuje, spustíme download
                 console.log('[AUTO-DOWNLOAD] element nájdený, spúšťam PDF export');
                 setTimeout(() => {
                     exportTableToPdf(exportedTable.categoryName, exportedTable.groupName);
                 }, 500);
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
+            } else if (attempt < 50) {
+                // Skúsime znova o 100ms
+                setTimeout(() => tryDownload(attempt + 1), 100);
+            } else {
                 hasAutoDownloadedRef.current = false;
                 console.error('[AUTO-DOWNLOAD] element sa nenašiel');
                 window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
             }
-        }, 100);
+        };
     
-        return () => clearInterval(interval);
+        // Prvý pokus spustíme až po dokončení aktuálneho renderu
+        setTimeout(() => tryDownload(0), 0);
+    
+        // POZOR: Žiadny cleanup – download beží nezávisle od useEffect
+        // Nechceme, aby sa zrušil pri re-renderi
     }, [exportedTable, dataLoading]);
 
     if (exportHash && exportHash.type === 'tabulky') {
