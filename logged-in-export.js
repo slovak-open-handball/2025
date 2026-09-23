@@ -259,11 +259,16 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 
     try {
         const rect = element.getBoundingClientRect();
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
+        const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
+
+        // Miesto pôvodných rozmerov použi zväčšené:
+        const cssWidth = rect.width * PDF_ZOOM;
+        const cssHeight = rect.height * PDF_ZOOM;
 
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
+            width: cssWidth,
+            height: cssHeight,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
@@ -359,11 +364,16 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
     try {
         const rect = element.getBoundingClientRect();
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
+        const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
 
+        // Miesto pôvodných rozmerov použi zväčšené:
+        const cssWidth = rect.width * PDF_ZOOM;
+        const cssHeight = rect.height * PDF_ZOOM;
+        
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
+            width: cssWidth,
+            height: cssHeight,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
