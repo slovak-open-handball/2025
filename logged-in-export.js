@@ -1038,7 +1038,7 @@ const ExportApp = ({ userProfileData }) => {
             if (showPreview) {
                 window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             } else {
-                downloadMatchesPdfViaHiddenIframe(hash, hallName, true);
+                downloadMatchesPdfViaHiddenIframe(hash, hallName);
             }
             return;
         }
