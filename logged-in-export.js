@@ -1584,14 +1584,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                     backgroundColor: colors.backgroundColor,
                                                     color: colors.textColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-block',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                     height: '20px',
-                                                    lineHeight: '20px',
-                                                    paddingTop: '0',
-                                                    paddingBottom: '0',
                                                     paddingLeft: '8px',
                                                     paddingRight: '8px',
-                                                    verticalAlign: 'middle',
                                                     boxSizing: 'border-box'
                                                 }
                                             }, match.matchType)
@@ -1607,14 +1605,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                     backgroundColor: '#F3E8FF',
                                                     color: '#6B21A5',
                                                     fontWeight: '500',
-                                                    display: 'inline-block',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                     height: '20px',
-                                                    lineHeight: '20px',
-                                                    paddingTop: '0',
-                                                    paddingBottom: '0',
                                                     paddingLeft: '8px',
                                                     paddingRight: '8px',
-                                                    verticalAlign: 'middle',
                                                     boxSizing: 'border-box'
                                                 }
                                             }, `o ${match.placementRank}. miesto`)
@@ -1634,14 +1630,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                     backgroundColor: groupColors.backgroundColor,
                                                     color: groupColors.textColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-block',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                     height: '20px',
-                                                    lineHeight: '20px',
-                                                    paddingTop: '0',
-                                                    paddingBottom: '0',
                                                     paddingLeft: '8px',
                                                     paddingRight: '8px',
-                                                    verticalAlign: 'middle',
                                                     boxSizing: 'border-box'
                                                 }
                                             }, match.groupName)
@@ -1662,14 +1656,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                     backgroundColor: lighterCategoryColor,
                                                     color: categoryColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-block',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
                                                     height: '20px',
-                                                    lineHeight: '20px',
-                                                    paddingTop: '0',
-                                                    paddingBottom: '0',
                                                     paddingLeft: '8px',
                                                     paddingRight: '8px',
-                                                    verticalAlign: 'middle',
                                                     boxSizing: 'border-box'
                                                 }
                                             }, categoryDisplayTag)
