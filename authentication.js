@@ -161,17 +161,6 @@ const isReallyLoggedIn = () => {
     return true;
 };
 
-/**
- * Zistí, či aktuálna stránka je logged-in-export.html s hashom v URL.
- * Ak áno, nesmieme presmerovávať (napr. na index.html alebo login.html),
- * pretože hash nesie informáciu o tom, ktorú tabuľku exportovať.
- */
-const isExportPageWithHash = () => {
-    return window.location.pathname.endsWith('logged-in-export.html')
-        && window.location.hash
-        && window.location.hash.length > 1;
-};
-
 const isAppCheckSupported = () => {
     try {
         return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
@@ -233,9 +222,9 @@ const loadPageVisibilitySettings = async () => {
         const pagesSnapshot = await getDocs(pagesRef);
         
         const visibilitySettings = {};
-        let matchesVisible = true;
-        let teamsInGroupsVisible = true;
-        let rostersVisible = true;
+        let matchesVisible = true; // predvolene viditeľné
+        let teamsInGroupsVisible = true; // predvolene viditeľné
+        let rostersVisible = true; // predvolene viditeľné
         
         pagesSnapshot.forEach(doc => {
             const data = doc.data();
@@ -264,8 +253,13 @@ const loadPageVisibilitySettings = async () => {
             }
         });
         
+        // Nastavíme tables na rovnakú viditeľnosť ako matches
         visibilitySettings['tables'] = matchesVisible;
+        
+        // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
         visibilitySettings['teams'] = teamsInGroupsVisible;
+        
+        // Nastavíme statistics na rovnakú viditeľnosť ako rosters
         visibilitySettings['statistics'] = rostersVisible;
         
         pageVisibilityCache = visibilitySettings;
@@ -324,8 +318,13 @@ const setupPageVisibilityListener = () => {
             }
         });
         
+        // Nastavíme tables na rovnakú viditeľnosť ako matches
         visibilitySettings['tables'] = matchesVisible;
+        
+        // Nastavíme teams na rovnakú viditeľnosť ako teams-in-groups
         visibilitySettings['teams'] = teamsInGroupsVisible;
+        
+        // Nastavíme statistics na rovnakú viditeľnosť ako rosters
         visibilitySettings['statistics'] = rostersVisible;
         
         pageVisibilityCache = visibilitySettings;
@@ -350,20 +349,17 @@ const checkCurrentPageVisibility = async () => {
     if (fileName === 'index.html') {
         return;
     }
-
-    // Ak ide o export s hashom, NEpresmerovávame
-    if (fileName === 'logged-in-export.html' && window.location.hash && window.location.hash.length > 1) {
-        return;
-    }
     
     // Povolené stránky pre prihlásených používateľov (bez kontroly viditeľnosti)
     const allowedForLoggedIn = ['map.html', 'matches.html', 'teams-in-groups.html', 'tables.html', 'teams.html', 'statistics.html'];
     if (allowedForLoggedIn.includes(fileName)) {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
+            // Skontrolujeme či je používateľ admin
             const userProfileData = window.globalUserProfileData;
             if (userProfileData && userProfileData.role === 'admin') {
                 // Admin má prístup vždy - ale rešpektujeme nastavenia viditeľnosti
+                // Pokračujeme na kontrolu viditeľnosti
             }
         }
     }
@@ -375,13 +371,16 @@ const checkCurrentPageVisibility = async () => {
     
     const pageId = fileName.replace('.html', '');
     
+    // Pre tables použijeme viditeľnosť z matches
     let isVisible;
     if (pageId === 'tables') {
         isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
     } 
+    // Pre teams použijeme viditeľnosť z teams-in-groups
     else if (pageId === 'teams') {
         isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
+    // Pre statistics použijeme viditeľnosť z rosters
     else if (pageId === 'statistics') {
         isVisible = settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
@@ -405,14 +404,17 @@ const isPageVisibleInSettings = async (pageId) => {
         return true;
     }
     
+    // Ak sa pýtame na tables, vrátime hodnotu pre matches
     if (pageId === 'tables') {
         return settings['matches'] !== undefined ? settings['matches'] : true;
     }
     
+    // Ak sa pýtame na teams, vrátime hodnotu pre teams-in-groups
     if (pageId === 'teams') {
         return settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
     
+    // Ak sa pýtame na statistics, vrátime hodnotu pre rosters
     if (pageId === 'statistics') {
         return settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
@@ -426,6 +428,11 @@ const isPageVisibleInSettings = async (pageId) => {
 };
 
 const checkPageVisibilityForUser = async (pageName, userProfileData) => {
+    // Admin má vždy prístup - ODSTRÁNENÉ
+    // if (userProfileData && userProfileData.role === 'admin') {
+    //     return true;
+    // }
+    
     const settings = await loadPageVisibilitySettings();
     if (!settings) {
         return true;
@@ -433,13 +440,16 @@ const checkPageVisibilityForUser = async (pageName, userProfileData) => {
     
     const pageId = pageName.replace('.html', '');
     
+    // Pre tables použijeme viditeľnosť z matches
     let isVisible;
     if (pageId === 'tables') {
         isVisible = settings['matches'] !== undefined ? settings['matches'] : true;
     }
+    // Pre teams použijeme viditeľnosť z teams-in-groups
     else if (pageId === 'teams') {
         isVisible = settings['teams-in-groups'] !== undefined ? settings['teams-in-groups'] : true;
     }
+    // Pre statistics použijeme viditeľnosť z rosters
     else if (pageId === 'statistics') {
         isVisible = settings['rosters'] !== undefined ? settings['rosters'] : true;
     }
@@ -506,11 +516,13 @@ const isPageAccessibleForGuest = async () => {
         }
     }
     
+    // Pre tables použijeme rovnakú logiku ako pre matches
     if (fileName === 'tables.html') {
         const isLoggedIn = isReallyLoggedIn();
         if (isLoggedIn) {
             return true;
         }
+        // Pre neprihlásených používateľov skontrolujeme viditeľnosť podľa matches
         const isVisible = await isPageVisibleInSettings('tables');
         return isVisible;
     }
@@ -703,13 +715,6 @@ const handleAuthState = async () => {
                                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
                                     return;
                                 }
-
-                                // Ak ide o export s hashom, NEpresmerovávame
-                                if (isExportPageWithHash()) {
-                                    window.globalUserProfileData = userProfileData;
-                                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                                    return;
-                                }
             
                                 if (isCurrentPageGuestOnly) {
                                     window.location.href = targetPathMyData;
@@ -763,11 +768,6 @@ const handleAuthState = async () => {
             }
             
             if (!isHtmlPage()) {
-                return;
-            }
-
-            // Ak ide o export s hashom, NEpresmerovávame
-            if (isExportPageWithHash()) {
                 return;
             }
             
