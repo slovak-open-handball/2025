@@ -441,8 +441,8 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
     try {
         const rect = element.getBoundingClientRect();
 
-        const cssWidth = rect.width * PDF_ZOOM;
-        const cssHeight = rect.height * PDF_ZOOM;
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
 
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
