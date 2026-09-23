@@ -702,6 +702,9 @@ const CrossTable = ({
     // Sivá farba pre podfarbenie
     const TRANSFERRED_BG = '#d1d5db';
 
+    // NOVÉ: Hrubšie orámovanie
+    const THICK_BORDER = '3px solid #000000';
+
     const getStats = (teamId) => {
         if (!sortedTeams) return null;
         return sortedTeams.find(t => t.id === teamId) || null;
@@ -720,9 +723,7 @@ const CrossTable = ({
         return trimmed.charAt(trimmed.length - 1).toUpperCase();
     };
 
-    // UPRAVENÉ: Podfarbí len ak je zapnuté carryOverEnabled
     const shouldHighlightCell = (rowTeam, colTeam) => {
-        // NOVÉ: Ak nie je zapnuté prenášanie vzájomných zápasov, nepodfarbujeme
         if (carryOverEnabled !== true) return false;
         if (groupType !== 'nadstavbová skupina') return false;
         if (!rowTeam || !colTeam) return false;
@@ -732,7 +733,7 @@ const CrossTable = ({
         const colChar = getLastChar(colTeam);
 
         if (!rowChar || !colChar) return false;
-        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(rowChar)) return false;
+        if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚÚŮÝŽ]/.test(rowChar)) return false;
         if (!/[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]/.test(colChar)) return false;
 
         return rowChar === colChar;
@@ -748,7 +749,14 @@ const CrossTable = ({
                 'table',
                 {
                     className: 'border-collapse',
-                    style: { tableLayout: 'fixed', margin: 0, padding: 0, borderSpacing: 0 }
+                    style: { 
+                        tableLayout: 'fixed', 
+                        margin: 0, 
+                        padding: 0, 
+                        borderSpacing: 0,
+                        // NOVÉ: Hrubšie vonkajšie orámovanie celej tabuľky
+                        border: THICK_BORDER
+                    }
                 },
 
                 React.createElement(
@@ -783,10 +791,11 @@ const CrossTable = ({
                                 team.name
                             )
                         ),
+                        // NOVÉ: "Skóre" hlavička s hrubším borderLeft (medzi posledným tímom a Skóre)
                         React.createElement('th', {
                             colSpan: 3,
                             className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
-                            style: cellStyle
+                            style: { ...cellStyle, borderLeft: THICK_BORDER }
                         }, 'Skóre'),
                         React.createElement('th', {
                             className: baseThCell + ' px-3 py-2 ' + FONT_CLASS,
@@ -876,11 +885,17 @@ const CrossTable = ({
                         });
 
                         const showTotals = stats && stats.played > 0;
+                        // NOVÉ: Hrubší borderLeft na prvom "Skóre" stĺpci v tele tabuľky
                         rowCells.push(
                             React.createElement('td', {
                                 key: 'total-scored-' + rowIdx,
                                 className: baseCell + ' ' + FONT_CLASS,
-                                style: { ...subCellLeftStyle, textAlign: 'right', paddingRight: '10px' }
+                                style: { 
+                                    ...subCellLeftStyle, 
+                                    textAlign: 'right', 
+                                    paddingRight: '10px',
+                                    borderLeft: THICK_BORDER
+                                }
                             }, showTotals ? stats.goalsFor : ''),
                             React.createElement('td', {
                                 key: 'total-colon-' + rowIdx,
