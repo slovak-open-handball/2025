@@ -415,17 +415,18 @@ const ExportApp = ({ userProfileData }) => {
         if (!exportHash || exportHash.type !== 'tabulky') return;
 
         const handleKeyDown = async (e) => {
-            // Ctrl+S alebo Cmd+S (Mac)
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 e.stopPropagation();
 
-                if (!tableRef.current) {
+                // Použijeme ID namiesto ref
+                const element = document.getElementById('pdf-export-target');
+        
+                if (!element) {
                     window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
                     return;
                 }
 
-                // Podpora pre html2canvas + jspdf.umd.js
                 const html2canvasFn = window.html2canvas;
                 const jsPDFClass = window.jspdf?.jsPDF;
 
@@ -443,8 +444,6 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Generujem PDF...', 'info');
 
                 try {
-                    const element = document.getElementById('pdf-export-target');
-
                     if (!element) {
                         window.showGlobalNotification('Element tabuľky sa nenašiel.', 'error');
                         return;
