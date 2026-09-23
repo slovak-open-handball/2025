@@ -212,8 +212,11 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName, silent = fals
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
 
-    iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
-    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
+    const uniqueId = `pdf-${hash}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    iframe.name = uniqueId;
+    
+    // PO NOVOM: pridaj uniqueId do URL
+    iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}&instanceId=${encodeURIComponent(uniqueId)}#${hash}`;
 
     iframe.onload = () => {
         console.log('[iframe] načítaný:', iframe.src);
@@ -226,7 +229,6 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName, silent = fals
 
     document.body.appendChild(iframe);
 
-    // Zobraz modrú notifikáciu LEN ak nie je silent
     if (!silent) {
         const label = groupName
             ? `${categoryName} - ${groupName}`
@@ -851,16 +853,27 @@ const ExportApp = ({ userProfileData }) => {
         if (dataLoading) return;
         if (!exportedTable) return;
         if (!exportedTable.teams || exportedTable.teams.length === 0) return;
-    
-        // KĽÚČOVÉ: useRef zabráni viacnásobnému spusteniu v jednom mounte
-        if (autoDownloadTriggeredRef.current) return;
-        autoDownloadTriggeredRef.current = true;
-    
+
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
 
         if (!shouldAutoDownload) return;
+
+        // PO NOVOM: unikátny kľúč pre každý iframe (instanceId z URL)
+        const instanceId = urlParams.get('instanceId') || 'no-instance';
+        const hashKey = `tabulkyPdfAutoDownloaded_${instanceId}_${exportHash.categoryName}_${exportHash.groupName}`;
     
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
+        } catch (e) { }
+    
+        if (alreadyDownloaded) return;
+    
+        try {
+            sessionStorage.setItem(hashKey, '1');
+        } catch (e) { }
+
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
     
         const timer = setTimeout(() => {
