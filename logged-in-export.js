@@ -1575,8 +1575,19 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'type',
-                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                                style: { backgroundColor: colors.backgroundColor, color: colors.textColor, fontWeight: '500' }
+                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: colors.backgroundColor,
+                                                    color: colors.textColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    lineHeight: '1.2',
+                                                    height: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0'
+                                                }
                                             }, match.matchType)
                                         );
                                     }
@@ -1585,8 +1596,19 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'placement',
-                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                                style: { backgroundColor: '#F3E8FF', color: '#6B21A5', fontWeight: '500' }
+                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: '#F3E8FF',
+                                                    color: '#6B21A5',
+                                                    fontWeight: '500',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    lineHeight: '1.2',
+                                                    height: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0'
+                                                }
                                             }, `o ${match.placementRank}. miesto`)
                                         );
                                     }
@@ -1599,8 +1621,19 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'group',
-                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                                style: { backgroundColor: groupColors.backgroundColor, color: groupColors.textColor, fontWeight: '500' }
+                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: groupColors.backgroundColor,
+                                                    color: groupColors.textColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    lineHeight: '1.2',
+                                                    height: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0'
+                                                }
                                             }, match.groupName)
                                         );
                                     }
@@ -1614,8 +1647,19 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'category',
-                                                className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
-                                                style: { backgroundColor: lighterCategoryColor, color: categoryColor, fontWeight: '500' }
+                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                style: {
+                                                    backgroundColor: lighterCategoryColor,
+                                                    color: categoryColor,
+                                                    fontWeight: '500',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    lineHeight: '1.2',
+                                                    height: '20px',
+                                                    paddingTop: '0',
+                                                    paddingBottom: '0'
+                                                }
                                             }, categoryDisplayTag)
                                         );
                                     }
