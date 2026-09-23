@@ -189,7 +189,6 @@ const exportTableToPdf = async (categoryName, groupName) => {
 
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
-    const hasAutoDownloadedRef = React.useRef(false);
 
     const [selectedOption, setSelectedOption] = useState('');
     const [categories, setCategories] = useState([]);
@@ -495,28 +494,35 @@ const ExportApp = ({ userProfileData }) => {
         !selectedOption ||
         (selectedOption === 'tabulky' && (!selectedCategoryId || !selectedGroupType || !selectedGroupName));
 
-    const handleGenerate = () => {
-        if (!selectedOption) {
-            window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
-            return;
-        }
-        if (selectedOption === 'tabulky') {
-            if (!selectedCategoryId || !selectedGroupType || !selectedGroupName) {
-                window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
+        const handleGenerate = () => {
+            if (!selectedOption) {
+                window.showGlobalNotification('Prosím, vyberte možnosť pred generovaním.', 'error');
                 return;
             }
-            const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-            const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
-            const categoryNameSafe = spacesToDashes(categoryName);
-            const groupNameSafe = spacesToDashes(selectedGroupName);
-            const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-            // NOVÉ: ?download=1 – nová karta po načítaní automaticky stiahne PDF
-            window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
-            return;
-        }
-        // Pre zápasy tiež ?download=1 (ak by v budúcnosti mali PDF)
-        window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
-    };
+            if (selectedOption === 'tabulky') {
+                if (!selectedCategoryId || !selectedGroupType || !selectedGroupName) {
+                    window.showGlobalNotification('Prosím, vyberte kategóriu, typ skupiny aj konkrétnu skupinu.', 'error');
+                    return;
+                }
+        
+                // NOVÉ: Vyčistíme flag, aby nová karta mohla znova stiahnuť PDF
+                try {
+                    sessionStorage.removeItem('pdfAutoDownloaded');
+                } catch (e) { /* ignore */ }
+        
+                const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+                const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
+                const categoryNameSafe = spacesToDashes(categoryName);
+                const groupNameSafe = spacesToDashes(selectedGroupName);
+                const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
+                window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+                return;
+            }
+            try {
+                sessionStorage.removeItem('pdfAutoDownloaded');
+            } catch (e) { /* ignore */ }
+            window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
+        };
 
     const handleExportPdf = () => {
         exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
@@ -541,9 +547,21 @@ const ExportApp = ({ userProfileData }) => {
         const shouldAutoDownload = urlParams.get('download') === '1';
     
         if (!shouldAutoDownload) return;
-        if (hasAutoDownloadedRef.current) return;
     
-        // Polling mechanizmus, ktorý sleduje, kedy sú dáta aj DOM pripravené
+        // NOVÉ: Skontrolujeme sessionStorage (prežije StrictMode aj refresh)
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem('pdfAutoDownloaded') === '1';
+        } catch (e) { /* ignore */ }
+    
+        if (alreadyDownloaded) return;
+    
+        // Hneď označíme (aby druhé spustenie v StrictMode preskočilo)
+        try {
+            sessionStorage.setItem('pdfAutoDownloaded', '1');
+        } catch (e) { /* ignore */ }
+    
+        // Polling mechanizmus
         let attempts = 0;
         const maxAttempts = 100; // 10 sekúnd
     
@@ -560,7 +578,6 @@ const ExportApp = ({ userProfileData }) => {
             });
     
             if (table && !loading && element) {
-                hasAutoDownloadedRef.current = true;
                 setTimeout(() => {
                     exportTableToPdf(table.categoryName, table.groupName);
                 }, 500);
@@ -568,6 +585,10 @@ const ExportApp = ({ userProfileData }) => {
             }
     
             if (attempts >= maxAttempts) {
+                // Ak sa nepodarilo, reset flag aby to mohol používateľ skúsiť znova
+                try {
+                    sessionStorage.removeItem('pdfAutoDownloaded');
+                } catch (e) { /* ignore */ }
                 window.showGlobalNotification('Nepodarilo sa načítať tabuľku pre PDF export.', 'error');
                 return;
             }
@@ -576,8 +597,6 @@ const ExportApp = ({ userProfileData }) => {
         };
     
         setTimeout(poll, 100);
-    
-        // Žiadny cleanup – polling beží nezávisle
     }, []); // ← PRÁZDNE ZÁVISLOSTI
     
     if (exportHash && exportHash.type === 'tabulky') {
