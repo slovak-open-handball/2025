@@ -516,20 +516,20 @@ const ExportApp = ({ userProfileData }) => {
         exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
     };
 
-    // Pre auto-download v useEffect:
+    const hasAutoDownloadedRef = React.useRef(false);
+    
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-
+    
         if (!shouldAutoDownload) return;
         if (!exportedTable) return;
         if (dataLoading) return;
-
-        try {
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, '', newUrl);
-        } catch (e) { /* ignore */ }
-
+    
+        // Ak už bolo auto-download spustené, preskočíme
+        if (hasAutoDownloadedRef.current) return;
+        hasAutoDownloadedRef.current = true;
+    
         let attempts = 0;
         const maxAttempts = 50;
         const interval = setInterval(() => {
@@ -542,6 +542,7 @@ const ExportApp = ({ userProfileData }) => {
                 }, 500);
             } else if (attempts >= maxAttempts) {
                 clearInterval(interval);
+                hasAutoDownloadedRef.current = false; // reset pre ďalší pokus
                 window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
             }
         }, 100);
