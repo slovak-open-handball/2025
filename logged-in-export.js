@@ -231,7 +231,11 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
 };
 
 const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
+    console.log('[exportTableToPdf] ZAVOLANÉ:', { categoryName, groupName, fixedDpr });
+    
     const element = document.getElementById('pdf-export-target');
+    console.log('[exportTableToPdf] element pdf-export-target:', !!element, element ? `rect=${element.getBoundingClientRect().width}×${element.getBoundingClientRect().height}` : '');
+    
     if (!element) {
         window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
         return;
@@ -755,9 +759,6 @@ const ExportApp = ({ userProfileData }) => {
         dataLoading
     ]);
 
-    // ============================================================
-    // AUTO-DOWNLOAD PDF PRE TABUĽKY
-    // ============================================================
     useEffect(() => {
         console.log('[tabulky auto-download] useEffect spustený:', {
             exportHashType: exportHash?.type,
@@ -777,26 +778,32 @@ const ExportApp = ({ userProfileData }) => {
         console.log('[tabulky auto-download] shouldAutoDownload:', shouldAutoDownload);
     
         if (!shouldAutoDownload) return;
-
+    
         const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
         let alreadyDownloaded = false;
         try {
             alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
         } catch (e) { }
-
+    
+        console.log('[tabulky auto-download] alreadyDownloaded:', alreadyDownloaded);
+    
         if (alreadyDownloaded) return;
-
+    
         try {
             sessionStorage.setItem(hashKey, '1');
         } catch (e) { }
-
+    
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
-
+    
         const timer = setTimeout(() => {
+            console.log('[tabulky auto-download] ⏰ TIMER SA SPUSTIL, volám exportTableToPdf');
             exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
-        }, 800);
-
-        return () => clearTimeout(timer);
+        }, 1500);  // Zvýšené z 800 na 1500 ms
+    
+        return () => {
+            console.log('[tabulky auto-download] cleanup – ruším timer');
+            clearTimeout(timer);
+        };
     }, [exportHash, dataLoading, exportedTable]);
 
     // ============================================================
