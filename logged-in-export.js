@@ -175,6 +175,11 @@ const exportTableToPdf = async (categoryName, groupName) => {
 
         pdf.save(fileName);
 
+        try {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) { /* ignore */ }
+
         window.showGlobalNotification('PDF bolo uložené.', 'success');
     } catch (err) {
         console.error('Chyba pri PDF exporte:', err);
