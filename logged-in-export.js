@@ -137,9 +137,11 @@ const parseExportHash = () => {
     }
 
     if (parts[0] === 'zapasy') {
-        // Ak je v hashi aj ID haly: #zapasy/<hallId>
+        // V URL je názov haly s pomlčkami: #zapasy/<hallName-s-pomlckami>
         if (parts.length >= 2) {
-            return { type: 'zapasy', hallId: decodeURIComponent(parts[1]) };
+            const hallNameRaw = decodeURIComponent(parts[1]);
+            const hallName = dashesToSpaces(hallNameRaw);
+            return { type: 'zapasy', hallName };
         }
         return { type: 'zapasy' };
     }
@@ -746,12 +748,18 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Prosím, vyberte športovú halu.', 'error');
                 return;
             }
+
+            // Nájdeme názov haly podľa vybraného ID
+            const selectedHall = halls.find(h => h.id === selectedHallId);
+            const hallName = selectedHall ? selectedHall.name : selectedHallId;
         
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-        
-            const hash = `zapasy/${encodeURIComponent(selectedHallId)}`;
+
+            // V URL bude názov haly s pomlčkami namiesto medzier
+            const hallNameSafe = spacesToDashes(hallName);
+            const hash = `zapasy/${encodeURIComponent(hallNameSafe)}`;
             window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             return;
         }
@@ -885,10 +893,10 @@ const ExportApp = ({ userProfileData }) => {
     // EXPORT ZÁPASOV PRE KONKRÉTNU HALU (bez výsledkov)
     // ============================================================
     if (exportHash && exportHash.type === 'zapasy') {
-        const hallId = exportHash.hallId || null;
+        const hallName = exportHash.hallName || null;
     
-        // Ak chýba hallId v hashi, zobrazíme chybu
-        if (!hallId) {
+        // Ak chýba názov haly v hashi, zobrazíme chybu
+        if (!hallName) {
             return React.createElement(
                 'div',
                 { className: 'w-full p-0 m-0' },
@@ -900,12 +908,12 @@ const ExportApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4' },
-                    React.createElement('p', { className: 'text-red-700 font-medium' }, 'Chýba ID športovej haly v URL.')
+                    React.createElement('p', { className: 'text-red-700 font-medium' }, 'Chýba názov športovej haly v URL.')
                 )
             );
         }
     
-        return React.createElement(MatchesExportView, { hallId });
+        return React.createElement(MatchesExportView, { hallName });
     }
 
     return React.createElement(
@@ -1085,35 +1093,60 @@ const ExportApp = ({ userProfileData }) => {
 
 // ============================================================
 // KOMPONENT: Export zápasov pre konkrétnu halu (bez výsledkov)
+// - prijíma hallName (názov haly z URL)
+// - nájde halu podľa názvu, získa jej ID
+// - filtruje zápasy podľa tohto ID
 // ============================================================
-const MatchesExportView = ({ hallId }) => {
+const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [hallName, setHallName] = useState('');
+    const [hallName, setHallName] = useState(hallNameFromUrl || '');
+    const [hallId, setHallId] = useState(null);
     const [matches, setMatches] = useState([]);
     const [teamNames, setTeamNames] = useState({});
     const [categoriesData, setCategoriesData] = useState({});
     const [groupsData, setGroupsData] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
 
-    // Načítanie názvu haly
+    // Načítanie haly podľa názvu z URL
     useEffect(() => {
-        if (!window.db || !hallId) return;
-        const loadHall = async () => {
+        if (!window.db || !hallNameFromUrl) return;
+
+        const findHallByName = async () => {
             try {
-                const hallRef = doc(window.db, 'places', hallId);
-                const hallSnap = await getDoc(hallRef);
-                if (hallSnap.exists()) {
-                    setHallName(hallSnap.data().name || 'Športová hala');
+                const placesRef = collection(window.db, 'places');
+                const snapshot = await getDocs(placesRef);
+
+                let foundHall = null;
+                const targetNorm = normalizeName(hallNameFromUrl);
+
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.type !== 'sportova_hala') return;
+                    if (normalizeName(data.name) === targetNorm) {
+                        foundHall = {
+                            id: docSnap.id,
+                            name: data.name
+                        };
+                    }
+                });
+
+                if (foundHall) {
+                    setHallId(foundHall.id);
+                    setHallName(foundHall.name);
                 } else {
-                    setHallName('Športová hala');
+                    setError(`Športová hala "${hallNameFromUrl}" sa nenašla.`);
+                    setLoading(false);
                 }
             } catch (e) {
-                setHallName('Športová hala');
+                console.error('[Export zápasy] Chyba pri hľadaní haly:', e);
+                setError('Nepodarilo sa nájsť športovú halu.');
+                setLoading(false);
             }
         };
-        loadHall();
-    }, [hallId]);
+
+        findHallByName();
+    }, [hallNameFromUrl]);
 
     // Načítanie kategórií, skupín, farieb
     useEffect(() => {
@@ -1149,7 +1182,7 @@ const MatchesExportView = ({ hallId }) => {
         };
     }, []);
 
-    // Načítanie zápasov pre konkrétnu halu (onSnapshot pre live update)
+    // Načítanie zápasov pre konkrétnu halu (až keď poznáme hallId)
     useEffect(() => {
         if (!window.db || !hallId) return;
 
@@ -1186,7 +1219,7 @@ const MatchesExportView = ({ hallId }) => {
         return () => unsubscribe();
     }, [hallId]);
 
-    // Načítanie mien tímov (bez výsledkov – len názvy)
+    // Načítanie mien tímov
     useEffect(() => {
         if (!matches.length) return;
 
@@ -1194,11 +1227,6 @@ const MatchesExportView = ({ hallId }) => {
             const names = {};
 
             for (const match of matches) {
-                let categoryName = match.categoryName;
-                if (!categoryName && match.categoryId && categoriesData[match.categoryId]) {
-                    categoryName = categoriesData[match.categoryId];
-                }
-
                 if (match.homeTeamIdentifier) {
                     if (window.matchTracker?.getTeamNameByDisplayIdSync) {
                         try {
@@ -1232,7 +1260,6 @@ const MatchesExportView = ({ hallId }) => {
         processNames();
     }, [matches, categoriesData]);
 
-    // Pomocné funkcie pre farby
     const getCategoryColor = (categoryId) => {
         if (!categoryId || !categoryDrawColors[categoryId]) return '#3B82F6';
         return categoryDrawColors[categoryId];
@@ -1298,7 +1325,6 @@ const MatchesExportView = ({ hallId }) => {
         }
     };
 
-    // Rozdelenie zápasov podľa dní
     const matchesByDay = React.useMemo(() => {
         const groups = {};
         matches.forEach(match => {
@@ -1335,7 +1361,7 @@ const MatchesExportView = ({ hallId }) => {
         'div',
         { className: 'w-full p-0 m-0' },
 
-        // Hlavička
+        // Hlavička – zobrazí názov haly z URL (nie ID)
         React.createElement(
             'div',
             { className: 'mb-6 text-center pt-6' },
@@ -1344,11 +1370,10 @@ const MatchesExportView = ({ hallId }) => {
                 'div',
                 { className: 'flex items-center justify-center gap-2 mt-1' },
                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
-                React.createElement('span', { className: 'text-gray-600' }, hallName || 'Športová hala')
+                React.createElement('span', { className: 'text-gray-600' }, hallName || hallNameFromUrl || 'Športová hala')
             )
         ),
 
-        // Tabuľka
         matchesByDay.length === 0 ?
             React.createElement(
                 'div',
@@ -1381,7 +1406,6 @@ const MatchesExportView = ({ hallId }) => {
                         matchesByDay.map((dayGroup, dayIndex) => {
                             const rows = [];
 
-                            // Riadok s dňom
                             rows.push(
                                 React.createElement(
                                     'tr',
@@ -1399,7 +1423,6 @@ const MatchesExportView = ({ hallId }) => {
                                 )
                             );
 
-                            // Zápasy v danom dni
                             dayGroup.matches.forEach((match, matchIndex) => {
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || match.homeTeamIdentifier || '???';
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || match.awayTeamIdentifier || '???';
@@ -1467,7 +1490,6 @@ const MatchesExportView = ({ hallId }) => {
                                         'tr',
                                         { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
 
-                                        // Čas
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap' },
@@ -1479,28 +1501,24 @@ const MatchesExportView = ({ hallId }) => {
                                             )
                                         ),
 
-                                        // Domáci
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-right' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                         ),
 
-                                        // VS (bez skóre)
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
                                             React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
                                         ),
 
-                                        // Hostia
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-left' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
 
-                                        // Info
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3' },
