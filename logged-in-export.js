@@ -1,8 +1,10 @@
 // logged-in-export.js
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const { useState, useEffect } = React;
+
+const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
@@ -120,6 +122,15 @@ const normalizeName = (name) => {
         .trim();
 };
 
+// Pomocná funkcia na extrahovanie čistého názvu tímu (bez kategórie)
+const getCleanTeamName = (teamName, categoryName) => {
+    if (!teamName) return '';
+    if (categoryName && teamName.startsWith(categoryName + ' ')) {
+        return teamName.substring(categoryName.length + 1).trim();
+    }
+    return teamName;
+};
+
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
@@ -135,6 +146,7 @@ const ExportApp = ({ userProfileData }) => {
     const [loadingTable, setLoadingTable] = useState(false);
     const [errorTable, setErrorTable] = useState(null);
 
+    // Načítanie kategórií a skupín pre selectboxy
     useEffect(() => {
         if (exportHash) return;
         if (selectedOption !== 'tabulky') return;
@@ -201,6 +213,7 @@ const ExportApp = ({ userProfileData }) => {
         setSelectedGroupName('');
     }, [selectedGroupType, exportHash]);
 
+    // Hlavné načítanie tabuľky - tímy z users + superstructureGroups
     useEffect(() => {
         if (!exportHash || exportHash.type !== 'tabulky') {
             setExportedTable(null);
@@ -221,6 +234,7 @@ const ExportApp = ({ userProfileData }) => {
                 const categoriesData = categoriesSnap.exists() ? categoriesSnap.data() : {};
                 const groupsData = groupsSnap.exists() ? groupsSnap.data() : {};
 
+                // 1. Nájdeme kategóriu
                 let categoryId = null;
                 let categoryName = exportHash.categoryName;
                 const targetCategoryNorm = normalizeName(exportHash.categoryName);
@@ -241,6 +255,7 @@ const ExportApp = ({ userProfileData }) => {
                     return;
                 }
 
+                // 2. Nájdeme skupinu
                 const groupList = groupsData[categoryId] || [];
                 const targetGroupNorm = normalizeName(exportHash.groupName);
                 let foundGroup = null;
@@ -262,19 +277,98 @@ const ExportApp = ({ userProfileData }) => {
                 const groupName = foundGroup.name;
                 const groupType = foundGroup.type;
 
+                // 3. Načítame VŠETKY tímy - z users aj superstructureGroups
+                const allTeams = [];
+
+                // 3a. Používateľské tímy
+                const usersSnap = await getDocs(collection(window.db, 'users'));
+                usersSnap.forEach((userDoc) => {
+                    const userData = userDoc.data();
+                    if (userData && userData.teams) {
+                        Object.entries(userData.teams).forEach(([catName, teamArray]) => {
+                            if (Array.isArray(teamArray)) {
+                                teamArray.forEach(team => {
+                                    if (team.teamName) {
+                                        const hasGroup = team.groupName && team.groupName.trim() !== '';
+                                        allTeams.push({
+                                            uid: userDoc.id,
+                                            category: catName,
+                                            id: team.id,
+                                            teamName: team.teamName,
+                                            groupName: team.groupName || null,
+                                            order: hasGroup ? (team.order ?? 0) : null,
+                                            isSuperstructureTeam: false,
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+
+                // 3b. Superstructure tímy (globálne)
+                const superstructureSnap = await getDoc(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')));
+                if (superstructureSnap.exists()) {
+                    const superstructureData = superstructureSnap.data() || {};
+                    Object.entries(superstructureData).forEach(([catName, teamArray]) => {
+                        (teamArray || []).forEach(team => {
+                            allTeams.push({
+                                uid: 'global',
+                                category: catName,
+                                id: team.id || crypto.randomUUID(),
+                                teamName: team.teamName,
+                                groupName: team.groupName || null,
+                                order: team.groupName ? (team.order ?? 0) : null,
+                                isSuperstructureTeam: true
+                            });
+                        });
+                    });
+                }
+
+                // 4. Vyfiltrujeme tímy pre našu kategóriu a skupinu
+                const teamsInGroup = allTeams.filter(t => 
+                    normalizeName(t.category) === normalizeName(categoryName) &&
+                    t.groupName &&
+                    normalizeName(t.groupName) === normalizeName(groupName)
+                );
+
+                // Zoradíme podľa order
+                teamsInGroup.sort((a, b) => {
+                    const oa = typeof a.order === 'number' ? a.order : Infinity;
+                    const ob = typeof b.order === 'number' ? b.order : Infinity;
+                    return oa - ob;
+                });
+
+                // 5. Pripravíme si tímy pre tabuľku (s čistými názvami)
+                const teamsForTable = teamsInGroup.map(t => {
+                    let displayName = t.teamName;
+                    // Pre superstructure tímy odstránime prefix kategórie
+                    if (t.isSuperstructureTeam && t.category && displayName.startsWith(t.category + ' ')) {
+                        displayName = displayName.substring(t.category.length + 1).trim();
+                    }
+                    return {
+                        id: t.id,
+                        name: displayName,
+                        fullName: t.teamName,
+                        order: t.order,
+                        isSuperstructureTeam: t.isSuperstructureTeam
+                    };
+                });
+
                 if (isCancelled) return;
 
                 setExportedTable({
                     categoryName,
                     groupName,
                     groupType,
-                    teams: [],
-                    sortedTeams: [],
+                    teams: teamsForTable,
+                    sortedTeams: teamsForTable,
                     matrix: {},
                     teamNamesFromMatches: {}
                 });
                 setLoadingTable(false);
             } catch (err) {
+                console.error("Chyba pri načítavaní tabuľky:", err);
                 if (!isCancelled) {
                     setErrorTable('Nepodarilo sa načítať tabuľku.');
                     setLoadingTable(false);
@@ -348,17 +442,22 @@ const ExportApp = ({ userProfileData }) => {
                 React.createElement('p', { className: 'text-red-700 font-medium' }, errorTable)
             ),
 
-            !loadingTable && !errorTable && exportedTable && React.createElement(
-                CrossTable,
-                {
-                    teams: exportedTable.teams,
-                    sortedTeams: exportedTable.sortedTeams,
-                    matrix: exportedTable.matrix,
-                    categoryName: exportedTable.categoryName,
-                    groupName: exportedTable.groupName,
-                    groupType: exportedTable.groupType,
-                    teamNamesFromMatches: exportedTable.teamNamesFromMatches
-                }
+            !loadingTable && !errorTable && exportedTable && (
+                (exportedTable.teams && exportedTable.teams.length > 0)
+                    ? React.createElement(CrossTable, {
+                        teams: exportedTable.teams,
+                        sortedTeams: exportedTable.sortedTeams,
+                        matrix: exportedTable.matrix,
+                        categoryName: exportedTable.categoryName,
+                        groupName: exportedTable.groupName,
+                        groupType: exportedTable.groupType,
+                        teamNamesFromMatches: exportedTable.teamNamesFromMatches
+                    })
+                    : React.createElement(
+                        'div',
+                        { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-xl m-4' },
+                        React.createElement('p', { className: 'text-lg' }, 'Pre túto skupinu neexistujú žiadne tímy.')
+                    )
             )
         );
     }
