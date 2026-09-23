@@ -13,7 +13,7 @@ const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const PDF_IFRAME_WIDTH = 1920; 
 const PDF_IFRAME_HEIGHT = 1080;
 const PDF_ZOOM = 1.75; 
-const PDF_DEVICE_PIXEL_RATIO = 2.0;
+const PDF_DEVICE_PIXEL_RATIO = 2.0;sv
 
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
@@ -981,25 +981,30 @@ const ExportApp = ({ userProfileData }) => {
                     sessionStorage.setItem('pdfBatchActive', '1');
                 } catch (e) { }
     
+                try {
+                    const keysToRemove = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && (key.startsWith('tabulkyPdfAutoDownloaded_') || key.startsWith('pdfAutoDownloaded'))) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+                } catch (e) { }
+            
                 groupsToProcess.forEach((groupName, index) => {
                     const groupNameSafe = spacesToDashes(groupName);
                     const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-    
-                    try {
-                        sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
-                        sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
-                        sessionStorage.removeItem('pdfAutoDownloaded');
-                    } catch (e) { }
-    
+
                     setTimeout(() => {
                         downloadPdfViaHiddenIframe(hash, categoryName, groupName, true);
                     }, index * 3000);
                 });
-    
+
                 window.showGlobalNotification(
                     `Generujem PDF pre ${groupsToProcess.length} skupín v kategórii ${categoryName} typu ${formatGroupType(selectedGroupType)}. Prosím čakajte`,
                     'info'
-                );
+                );    
             }
             return;
         }
