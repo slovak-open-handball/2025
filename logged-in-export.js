@@ -184,6 +184,26 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
 
     iframe.onload = () => {
         console.log('[iframe] načítaný:', iframe.src);
+
+        // ===== APLIKUJ ZOOM V IFRAME =====
+        try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const iframeWin = iframe.contentWindow;
+
+            // Nastavíme zoom priamo na <html> element v iframe
+            iframeDoc.documentElement.style.zoom = PDF_ZOOM; // napr. 1.75 pre 175 %
+            
+            // Voliteľne: nastavíme aj transform scale, ak zoom nefunguje
+            // iframeDoc.documentElement.style.transform = `scale(${PDF_ZOOM})`;
+            // iframeDoc.documentElement.style.transformOrigin = 'top left';
+            // iframeDoc.documentElement.style.width = (100 / PDF_ZOOM) + '%';
+            // iframeDoc.documentElement.style.height = (100 / PDF_ZOOM) + '%';
+
+            console.log('[iframe] zoom aplikovaný:', PDF_ZOOM);
+        } catch (e) {
+            console.error('[iframe] Nepodarilo sa aplikovať zoom:', e);
+        }
+
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
