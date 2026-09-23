@@ -392,6 +392,26 @@ const ExportApp = ({ userProfileData }) => {
         dataLoading
     ]);
 
+    // ============================================================
+    // NOVÉ: Nastavenie titulku karty podľa kategórie a skupiny
+    // ============================================================
+    useEffect(() => {
+        // Ak je v URL hash a tabuľka je načítaná, nastavíme titulok
+        if (exportHash && exportHash.type === 'tabulky' && exportedTable) {
+            const { categoryName, groupName } = exportedTable;
+            if (categoryName && groupName) {
+                document.title = `${categoryName} - ${groupName} | SOH 2025`;
+            } else if (categoryName) {
+                document.title = `${categoryName} | SOH 2025`;
+            }
+        } else if (exportHash && exportHash.type === 'zapasy') {
+            document.title = 'Zápasy v športovej hale | SOH 2025';
+        } else {
+            // Ak nie je hash (alebo iný typ), vrátime predvolený titulok
+            document.title = 'SOH 2025 - Export';
+        }
+    }, [exportHash && exportHash.type, exportHash && exportHash.categoryName, exportHash && exportHash.groupName, exportedTable]);
+
     const availableGroupTypes = selectedCategoryId
         ? Array.from(new Set((groups[selectedCategoryId] || []).map(g => g.type))).sort((a, b) => {
             if (a === b) return 0;
