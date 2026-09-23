@@ -843,23 +843,23 @@ const ExportApp = ({ userProfileData }) => {
         dataLoading
     ]);
 
-    // Použijeme useRef namiesto sessionStorage – useRef sa resetuje pri každom mounte
+    // Použijeme useRef – zabráni viacnásobnému spusteniu v jednom mounte
     const autoDownloadTriggeredRef = React.useRef(false);
-    
+
     useEffect(() => {
         if (!exportHash || exportHash.type !== 'tabulky') return;
         if (dataLoading) return;
         if (!exportedTable) return;
         if (!exportedTable.teams || exportedTable.teams.length === 0) return;
-
+    
+        // KĽÚČOVÉ: useRef zabráni viacnásobnému spusteniu v jednom mounte
+        if (autoDownloadTriggeredRef.current) return;
+        autoDownloadTriggeredRef.current = true;
+    
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
 
         if (!shouldAutoDownload) return;
-    
-        // useRef – resetuje sa pri každom mounte iframe
-        if (autoDownloadTriggeredRef.current) return;
-        autoDownloadTriggeredRef.current = true;
     
         const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
     
@@ -967,36 +967,31 @@ const ExportApp = ({ userProfileData }) => {
                     downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
                 }
             } else {
+                // Hromadné generovanie tabuliek
                 try {
                     sessionStorage.setItem('pdfBatchTotal', String(groupsToProcess.length));
                     sessionStorage.setItem('pdfBatchCompleted', '0');
                     sessionStorage.setItem('pdfBatchActive', '1');
                 } catch (e) { }
-    
+            
+                // Vymaž LEN staré pdfAutoDownloaded flagy (nie tabulkyPdfAutoDownloaded_*)
                 try {
-                    const keysToRemove = [];
-                    for (let i = 0; i < sessionStorage.length; i++) {
-                        const key = sessionStorage.key(i);
-                        if (key && (key.startsWith('tabulkyPdfAutoDownloaded_') || key.startsWith('pdfAutoDownloaded'))) {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+                    sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { }
             
                 groupsToProcess.forEach((groupName, index) => {
                     const groupNameSafe = spacesToDashes(groupName);
                     const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-
+            
                     setTimeout(() => {
                         downloadPdfViaHiddenIframe(hash, categoryName, groupName, true);
                     }, index * 3000);
                 });
-
+            
                 window.showGlobalNotification(
                     `Generujem PDF pre ${groupsToProcess.length} skupín v kategórii ${categoryName} typu ${formatGroupType(selectedGroupType)}. Prosím čakajte`,
                     'info'
-                );    
+                );
             }
             return;
         }
