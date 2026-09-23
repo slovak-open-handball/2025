@@ -122,6 +122,66 @@ const normalizeName = (name) => {
         .trim();
 };
 
+// Mimo komponenty ExportApp – definujte pomocnú funkciu
+const exportTableToPdf = async (categoryName, groupName) => {
+    const element = document.getElementById('pdf-export-target');
+    if (!element) {
+        window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
+        return;
+    }
+
+    const html2canvasFn = window.html2canvas;
+    const jsPDFClass = window.jspdf?.jsPDF;
+
+    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
+        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
+        return;
+    }
+
+    const safeCategory = (categoryName || 'kategoria').replace(/\s+/g, '-');
+    const safeGroup = (groupName || 'skupina').replace(/\s+/g, '-');
+    const fileName = `${safeCategory}_${safeGroup}.pdf`;
+
+    window.showGlobalNotification('Generujem PDF...', 'info');
+
+    try {
+        const rect = element.getBoundingClientRect();
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
+
+        const canvas = await html2canvasFn(element, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: cssWidth,
+            height: cssHeight,
+            windowWidth: cssWidth,
+            windowHeight: cssHeight
+        });
+
+        const pxToMm = 0.264583;
+        const pdfWidthMm = cssWidth * pxToMm;
+        const pdfHeightMm = cssHeight * pxToMm;
+
+        const pdf = new jsPDFClass({
+            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+            unit: 'mm',
+            format: [pdfWidthMm, pdfHeightMm]
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+        pdf.save(fileName);
+
+        window.showGlobalNotification('PDF bolo uložené.', 'success');
+    } catch (err) {
+        console.error('Chyba pri PDF exporte:', err);
+        window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
+    }
+};
+
 const ExportApp = ({ userProfileData }) => {
     const exportHash = parseExportHash();
 
@@ -452,106 +512,33 @@ const ExportApp = ({ userProfileData }) => {
         window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
     };
 
-    // ============================================================
-    // PDF EXPORT – volané kliknutím na tlačidlo
-    // ============================================================
-    const handleExportPdf = async () => {
-        const element = document.getElementById('pdf-export-target');
-    
-        if (!element) {
-            window.showGlobalNotification('Tabuľka ešte nie je načítaná.', 'error');
-            return;
-        }
-    
-        const html2canvasFn = window.html2canvas;
-        const jsPDFClass = window.jspdf?.jsPDF;
-    
-        if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
-            window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
-            return;
-        }
-
-        const categoryName = exportedTable?.categoryName || 'kategoria';
-        const groupName = exportedTable?.groupName || 'skupina';
-        const safeCategory = categoryName.replace(/\s+/g, '-');
-        const safeGroup = groupName.replace(/\s+/g, '-');
-        const fileName = `${safeCategory}_${safeGroup}.pdf`;
-    
-        window.showGlobalNotification('Generujem PDF...', 'info');
-    
-        try {
-            // 1. Zmeriame SKUTOČNÉ rozmery elementu (v CSS pixeloch)
-            const rect = element.getBoundingClientRect();
-            const cssWidth = rect.width;
-            const cssHeight = rect.height;
-    
-            // 2. Vyrenderujeme do canvasu s scale=2 (vyššia kvalita)
-            const canvas = await html2canvasFn(element, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                width: cssWidth,
-                height: cssHeight,
-                windowWidth: cssWidth,
-                windowHeight: cssHeight
-            });
-
-            // 3. Prevod CSS px → mm (96 DPI = 0.264583 mm/px)
-            const pxToMm = 0.264583;
-            const pdfWidthMm = cssWidth * pxToMm;
-            const pdfHeightMm = cssHeight * pxToMm;
-
-            // 4. Vytvoríme PDF s vlastnou veľkosťou
-            const pdf = new jsPDFClass({
-                orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
-                unit: 'mm',
-                format: [pdfWidthMm, pdfHeightMm]
-            });
-
-            // 5. Vložíme obrázok
-            const imgData = canvas.toDataURL('image/png');
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
-
-            // 6. Uložíme
-            pdf.save(fileName);
-    
-            window.showGlobalNotification('PDF bolo uložené.', 'success');
-        } catch (err) {
-            console.error('Chyba pri PDF exporte:', err);
-            window.showGlobalNotification('Nepodarilo sa vytvoriť PDF.', 'error');
-        }
+    const handleExportPdf = () => {
+        exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
     };
 
-    // ============================================================
-    // AUTO-DOWNLOAD po otvorení novej karty s ?download=1
-    // ============================================================
+    // Pre auto-download v useEffect:
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
-    
+
         if (!shouldAutoDownload) return;
         if (!exportedTable) return;
         if (dataLoading) return;
 
-        // Hneď odstránime ?download=1 z URL, aby sa pri ďalšom spustení
-        // useEffect (StrictMode) už nespustil download
         try {
             const newUrl = window.location.pathname + window.location.hash;
             window.history.replaceState({}, '', newUrl);
         } catch (e) { /* ignore */ }
-    
-        // Počkáme, kým sa DOM element 'pdf-export-target' vykreslí
+
         let attempts = 0;
         const maxAttempts = 50;
         const interval = setInterval(() => {
             attempts++;
             const element = document.getElementById('pdf-export-target');
-    
             if (element) {
                 clearInterval(interval);
                 setTimeout(() => {
-                    handleExportPdf();
+                    exportTableToPdf(exportedTable.categoryName, exportedTable.groupName);
                 }, 500);
             } else if (attempts >= maxAttempts) {
                 clearInterval(interval);
