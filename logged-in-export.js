@@ -183,6 +183,7 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
     iframe.onload = () => {
+        console.log('[iframe] načítaný:', iframe.src);
         setTimeout(() => {
             try {
                 document.body.removeChild(iframe);
@@ -434,6 +435,41 @@ const ExportApp = ({ userProfileData }) => {
     const [groupsLoaded, setGroupsLoaded] = useState(false);
     const [usersLoaded, setUsersLoaded] = useState(false);
     const [superstructureLoaded, setSuperstructureLoaded] = useState(false);    
+
+    // ============================================================
+    // AUTO-DOWNLOAD PDF PRE TABUĽKY
+    // ============================================================
+    useEffect(() => {
+        if (!exportHash || exportHash.type !== 'tabulky') return;
+        if (dataLoading) return;
+        if (!exportedTable) return;
+        if (!exportedTable.teams || exportedTable.teams.length === 0) return;
+    
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldAutoDownload = urlParams.get('download') === '1';
+    
+        if (!shouldAutoDownload) return;
+    
+        const hashKey = `tabulkyPdfAutoDownloaded_${exportHash.categoryName}_${exportHash.groupName}`;
+        let alreadyDownloaded = false;
+        try {
+            alreadyDownloaded = sessionStorage.getItem(hashKey) === '1';
+        } catch (e) { }
+    
+        if (alreadyDownloaded) return;
+    
+        try {
+            sessionStorage.setItem(hashKey, '1');
+        } catch (e) { }
+    
+        const fixedDprFromUrl = parseFloat(urlParams.get('fixedDpr')) || PDF_DEVICE_PIXEL_RATIO;
+    
+        const timer = setTimeout(() => {
+            exportTableToPdf(exportedTable.categoryName, exportedTable.groupName, fixedDprFromUrl);
+        }, 800);
+    
+        return () => clearTimeout(timer);
+    }, [exportHash, dataLoading, exportedTable]);
 
     // ============================================================
     // Sledovanie dokončenia hromadného generovania PDF
@@ -1556,6 +1592,14 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
+
+        console.log('[MatchesExportView] auto-download useEffect:', {
+            shouldAutoDownload,
+            loading,
+            matchesByDayLength: matchesByDay.length,
+            hallNameFromUrl,
+            fixedDpr
+        });
     
         if (!shouldAutoDownload) return;
         if (loading) return;
