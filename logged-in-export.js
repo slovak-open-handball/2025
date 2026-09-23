@@ -1116,7 +1116,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     const [hallName, setHallName] = useState(hallNameFromUrl || '');
     const [hallId, setHallId] = useState(null);
     const [matches, setMatches] = useState([]);
-    const [teamNames, setTeamNames] = useState({});
     const [categoriesData, setCategoriesData] = useState({});
     const [groupsData, setGroupsData] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
@@ -1232,23 +1231,38 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
         return () => unsubscribe();
     }, [hallId]);
 
-    // Načítanie mien tímov – BEZ mapovania (pôvodné názvy zo zápasov)
-    useEffect(() => {
-        if (!matches.length) return;
+    // Zobrazenie názvu tímu:
+    // - pre zápasy v základných skupinách použije teamManager.getTeamNameByDisplayIdSync(...)
+    // - pre ostatné zápasy vráti pôvodný názov
+    const getDisplayTeamNameForMatch = (match, rawTeamName) => {
+        if (!rawTeamName) return '???';
 
-        const names = {};
+        // Zistíme, či ide o zápas v základnej skupine
+        const isBasicGroupMatch =
+            match.groupName &&
+            !match.isPlacementMatch &&
+            (() => {
+                const categoryGroups = groupsData[match.categoryId] || [];
+                const foundGroup = categoryGroups.find(g => g.name === match.groupName);
+                return foundGroup && foundGroup.type === 'základná skupina';
+            })();
 
-        for (const match of matches) {
-            if (match.homeTeamIdentifier && !names[match.homeTeamIdentifier]) {
-                names[match.homeTeamIdentifier] = match.homeTeamIdentifier;
-            }
-            if (match.awayTeamIdentifier && !names[match.awayTeamIdentifier]) {
-                names[match.awayTeamIdentifier] = match.awayTeamIdentifier;
-            }
+        if (!isBasicGroupMatch) {
+            return rawTeamName;
         }
 
-        setTeamNames(names);
-    }, [matches]);
+        // Pre základné skupiny použijeme teamManager
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            try {
+                const mapped = window.teamManager.getTeamNameByDisplayIdSync(rawTeamName);
+                if (mapped && mapped !== rawTeamName) {
+                    return mapped;
+                }
+            } catch (e) { }
+        }
+
+        return rawTeamName;
+    };
 
     const getCategoryColor = (categoryId) => {
         if (!categoryId || !categoryDrawColors[categoryId]) return '#3B82F6';
@@ -1458,8 +1472,8 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                 );
 
                                 dayGroup.matches.forEach((match, matchIndex) => {
-                                    const homeTeamDisplay = match.homeTeamIdentifier || '???';
-                                    const awayTeamDisplay = match.awayTeamIdentifier || '???';
+                                    const homeTeamDisplay = getDisplayTeamNameForMatch(match, match.homeTeamIdentifier);
+                                    const awayTeamDisplay = getDisplayTeamNameForMatch(match, match.awayTeamIdentifier);
 
                                     const categoryColor = getCategoryColor(match.categoryId);
                                     const lighterCategoryColor = getLighterColor(categoryColor);
