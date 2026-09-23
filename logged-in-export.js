@@ -1580,13 +1580,15 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                     backgroundColor: colors.backgroundColor,
                                                     color: colors.textColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    lineHeight: '1.2',
+                                                    display: 'inline-block',
                                                     height: '20px',
+                                                    lineHeight: '20px',
                                                     paddingTop: '0',
-                                                    paddingBottom: '0'
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
                                                 }
                                             }, match.matchType)
                                         );
@@ -1596,18 +1598,20 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'placement',
-                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
                                                 style: {
                                                     backgroundColor: '#F3E8FF',
                                                     color: '#6B21A5',
                                                     fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    lineHeight: '1.2',
+                                                    display: 'inline-block',
                                                     height: '20px',
+                                                    lineHeight: '20px',
                                                     paddingTop: '0',
-                                                    paddingBottom: '0'
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
                                                 }
                                             }, `o ${match.placementRank}. miesto`)
                                         );
@@ -1621,18 +1625,20 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'group',
-                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
                                                 style: {
                                                     backgroundColor: groupColors.backgroundColor,
                                                     color: groupColors.textColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    lineHeight: '1.2',
+                                                    display: 'inline-block',
                                                     height: '20px',
+                                                    lineHeight: '20px',
                                                     paddingTop: '0',
-                                                    paddingBottom: '0'
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
                                                 }
                                             }, match.groupName)
                                         );
@@ -1647,18 +1653,20 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                         infoTags.push(
                                             React.createElement('span', {
                                                 key: 'category',
-                                                className: 'text-xs px-2 rounded-full whitespace-nowrap',
+                                                className: 'text-xs rounded-full whitespace-nowrap',
                                                 style: {
                                                     backgroundColor: lighterCategoryColor,
                                                     color: categoryColor,
                                                     fontWeight: '500',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    lineHeight: '1.2',
+                                                    display: 'inline-block',
                                                     height: '20px',
+                                                    lineHeight: '20px',
                                                     paddingTop: '0',
-                                                    paddingBottom: '0'
+                                                    paddingBottom: '0',
+                                                    paddingLeft: '8px',
+                                                    paddingRight: '8px',
+                                                    verticalAlign: 'middle',
+                                                    boxSizing: 'border-box'
                                                 }
                                             }, categoryDisplayTag)
                                         );
