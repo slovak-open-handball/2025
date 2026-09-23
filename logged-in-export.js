@@ -234,23 +234,6 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     iframe.name = `matches-pdf-iframe-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
-    iframe.onload = () => {
-        // ===== APLIKUJ ZOOM V IFRAME =====
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iframeDoc.documentElement.style.zoom = PDF_ZOOM;
-            console.log('[iframe zápasy] zoom aplikovaný:', PDF_ZOOM);
-        } catch (e) {
-            console.error('[iframe zápasy] Nepodarilo sa aplikovať zoom:', e);
-        }
-
-        setTimeout(() => {
-            try {
-                document.body.removeChild(iframe);
-            } catch (e) { }
-        }, 20000);
-    };
-
     document.body.appendChild(iframe);
 
     if (!silent) {
