@@ -440,11 +440,12 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
 
     try {
         const rect = element.getBoundingClientRect();
-        const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO) * (PDF_ZOOM || 1);
 
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
-        
+        // PO NOVOM: rozmery pre html2canvas vynásobíme PDF_ZOOM,
+        // aby PDF bolo fyzicky zväčšené na 175 %
+        const cssWidth = rect.width * PDF_ZOOM;
+        const cssHeight = rect.height * PDF_ZOOM;
+
         const canvas = await html2canvasFn(element, {
             scale: scaleToUse,
             useCORS: true,
@@ -459,6 +460,7 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
         });
 
         const pxToMm = 0.264583;
+        // PO NOVOM: pdfWidthMm/pdfHeightMm vychádzajú zo zväčšených rozmerov
         const pdfWidthMm = cssWidth * pxToMm;
         const pdfHeightMm = cssHeight * pxToMm;
 
@@ -1351,24 +1353,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
     };
 
     // ============================================================
-    // APLIKOVANIE ZOOMU 175 % PRI NAČÍTANÍ ZOZNAMU ZÁPASOV Z URL
-    // ============================================================
-    useEffect(() => {
-        // Použijeme fixný zoom 1.75 (175 %)
-        const zoomValue = 1.75;
-        
-        // Aplikujeme zoom na <html> element
-        document.documentElement.style.zoom = zoomValue;
-        
-        console.log('[MatchesExportView] zoom aplikovaný:', zoomValue);
-        
-        // Cleanup pri odmountovaní – vrátime zoom na 1
-        return () => {
-            document.documentElement.style.zoom = '';
-        };
-    }, []);
-
-    // ============================================================
     // Čítanie pevných hodnôt z URL (nastavené rodičovským oknom)
     // ============================================================
     const urlParams = new URLSearchParams(window.location.search);
@@ -1753,7 +1737,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                     display: 'inline-block',
                     width: '100%',
                     padding: '20px',
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    transform: 'scale(1.75)',
+                    transformOrigin: 'top left'
                 }
             },
 
