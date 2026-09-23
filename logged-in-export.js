@@ -616,11 +616,17 @@ const ExportApp = ({ userProfileData }) => {
                 if (selectedGroupName) {
                     const groupNameSafe = spacesToDashes(selectedGroupName);
                     const hash = `tabulky/${categoryNameSafe}/${groupNameSafe}`;
-        
+                
+                    // NOVÉ: Odstrániť aj hash-špecifický kľúč
+                    try {
+                        sessionStorage.removeItem(`pdfAutoDownloaded_#${hash}`);
+                        sessionStorage.removeItem(`pdfAutoDownloaded_${hash}`);
+                        sessionStorage.removeItem('pdfAutoDownloaded');
+                    } catch (e) { /* ignore */ }
+                
                     if (showPreview) {
                         window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                     } else {
-                        // NOVÉ: Odovzdáme categoryName a groupName
                         downloadPdfViaHiddenIframe(hash, categoryName, selectedGroupName);
                     }
                 } else {
