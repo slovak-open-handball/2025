@@ -165,7 +165,7 @@ const ExportApp = ({ userProfileData }) => {
                                     userTeamsList.push({
                                         uid: docSnap.id,
                                         category: categoryName,
-                                        id: team.id,
+                                        id: team.id || `${docSnap.id}_${categoryName}_${team.teamName}`,  // ← FALLBACK
                                         teamName: team.teamName,
                                         groupName: team.groupName || null,
                                         order: hasGroup ? (team.order ?? 0) : null,
@@ -231,7 +231,7 @@ const ExportApp = ({ userProfileData }) => {
             (teamArray || []).map(team => ({
                 uid: 'global',
                 category: categoryName,
-                id: team.id || crypto.randomUUID(),
+                id: team.id || `global_${categoryName}_${team.teamName}`,  // ← FALLBACK
                 teamName: team.teamName,
                 groupName: team.groupName || null,
                 order: team.groupName ? (team.order ?? 0) : null,
