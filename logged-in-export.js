@@ -527,28 +527,18 @@ const ExportApp = ({ userProfileData }) => {
     // AUTO-DOWNLOAD po otvorení novej karty s ?download=1
     // ============================================================
     useEffect(() => {
-        // Skontrolujeme, či je v URL ?download=1
         const urlParams = new URLSearchParams(window.location.search);
         const shouldAutoDownload = urlParams.get('download') === '1';
     
         if (!shouldAutoDownload) return;
         if (!exportedTable) return;
         if (dataLoading) return;
-    
-        // NOVÉ: Skontrolujeme sessionStorage – prežije refresh aj StrictMode
-        let alreadyDownloaded = false;
-        try {
-            alreadyDownloaded = sessionStorage.getItem('pdfAutoDownloaded') === '1';
-        } catch (e) { /* ignore */ }
 
-        if (alreadyDownloaded) {
-            // Už sme stiahli v tejto session – nič nerobíme
-            return;
-        }
-    
-        // Hneď označíme, že download prebieha (aby ho druhé spustenie useEffect nespustilo)
+        // Hneď odstránime ?download=1 z URL, aby sa pri ďalšom spustení
+        // useEffect (StrictMode) už nespustil download
         try {
-            sessionStorage.setItem('pdfAutoDownloaded', '1');
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
         } catch (e) { /* ignore */ }
     
         // Počkáme, kým sa DOM element 'pdf-export-target' vykreslí
@@ -560,16 +550,11 @@ const ExportApp = ({ userProfileData }) => {
     
             if (element) {
                 clearInterval(interval);
-                // Ešte chvíľu počkáme, aby sa tabuľka stihla vykresliť
                 setTimeout(() => {
                     handleExportPdf();
-                }, 300);
+                }, 500);
             } else if (attempts >= maxAttempts) {
                 clearInterval(interval);
-                // Ak sa element nenašiel, reset flag aby to mohol používateľ skúsiť znova
-                try {
-                    sessionStorage.removeItem('pdfAutoDownloaded');
-                } catch (e) { /* ignore */ }
                 window.showGlobalNotification('Nepodarilo sa nájsť tabuľku pre PDF export.', 'error');
             }
         }, 100);
