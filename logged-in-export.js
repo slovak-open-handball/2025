@@ -696,25 +696,24 @@ const ExportApp = ({ userProfileData }) => {
             return;
         }
     
+        // ===== ZÁPASY V ŠPORTOVEJ HALE =====
+        // Vždy otvoríme novú kartu
         try {
             sessionStorage.removeItem('pdfAutoDownloaded');
         } catch (e) { }
-        if (showPreview) {
-            window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
-        } else {
-            downloadPdfViaHiddenIframe(selectedOption, 'Zápasy', null);
-        }
+
+        window.open(`logged-in-export.html?download=1#${selectedOption}`, '_blank');
     };
     
-        const handleExportPdf = () => {
-            exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
-        };
+    const handleExportPdf = () => {
+        exportTableToPdf(exportedTable?.categoryName, exportedTable?.groupName);
+    };
         
-        // Uchovávame si referenciu na aktuálne dáta
-        const exportedTableRef = React.useRef(null);
-        const dataLoadingRef = React.useRef(true);
+    // Uchovávame si referenciu na aktuálne dáta
+    const exportedTableRef = React.useRef(null);
+    const dataLoadingRef = React.useRef(true);
         
-        // Aktualizujeme ref pri každej zmene
+    // Aktualizujeme ref pri každej zmene
     useEffect(() => {
         exportedTableRef.current = exportedTable;
     }, [exportedTable]);
