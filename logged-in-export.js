@@ -197,7 +197,7 @@ const normalizeName = (name) => {
         .trim();
 };
 
-const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
+const downloadPdfViaHiddenIframe = (hash, categoryName, groupName, silent = false) => {
     const iframe = document.createElement('iframe');
 
     iframe.style.position = 'fixed';
@@ -212,7 +212,6 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     iframe.name = `pdf-iframe-${hash}-${Date.now()}`;
     iframe.src = `logged-in-export.html?download=1&fixedZoom=${PDF_ZOOM}&fixedDpr=${PDF_DEVICE_PIXEL_RATIO}#${hash}`;
 
-    // V downloadPdfViaHiddenIframe
     iframe.onload = () => {
         console.log('[iframe] načítaný:', iframe.src);
         setTimeout(() => {
@@ -224,10 +223,13 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
 
     document.body.appendChild(iframe);
 
-    const label = groupName
-        ? `${categoryName} - ${groupName}`
-        : categoryName || 'neznáma kategória';
-    window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
+    // Zobraz modrú notifikáciu LEN ak nie je silent
+    if (!silent) {
+        const label = groupName
+            ? `${categoryName} - ${groupName}`
+            : categoryName || 'neznáma kategória';
+        window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
+    }
 };
 
 const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
@@ -960,7 +962,7 @@ const ExportApp = ({ userProfileData }) => {
                     } catch (e) { }
     
                     setTimeout(() => {
-                        downloadPdfViaHiddenIframe(hash, categoryName, groupName);
+                        downloadPdfViaHiddenIframe(hash, categoryName, groupName, true);
                     }, index * 3000);
                 });
     
@@ -1033,7 +1035,7 @@ const ExportApp = ({ userProfileData }) => {
             if (showPreview) {
                 window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
             } else {
-                downloadMatchesPdfViaHiddenIframe(hash, hallName);
+                downloadMatchesPdfViaHiddenIframe(hash, hall.name, true);
             }
             return;
         }
