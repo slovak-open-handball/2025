@@ -243,8 +243,8 @@ const downloadMatchesPdfViaHiddenIframe = (hash, hallName, silent = false) => {
     iframe.style.position = 'fixed';
     iframe.style.top = '0';
     iframe.style.left = '-9999px';
-    iframe.style.width = PDF_IFRAME_WIDTH + 'px';
-    iframe.style.height = PDF_IFRAME_HEIGHT + 'px';
+    iframe.style.width = (PDF_IFRAME_WIDTH / PDF_ZOOM) + 'px';
+    iframe.style.height = (PDF_IFRAME_HEIGHT / PDF_ZOOM) + 'px';
     iframe.style.border = '0';
     iframe.style.pointerEvents = 'none';
     iframe.style.zIndex = '-1';
