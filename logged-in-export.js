@@ -1588,6 +1588,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl }) => {
                                                 { className: 'px-4 py-3 whitespace-nowrap text-left' },
                                                 React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                             ),
+                                            
+                                            React.createElement(
+                                                'td',
+                                                { className: 'px-4 py-3' },
+                                                React.createElement('div', { className: 'flex flex-col gap-1' }, infoTags)
+                                            )
                                         )
                                     );
                                 });
