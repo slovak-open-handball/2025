@@ -225,7 +225,9 @@ const exportTableToPdf = async (categoryName, groupName) => {
             width: cssWidth,
             height: cssHeight,
             windowWidth: cssWidth,
-            windowHeight: cssHeight
+            windowHeight: cssHeight,
+            foreignObjectRendering: false,
+            allowTaint: true   
         });
 
         const pxToMm = 0.264583;
@@ -309,7 +311,9 @@ const exportMatchesToPdf = async (hallName, matchesByDay, formatDateHeaderFn, fo
             width: cssWidth,
             height: cssHeight,
             windowWidth: cssWidth,
-            windowHeight: cssHeight
+            windowHeight: cssHeight,
+            foreignObjectRendering: false,
+            allowTaint: true   
         });
 
         const pxToMm = 0.264583;
