@@ -187,6 +187,31 @@ const downloadPdfViaHiddenIframe = (hash, categoryName, groupName) => {
     window.showGlobalNotification(`Generujem PDF pre: ${label}`, 'info');
 };
 
+const downloadMatchesPdfViaHiddenIframe = (hash, hallName) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.name = `matches-pdf-iframe-${Date.now()}`;
+    iframe.src = `logged-in-export.html?download=1#${hash}`;
+
+    iframe.onload = () => {
+        setTimeout(() => {
+            try {
+                document.body.removeChild(iframe);
+            } catch (e) { }
+        }, 20000);
+    };
+
+    document.body.appendChild(iframe);
+
+    window.showGlobalNotification(`Generujem PDF pre zápasy: ${hallName}`, 'info');
+};
+
 const exportTableToPdf = async (categoryName, groupName) => {
     const element = document.getElementById('pdf-export-target');
     if (!element) {
@@ -819,7 +844,7 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Prosím, vyberte športovú halu.', 'error');
                 return;
             }
-
+        
             // Nájdeme názov haly podľa vybraného ID
             const selectedHall = halls.find(h => h.id === selectedHallId);
             const hallName = selectedHall ? selectedHall.name : selectedHallId;
@@ -827,11 +852,25 @@ const ExportApp = ({ userProfileData }) => {
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-
+        
             // V URL bude názov haly s pomlčkami namiesto medzier
             const hallNameSafe = spacesToDashes(hallName);
             const hash = `zapasy/${encodeURIComponent(hallNameSafe)}`;
-            window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+        
+            // Vymažeme sessionStorage flagy pre túto halu, aby sa auto-download spustil znova
+            try {
+                sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallName}`);
+                sessionStorage.removeItem(`matchesPdfAutoDownloaded_${hallNameSafe}`);
+                sessionStorage.removeItem('pdfAutoDownloaded');
+            } catch (e) { }
+        
+            if (showPreview) {
+                // Zaškrtnuté → otvorí novú kartu s náhľadom, PDF sa stiahne automaticky
+                window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
+            } else {
+                // Nezaškrtnuté → PDF sa vygeneruje a stiahne priamo v tejto karte
+                downloadMatchesPdfViaHiddenIframe(hash, hallName);
+            }
             return;
         }
 
@@ -1064,8 +1103,12 @@ const ExportApp = ({ userProfileData }) => {
                     `Vygenerujú sa PDF pre všetky skupiny typu "${formatGroupType(selectedGroupType)}" v kategórii.`
                 ),
 
-                // Náhľad checkbox – zobrazí sa len ak je vybraný typ exportu
-                selectedOption && selectedGroupName && React.createElement(
+                // Náhľad checkbox – zobrazí sa pri vybranej skupine (tabulky)
+                // alebo pri vybranej športovej hale (zapasy)
+                selectedOption && (
+                    (selectedOption === 'tabulky' && selectedGroupName) ||
+                    (selectedOption === 'zapasy' && selectedHallId)
+                ) && React.createElement(
                     'div',
                     { className: 'flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200' },
                     React.createElement('input', {
@@ -1084,7 +1127,9 @@ const ExportApp = ({ userProfileData }) => {
                         React.createElement('span', { className: 'font-semibold' }, 'Zobraziť náhľad'),
                         React.createElement('span', { className: 'block text-xs text-gray-500 mt-0.5' },
                             showPreview
-                                ? 'Otvorí sa nová karta s tabuľkou a PDF sa automaticky stiahne.'
+                                ? (selectedOption === 'zapasy'
+                                    ? 'Otvorí sa nová karta so zoznamom zápasov a PDF sa automaticky stiahne.'
+                                    : 'Otvorí sa nová karta s tabuľkou a PDF sa automaticky stiahne.')
                                 : 'PDF sa stiahne priamo v tejto karte (bez otvorenia novej karty).'
                         )
                     )
