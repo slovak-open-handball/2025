@@ -227,6 +227,11 @@ const cateringApp = ({ userProfileData }) => {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
     const [filterMealType, setFilterMealType] = useState('');
+    const [showAssignmentTypeModal, setShowAssignmentTypeModal] = useState(false);
+    const [pendingAssignmentCell, setPendingAssignmentCell] = useState(null);
+
+    // 🔥 NOVÉ: modálne okno pre priradenie podľa umiestnenia (zatiaľ prázdne)
+    const [showPlaceAssignmentModal, setShowPlaceAssignmentModal] = useState(false);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -596,8 +601,18 @@ const cateringApp = ({ userProfileData }) => {
         return total;
     };
 
-    // Otvorí modálne okno pre priradenie
+        // Otvorí modálne okno pre priradenie (najprv výber typu)
     const openCateringModal = (team, day, mealType, slot) => {
+        // Uložíme si kontext bunky (tím, deň, jedlo, slot)
+        setPendingAssignmentCell({ team, day, mealType, slot });
+        // Otvoríme modálne okno s výberom typu priradenia
+        setShowAssignmentTypeModal(true);
+    };
+
+    // Používateľ zvolil "Priradiť pre tím" → otvorí existujúce modálne okno
+    const handleAssignForTeam = () => {
+        if (!pendingAssignmentCell) return;
+        const { team, day, mealType, slot } = pendingAssignmentCell;
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
         setSelectedCateringCell({
             team,
@@ -609,7 +624,20 @@ const cateringApp = ({ userProfileData }) => {
             existingId: existing?.id || null,
         });
         setSelectedCateringPlaceId(existing?.placeId || '');
+        setShowAssignmentTypeModal(false);
         setShowCateringModal(true);
+    };
+
+    // Používateľ zvolil "Priradiť podľa umiestnenia" → otvorí nové (zatiaľ prázdne) modálne okno
+    const handleAssignByPlace = () => {
+        setShowAssignmentTypeModal(false);
+        setShowPlaceAssignmentModal(true);
+    };
+
+    // Zatvoriť modálne okno výberu typu
+    const cancelAssignmentType = () => {
+        setShowAssignmentTypeModal(false);
+        setPendingAssignmentCell(null);
     };
 
     const buildCateringPayload = (placeId) => {
@@ -1304,6 +1332,113 @@ const cateringApp = ({ userProfileData }) => {
                             )];
                         })
                     ),
+                )
+            ),
+                        // 🔥 NOVÉ: Modálne okno – výber typu priradenia
+            showAssignmentTypeModal && React.createElement(
+                'div',
+                {
+                    className:
+                        'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
+                    onClick: () => {
+                        cancelAssignmentType();
+                    },
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className:
+                            'bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6',
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-4 text-gray-800 text-center' },
+                        'Vyberte typ priradenia'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600 text-sm mb-6 text-center' },
+                        'Ako chcete priradiť stravovanie pre túto bunku?'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: handleAssignForTeam,
+                                className:
+                                    'w-full py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition',
+                            },
+                            'Priradiť stravovanie pre tím'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: handleAssignByPlace,
+                                className:
+                                    'w-full py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition',
+                            },
+                            'Priradiť stravovanie podľa umiestnenia'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: cancelAssignmentType,
+                                className:
+                                    'w-full py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition',
+                            },
+                            'Zrušiť'
+                        )
+                    )
+                )
+            ),
+
+            // 🔥 NOVÉ: Modálne okno pre priradenie podľa umiestnenia (zatiaľ prázdne)
+            showPlaceAssignmentModal && React.createElement(
+                'div',
+                {
+                    className:
+                        'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
+                    onClick: () => {
+                        setShowPlaceAssignmentModal(false);
+                        setPendingAssignmentCell(null);
+                    },
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className:
+                            'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-4 text-gray-800' },
+                        'Priradiť stravovanie podľa umiestnenia'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600 text-sm mb-6' },
+                        'Toto modálne okno je zatiaľ prázdne. Logika bude doplnená neskôr.'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => {
+                                    setShowPlaceAssignmentModal(false);
+                                    setPendingAssignmentCell(null);
+                                },
+                                className:
+                                    'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition',
+                            },
+                            'Zatvoriť'
+                        )
+                    )
                 )
             ),
             // Modálne okno pre priradenie stravovacieho miesta
