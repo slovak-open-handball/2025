@@ -91,14 +91,6 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     return days;
 };
 
-/**
- * Pomocná funkcia: načíta všetky používateľské tímy z kolekcie 'users'.
- * Vráti zoradené pole objektov { uid, teamName, category, id }.
- *
- * ZORADENIE:
- *   1. abecedne podľa názvu KATEGÓRIE (sk locale)
- *   2. potom abecedne podľa názvu TÍMU (sk locale)
- */
 const loadUserTeams = async (db) => {
     if (!db) return [];
 
@@ -119,11 +111,20 @@ const loadUserTeams = async (db) => {
             teamArray.forEach((team) => {
                 if (!team?.teamName) return;
 
+                // 🔥 Spočítame členov jednotlivých polí
+                const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
+                const menTeamMembersCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
+                const womenTeamMembersCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
+                const menDriversCount = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
+                const womenDriversCount = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
+
                 teams.push({
                     uid: userDoc.id,
                     id: team.id || `${userDoc.id}-${team.teamName}`,
                     teamName: team.teamName,
                     category: categoryName,
+                    playersCount,
+                    othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
                 });
             });
         });
@@ -410,7 +411,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'thead',
                         null,
-                        // Riadok 1: Kategória (rowspan=3), Tím (rowspan=3), Deň (colspan=počet slotov), ...
+                        // Riadok 1: Kategória (rowspan=3), Tím (rowspan=3), Hráči (počet), Ostatní (počet), Deň (colspan=počet slotov), ...
                         React.createElement(
                             'tr',
                             null,
@@ -428,10 +429,31 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        // 🔥 Hrubá čiara na pravom okraji "Tím" → oddeľuje Tím od prvého dňa
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px] border-r-4 border-r-gray-500',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px]',
                                 },
                                 'Tím'
+                            ),
+                            // 🔥 NOVÉ: počet hráčov
+                            React.createElement(
+                                'th',
+                                {
+                                    rowSpan: 3,
+                                    className:
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[80px]',
+                                    title: 'Počet členov v poli playerDetails',
+                                },
+                                'Hráči (počet)'
+                            ),
+                            // 🔥 NOVÉ: počet ostatných členov
+                            React.createElement(
+                                'th',
+                                {
+                                    rowSpan: 3,
+                                    className:
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[100px] border-r-4 border-r-gray-500',
+                                    title: 'Súčet členov: realizačný tím (ž) + realizačný tím (m) + šofér (ž) + šofér (m)',
+                                },
+                                'Ostatní (počet)'
                             ),
                             visibleDays.map((day, index) => {
                                 const total = dayColumnCount(day.key);
@@ -501,7 +523,7 @@ const cateringApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
-                        // 🔥 Riadok 3: Popisky začiatkov jednotlivých slotov (len ak existujú)
+                        // Riadok 3: Popisky začiatkov jednotlivých slotov (len ak existujú)
                         React.createElement(
                             'tr',
                             null,
@@ -568,7 +590,7 @@ const cateringApp = ({ userProfileData }) => {
                                   React.createElement(
                                       'td',
                                       {
-                                          colSpan: 2 + totalMealColumns,
+                                          colSpan: 4 + totalMealColumns,
                                           className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
                                       },
                                       'Žiadne tímy neboli nájdené v kolekcii users.'
@@ -593,10 +615,27 @@ const cateringApp = ({ userProfileData }) => {
                                           'td',
                                           {
                                               className:
-                                                  // 🔥 Hrubá čiara na pravom okraji bunky "Tím" → oddeľuje Tím od prvého dňa
-                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap border-r-4 border-r-gray-500',
+                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap',
                                           },
                                           team.teamName
+                                      ),
+                                      // 🔥 NOVÉ: počet hráčov
+                                      React.createElement(
+                                          'td',
+                                          {
+                                              className:
+                                                  'border border-gray-300 px-3 py-2 text-center text-gray-700 whitespace-nowrap text-xs font-medium',
+                                          },
+                                          team.playersCount
+                                      ),
+                                      // 🔥 NOVÉ: počet ostatných členov
+                                      React.createElement(
+                                          'td',
+                                          {
+                                              className:
+                                                  'border border-gray-300 px-3 py-2 text-center text-gray-700 whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
+                                          },
+                                          team.othersCount
                                       ),
                                       visibleDays.map((day, dayIndex) => {
                                           const lunchCount = slotCountFor(day.key, 'lunch');
