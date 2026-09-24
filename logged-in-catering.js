@@ -1660,7 +1660,8 @@ const cateringApp = ({ userProfileData }) => {
                             {
                                 onClick: handleAssignForTeam,
                                 className:
-                                    'w-full py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition',
+                                    'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-green-200',
+                                style: { backgroundColor: '#DCFCE7' },
                             },
                             'Priradiť stravovanie pre tím'
                         ),
@@ -1669,7 +1670,8 @@ const cateringApp = ({ userProfileData }) => {
                             {
                                 onClick: handleAssignByPlace,
                                 className:
-                                    'w-full py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition',
+                                    'w-full py-3 rounded-lg text-gray-800 font-medium hover:brightness-95 transition border border-blue-200',
+                                style: { backgroundColor: '#DBEAFE' },
                             },
                             'Priradiť stravovanie podľa umiestnenia'
                         ),
