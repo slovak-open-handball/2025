@@ -1130,8 +1130,9 @@ const cateringApp = ({ userProfileData }) => {
     // 🔥 NOVÉ: Používateľ vybral konkrétne superstructure priradenie na preplánovanie
     const handlePickSuperstructureReplan = (item) => {
         if (!pendingSuperstructureDecision || !item) return;
-    
-        const { team, day, mealType } = pendingSuperstructureDecision;
+
+        // 🔥 OPRAVA: doplnený slot z pendingSuperstructureDecision
+        const { team, day, mealType, slot } = pendingSuperstructureDecision;
         const { assignment, placeTeam } = item;
     
         setSelectedCateringCell({
