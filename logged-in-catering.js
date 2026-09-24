@@ -438,7 +438,7 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[80px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[60px]',
                                 },
                                 'Hráči'
                             ),
@@ -448,7 +448,7 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[100px] border-r-4 border-r-gray-500',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[60px] border-r-4 border-r-gray-500',
                                 },
                                 'RT'
                             ),
