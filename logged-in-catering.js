@@ -114,7 +114,7 @@ const loadUserTeams = async (db) => {
         Object.entries(userTeams).forEach(([categoryName, teamArray]) => {
             if (!Array.isArray(teamArray)) return;
 
-            teamArray.forEach((team) => {
+            teamArray.forEach((team, teamIndex) => {
                 if (!team?.teamName) return;
 
                 const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
@@ -123,11 +123,14 @@ const loadUserTeams = async (db) => {
                 const menDriversCount = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
                 const womenDriversCount = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
 
+                const cleanCat = cleanCategory(categoryName);
+
                 teams.push({
                     uid: userDoc.id,
-                    id: team.id || `${userDoc.id}-${team.teamName}`,
+                    teamIndex: teamIndex,
+                    id: team.id || `${userDoc.id}-${cleanCat}-${teamIndex}`,
                     teamName: team.teamName,
-                    category: cleanCategory(categoryName),
+                    category: cleanCat,
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
                     accommodationName: team.accommodation?.name || null,
@@ -545,7 +548,7 @@ const cateringApp = ({ userProfileData }) => {
         return cateringAssignments.find(
             (a) =>
                 a.teamUid === team.uid &&
-                a.teamId === team.id &&
+                a.teamIndex === team.teamIndex &&
                 (a.category === team.category || a.categoryName === team.category) &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
@@ -662,7 +665,7 @@ const cateringApp = ({ userProfileData }) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         return {
             teamUid: selectedCateringCell.team.uid,
-            teamId: selectedCateringCell.team.id,
+            teamIndex: selectedCateringCell.team.teamIndex,
             category: selectedCateringCell.team.category,
             categoryName: selectedCateringCell.team.category,
             dayKey: selectedCateringCell.dayKey,
@@ -707,7 +710,7 @@ const cateringApp = ({ userProfileData }) => {
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
                 a.teamUid === selectedCateringCell.team.uid &&
-                a.teamId === selectedCateringCell.team.id &&
+                a.teamIndex === selectedCateringCell.team.teamIndex &&
                 (a.category === selectedCateringCell.team.category ||
                  a.categoryName === selectedCateringCell.team.category) &&
                 a.dayKey === selectedCateringCell.dayKey &&
