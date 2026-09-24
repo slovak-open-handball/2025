@@ -1532,9 +1532,8 @@ const cateringApp = ({ userProfileData }) => {
 
                                 if (lunchCount > 0 || hasLunchSummary) {
                                     const lunchColSpan = lunchCount + (hasLunchSummary ? 1 : 0);
-                                    // 🔥 Hrubá čiara za obedom len ak v tomto dni nie je večera
-                                    const lunchHasThickRight =
-                                        (dinnerCount === 0 && !hasDinnerSummary);
+                                    // 🔥 Hrubá čiara za obedom VŽDY
+                                    const lunchHasThickRight = true;
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -1542,8 +1541,7 @@ const cateringApp = ({ userProfileData }) => {
                                                 key: `lunch-header-${index}`,
                                                 colSpan: lunchColSpan,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
-                                                    (lunchHasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs border-r-4 border-r-gray-500',
                                             },
                                             'Obed'
                                         )
@@ -1591,11 +1589,8 @@ const cateringApp = ({ userProfileData }) => {
                                 // Obedové sloty
                                 lunchSlots.forEach((slot, i) => {
                                     const isLastLunchSlot = i === lunchSlots.length - 1;
-                                    // 🔥 Hrubá čiara len ak nie je lunch summary a nie je večera v tomto dni
-                                    const hasThickRight =
-                                        isLastLunchSlot &&
-                                        !hasLunchSummary &&
-                                        (dinnerSlots.length === 0 && !hasDinnerSummary);
+                                    // 🔥 Hrubá čiara za posledným obedovým slotom VŽDY (ak nie je „∑ Obed")
+                                    const hasThickRight = isLastLunchSlot && !hasLunchSummary;
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -1613,16 +1608,14 @@ const cateringApp = ({ userProfileData }) => {
 
                                 // Stĺpec „∑ Obed" (denný súčet)
                                 if (hasLunchSummary) {
-                                    // 🔥 Hrubá čiara za "∑ Obed" len ak v tomto dni nie je večera
-                                    const hasThickRight = (dinnerSlots.length === 0 && !hasDinnerSummary);
+                                    // 🔥 Hrubá čiara za „∑ Obed" VŽDY
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
                                                 key: `lunch-summary-${dayIndex}`,
                                                 className:
-                                                    'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                    'border border-gray-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-bold text-amber-800 whitespace-nowrap min-w-[70px] border-r-4 border-r-gray-500',
                                                 title: 'Denný súčet obeda',
                                             },
                                             '∑'
@@ -1633,7 +1626,7 @@ const cateringApp = ({ userProfileData }) => {
                                 // Večerové sloty
                                 dinnerSlots.forEach((slot, i) => {
                                     const isLastDinnerSlot = i === dinnerSlots.length - 1;
-                                    // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY (ak nie je summary)
+                                    // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY (ak nie je „∑ Večera")
                                     const hasThickRight = isLastDinnerSlot && !hasDinnerSummary;
                                     parts.push(
                                         React.createElement(
@@ -1652,7 +1645,7 @@ const cateringApp = ({ userProfileData }) => {
 
                                 // Stĺpec „∑ Večera" (denný súčet)
                                 if (hasDinnerSummary) {
-                                    // 🔥 Hrubá čiara za "∑ Večera" VŽDY
+                                    // 🔥 Hrubá čiara za „∑ Večera" VŽDY
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -1763,10 +1756,8 @@ const cateringApp = ({ userProfileData }) => {
                                           for (let i = 0; i < lunchCount; i++) {
                                               const slot = daySlots[day.key].lunch[i];
                                               const isLastLunchCell = i === lunchCount - 1;
-                                              // 🔥 Hrubá čiara za obedom len ak v tomto dni nie je večera
-                                              const hasThickRight =
-                                                  isLastLunchCell &&
-                                                  (dinnerCount === 0);
+                                              // 🔥 Hrubá čiara za posledným obedovým slotom VŽDY
+                                              const hasThickRight = isLastLunchCell;
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
                                               const colors = existing
@@ -1844,15 +1835,13 @@ const cateringApp = ({ userProfileData }) => {
                                           }
 
                                           if (shouldShowMealType('lunch') && lunchCount > 0) {
-                                              // 🔥 Hrubá čiara za prázdnou obedovou summary bunkou len ak nie je večera
-                                              const hasThickRight =
-                                                  !(shouldShowMealType('dinner') && dinnerCount > 0);
+                                              // 🔥 Hrubá čiara za prázdnou obedovou summary bunkou VŽDY
+                                              const hasThickRight = true;
                                               cells.push(
                                                   React.createElement('td', {
                                                       key: `empty-lunch-summary-${rowIndex}-${dayIndex}`,
                                                       className:
-                                                          'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px]' +
-                                                          (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                          'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] border-r-4 border-r-gray-500',
                                                   })
                                               );
                                           }
@@ -1860,7 +1849,7 @@ const cateringApp = ({ userProfileData }) => {
                                           for (let i = 0; i < dinnerCount; i++) {
                                               const slot = daySlots[day.key].dinner[i];
                                               const isLastDinnerCell = i === dinnerCount - 1;
-                                              // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY
+                                              // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY (ak nie je summary)
                                               const hasThickRight = isLastDinnerCell;
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
                                               const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
@@ -2016,8 +2005,8 @@ const cateringApp = ({ userProfileData }) => {
 
                                     lunchSlots.forEach((slot, i) => {
                                         const isLastLunchCell = i === lunchSlots.length - 1;
-                                        // 🔥 Hrubá čiara za obedom len ak v tomto dni nie je večera
-                                        const hasThickRight = isLastLunchCell && (dinnerSlots.length === 0);
+                                        // 🔥 Hrubá čiara za posledným obedovým slotom v summary VŽDY
+                                        const hasThickRight = isLastLunchCell;
                                         const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
                                         const overCapacity = placeCapacity != null && count > placeCapacity;
 
@@ -2043,17 +2032,13 @@ const cateringApp = ({ userProfileData }) => {
                                     if (shouldShowMealType('lunch') && lunchSlots.length > 0) {
                                         const dailyLunchTotal = getDailyAssignedCountForPlace(place.id, day.key, 'lunch');
                                         const overCapacity = placeCapacity != null && dailyLunchTotal > placeCapacity;
-                                        // 🔥 Hrubá čiara za "∑ Obed" len ak nie je večera v tomto dni
-                                        const hasThickRight =
-                                            !(shouldShowMealType('dinner') && dinnerSlots.length > 0);
-
+                                        // 🔥 Hrubá čiara za „∑ Obed" VŽDY
                                         cells.push(React.createElement(
                                             'td',
                                             {
                                                 key: `summary-daily-${place.id}-lunch-${dayIndex}`,
                                                 className:
-                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
+                                                    'border border-gray-300 px-2 py-2 text-center text-sm font-bold min-w-[70px] border-r-4 border-r-gray-500' +
                                                     (overCapacity ? ' text-red-600' : ''),
                                                 style: dailyLunchTotal > 0
                                                     ? {
@@ -2070,15 +2055,9 @@ const cateringApp = ({ userProfileData }) => {
                                     dinnerSlots.forEach((slot, i) => {
                                         const isLastDinnerCell = i === dinnerSlots.length - 1;
                                         // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY (ak nie je summary)
-                                        const hasThickRight = isLastDinnerCell && !(shouldShowMealType('dinner') && dinnerSlots.length > 0) === false
-                                            ? false
-                                            : isLastDinnerCell; // zjednodušené nižšie
+                                        const hasThickRight = isLastDinnerCell && !(shouldShowMealType('dinner') && dinnerSlots.length > 0);
                                         const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
                                         const overCapacity = placeCapacity != null && count > placeCapacity;
-
-                                        // Ak existuje večerový summary, hrubá čiara patrí summary bunke (nie poslednému slotu)
-                                        const thickRight = isLastDinnerCell && !(shouldShowMealType('dinner') && dinnerSlots.length > 0 && false);
-                                        // (vždy je summary, keď dinnerSlots.length > 0, takže posledný slot NEMÁ hrubú čiaru)
 
                                         cells.push(React.createElement(
                                             'td',
