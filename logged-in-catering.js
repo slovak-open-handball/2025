@@ -1175,37 +1175,44 @@ const cateringApp = ({ userProfileData }) => {
                                   )
                               ),
                         // 🔥 SÚHRNNÉ RIADKY PRE KAŽDÉ STRAVOVACIE MIESTO (vždy zobrazené)
+                        // Farba bunky = farba konkrétneho stravovacieho miesta
                         React.createElement(
                             'tr',
-                            { key: 'summary-header', className: 'bg-yellow-100' },
+                            { key: 'summary-header', className: 'bg-gray-100' },
                             React.createElement(
                                 'td',
                                 {
                                     colSpan: 4 + filteredDays.reduce(
                                         (acc, d) => acc + visibleColumnCountForDay(d.key), 0
                                     ),
-                                    className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-yellow-800'
+                                    className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-gray-700'
                                 },
                                 'Súčty podľa stravovacích miest:'
                             )
                         ),
                         ...cateringPlaces.flatMap((place) => {
+                            const colors = getCateringPlaceColors(place.id);
+
                             return [React.createElement(
                                 'tr',
                                 {
                                     key: `summary-place-${place.id}`,
-                                    className: 'bg-yellow-50 border-t-2 border-yellow-300',
+                                    className: 'border-t-2 border-gray-300',
                                 },
                                 React.createElement(
                                     'td',
                                     {
                                         colSpan: 2,
-                                        className: 'border border-gray-300 px-3 py-2 text-left font-semibold text-gray-800 whitespace-nowrap',
+                                        className: 'border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap',
+                                        style: {
+                                            backgroundColor: colors.bg,
+                                            color: colors.text,
+                                        },
                                     },
                                     `Súčet: ${place.name}`
                                 ),
-                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100' }, ''),
-                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100 border-r-4 border-r-gray-500' }, ''),
+                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-50' }, ''),
+                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-50 border-r-4 border-r-gray-500' }, ''),
                                 ...filteredDays.flatMap((day, dayIndex) => {
                                     const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
                                     const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
@@ -1221,8 +1228,14 @@ const cateringApp = ({ userProfileData }) => {
                                             {
                                                 key: `summary-${place.id}-lunch-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
+                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
                                                     (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                style: count > 0
+                                                    ? {
+                                                        backgroundColor: colors.bg,
+                                                        color: colors.text,
+                                                    }
+                                                    : {},
                                             },
                                             count > 0 ? count : ''
                                         ));
@@ -1237,8 +1250,14 @@ const cateringApp = ({ userProfileData }) => {
                                             {
                                                 key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
+                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
                                                     (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                style: count > 0
+                                                    ? {
+                                                        backgroundColor: colors.bg,
+                                                        color: colors.text,
+                                                    }
+                                                    : {},
                                             },
                                             count > 0 ? count : ''
                                         ));
