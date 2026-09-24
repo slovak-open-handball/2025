@@ -541,16 +541,16 @@ const cateringApp = ({ userProfileData }) => {
         return accommodation.headerTextColor || '#000000';
     };
 
-    // Nájde existujúce priradenie pre konkrétnu bunku
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
-        return cateringAssignments.find(
-            (a) =>
-                a.teamId === team.id &&
+        return cateringAssignments.find((a) => {
+            const matchNew = a.teamUid === team.uid && a.teamId === team.id;
+            const matchOld = !a.teamUid && a.teamName === team.teamName; // fallback pre staré dáta
+            return (matchNew || matchOld) &&
                 (a.category === team.category || a.categoryName === team.category) &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
-                a.slotFrom === slotFrom
-        );
+                a.slotFrom === slotFrom;
+        });
     };
 
     // Farby stravovacieho miesta
@@ -661,11 +661,10 @@ const cateringApp = ({ userProfileData }) => {
     const buildCateringPayload = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         return {
+            teamUid: selectedCateringCell.team.uid,
             teamId: selectedCateringCell.team.id,
-            teamName: selectedCateringCell.team.teamName,
             category: selectedCateringCell.team.category,
             categoryName: selectedCateringCell.team.category,
-            uid: selectedCateringCell.team.uid,
             dayKey: selectedCateringCell.dayKey,
             dayLabel: selectedCateringCell.dayLabel,
             mealType: selectedCateringCell.mealType,
@@ -705,14 +704,15 @@ const cateringApp = ({ userProfileData }) => {
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
-        const existingForTeamDayMeal = cateringAssignments.filter(
-            (a) =>
-                a.teamId === selectedCateringCell.team.id &&
+        const existingForTeamDayMeal = cateringAssignments.filter((a) => {
+            const matchNew = a.teamUid === selectedCateringCell.team.uid && a.teamId === selectedCateringCell.team.id;
+            const matchOld = !a.teamUid && a.teamName === selectedCateringCell.team.teamName; // fallback pre staré dáta
+            return (matchNew || matchOld) &&
                 (a.category === selectedCateringCell.team.category ||
                  a.categoryName === selectedCateringCell.team.category) &&
                 a.dayKey === selectedCateringCell.dayKey &&
-                a.mealType === selectedCateringCell.mealType
-        );
+                a.mealType === selectedCateringCell.mealType;
+        });
 
         if (existingForTeamDayMeal.length === 0) {
             setSavingCatering(true);
