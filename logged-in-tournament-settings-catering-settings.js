@@ -38,7 +38,6 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
                 month: 'long',
                 year: 'numeric',
             }),
-            // 🔥 NOVÉ: číselný formát bez názvu mesiaca (DD. MM. YYYY)
             fullLabelNumeric: `${d}. ${m}. ${y}`,
         });
         current.setDate(current.getDate() + 1);
@@ -52,10 +51,23 @@ const EMPTY_DAY_TIMES = {
     dinner: { from: '', to: '' },
 };
 
+// Pomocná: prevedie "HH:MM" na minúty od polnoci
+const timeToMinutes = (t) => {
+    if (!t || typeof t !== 'string') return null;
+    const parts = t.split(':');
+    if (parts.length < 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+};
+
 export function CateringSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [tournamentDays, setTournamentDays] = React.useState([]);
-    const [cateringTimes, setCateringTimes] = React.useState({});          // aktuálne v UI
-    const [originalCateringTimes, setOriginalCateringTimes] = React.useState({}); // pôvodné z DB
+    const [cateringTimes, setCateringTimes] = React.useState({});
+    const [originalCateringTimes, setOriginalCateringTimes] = React.useState({});
+    const [unitMinutes, setUnitMinutes] = React.useState('');              // 🔥 nové
+    const [originalUnitMinutes, setOriginalUnitMinutes] = React.useState(''); // 🔥 nové
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
 
@@ -103,11 +115,16 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 if (snap.exists()) {
                     const data = snap.data() || {};
                     const loaded = data.times || {};
+                    const loadedUnit = data.unitMinutes != null ? String(data.unitMinutes) : '';
                     setCateringTimes(loaded);
                     setOriginalCateringTimes(loaded);
+                    setUnitMinutes(loadedUnit);
+                    setOriginalUnitMinutes(loadedUnit);
                 } else {
                     setCateringTimes({});
                     setOriginalCateringTimes({});
+                    setUnitMinutes('');
+                    setOriginalUnitMinutes('');
                 }
             },
             (error) => {
@@ -144,15 +161,21 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         });
     };
 
-    const buildCateringChanges = (original, updated, days) => {
+    const buildCateringChanges = (original, updated, days, origUnit, newUnit) => {
         const changes = [];
         const mealLabel = (m) => (m === 'lunch' ? 'Obed' : 'Večera');
+
+        // 🔥 Zmena jednotky
+        if (String(origUnit || '') !== String(newUnit || '')) {
+            const o = origUnit ? `${origUnit} min` : '(nezadané)';
+            const n = newUnit ? `${newUnit} min` : '(nezadané)';
+            changes.push(`Trvanie stravovacej jednotky: z '${o}' na '${n}'`);
+        }
 
         days.forEach((day) => {
             const orig = original?.[day.key] || {};
             const upd  = updated?.[day.key]  || {};
 
-            // 🔥 Použijeme číselný formát dátumu (napr. "23. 09. 2025")
             const dayLabel = day.fullLabelNumeric || day.fullLabel;
 
             ['lunch', 'dinner'].forEach((mealType) => {
@@ -200,10 +223,21 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             return;
         }
 
+        // 🔥 Validácia jednotky
+        const unit = parseInt(unitMinutes, 10);
+        const hasValidUnit = !isNaN(unit) && unit > 0;
+
+        if (unitMinutes !== '' && !hasValidUnit) {
+            showNotification?.('Trvanie stravovacej jednotky musí byť kladné číslo v minútach.', 'error');
+            return;
+        }
+
+        // Validácia časov
         for (const day of tournamentDays) {
             const t = cateringTimes[day.key];
             if (!t) continue;
 
+            // from < to
             if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
                 showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Obeda "od" musí byť pred časom "do".`, 'error');
                 return;
@@ -212,12 +246,44 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Večere "od" musí byť pred časom "do".`, 'error');
                 return;
             }
+
+            // 🔥 Deliteľnosť jednotkou
+            if (hasValidUnit) {
+                const meals = [
+                    { key: 'lunch',  label: 'Obed'  },
+                    { key: 'dinner', label: 'Večera' },
+                ];
+
+                for (const meal of meals) {
+                    const from = t[meal.key]?.from;
+                    const to   = t[meal.key]?.to;
+                    if (!from || !to) continue;
+
+                    const fromMin = timeToMinutes(from);
+                    const toMin   = timeToMinutes(to);
+                    if (fromMin == null || toMin == null) continue;
+
+                    const total = toMin - fromMin;
+                    if (total <= 0) {
+                        showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: ${meal.label} – neplatný časový rozsah.`, 'error');
+                        return;
+                    }
+                    if (total % unit !== 0) {
+                        showNotification?.(
+                            `Deň ${day.fullLabelNumeric || day.fullLabel}: ${meal.label} (${from} – ${to}) nie je možné presne rozdeliť na ${unit} minútové jednotky (celkovo ${total} min).`,
+                            'error'
+                        );
+                        return;
+                    }
+                }
+            }
         }
 
         try {
             setSaving(true);
 
             const originalTimes = originalCateringTimes;
+            const originalUnit  = originalUnitMinutes;
 
             const normalized = {};
             tournamentDays.forEach((day) => {
@@ -240,17 +306,21 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             const cateringDocRef = doc(db, 'settings', 'catering');
             await setDoc(cateringDocRef, {
                 times: normalized,
+                unitMinutes: hasValidUnit ? unit : null,
                 updatedAt: Timestamp.fromDate(new Date()),
                 updatedBy: userProfileData.email || null,
             }, { merge: true });
 
             setOriginalCateringTimes(normalized);
+            setOriginalUnitMinutes(hasValidUnit ? String(unit) : '');
 
             try {
                 const changesList = buildCateringChanges(
                     originalTimes,
                     normalized,
-                    tournamentDays
+                    tournamentDays,
+                    originalUnit,
+                    hasValidUnit ? String(unit) : ''
                 );
 
                 if (typeof sendAdminNotification === 'function' && changesList.length > 0) {
@@ -294,6 +364,35 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-2' }, 'Nastavenia stravovania'),
         React.createElement('p', { className: 'text-sm text-gray-500 mb-6' },
             'Nastavte časový rozsah (od – do) pre Obed a Večeru pre každý deň turnaja.'
+        ),
+
+        // 🔥 NASTAVENIE JEDNOTKY NAD TABUĽKOU
+        React.createElement(
+            'div',
+            { className: 'mb-6 flex flex-col sm:flex-row sm:items-end gap-3' },
+            React.createElement(
+                'div',
+                { className: 'flex flex-col' },
+                React.createElement(
+                    'label',
+                    { className: 'text-sm font-medium text-gray-700 mb-1' },
+                    'Trvanie stravovacej jednotky (minúty):'
+                ),
+                React.createElement('input', {
+                    type: 'number',
+                    min: '1',
+                    step: '1',
+                    value: unitMinutes,
+                    onChange: (e) => setUnitMinutes(e.target.value),
+                    placeholder: 'napr. 30',
+                    className: 'border border-gray-300 rounded px-3 py-2 text-sm w-48 focus:outline-none focus:border-blue-500',
+                })
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 sm:mb-2' },
+                'Celkový čas Obeda a Večere musí byť deliteľný touto jednotkou bez zvyšku.'
+            )
         ),
 
         React.createElement(
