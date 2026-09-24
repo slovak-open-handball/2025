@@ -1002,7 +1002,7 @@ const cateringApp = ({ userProfileData }) => {
                                       'tr',
                                       {
                                           key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
-                                          className: 'bg-white',
+                                          className: 'bg-white border-b border-gray-200',
                                       },
                                       React.createElement(
                                           'td',
