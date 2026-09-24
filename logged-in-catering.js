@@ -857,7 +857,7 @@ const cateringApp = ({ userProfileData }) => {
                 category: superstructureExisting.category,
                 groupName: superstructureExisting.groupName || null,
             };
-        
+
             setSelectedCateringCell({
                 team,
                 dayKey: day.key,
@@ -869,6 +869,8 @@ const cateringApp = ({ userProfileData }) => {
                 isSuperstructure: true,
                 placeTeam,
                 isPriority: false, // bude sa brať z checkboxu
+                // 🔥 Zobrazíme checkbox, aby používateľ mohol zmeniť prioritu
+                showPriorityCheckbox: true,
             });
             // 🔥 Predvyplníme checkbox podľa pôvodnej priority
             setCateringModalIsPriority(superstructureExisting.isPriority === true);
