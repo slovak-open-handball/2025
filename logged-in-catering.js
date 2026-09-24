@@ -520,14 +520,15 @@ const cateringApp = ({ userProfileData }) => {
     
                     const groupName = data.groupName || null;
     
-                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager
-                    const addTeam = (identifierFromMatch) => {
+                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager,
+                    // s fallbackom na homeTeamName / awayTeamName z dokumentu zápasu.
+                    const addTeam = (identifierFromMatch, teamNameFromMatch) => {
                         if (!identifierFromMatch) return;
                     
                         const key = `${categoryName}||${identifierFromMatch}`;
                         if (teamsMap.has(key)) return;
                     
-                        // 🔥 Získame pekný názov tímu z teamManager
+                        // 🔥 1) Skúsime teamManager (pre klasické zápasy)
                         let displayName = null;
                         if (
                             window.teamManager &&
@@ -542,28 +543,35 @@ const cateringApp = ({ userProfileData }) => {
                                 /* ignore */
                             }
                         }
-
+                    
+                        // 🔥 2) Ak teamManager zlyhal, použijeme homeTeamName / awayTeamName
+                        //     priamo z dokumentu zápasu (pre playoff / pavúk / o umiestnenie).
+                        if (!displayName && teamNameFromMatch) {
+                            displayName = teamNameFromMatch;
+                        }
+                    
                         console.log('🔍 addTeam:', {
                             identifierFromMatch,
+                            teamNameFromMatch,
                             categoryName,
                             resolvedByTeamManager: displayName,
                             containsCategory: displayName ? displayName.includes(categoryName) : false,
                         });
                     
-                        // 🔥 AK teamManager NEVRÁTIL NÁZOV → tím preskočíme (nedostane sa do zoznamu)
+                        // 🔥 Ak stále nemáme názov → tím preskočíme
                         if (!displayName) return;
                     
-                        // 🔥 AK teamManager vrátil rovnaký identifier → tím nebol nájdený → preskočíme
+                        // 🔥 Ak sa názov rovná identifieru → tím nebol nájdený → preskočíme
                         if (displayName === identifierFromMatch) return;
                     
-                        // 🔥 AK teamManager vrátil 'null' alebo 'undefined' ako string → preskočíme
+                        // 🔥 Ak je to 'null' / 'undefined' ako string → preskočíme
                         if (displayName === 'null' || displayName === 'undefined') return;
                     
                         // 🔥 Očistíme od medzier
                         displayName = String(displayName).trim();
                         if (!displayName) return;
                     
-                        // 🔥 NOVÉ: Názov tímu MUSÍ obsahovať názov kategórie.
+                        // 🔥 Názov tímu MUSÍ obsahovať názov kategórie.
                         // Ak neobsahuje, tím sa do zoznamu nepridá.
                         if (!displayName.includes(categoryName)) return;
                     
@@ -575,10 +583,10 @@ const cateringApp = ({ userProfileData }) => {
                             groupName: groupName,
                         });
                     };
-    
-                    // 🔥 Výhradne homeTeamIdentifier / awayTeamIdentifier
-                    addTeam(data.homeTeamIdentifier);
-                    addTeam(data.awayTeamIdentifier);
+                    
+                    // 🔥 Posielame AJ homeTeamName / awayTeamName pre fallback
+                    addTeam(data.homeTeamIdentifier, data.homeTeamName);
+                    addTeam(data.awayTeamIdentifier, data.awayTeamName);
                 });
     
                 setMatchTeams(Array.from(teamsMap.values()));
