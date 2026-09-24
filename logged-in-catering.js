@@ -1690,7 +1690,8 @@ const cateringApp = ({ userProfileData }) => {
                                       'td',
                                       {
                                           colSpan: 5 + filteredDays.reduce(
-                                              (acc, d) => acc + visibleColumnCountForDay(d.key),
+                                              (acc, d) =>
+                                                  acc + visibleColumnCountForDay(d.key) + dailySummaryColumnsForDay(d.key),
                                               0
                                           ),
                                           className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
@@ -1976,7 +1977,9 @@ const cateringApp = ({ userProfileData }) => {
                                 'td',
                                 {
                                     colSpan: 5 + filteredDays.reduce(
-                                        (acc, d) => acc + visibleColumnCountForDay(d.key), 0
+                                        (acc, d) =>
+                                            acc + visibleColumnCountForDay(d.key) + dailySummaryColumnsForDay(d.key),
+                                        0
                                     ),
                                     className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-gray-700'
                                 },
