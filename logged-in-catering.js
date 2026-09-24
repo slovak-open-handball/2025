@@ -576,10 +576,10 @@ const cateringApp = ({ userProfileData }) => {
         return val === 1 || val === true;
     };
 
-    // Spočíta počet členov tímov priradených na dané miesto + deň + jedlo + slot
+    // Spočíta počet členov VŠETKÝCH tímov priradených na dané miesto + deň + jedlo + slot
     const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
         let total = 0;
-        filteredTeams.forEach((team) => {
+        userTeams.forEach((team) => {
             const assignment = findCateringAssignment(team, dayKey, mealType, slotFrom);
             if (assignment && assignment.placeId === placeId) {
                 total += (team.playersCount || 0) + (team.othersCount || 0);
@@ -1174,115 +1174,80 @@ const cateringApp = ({ userProfileData }) => {
                                       })
                                   )
                               ),
-                        // 🔥 SÚHRNNÉ RIADKY – zobrazia sa len ak aspoň jedno miesto má priradenie
-                        ...(() => {
-                            const anyPlaceHasAssignment = cateringPlaces.some((place) => {
-                                let found = false;
-                                filteredDays.forEach((day) => {
+                        // 🔥 SÚHRNNÉ RIADKY PRE KAŽDÉ STRAVOVACIE MIESTO (vždy zobrazené)
+                        React.createElement(
+                            'tr',
+                            { key: 'summary-header', className: 'bg-yellow-100' },
+                            React.createElement(
+                                'td',
+                                {
+                                    colSpan: 4 + filteredDays.reduce(
+                                        (acc, d) => acc + visibleColumnCountForDay(d.key), 0
+                                    ),
+                                    className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-yellow-800'
+                                },
+                                'Súčty podľa stravovacích miest:'
+                            )
+                        ),
+                        ...cateringPlaces.flatMap((place) => {
+                            return [React.createElement(
+                                'tr',
+                                {
+                                    key: `summary-place-${place.id}`,
+                                    className: 'bg-yellow-50 border-t-2 border-yellow-300',
+                                },
+                                React.createElement(
+                                    'td',
+                                    {
+                                        colSpan: 2,
+                                        className: 'border border-gray-300 px-3 py-2 text-left font-semibold text-gray-800 whitespace-nowrap',
+                                    },
+                                    `Súčet: ${place.name}`
+                                ),
+                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100' }, ''),
+                                React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100 border-r-4 border-r-gray-500' }, ''),
+                                ...filteredDays.flatMap((day, dayIndex) => {
                                     const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
                                     const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
-                                    lunchSlots.forEach((slot) => {
-                                        if (getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from) > 0) found = true;
-                                    });
-                                    dinnerSlots.forEach((slot) => {
-                                        if (getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from) > 0) found = true;
-                                    });
-                                });
-                                return found;
-                            });
+                                    const isLastDay = dayIndex === filteredDays.length - 1;
+                                    const cells = [];
 
-                            if (!anyPlaceHasAssignment) return [];
-
-                            return [
-                                React.createElement(
-                                    'tr',
-                                    { key: 'summary-header', className: 'bg-yellow-100' },
-                                    React.createElement(
-                                        'td',
-                                        {
-                                            colSpan: 4 + filteredDays.reduce(
-                                                (acc, d) => acc + visibleColumnCountForDay(d.key), 0
-                                            ),
-                                            className: 'border border-gray-300 px-3 py-2 text-left text-sm font-bold text-yellow-800'
-                                        },
-                                        'Súčty podľa stravovacích miest:'
-                                    )
-                                ),
-                                ...cateringPlaces.flatMap((place) => {
-                                    let hasAny = false;
-                                    filteredDays.forEach((day) => {
-                                        const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
-                                        const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
-                                        lunchSlots.forEach((slot) => {
-                                            if (getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from) > 0) hasAny = true;
-                                        });
-                                        dinnerSlots.forEach((slot) => {
-                                            if (getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from) > 0) hasAny = true;
-                                        });
-                                    });
-
-                                    if (!hasAny) return [];
-
-                                    return [React.createElement(
-                                        'tr',
-                                        {
-                                            key: `summary-place-${place.id}`,
-                                            className: 'bg-yellow-50 border-t-2 border-yellow-300',
-                                        },
-                                        React.createElement(
+                                    lunchSlots.forEach((slot, i) => {
+                                        const isLastLunchCell = i === lunchSlots.length - 1;
+                                        const hasThickRight = isLastLunchCell && ((dinnerSlots.length > 0) || !isLastDay);
+                                        const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
+                                        cells.push(React.createElement(
                                             'td',
                                             {
-                                                colSpan: 2,
-                                                className: 'border border-gray-300 px-3 py-2 text-left font-semibold text-gray-800 whitespace-nowrap',
+                                                key: `summary-${place.id}-lunch-${dayIndex}-${i}`,
+                                                className:
+                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
                                             },
-                                            `Súčet: ${place.name}`
-                                        ),
-                                        React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100' }, ''),
-                                        React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-100 border-r-4 border-r-gray-500' }, ''),
-                                        ...filteredDays.flatMap((day, dayIndex) => {
-                                            const lunchSlots = shouldShowMealType('lunch') ? (daySlots[day.key]?.lunch || []) : [];
-                                            const dinnerSlots = shouldShowMealType('dinner') ? (daySlots[day.key]?.dinner || []) : [];
-                                            const isLastDay = dayIndex === filteredDays.length - 1;
-                                            const cells = [];
+                                            count > 0 ? count : ''
+                                        ));
+                                    });
 
-                                            lunchSlots.forEach((slot, i) => {
-                                                const isLastLunchCell = i === lunchSlots.length - 1;
-                                                const hasThickRight = isLastLunchCell && ((dinnerSlots.length > 0) || !isLastDay);
-                                                const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
-                                                cells.push(React.createElement(
-                                                    'td',
-                                                    {
-                                                        key: `summary-${place.id}-lunch-${dayIndex}-${i}`,
-                                                        className:
-                                                            'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
-                                                            (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                    },
-                                                    count > 0 ? count : ''
-                                                ));
-                                            });
+                                    dinnerSlots.forEach((slot, i) => {
+                                        const isLastDinnerCell = i === dinnerSlots.length - 1;
+                                        const hasThickRight = isLastDinnerCell && !isLastDay;
+                                        const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
+                                        cells.push(React.createElement(
+                                            'td',
+                                            {
+                                                key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
+                                                className:
+                                                    'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                            },
+                                            count > 0 ? count : ''
+                                        ));
+                                    });
 
-                                            dinnerSlots.forEach((slot, i) => {
-                                                const isLastDinnerCell = i === dinnerSlots.length - 1;
-                                                const hasThickRight = isLastDinnerCell && !isLastDay;
-                                                const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
-                                                cells.push(React.createElement(
-                                                    'td',
-                                                    {
-                                                        key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
-                                                        className:
-                                                            'border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-800 min-w-[70px]' +
-                                                            (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                    },
-                                                    count > 0 ? count : ''
-                                                ));
-                                            });
-
-                                            return cells;
-                                        })
-                                    )];
+                                    return cells;
                                 })
-                            ];
-                        })()
+                            )];
+                        })
                     ),
                 )
             ),
