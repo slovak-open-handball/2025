@@ -385,96 +385,56 @@ const exportTableToPdf = async (categoryName, groupName, fixedDpr = null) => {
 };
 
 const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, formatTimeFn, fixedDpr = null) => {
-    const markBatchCompleted = () => {
-        try {
-            const isActive = sessionStorage.getItem('pdfBatchActive') === '1';
-            if (isActive) {
-                let completed = parseInt(sessionStorage.getItem('pdfBatchCompleted') || '0', 10);
-                completed++;
-                sessionStorage.setItem('pdfBatchCompleted', String(completed));
-                sessionStorage.setItem('pdfBatchLastLabel', title || '');
-            }
-        } catch (e) { }
-    };
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const element = document.getElementById('matches-pdf-export-target');
-    if (!element) {
-        window.showGlobalNotification('Zoznam zápasov ešte nie je načítaný.', 'error');
-        markBatchCompleted();
-        return;
-    }
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
 
-    const html2canvasFn = window.html2canvas;
-    const jsPDFClass = window.jspdf?.jsPDF;
+    // Nadpis
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(title, pageWidth / 2, margin + 6, { align: 'center' });
 
-    if (typeof html2canvasFn === 'undefined' || !jsPDFClass) {
-        window.showGlobalNotification('PDF knižnice nie sú načítané.', 'error');
-        markBatchCompleted();
-        return;
-    }
+    let y = margin + 14;
 
-    const safeTitle = (title || 'zapasy').replace(/\s+/g, '-');
-    const fileName = `${safeTitle}.pdf`;
+    matchesByDay.forEach((dayGroup, dayIndex) => {
+        // Dátum
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(formatDateHeaderFn(dayGroup.date), margin, y);
+        y += 6;
 
-    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
+        // Riadky zápasov
+        const rows = dayGroup.matches.map(m => [
+            formatTimeFn(m.scheduledTime),
+            m.homeTeamIdentifier || '',
+            'vs',
+            m.awayTeamIdentifier || '',
+            m.matchType || '',
+        ]);
 
-    const scaleToUse = (fixedDpr || PDF_DEVICE_PIXEL_RATIO);
-
-    try {
-        const rect = element.getBoundingClientRect();
-
-        const cssWidth = rect.width;
-        const cssHeight = rect.height;
-
-        const canvas = await html2canvasFn(element, {
-            scale: scaleToUse,
-            width: cssWidth,
-            height: cssHeight,
-            useCORS: true,
-            logging: false,
-            backgroundColor: '#ffffff',
-            windowWidth: cssWidth,
-            windowHeight: cssHeight,
-            foreignObjectRendering: false,
-            allowTaint: true
+        pdf.autoTable({
+            startY: y,
+            head: [['Čas', 'Domáci', 'VS', 'Hostia', 'Info']],
+            body: rows,
+            styles: { fontSize: 10, cellPadding: 1.5 },
+            headStyles: { fillColor: [220, 230, 245], textColor: 20, fontStyle: 'bold' },
+            margin: { left: margin, right: margin },
+            theme: 'grid',
         });
 
-        const pxToMm = 0.264583;
-        const pdfWidthMm = cssWidth * pxToMm;
-        const pdfHeightMm = cssHeight * pxToMm;
+        y = pdf.lastAutoTable.finalY + 8;
 
-        const pdf = new jsPDFClass({
-            orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
-            unit: 'mm',
-            format: [pdfWidthMm, pdfHeightMm]
-        });
+        // Ak sme na konci strany, pridaj novú
+        if (y > pageHeight - 20) {
+            pdf.addPage();
+            y = margin;
+        }
+    });
 
-        const imgData = canvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
-
-        pdf.save(fileName);
-
-        try {
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, '', newUrl);
-        } catch (e) { }
-
-        window.showGlobalNotification(`PDF bolo uložené: ${fileName}`, 'success');
-        markBatchCompleted();
-        try {
-            if (window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'PDF_EXPORT_COMPLETED',
-                    success: true,
-                    label: fileName,
-                    fileName: fileName
-                }, '*');
-            }
-        } catch (e) { }
-    } catch (err) {
-        window.showGlobalNotification('Nepodarilo sa vytvoriť PDF pre zápasy.', 'error');
-        markBatchCompleted();
-    }
+    pdf.save(`${title}.pdf`);
 };
 
 const ExportApp = ({ userProfileData }) => {
