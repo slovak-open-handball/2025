@@ -503,68 +503,42 @@ const cateringApp = ({ userProfileData }) => {
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
             (snapshot) => {
-                const teamsMap = new Map(); // kľúč = `${category}||${teamName}`
+                const teamsMap = new Map(); // kľúč = `${category}||${identifier}`
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                
-                    // 🧪 DEBUG – vypíšeme raw dáta
-                    console.log('🔍 MATCH DOC:', {
-                        id: docSnap.id,
-                        categoryName_raw: data.categoryName,
-                        categoryId: data.categoryId,
-                        homeTeamName: data.homeTeamName,
-                        awayTeamName: data.awayTeamName,
-                        homeTeamIdentifier: data.homeTeamIdentifier,
-                        awayTeamIdentifier: data.awayTeamIdentifier,
-                        matchType: data.matchType,
-                        isPlacementMatch: data.isPlacementMatch,
-                        groupName: data.groupName,
-                    });
-                
+    
+                    // 🔥 Fallback categoryId → categoryName
                     let categoryName = data.categoryName || '';
                     if (!categoryName && data.categoryId && window.categoriesData) {
                         categoryName = window.categoriesData[data.categoryId] || '';
                     }
                     categoryName = cleanCategory(categoryName);
-                
-                    // 🧪 DEBUG – kategória
-                    console.log('🔍 CATEGORY:', {
-                        categoryName_clean: categoryName,
-                        willSkip: !categoryName,
-                    });
-                
+    
+                    // 🔥 Ak nemáme kategóriu, tím preskočíme
                     if (!categoryName) return;
-                
+    
                     const groupName = data.groupName || null;
-                
-                    const addTeam = (teamNameFromMatch) => {
-                        if (!teamNameFromMatch) {
-                            console.log('  ⏭️ addTeam SKIP – prázdny teamName');
-                            return;
-                        }
-                        const key = `${categoryName}||${teamNameFromMatch}`;
-                        if (teamsMap.has(key)) {
-                            console.log('  ⏭️ addTeam SKIP – duplicitný kľúč:', key);
-                            return;
-                        }
-                        console.log('  ✅ addTeam:', teamNameFromMatch, '| category:', categoryName);
+    
+                    // 🔥 POUŽIJEME IDENTIFIER (nie teamName)
+                    const addTeam = (identifierFromMatch) => {
+                        if (!identifierFromMatch) return;
+    
+                        const key = `${categoryName}||${identifierFromMatch}`;
+                        if (teamsMap.has(key)) return;
+    
                         teamsMap.set(key, {
-                            id: teamNameFromMatch,
-                            teamName: teamNameFromMatch,
+                            id: identifierFromMatch,
+                            teamName: identifierFromMatch,   // 🔥 do teamName ukladáme identifier
                             category: categoryName,
                             groupName: groupName,
                         });
                     };
-                
-                    addTeam(data.homeTeamName);
-                    addTeam(data.awayTeamName);
+    
+                    // 🔥 Výhradne homeTeamIdentifier / awayTeamIdentifier
+                    addTeam(data.homeTeamIdentifier);
+                    addTeam(data.awayTeamIdentifier);
                 });
-                
-                console.log('matchTeams loaded:', Array.from(teamsMap.values()));
-                setMatchTeams(Array.from(teamsMap.values()));
-
-                console.log('matchTeams loaded:', Array.from(teamsMap.values()));
     
                 setMatchTeams(Array.from(teamsMap.values()));
             },
@@ -574,7 +548,7 @@ const cateringApp = ({ userProfileData }) => {
         );
     
         return () => unsubscribe();
-    }, [categoriesReady]);   // 🔥 ZÁVISLOSŤ NA categoriesReady
+    }, [categoriesReady]);
 
     if (loading) {
         return React.createElement(
