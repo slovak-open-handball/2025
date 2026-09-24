@@ -1724,7 +1724,7 @@ const cateringApp = ({ userProfileData }) => {
                                                   // klasické priradenie – bez zmeny
                                               } else if (superstructureAssignment && superstructureAssignment.isPriority) {
                                                   // 🔥 Prioritné superstructure priradenie – hrubé čierne orámovanie
-                                                  cellClass += 'font-bold border-4 border-black ';
+                                                  cellClass += 'font-bold ';
                                               } else if (hasMealInPackage) {
                                                   cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                               } else {
@@ -1750,6 +1750,13 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? {
                                                                         backgroundColor: superstructureColors.bg,
                                                                         color: superstructureColors.text,
+                                                                        // 🔥 Prioritné priradenie – hrubé čierne orámovanie cez inline style
+                                                                        ...(superstructureAssignment.isPriority
+                                                                            ? {
+                                                                                  border: '4px solid #000000',
+                                                                                  fontWeight: 'bold',
+                                                                              }
+                                                                            : {}),
                                                                     }
                                                                   : {},
                                                           title: existing
@@ -1801,7 +1808,7 @@ const cateringApp = ({ userProfileData }) => {
                                                   // klasické priradenie – bez zmeny
                                               } else if (superstructureAssignment && superstructureAssignment.isPriority) {
                                                   // 🔥 Prioritné superstructure priradenie – hrubé čierne orámovanie
-                                                  cellClass += 'font-bold border-4 border-black ';
+                                                  cellClass += 'font-bold ';
                                               } else if (hasMealInPackage) {
                                                   cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                               } else {
@@ -1827,6 +1834,13 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? {
                                                                         backgroundColor: superstructureColors.bg,
                                                                         color: superstructureColors.text,
+                                                                        // 🔥 Prioritné priradenie – hrubé čierne orámovanie cez inline style
+                                                                        ...(superstructureAssignment.isPriority
+                                                                            ? {
+                                                                                  border: '4px solid #000000',
+                                                                                  fontWeight: 'bold',
+                                                                              }
+                                                                            : {}),
                                                                     }
                                                                   : {},
                                                           title: existing
