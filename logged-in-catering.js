@@ -520,15 +520,15 @@ const cateringApp = ({ userProfileData }) => {
     
                     const groupName = data.groupName || null;
     
-                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager,
-                    // s fallbackom na homeTeamName / awayTeamName z dokumentu zápasu.
+                    // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager.
+                    // Ak teamManager vráti null, použijeme samotný identifier.
                     const addTeam = (identifierFromMatch, teamNameFromMatch) => {
                         if (!identifierFromMatch) return;
                     
                         const key = `${categoryName}||${identifierFromMatch}`;
                         if (teamsMap.has(key)) return;
                     
-                        // 🔥 1) Skúsime teamManager (pre klasické zápasy)
+                        // 🔥 1) Skúsime teamManager
                         let displayName = null;
                         if (
                             window.teamManager &&
@@ -544,10 +544,15 @@ const cateringApp = ({ userProfileData }) => {
                             }
                         }
                     
-                        // 🔥 2) Ak teamManager zlyhal, použijeme homeTeamName / awayTeamName
-                        //     priamo z dokumentu zápasu (pre playoff / pavúk / o umiestnenie).
+                        // 🔥 2) Ak teamManager vrátil null → skúsime homeTeamName / awayTeamName z dokumentu
                         if (!displayName && teamNameFromMatch) {
                             displayName = teamNameFromMatch;
+                        }
+                    
+                        // 🔥 3) Ak stále nemáme nič → použijeme samotný identifier (parameter,
+                        //     ktorý sme poslali do teamManager)
+                        if (!displayName) {
+                            displayName = identifierFromMatch;
                         }
                     
                         console.log('🔍 addTeam:', {
@@ -555,25 +560,29 @@ const cateringApp = ({ userProfileData }) => {
                             teamNameFromMatch,
                             categoryName,
                             resolvedByTeamManager: displayName,
-                            containsCategory: displayName ? displayName.includes(categoryName) : false,
+                            usedFallback: displayName === identifierFromMatch,
                         });
-                    
-                        // 🔥 Ak stále nemáme názov → tím preskočíme
-                        if (!displayName) return;
-                    
-                        // 🔥 Ak sa názov rovná identifieru → tím nebol nájdený → preskočíme
-                        if (displayName === identifierFromMatch) return;
-                    
-                        // 🔥 Ak je to 'null' / 'undefined' ako string → preskočíme
-                        if (displayName === 'null' || displayName === 'undefined') return;
                     
                         // 🔥 Očistíme od medzier
                         displayName = String(displayName).trim();
                         if (!displayName) return;
                     
+                        // 🔥 Ak je to 'null' / 'undefined' ako string → použijeme identifier
+                        if (displayName === 'null' || displayName === 'undefined') {
+                            displayName = identifierFromMatch;
+                        }
+                    
                         // 🔥 Názov tímu MUSÍ obsahovať názov kategórie.
-                        // Ak neobsahuje, tím sa do zoznamu nepridá.
-                        if (!displayName.includes(categoryName)) return;
+                        // Ak neobsahuje, skúsime pridať kategóriu na začiatok (fallback).
+                        if (!displayName.includes(categoryName)) {
+                            // Skúsime, či aspoň identifier obsahuje kategóriu
+                            if (identifierFromMatch.includes(categoryName)) {
+                                displayName = identifierFromMatch;
+                            } else {
+                                // Pridáme kategóriu pred identifier, aby sa tím zobrazil
+                                displayName = `${categoryName} ${identifierFromMatch}`;
+                            }
+                        }
                     
                         teamsMap.set(key, {
                             id: identifierFromMatch,
