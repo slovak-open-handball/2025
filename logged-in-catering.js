@@ -486,9 +486,9 @@ const cateringApp = ({ userProfileData }) => {
                         teamsMap.set(key, {
                             // 🔥 id = identifier ak existuje, inak teamName
                             // (id slúži len ako kľúč v rámci matchTeams a ukladá sa do DB ako teamIndex)
-                            id: teamNameFromMatch,
+                            id: identifierFromMatch || teamNameFromMatch,
                             teamName: teamNameFromMatch,
-                            identifier: teamNameFromMatch,
+                            identifier: identifierFromMatch || teamNameFromMatch,
                             category: categoryName,
                             groupName: groupName,
                         });
