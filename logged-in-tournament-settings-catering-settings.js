@@ -38,6 +38,8 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
                 month: 'long',
                 year: 'numeric',
             }),
+            // 🔥 NOVÉ: číselný formát bez názvu mesiaca (DD. MM. YYYY)
+            fullLabelNumeric: `${d}. ${m}. ${y}`,
         });
         current.setDate(current.getDate() + 1);
     }
@@ -91,7 +93,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
     }, [db, showNotification]);
 
     // 2) Načítame existujúce časy stravovania zo settings/catering
-    //    POZOR: naplníme AJ cateringTimes AJ originalCateringTimes
     React.useEffect(() => {
         if (!db) return;
 
@@ -104,7 +105,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     const data = snap.data() || {};
                     const loaded = data.times || {};
                     setCateringTimes(loaded);
-                    setOriginalCateringTimes(loaded); // 🔥 kópia pre porovnanie
+                    setOriginalCateringTimes(loaded);
                 } else {
                     setCateringTimes({});
                     setOriginalCateringTimes({});
@@ -153,6 +154,9 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             const orig = original?.[day.key] || {};
             const upd  = updated?.[day.key]  || {};
 
+            // 🔥 Použijeme číselný formát dátumu (napr. "23. 09. 2025")
+            const dayLabel = day.fullLabelNumeric || day.fullLabel;
+
             ['lunch', 'dinner'].forEach((mealType) => {
                 const oFrom = orig?.[mealType]?.from || '';
                 const oTo   = orig?.[mealType]?.to   || '';
@@ -166,14 +170,14 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
 
                 if (oEmpty && !nEmpty) {
                     changes.push(
-                        `Deň ${day.fullLabel}: pridané ${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}`
+                        `Deň ${dayLabel}: pridané ${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}`
                     );
                     return;
                 }
 
                 if (!oEmpty && nEmpty) {
                     changes.push(
-                        `Deň ${day.fullLabel}: odobrané ${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})`
+                        `Deň ${dayLabel}: odobrané ${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})`
                     );
                     return;
                 }
@@ -183,7 +187,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     const toChanged   = oTo   !== nTo   ? `"do" z '${oTo || '-'}' na '${nTo || '-'}'` : '';
                     const parts = [fromChanged, toChanged].filter(Boolean).join(', ');
                     changes.push(
-                        `Deň ${day.fullLabel}: ${mealLabel(mealType)} – zmena ${parts}`
+                        `Deň ${dayLabel}: ${mealLabel(mealType)} – zmena ${parts}`
                     );
                 }
             });
@@ -203,11 +207,11 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             if (!t) continue;
 
             if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
-                showNotification?.(`Deň ${day.fullLabel}: čas Obeda "od" musí byť pred časom "do".`, 'error');
+                showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Obeda "od" musí byť pred časom "do".`, 'error');
                 return;
             }
             if (t.dinner?.from && t.dinner?.to && t.dinner.from >= t.dinner.to) {
-                showNotification?.(`Deň ${day.fullLabel}: čas Večere "od" musí byť pred časom "do".`, 'error');
+                showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Večere "od" musí byť pred časom "do".`, 'error');
                 return;
             }
         }
@@ -215,7 +219,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         try {
             setSaving(true);
 
-            // 🔥 PÔVODNÉ hodnoty berieme z originalCateringTimes (načítané z DB)
             const originalTimes = originalCateringTimes;
 
             const normalized = {};
@@ -243,8 +246,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 updatedBy: userProfileData.email || null,
             }, { merge: true });
 
-            // 🔥 Po úspešnom zápise aktualizujeme originalCateringTimes,
-            // aby pri ďalšom uložení porovnávanie sedelo
             setOriginalCateringTimes(normalized);
 
             try {
