@@ -51,7 +51,6 @@ const EMPTY_DAY_TIMES = {
     dinner: { from: '', to: '' },
 };
 
-// Pomocná: prevedie "HH:MM" na minúty od polnoci
 const timeToMinutes = (t) => {
     if (!t || typeof t !== 'string') return null;
     const parts = t.split(':');
@@ -111,23 +110,21 @@ const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) 
             const from = t[meal.key]?.from || '';
             const to   = t[meal.key]?.to   || '';
 
-            // 🔥 NOVÉ: ak je niečo vyplnené, musí to byť kompletný čas (hodiny + minúty)
             const fromFilled = from !== '';
             const toFilled   = to   !== '';
 
             if (fromFilled && !isCompleteTime(from)) {
                 errors.push(
-                    `Deň ${dayLabel}: ${meal.label} – čas "Od" nemá zadané hodiny aj minúty.`
+                    `Deň ${dayLabel}: ${meal.label} – čas od nemá zadané hodiny aj minúty.`
                 );
             }
             if (toFilled && !isCompleteTime(to)) {
                 errors.push(
-                    `Deň ${dayLabel}: ${meal.label} – čas "Do" nemá zadané hodiny aj minúty.`
+                    `Deň ${dayLabel}: ${meal.label} – čas do nemá zadané hodiny aj minúty.`
                 );
             }
         }
 
-        // from < to pre Obed
         if (
             isCompleteTime(t.lunch?.from) &&
             isCompleteTime(t.lunch?.to) &&
@@ -135,7 +132,6 @@ const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) 
         ) {
             errors.push(`Deň ${dayLabel}: čas Obeda od musí byť pred časom do.`);
         }
-        // from < to pre Večeru
         if (
             isCompleteTime(t.dinner?.from) &&
             isCompleteTime(t.dinner?.to) &&
@@ -144,13 +140,11 @@ const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) 
             errors.push(`Deň ${dayLabel}: čas Večere od musí byť pred časom do.`);
         }
 
-        // Deliteľnosť jednotkou
         if (hasValidUnit) {
             for (const meal of meals) {
                 const from = t[meal.key]?.from;
                 const to   = t[meal.key]?.to;
 
-                // Kontrolu deliteľnosti robíme len ak sú oba časy kompletné
                 if (!isCompleteTime(from) || !isCompleteTime(to)) continue;
 
                 const fromMin = timeToMinutes(from);
@@ -183,7 +177,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
 
-    // 1) Načítame dátumy turnaja zo settings/registration
     React.useEffect(() => {
         if (!db) {
             setLoading(false);
@@ -215,7 +208,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         return () => unsubscribe();
     }, [db, showNotification]);
 
-    // 2) Načítame existujúce časy stravovania zo settings/catering
     React.useEffect(() => {
         if (!db) return;
 
@@ -328,7 +320,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         return changes;
     };
 
-    // 🔥 Vypočítame chyby pri každom renderi (na základe aktuálnych hodnôt)
     const validationErrors = computeValidationErrors(tournamentDays, cateringTimes, unitMinutes);
     const hasErrors = validationErrors.length > 0;
 
@@ -338,7 +329,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             return;
         }
 
-        // Ak sú chyby, neukladáme (tlačidlo je aj tak disabled)
         if (hasErrors) {
             return;
         }
@@ -425,7 +415,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         );
     }
 
-    // Štýly tlačidla Uložiť
     const saveButtonBase = 'font-bold py-2 px-6 rounded-lg transition-colors duration-200 border-2';
     const saveButtonEnabled = `${saveButtonBase} bg-blue-500 hover:bg-blue-700 text-white border-transparent`;
     const saveButtonDisabled = `${saveButtonBase} bg-white text-blue-500 border-blue-500 cursor-not-allowed`;
@@ -443,7 +432,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             'Nastavte časový rozsah (od – do) pre Obed a Večeru pre každý deň turnaja.'
         ),
 
-        // 🔥 NASTAVENIE JEDNOTKY NAD TABUĽKOU
         React.createElement(
             'div',
             { className: 'mb-6 flex flex-col sm:flex-row sm:items-end gap-3' },
@@ -559,7 +547,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             )
         ),
 
-        // 🔥 CHYBOVÉ VETY POD TABUĽKOU, NAD TLAČIDLOM
         hasErrors && React.createElement(
             'div',
             {
