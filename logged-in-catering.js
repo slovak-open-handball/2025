@@ -1103,7 +1103,7 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                                   : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : ''
+                                                      existing ? teamTotal : (canClick ? '' : '–')
                                                   )
                                               );
                                           }
@@ -1152,7 +1152,7 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                                   : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : ''
+                                                      existing ? teamTotal : (canClick ? '' : '–')
                                                   )
                                               );
                                           }
