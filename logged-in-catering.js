@@ -111,7 +111,6 @@ const loadUserTeams = async (db) => {
             teamArray.forEach((team) => {
                 if (!team?.teamName) return;
 
-                // 🔥 Spočítame členov jednotlivých polí
                 const playersCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
                 const menTeamMembersCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
                 const womenTeamMembersCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
@@ -131,7 +130,6 @@ const loadUserTeams = async (db) => {
         });
     });
 
-    // 🔥 ZORADENIE: najprv podľa kategórie, potom podľa názvu tímu
     teams.sort((a, b) => {
         const catCompare = (a.category || '').localeCompare(b.category || '', 'sk', { sensitivity: 'base' });
         if (catCompare !== 0) return catCompare;
@@ -145,7 +143,6 @@ const loadUserTeams = async (db) => {
 // Pomocné funkcie pre delenie stravovacích slotov
 // ============================================================
 
-/** Prevedie "HH:MM" na minúty od polnoci. Vráti null, ak je vstup neplatný. */
 const timeToMinutes = (t) => {
     if (!t || typeof t !== 'string') return null;
     const parts = t.split(':');
@@ -156,17 +153,12 @@ const timeToMinutes = (t) => {
     return h * 60 + m;
 };
 
-/** Naformátuje minúty od polnoci na "HH:MM". */
 const minutesToTime = (mins) => {
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
-/**
- * Skontroluje, či má dané jedlo v danom dni platný časový rozptyl
- * a či je možné z neho vygenerovať aspoň jeden slot.
- */
 const hasValidMealRange = (mealTimes, unitMinutes) => {
     if (!mealTimes) return false;
     const fromMin = timeToMinutes(mealTimes.from);
@@ -180,11 +172,6 @@ const hasValidMealRange = (mealTimes, unitMinutes) => {
     return true;
 };
 
-/**
- * Rozdelí interval from–to na sloty podľa unitMinutes.
- * Vráti pole objektov { from, to, label } – label je začiatok slotu.
- * Ak nie je možné deliť (neplatné vstupy alebo unit <= 0), vráti prázdne pole.
- */
 const buildMealSlots = (from, to, unitMinutes) => {
     const fromMin = timeToMinutes(from);
     const toMin = timeToMinutes(to);
@@ -218,29 +205,22 @@ const cateringApp = ({ userProfileData }) => {
     const [cateringTimes, setCateringTimes] = useState({});
     const [unitMinutes, setUnitMinutes] = useState('');
     const [loading, setLoading] = useState(true);
-    // 🔥 NOVÉ: ubytovne s farbami pre vyfarbenie buniek Hráči a RT
     const [accommodations, setAccommodations] = useState([]);
-
-    // 🔥 NOVÉ: stravovacie miesta (places typu "stravovanie")
     const [cateringPlaces, setCateringPlaces] = useState([]);
-
-    // 🔥 NOVÉ: uložené priradenia stravovania z kolekcie "catering"
     const [cateringAssignments, setCateringAssignments] = useState([]);
 
-    // 🔥 NOVÉ: modálne okno pre priradenie stravovania
     const [showCateringModal, setShowCateringModal] = useState(false);
     const [selectedCateringCell, setSelectedCateringCell] = useState(null);
     const [selectedCateringPlaceId, setSelectedCateringPlaceId] = useState('');
     const [savingCatering, setSavingCatering] = useState(false);
 
-    // 🔥 NOVÉ: potvrdenie zmeny priradenia (ak už existuje)
     const [showChangeConfirm, setShowChangeConfirm] = useState(false);
     const [pendingChange, setPendingChange] = useState(null);
 
-    // 🔥 NOVÉ: filtre pre tabuľku stravovania
+    // Filtre pre tabuľku stravovania
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDayKey, setFilterDayKey] = useState('');
-    const [filterMealType, setFilterMealType] = useState(''); 
+    const [filterMealType, setFilterMealType] = useState('');
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -278,7 +258,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 Načítanie nastavení stravovania (časy + jednotka)
+    // Načítanie nastavení stravovania (časy + jednotka)
     useEffect(() => {
         if (!window.db) return;
 
@@ -305,7 +285,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Načítanie používateľských tímov z kolekcie 'users'
+    // Načítanie používateľských tímov
     useEffect(() => {
         if (!window.db) return;
 
@@ -330,7 +310,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie ubytovní (places) s farbami
+    // Načítanie ubytovní (places) s farbami
     useEffect(() => {
         if (!window.db) return;
 
@@ -358,7 +338,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie stravovacích miest (places typu "stravovanie") – aj s farbami
+    // Načítanie stravovacích miest
     useEffect(() => {
         if (!window.db) return;
 
@@ -387,7 +367,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie priradení stravovania z kolekcie "catering"
+    // Načítanie priradení stravovania
     useEffect(() => {
         if (!window.db) return;
 
@@ -437,9 +417,7 @@ const cateringApp = ({ userProfileData }) => {
         );
     }
 
-    // ============================================================
     // Predpočítame sloty pre každý deň a každé jedlo.
-    // ============================================================
     const daySlots = {};
     tournamentDays.forEach((day) => {
         const t = cateringTimes[day.key] || {};
@@ -485,33 +463,37 @@ const cateringApp = ({ userProfileData }) => {
         return slots.length;
     };
 
-    const totalMealColumns = visibleDays.reduce(
-        (acc, day) => acc + dayColumnCount(day.key),
-        0
-    );
-
-    // 🔥 NOVÉ: zoznam dostupných kategórií pre filter
-    const availableCategories = Array.from(
-        new Set(userTeams.map((t) => t.category).filter(Boolean))
-    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
-
-    // 🔥 NOVÉ: filtrované tímy (podľa kategórie)
-    const filteredTeams = filterCategory
-        ? userTeams.filter((t) => t.category === filterCategory)
-        : userTeams;
-
-    // 🔥 NOVÉ: filtrované dni (podľa dňa)
-    const filteredDays = filterDayKey
-        ? visibleDays.filter((d) => d.key === filterDayKey)
-        : visibleDays;
-
-    // 🔥 NOVÉ: pomocná funkcia, ktorá vráti, či sa má daný typ jedla zobraziť
+    // Pomocná funkcia: má sa daný typ jedla zobraziť?
     const shouldShowMealType = (mealType) => {
         if (!filterMealType) return true;
         return filterMealType === mealType;
     };
 
-    // 🔥 Získanie farby ubytovne pre tím (bez ubytovne = žltá #FFFF00)
+    // Počet zobrazených stĺpcov pre daný deň (rešpektuje filter typu jedla)
+    const visibleColumnCountForDay = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        let count = 0;
+        if (shouldShowMealType('lunch')) count += slots.lunch.length;
+        if (shouldShowMealType('dinner')) count += slots.dinner.length;
+        return count;
+    };
+
+    // Zoznam dostupných kategórií pre filter
+    const availableCategories = Array.from(
+        new Set(userTeams.map((t) => t.category).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+
+    // Filtrované tímy podľa kategórie
+    const filteredTeams = filterCategory
+        ? userTeams.filter((t) => t.category === filterCategory)
+        : userTeams;
+
+    // Filtrované dni podľa dňa
+    const filteredDays = filterDayKey
+        ? visibleDays.filter((d) => d.key === filterDayKey)
+        : visibleDays;
+
+    // Farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
         if (!team.accommodationName) return '#FFFF00';
         const accommodation = accommodations.find(place => place.name === team.accommodationName);
@@ -526,7 +508,7 @@ const cateringApp = ({ userProfileData }) => {
         return accommodation.headerTextColor || '#000000';
     };
 
-    // 🔥 Nájde existujúce priradenie pre konkrétnu bunku (tím + deň + jedlo + slot)
+    // Nájde existujúce priradenie pre konkrétnu bunku
     const findCateringAssignment = (team, dayKey, mealType, slotFrom) => {
         return cateringAssignments.find(
             (a) =>
@@ -538,7 +520,7 @@ const cateringApp = ({ userProfileData }) => {
         );
     };
 
-    // 🔥 Nájde stravovacie miesto podľa placeId a vráti jeho farby
+    // Farby stravovacieho miesta
     const getCateringPlaceColors = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         if (!place) return { bg: '#1e40af', text: '#000000' };
@@ -546,9 +528,9 @@ const cateringApp = ({ userProfileData }) => {
             bg: place.headerColor || '#1e40af',
             text: place.headerTextColor || '#000000',
         };
-    };    
-    
-    // 🔥 Otvorí modálne okno pre priradenie stravovacieho miesta
+    };
+
+    // Otvorí modálne okno pre priradenie
     const openCateringModal = (team, day, mealType, slot) => {
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
         setSelectedCateringCell({
@@ -568,9 +550,9 @@ const cateringApp = ({ userProfileData }) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         return {
             teamId: selectedCateringCell.team.id,
-            teamName: selectedCateringCell.team.teamName, 
-            category: selectedCateringCell.team.category, 
-            categoryName: selectedCateringCell.team.category, 
+            teamName: selectedCateringCell.team.teamName,
+            category: selectedCateringCell.team.category,
+            categoryName: selectedCateringCell.team.category,
             uid: selectedCateringCell.team.uid,
             dayKey: selectedCateringCell.dayKey,
             dayLabel: selectedCateringCell.dayLabel,
@@ -585,15 +567,12 @@ const cateringApp = ({ userProfileData }) => {
     const performSaveCateringAssignment = async (payload, isChange, oldIds) => {
         try {
             if (isChange && Array.isArray(oldIds) && oldIds.length > 0) {
-                // 1) vymaž staré priradenia pre daný tím + deň + typ jedla
                 for (const id of oldIds) {
                     await deleteDoc(doc(window.db, 'catering', id));
                 }
-                // 2) vytvor nové (bez createdAt / updatedAt)
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
             } else {
-                // bez createdAt / updatedAt
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
@@ -609,14 +588,12 @@ const cateringApp = ({ userProfileData }) => {
         }
     };
 
-    // 🔥 Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
+    // Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
     const saveCateringAssignment = async () => {
         if (!selectedCateringCell || !selectedCateringPlaceId || !window.db) return;
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
-        // Zisti, či pre tento tím, tento deň a tento typ jedla už existuje priradenie.
-        // Podľa pravidla: každý tím má pre každý deň a typ jedla PRÁVE JEDNO priradenie.
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
                 a.teamId === selectedCateringCell.team.id &&
@@ -626,14 +603,12 @@ const cateringApp = ({ userProfileData }) => {
                 a.mealType === selectedCateringCell.mealType
         );
 
-        // Ak neexistuje žiadne priradenie pre daný deň + typ jedla → rovno ulož
         if (existingForTeamDayMeal.length === 0) {
             setSavingCatering(true);
             await performSaveCateringAssignment(payload, false, null);
             return;
         }
 
-        // Ak existuje a je úplne identické (rovnaký slot aj miesto) → nič sa nemení
         const identical = existingForTeamDayMeal.find(
             (a) =>
                 a.slotFrom === selectedCateringCell.slotFrom &&
@@ -646,8 +621,6 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // Inak → zobraz potvrdenie o zmene.
-        // Vymažú sa len priradenia pre daný deň + typ jedla (nie celý tím).
         setPendingChange({
             payload,
             oldIds: existingForTeamDayMeal.map((a) => a.id),
@@ -655,7 +628,6 @@ const cateringApp = ({ userProfileData }) => {
         setShowChangeConfirm(true);
     };
 
-    // 🔥 Potvrdenie zmeny – vymaž staré a ulož nové
     const confirmChangeAssignment = async () => {
         if (!pendingChange || !window.db) return;
         setSavingCatering(true);
@@ -670,14 +642,12 @@ const cateringApp = ({ userProfileData }) => {
         setPendingChange(null);
     };
 
-    // 🔥 Zrušenie zmeny – nič sa neukladá
     const cancelChangeAssignment = () => {
         setShowChangeConfirm(false);
         setPendingChange(null);
         setSavingCatering(false);
     };
 
-    // 🔥 Odstráni priradenie stravovacieho miesta
     const deleteCateringAssignment = async () => {
         if (!selectedCateringCell?.existingId || !window.db) return;
         setSavingCatering(true);
@@ -701,12 +671,12 @@ const cateringApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'w-full min-w-0 bg-white rounded-xl shadow-xl p-8' },
-                        React.createElement(
+            React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Stravovanie'),
 
-                // 🔥 NOVÉ: filtre (kategória, dátum, typ jedla)
+                // Filtre (kategória, dátum, typ jedla)
                 React.createElement(
                     'div',
                     { className: 'flex flex-wrap items-center justify-center gap-4 w-full' },
@@ -789,6 +759,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'thead',
                         null,
+                        // Riadok 1: Kategória, Tím, Hráči, RT, dni
                         React.createElement(
                             'tr',
                             null,
@@ -829,8 +800,8 @@ const cateringApp = ({ userProfileData }) => {
                                 'RT'
                             ),
                             filteredDays.map((day, index) => {
-                                const total = dayColumnCount(day.key);
-                                const isLastDay = index === visibleDays.length - 1;
+                                const total = visibleColumnCountForDay(day.key);
+                                const isLastDay = index === filteredDays.length - 1;
                                 return React.createElement(
                                     'th',
                                     {
@@ -845,6 +816,61 @@ const cateringApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
+                        // Riadok 2: Obed / Večera
+                        React.createElement(
+                            'tr',
+                            null,
+                            filteredDays.map((day, index) => {
+                                const lunchCount = shouldShowMealType('lunch')
+                                    ? slotCountFor(day.key, 'lunch')
+                                    : 0;
+                                const dinnerCount = shouldShowMealType('dinner')
+                                    ? slotCountFor(day.key, 'dinner')
+                                    : 0;
+                                const isLastDay = index === filteredDays.length - 1;
+                                const parts = [];
+
+                                if (lunchCount > 0) {
+                                    const lunchHasThickRight = (dinnerCount > 0) || !isLastDay;
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `lunch-header-${index}`,
+                                                colSpan: lunchCount,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
+                                                    (lunchHasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                            },
+                                            'Obed'
+                                        )
+                                    );
+                                }
+
+                                if (dinnerCount > 0) {
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `dinner-header-${index}`,
+                                                colSpan: dinnerCount,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
+                                                    (!isLastDay ? ' border-r-4 border-r-gray-500' : ''),
+                                            },
+                                            'Večera'
+                                        )
+                                    );
+                                }
+
+                                return React.createElement(
+                                    React.Fragment,
+                                    { key: `meal-header-${index}` },
+                                    ...parts
+                                );
+                            })
+                        ),
+                        // Riadok 3: Popisky časov
                         React.createElement(
                             'tr',
                             null,
@@ -902,77 +928,26 @@ const cateringApp = ({ userProfileData }) => {
                                     ...parts
                                 );
                             })
-                        ),
-                        React.createElement(
-                            'tr',
-                            null,
-                            visibleDays.map((day, dayIndex) => {
-                                const lunchSlots = daySlots[day.key]?.lunch || [];
-                                const dinnerSlots = daySlots[day.key]?.dinner || [];
-                                const isLastDay = dayIndex === visibleDays.length - 1;
-                                const parts = [];
-
-                                lunchSlots.forEach((slot, i) => {
-                                    const isLastLunchSlot = i === lunchSlots.length - 1;
-                                    const hasThickRight =
-                                        isLastLunchSlot &&
-                                        ((dinnerSlots.length > 0) || !isLastDay);
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `lunch-slot-${dayIndex}-${i}`,
-                                                className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                            },
-                                            slot.label
-                                        )
-                                    );
-                                });
-
-                                dinnerSlots.forEach((slot, i) => {
-                                    const isLastDinnerSlot = i === dinnerSlots.length - 1;
-                                    const hasThickRight = isLastDinnerSlot && !isLastDay;
-                                    parts.push(
-                                        React.createElement(
-                                            'th',
-                                            {
-                                                key: `dinner-slot-${dayIndex}-${i}`,
-                                                className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
-                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                            },
-                                            slot.label
-                                        )
-                                    );
-                                });
-
-                                return React.createElement(
-                                    React.Fragment,
-                                    { key: `slot-headers-${dayIndex}` },
-                                    ...parts
-                                );
-                            })
                         )
                     ),
                     // TELO TABUĽKY
                     React.createElement(
                         'tbody',
                         null,
-                        userTeams.length === 0
+                        filteredTeams.length === 0
                             ? React.createElement(
                                   'tr',
                                   null,
                                   React.createElement(
                                       'td',
                                       {
-                                          colSpan: 4 + totalMealColumns,
+                                          colSpan: 4 + filteredDays.reduce(
+                                              (acc, d) => acc + visibleColumnCountForDay(d.key),
+                                              0
+                                          ),
                                           className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
                                       },
-                                      'Žiadne tímy neboli nájdené v kolekcii users.'
+                                      'Žiadne tímy neboli nájdené.'
                                   )
                               )
                             : filteredTeams.map((team, rowIndex) =>
@@ -1115,7 +1090,7 @@ const cateringApp = ({ userProfileData }) => {
                     )
                 )
             ),
-            // 🔥 Modálne okno pre priradenie stravovacieho miesta
+            // Modálne okno pre priradenie stravovacieho miesta
             showCateringModal && selectedCateringCell && React.createElement(
                 'div',
                 {
@@ -1241,8 +1216,8 @@ const cateringApp = ({ userProfileData }) => {
                         )
                     )
                 )
-            )            ,
-            // 🔥 Potvrdzovacie okno pri zmene priradenia
+            ),
+            // Potvrdzovacie okno pri zmene priradenia
             showChangeConfirm && pendingChange && React.createElement(
                 'div',
                 {
@@ -1290,7 +1265,7 @@ const cateringApp = ({ userProfileData }) => {
                         )
                     )
                 )
-            )            
+            )
         )
     );
 };
