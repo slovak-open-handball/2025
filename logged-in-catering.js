@@ -1123,7 +1123,7 @@ const cateringApp = ({ userProfileData }) => {
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 text-left whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
+                                                  'border border-gray-300 px-3 py-2 text-center whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
                                           },
                                           team.packageName || '–'
                                       ),
@@ -1369,7 +1369,7 @@ const cateringApp = ({ userProfileData }) => {
                     ),
                 )
             ),
-                        // 🔥 NOVÉ: Modálne okno – výber typu priradenia
+            // 🔥 NOVÉ: Modálne okno – výber typu priradenia
             showAssignmentTypeModal && React.createElement(
                 'div',
                 {
