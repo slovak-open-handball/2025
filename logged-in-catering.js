@@ -303,19 +303,6 @@ const cateringApp = ({ userProfileData }) => {
                 try {
                     const teams = await loadUserTeams(window.db);
                     setUserTeams(teams);
-                    console.log('[DEBUG] Načítané tímy:', teams.length);
-                    console.log('[DEBUG] Unikátne kategórie v userTeams:', 
-                        Array.from(new Set(teams.map(t => t.category)))
-                    );
-                    console.log('[DEBUG] Prvých 5 tímov (kategória):', 
-                        teams.slice(0, 5).map(t => ({ 
-                            teamName: t.teamName, 
-                            category: t.category,
-                            categoryType: typeof t.category,
-                            categoryLength: (t.category || '').length,
-                            categoryCodes: Array.from((t.category || '')).map(c => c.charCodeAt(0))
-                        }))
-                    );
                 } catch (err) {
                     console.error('cateringApp: Chyba pri načítaní tímov:', err);
                     window.showGlobalNotification('Nepodarilo sa načítať tímy.', 'error');
@@ -542,21 +529,6 @@ const cateringApp = ({ userProfileData }) => {
 
     const categoryHasVisibleColumns = () => true;
 
-    console.log('=== [DEBUG FILTER KATEGÓRIE] ===');
-    console.log('[DEBUG] filterCategory (raw):', JSON.stringify(filterCategory));
-    console.log('[DEBUG] filterCategory typ:', typeof filterCategory);
-    console.log('[DEBUG] filterCategory length:', (filterCategory || '').length);
-    console.log('[DEBUG] filterCategory kódy znakov:', 
-        Array.from(filterCategory || '').map(c => c.charCodeAt(0))
-    );
-    console.log('[DEBUG] availableCategories:', availableCategories);
-    console.log('[DEBUG] userTeams kategórie (raw):', 
-        Array.from(new Set(userTeams.map(t => t.category)))
-    );
-    console.log('[DEBUG] userTeams kategórie (JSON):', 
-        Array.from(new Set(userTeams.map(t => t.category))).map(c => JSON.stringify(c))
-    );
-
     const filteredTeams = (filterCategory
         ? userTeams.filter((t) => {
               const match = t.category === filterCategory;
@@ -572,11 +544,6 @@ const cateringApp = ({ userProfileData }) => {
           })
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
-
-    console.log('[DEBUG] filteredTeams po filtri:', filteredTeams.length);
-    console.log('[DEBUG] filteredTeams kategórie:', 
-        Array.from(new Set(filteredTeams.map(t => t.category)))
-    );
 
     // Farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
@@ -796,14 +763,6 @@ const cateringApp = ({ userProfileData }) => {
                                 value: filterCategory,
                                 onChange: (e) => {
                                     const val = e.target.value;
-                                    console.log('[DEBUG] Používateľ vybral kategóriu:', JSON.stringify(val));
-                                    console.log('[DEBUG] Dĺžka:', val.length);
-                                    console.log('[DEBUG] Kódy znakov:', 
-                                        Array.from(val).map(c => c.charCodeAt(0))
-                                    );
-                                    console.log('[DEBUG] Dostupné kategórie v userTeams:',
-                                        Array.from(new Set(userTeams.map(t => t.category))).map(c => JSON.stringify(c))
-                                    );
                                     setFilterCategory(val);
                                 },
                                 className:
@@ -1415,8 +1374,6 @@ const handleDataUpdateAndRender = (event) => {
 
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-catering.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
@@ -1426,8 +1383,6 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-catering.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-
                                 await updateDoc(userProfileRef, {
                                     email: user.email
                                 });
