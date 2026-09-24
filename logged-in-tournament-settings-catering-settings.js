@@ -252,14 +252,14 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
 
                 if (oEmpty && !nEmpty) {
                     changes.push(
-                        `Deň ${dayLabel}: pridané ${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}`
+                        `Deň ${dayLabel}: pridané '''${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}'`
                     );
                     return;
                 }
 
                 if (!oEmpty && nEmpty) {
                     changes.push(
-                        `Deň ${dayLabel}: odobrané ${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})`
+                        `Deň ${dayLabel}: zmazané '''${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})'`
                     );
                     return;
                 }
