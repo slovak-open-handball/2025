@@ -593,6 +593,20 @@ const cateringApp = ({ userProfileData }) => {
         );
     };
 
+    // 🔥 NOVÉ: Nájde superstructure priradenie pre konkrétnu bunku (kliknutý tím + deň + jedlo + slot)
+    const findSuperstructureAssignmentForCell = (team, dayKey, mealType, slotFrom) => {
+        return cateringAssignments.find(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.clickedTeamUid === team.uid &&
+                a.clickedTeamIndex === team.teamIndex &&
+                a.clickedTeamCategory === team.category &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType &&
+                a.slotFrom === slotFrom
+        );
+    };
+
     // Farby stravovacieho miesta
     const getCateringPlaceColors = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
@@ -823,13 +837,10 @@ const cateringApp = ({ userProfileData }) => {
 
         try {
             const payload = {
-                // Kontext pôvodnej bunky (kto klikol)
                 clickedTeamUid: team.uid,
                 clickedTeamIndex: team.teamIndex,
                 clickedTeamCategory: team.category,
-                clickedTeamName: team.teamName,
 
-                // Priradený superstructure tím (umiestnenie)
                 teamUid: 'global',
                 teamIndex: placeTeam.id,
                 category: placeTeam.category,
@@ -838,14 +849,12 @@ const cateringApp = ({ userProfileData }) => {
                 groupName: placeTeam.groupName || null,
                 isSuperstructure: true,
 
-                // Časové údaje
                 dayKey: day.key,
                 dayLabel: day.fullLabelNumeric,
                 mealType: mealType,
                 slotFrom: slot.from,
                 slotTo: slot.to,
 
-                // Miesto – zatiaľ nevyberáme
                 placeId: '',
                 placeName: '',
             };
@@ -1253,12 +1262,19 @@ const cateringApp = ({ userProfileData }) => {
                                                   isLastLunchCell &&
                                                   ((dinnerCount > 0) || !isLastDay);
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
+                                              const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'lunch', slot.from);
                                               const colors = existing
                                                   ? getCateringPlaceColors(existing.placeId)
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
                                               const canClick = teamHasMealInPackage(team, day.key, 'lunch');
+
+                                              // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
+                                              const displaySuperstructureName = superstructureAssignment?.teamName || null;
+                                              const superstructureColors = superstructureAssignment
+                                                  ? getCateringPlaceColors(superstructureAssignment.placeId)
+                                                  : null;
 
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
@@ -1285,14 +1301,25 @@ const cateringApp = ({ userProfileData }) => {
                                                                     backgroundColor: colors.bg,
                                                                     color: colors.text,
                                                                 }
-                                                              : {},
+                                                              : superstructureAssignment && superstructureColors
+                                                                  ? {
+                                                                        backgroundColor: superstructureColors.bg,
+                                                                        color: superstructureColors.text,
+                                                                    }
+                                                                  : {},
                                                           title: !canClick
                                                               ? `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}`
                                                               : existing
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                                  : superstructureAssignment
+                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                      : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : (canClick ? '' : '–')
+                                                      existing
+                                                          ? teamTotal
+                                                          : displaySuperstructureName
+                                                              ? displaySuperstructureName
+                                                              : (canClick ? '' : '–')
                                                   )
                                               );
                                           }
@@ -1302,12 +1329,19 @@ const cateringApp = ({ userProfileData }) => {
                                               const isLastDinnerCell = i === dinnerCount - 1;
                                               const hasThickRight = isLastDinnerCell && !isLastDay;
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
+                                              const superstructureAssignment = findSuperstructureAssignmentForCell(team, day.key, 'dinner', slot.from);
                                               const colors = existing
                                                   ? getCateringPlaceColors(existing.placeId)
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
                                               const canClick = teamHasMealInPackage(team, day.key, 'dinner');
+
+                                              // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
+                                              const displaySuperstructureName = superstructureAssignment?.teamName || null;
+                                              const superstructureColors = superstructureAssignment
+                                                  ? getCateringPlaceColors(superstructureAssignment.placeId)
+                                                  : null;
 
                                               let cellClass =
                                                   'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
@@ -1334,17 +1368,28 @@ const cateringApp = ({ userProfileData }) => {
                                                                     backgroundColor: colors.bg,
                                                                     color: colors.text,
                                                                 }
-                                                              : {},
+                                                              : superstructureAssignment && superstructureColors
+                                                                  ? {
+                                                                        backgroundColor: superstructureColors.bg,
+                                                                        color: superstructureColors.text,
+                                                                    }
+                                                                  : {},
                                                           title: !canClick
                                                               ? `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}`
                                                               : existing
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                                  : superstructureAssignment
+                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                      : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : (canClick ? '' : '–')
+                                                      existing
+                                                          ? teamTotal
+                                                          : displaySuperstructureName
+                                                              ? displaySuperstructureName
+                                                              : (canClick ? '' : '–')
                                                   )
                                               );
-                                          }
+                                          }                                          
 
                                           return React.createElement(
                                               React.Fragment,
