@@ -555,6 +555,48 @@ const exportMatchesToPdf = async (title, matchesByDay, formatDateHeaderFn, forma
         return;
     }
 
+    // ===== EXPLICITNÁ REGISTRÁCIA AUTOTABLE =====
+    // Skontrolujeme, či prototyp jsPDF má autoTable. Ak nie, pridáme ho.
+    if (typeof jsPDF.API.autoTable !== 'function') {
+        // Skúsime nájsť autoTable vo window (plugin ho tam zvyčajne zaregistruje)
+        const autoTableFn = window.autoTable || (window.jspdf && window.jspdf.autoTable);
+        if (typeof autoTableFn === 'function') {
+            jsPDF.API.autoTable = function (...args) {
+                return autoTableFn(this, ...args);
+            };
+            console.warn('[PDF] autoTable manuálne zaregistrovaný z window.autoTable');
+        } else {
+            window.showGlobalNotification('Plugin jspdf-autotable nie je dostupný.', 'error');
+            console.error('[PDF] window.autoTable nie je funkcia. Skontroluj <script> jspdf-autotable.');
+            return;
+        }
+    }
+    // =============================================
+
+    window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
+
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    // Po vytvorení inštancie overíme, že má autoTable
+    if (typeof pdf.autoTable !== 'function') {
+        // Skúsime ho priradiť priamo inštancii
+        const autoTableFn = window.autoTable || (window.jspdf && window.jspdf.autoTable);
+        if (typeof autoTableFn === 'function') {
+            pdf.autoTable = function (...args) {
+                return autoTableFn(this, ...args);
+            };
+        } else {
+            window.showGlobalNotification('pdf.autoTable nie je dostupné ani po registrácii.', 'error');
+            return;
+        }
+    }
+    
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) {
+        window.showGlobalNotification('PDF knižnica nie je načítaná.', 'error');
+        return;
+    }
+
     window.showGlobalNotification(`Generujem PDF pre: ${title}`, 'info');
 
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
