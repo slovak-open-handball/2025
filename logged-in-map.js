@@ -2423,8 +2423,8 @@ const MapApp = ({ userProfileData }) => {
                       `${formatPrice(selectedPlace.pricePerNight)} €/os/noc`
                     ),
 
-                    // Farby pre ubytovanie
-                    selectedPlace.type === 'ubytovanie' && (
+                    // Farby pre ubytovanie a stravovanie
+                    (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie') && (
                       React.createElement('div', { className: 'mb-3 flex items-center gap-3' },
                         React.createElement('strong', { className: 'text-gray-700' }, 'Farba:'),
                         React.createElement('div', { 
