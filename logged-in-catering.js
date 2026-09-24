@@ -352,6 +352,7 @@ const cateringApp = ({ userProfileData }) => {
                         name: data.name || '(bez názvu)',
                         headerColor: data.headerColor || '#1e40af',
                         headerTextColor: data.headerTextColor || '#000000',
+                        capacity: data.capacity != null ? Number(data.capacity) : null,
                     });
                 });
                 places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
@@ -555,6 +556,13 @@ const cateringApp = ({ userProfileData }) => {
             bg: place.headerColor || '#1e40af',
             text: place.headerTextColor || '#000000',
         };
+    };
+
+    // Vráti kapacitu daného stravovacieho miesta (alebo null)
+    const getCateringPlaceCapacity = (placeId) => {
+        const place = cateringPlaces.find((p) => p.id === placeId);
+        if (!place) return null;
+        return place.capacity != null ? Number(place.capacity) : null;
     };
 
     // Zistí, či má tím v balíku povolený daný typ stravovania pre daný deň
@@ -1176,6 +1184,7 @@ const cateringApp = ({ userProfileData }) => {
                               ),
                         // 🔥 SÚHRNNÉ RIADKY PRE KAŽDÉ STRAVOVACIE MIESTO (vždy zobrazené)
                         // Farba bunky = farba konkrétneho stravovacieho miesta
+                        // Ak je prekročená kapacita miesta v danom slote, bunka má červené písmo a bold
                         React.createElement(
                             'tr',
                             { key: 'summary-header', className: 'bg-gray-100' },
@@ -1192,6 +1201,7 @@ const cateringApp = ({ userProfileData }) => {
                         ),
                         ...cateringPlaces.flatMap((place) => {
                             const colors = getCateringPlaceColors(place.id);
+                            const placeCapacity = getCateringPlaceCapacity(place.id);
 
                             return [React.createElement(
                                 'tr',
@@ -1209,7 +1219,8 @@ const cateringApp = ({ userProfileData }) => {
                                             color: colors.text,
                                         },
                                     },
-                                    `Súčet: ${place.name}`
+                                    `Súčet: ${place.name}` +
+                                        (placeCapacity != null ? ` – Kapacita: ${placeCapacity}` : '')
                                 ),
                                 React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-50' }, ''),
                                 React.createElement('td', { className: 'border border-gray-300 px-3 py-2 bg-gray-50 border-r-4 border-r-gray-500' }, ''),
@@ -1223,17 +1234,23 @@ const cateringApp = ({ userProfileData }) => {
                                         const isLastLunchCell = i === lunchSlots.length - 1;
                                         const hasThickRight = isLastLunchCell && ((dinnerSlots.length > 0) || !isLastDay);
                                         const count = getAssignedCountForPlace(place.id, day.key, 'lunch', slot.from);
+
+                                        const overCapacity =
+                                            placeCapacity != null &&
+                                            count > placeCapacity;
+
                                         cells.push(React.createElement(
                                             'td',
                                             {
                                                 key: `summary-${place.id}-lunch-${dayIndex}-${i}`,
                                                 className:
                                                     'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
+                                                    (overCapacity ? ' font-bold text-red-600' : ''),
                                                 style: count > 0
                                                     ? {
                                                         backgroundColor: colors.bg,
-                                                        color: colors.text,
+                                                        color: overCapacity ? '#dc2626' : colors.text,
                                                     }
                                                     : {},
                                             },
@@ -1245,17 +1262,23 @@ const cateringApp = ({ userProfileData }) => {
                                         const isLastDinnerCell = i === dinnerSlots.length - 1;
                                         const hasThickRight = isLastDinnerCell && !isLastDay;
                                         const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
+
+                                        const overCapacity =
+                                            placeCapacity != null &&
+                                            count > placeCapacity;
+
                                         cells.push(React.createElement(
                                             'td',
                                             {
                                                 key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
                                                 className:
                                                     'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
-                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
+                                                    (overCapacity ? ' font-bold text-red-600' : ''),
                                                 style: count > 0
                                                     ? {
                                                         backgroundColor: colors.bg,
-                                                        color: colors.text,
+                                                        color: overCapacity ? '#dc2626' : colors.text,
                                                     }
                                                     : {},
                                             },
