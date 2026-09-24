@@ -1454,12 +1454,14 @@ const cateringApp = ({ userProfileData }) => {
                                               // 🔥 Klik je povolený vždy (aj keď tím nemá stravovanie v balíku)
                                               const canClick = true;
 
-                                              // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu bez kategórie
                                               const displaySuperstructureName = superstructureAssignment
                                                   ? getPlaceTeamDisplayName(
                                                         superstructureAssignment.teamName,
                                                         superstructureAssignment.category
                                                     )
+                                                  : null;
+                                              const superstructureColors = superstructureAssignment
+                                                  ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
 
                                               let cellClass =
