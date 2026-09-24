@@ -192,8 +192,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
             const cateringDocRef = doc(db, 'settings', 'catering');
             await setDoc(cateringDocRef, {
                 times: normalized,
-                updatedAt: Timestamp.fromDate(new Date()),
-                updatedBy: userProfileData.email || null,
             }, { merge: true });
 
             showNotification?.('Nastavenia stravovania boli úspešne uložené.', 'success');
