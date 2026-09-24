@@ -430,7 +430,7 @@ const cateringApp = ({ userProfileData }) => {
                                         {
                                             colSpan: dinnerCount,
                                             className:
-                                                'border border-gray-300 bg-purple-50 px-2 py-1 text-center font-semibold text-purple-700 text-xs',
+                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
                                         },
                                         'Večera'
                                     )
@@ -470,7 +470,7 @@ const cateringApp = ({ userProfileData }) => {
                                         {
                                             key: `dinner-slot-${dayIndex}-${i}`,
                                             className:
-                                                'border border-gray-300 bg-purple-50 px-2 py-1 text-center text-[11px] text-purple-700 whitespace-nowrap min-w-[70px]',
+                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
                                             title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
                                         },
                                         slot.label
