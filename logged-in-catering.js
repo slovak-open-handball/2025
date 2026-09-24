@@ -162,6 +162,23 @@ const minutesToTime = (mins) => {
 };
 
 /**
+ * Skontroluje, či má dané jedlo v danom dni platný časový rozptyl
+ * a či je možné z neho vygenerovať aspoň jeden slot.
+ */
+const hasValidMealRange = (mealTimes, unitMinutes) => {
+    if (!mealTimes) return false;
+    const fromMin = timeToMinutes(mealTimes.from);
+    const toMin = timeToMinutes(mealTimes.to);
+    const unit = parseInt(unitMinutes, 10);
+
+    if (fromMin == null || toMin == null) return false;
+    if (isNaN(unit) || unit <= 0) return false;
+    if (toMin - fromMin < unit) return false;
+
+    return true;
+};
+
+/**
  * Rozdelí interval from–to na sloty podľa unitMinutes.
  * Vráti pole objektov { from, to, label } – label je začiatok slotu.
  * Ak nie je možné deliť (neplatné vstupy alebo unit <= 0), vráti prázdne pole.
@@ -314,35 +331,61 @@ const cateringApp = ({ userProfileData }) => {
     }
 
     // ============================================================
-    // Predpočítame sloty pre každý deň a každé jedlo
+    // Predpočítame sloty pre každý deň a každé jedlo.
+    // Ak jedlo nemá platný rozptyl, sloty budú prázdne a stĺpce sa negenerujú.
     // ============================================================
-    // daySlots[dayKey] = { lunch: [slot, ...], dinner: [slot, ...] }
     const daySlots = {};
     tournamentDays.forEach((day) => {
         const t = cateringTimes[day.key] || {};
-        const lunchFrom = t.lunch?.from || '';
-        const lunchTo = t.lunch?.to || '';
-        const dinnerFrom = t.dinner?.from || '';
-        const dinnerTo = t.dinner?.to || '';
+        const lunchTimes = t.lunch || null;
+        const dinnerTimes = t.dinner || null;
 
         daySlots[day.key] = {
-            lunch: buildMealSlots(lunchFrom, lunchTo, unitMinutes),
-            dinner: buildMealSlots(dinnerFrom, dinnerTo, unitMinutes),
+            lunch: hasValidMealRange(lunchTimes, unitMinutes)
+                ? buildMealSlots(lunchTimes.from, lunchTimes.to, unitMinutes)
+                : [],
+            dinner: hasValidMealRange(dinnerTimes, unitMinutes)
+                ? buildMealSlots(dinnerTimes.from, dinnerTimes.to, unitMinutes)
+                : [],
         };
     });
 
-    // Koľko stĺpcov pre dané jedlo (aspoň 1, aby sa hlavička nezrútila)
+    // Pomocná funkcia: vráti počet stĺpcov pre daný deň (0 = deň sa nezobrazí)
+    const dayColumnCount = (dayKey) => {
+        const slots = daySlots[dayKey] || { lunch: [], dinner: [] };
+        return slots.lunch.length + slots.dinner.length;
+    };
+
+    // Vyfiltrujeme len dni, ktoré majú aspoň jeden stĺpec
+    const visibleDays = tournamentDays.filter((day) => dayColumnCount(day.key) > 0);
+
+    // Ak ani jeden deň nemá platné rozptyly, zobrazíme upozornenie
+    if (visibleDays.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement(
+                'div',
+                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Nie sú nastavené žiadne platné časové rozptyly pre stravovanie. Nastavte prosím časy obeda/večere a jednotku delenia.'
+                )
+            )
+        );
+    }
+
+    // Koľko stĺpcov pre dané jedlo v danom dni (0 ak nie je platný rozptyl)
     const slotCountFor = (dayKey, mealType) => {
         const slots = daySlots[dayKey]?.[mealType] || [];
-        return Math.max(slots.length, 1);
+        return slots.length;
     };
 
     // Celkový počet stĺpcov vpravo od dvoch fixných (Kategória, Tím)
-    const totalMealColumns = tournamentDays.reduce(
-        (acc, day) =>
-            acc +
-            slotCountFor(day.key, 'lunch') +
-            slotCountFor(day.key, 'dinner'),
+    const totalMealColumns = visibleDays.reduce(
+        (acc, day) => acc + dayColumnCount(day.key),
         0
     );
 
@@ -389,10 +432,8 @@ const cateringApp = ({ userProfileData }) => {
                                 },
                                 'Tím'
                             ),
-                            tournamentDays.map((day, index) => {
-                                const lunchCount = slotCountFor(day.key, 'lunch');
-                                const dinnerCount = slotCountFor(day.key, 'dinner');
-                                const total = lunchCount + dinnerCount;
+                            visibleDays.map((day, index) => {
+                                const total = dayColumnCount(day.key);
                                 return React.createElement(
                                     'th',
                                     {
@@ -406,82 +447,95 @@ const cateringApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
-                        // Riadok 2: Obed / Večera s colspan = počet slotov
+                        // Riadok 2: Obed / Večera s colspan = počet slotov (len ak existujú)
                         React.createElement(
                             'tr',
                             null,
-                            tournamentDays.map((day, index) => {
+                            visibleDays.map((day, index) => {
                                 const lunchCount = slotCountFor(day.key, 'lunch');
                                 const dinnerCount = slotCountFor(day.key, 'dinner');
+                                const parts = [];
+
+                                if (lunchCount > 0) {
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `lunch-header-${index}`,
+                                                colSpan: lunchCount,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                            },
+                                            'Obed'
+                                        )
+                                    );
+                                }
+
+                                if (dinnerCount > 0) {
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `dinner-header-${index}`,
+                                                colSpan: dinnerCount,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                            },
+                                            'Večera'
+                                        )
+                                    );
+                                }
+
                                 return React.createElement(
                                     React.Fragment,
                                     { key: `meal-header-${index}` },
-                                    React.createElement(
-                                        'th',
-                                        {
-                                            colSpan: lunchCount,
-                                            className:
-                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
-                                        },
-                                        'Obed'
-                                    ),
-                                    React.createElement(
-                                        'th',
-                                        {
-                                            colSpan: dinnerCount,
-                                            className:
-                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
-                                        },
-                                        'Večera'
-                                    )
+                                    ...parts
                                 );
                             })
                         ),
-                        // 🔥 Riadok 3: Popisky začiatkov jednotlivých slotov
+                        // 🔥 Riadok 3: Popisky začiatkov jednotlivých slotov (len ak existujú)
                         React.createElement(
                             'tr',
                             null,
-                            tournamentDays.map((day, dayIndex) => {
+                            visibleDays.map((day, dayIndex) => {
                                 const lunchSlots = daySlots[day.key]?.lunch || [];
                                 const dinnerSlots = daySlots[day.key]?.dinner || [];
+                                const parts = [];
 
-                                const lunchHeaders = (lunchSlots.length > 0
-                                    ? lunchSlots
-                                    : [{ label: '—' }]
-                                ).map((slot, i) =>
-                                    React.createElement(
-                                        'th',
-                                        {
-                                            key: `lunch-slot-${dayIndex}-${i}`,
-                                            className:
-                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
-                                            title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                        },
-                                        slot.label
-                                    )
-                                );
+                                lunchSlots.forEach((slot, i) => {
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `lunch-slot-${dayIndex}-${i}`,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
+                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
+                                            },
+                                            slot.label
+                                        )
+                                    );
+                                });
 
-                                const dinnerHeaders = (dinnerSlots.length > 0
-                                    ? dinnerSlots
-                                    : [{ label: '—' }]
-                                ).map((slot, i) =>
-                                    React.createElement(
-                                        'th',
-                                        {
-                                            key: `dinner-slot-${dayIndex}-${i}`,
-                                            className:
-                                                'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
-                                            title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
-                                        },
-                                        slot.label
-                                    )
-                                );
+                                dinnerSlots.forEach((slot, i) => {
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `dinner-slot-${dayIndex}-${i}`,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
+                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
+                                            },
+                                            slot.label
+                                        )
+                                    );
+                                });
 
                                 return React.createElement(
                                     React.Fragment,
                                     { key: `slot-headers-${dayIndex}` },
-                                    ...lunchHeaders,
-                                    ...dinnerHeaders
+                                    ...parts
                                 );
                             })
                         )
@@ -526,39 +580,43 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.teamName
                                       ),
-                                      tournamentDays.map((day, dayIndex) => {
+                                      visibleDays.map((day, dayIndex) => {
                                           const lunchCount = slotCountFor(day.key, 'lunch');
                                           const dinnerCount = slotCountFor(day.key, 'dinner');
+                                          const cells = [];
 
-                                          const lunchCells = Array.from({ length: lunchCount }).map((_, i) =>
-                                              React.createElement(
-                                                  'td',
-                                                  {
-                                                      key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
-                                                      className:
-                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
-                                                  },
-                                                  '—'
-                                              )
-                                          );
+                                          for (let i = 0; i < lunchCount; i++) {
+                                              cells.push(
+                                                  React.createElement(
+                                                      'td',
+                                                      {
+                                                          key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
+                                                          className:
+                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
+                                                      },
+                                                      '—'
+                                                  )
+                                              );
+                                          }
 
-                                          const dinnerCells = Array.from({ length: dinnerCount }).map((_, i) =>
-                                              React.createElement(
-                                                  'td',
-                                                  {
-                                                      key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
-                                                      className:
-                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
-                                                  },
-                                                  '—'
-                                              )
-                                          );
+                                          for (let i = 0; i < dinnerCount; i++) {
+                                              cells.push(
+                                                  React.createElement(
+                                                      'td',
+                                                      {
+                                                          key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
+                                                          className:
+                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
+                                                      },
+                                                      '—'
+                                                  )
+                                              );
+                                          }
 
                                           return React.createElement(
                                               React.Fragment,
                                               { key: `cells-${rowIndex}-${dayIndex}` },
-                                              ...lunchCells,
-                                              ...dinnerCells
+                                              ...cells
                                           );
                                       })
                                   )
