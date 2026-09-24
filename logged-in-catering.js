@@ -869,7 +869,7 @@ const cateringApp = ({ userProfileData }) => {
                 { className: 'overflow-x-auto pb-4 w-full min-w-0' },
                 React.createElement(
                     'table',
-                    { className: 'min-w-max border-collapse text-sm' },
+                    { className: 'min-w-max border-collapse text-sm', key: filterCategory },
                     // HLAVIČKA TABUĽKY
                     React.createElement(
                         'thead',
