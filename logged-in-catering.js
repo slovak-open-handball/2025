@@ -1,5 +1,5 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Importy pre Firebase funkcie
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
@@ -46,7 +46,6 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 /**
  * Pomocná funkcia: vráti zoznam všetkých dní medzi arrivalDate a tournamentEnd.
- * Každý deň je reprezentovaný ako objekt { date: Date, label: string }.
  */
 const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     if (!arrivalDate || !tournamentEnd) return [];
@@ -56,7 +55,6 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
 
-    // Normalizujeme na polnoc, aby sme predišli problémom s časovými zónami
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
@@ -69,6 +67,11 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
         days.push({
             date: new Date(current),
             label: current.toLocaleDateString('sk-SK', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'numeric',
+            }),
+            fullLabel: current.toLocaleDateString('sk-SK', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -81,14 +84,59 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     return days;
 };
 
+/**
+ * Pomocná funkcia: načíta všetky používateľské tímy z kolekcie 'users'.
+ * Vráti zoradené pole objektov { uid, teamName, category, id }.
+ */
+const loadUserTeams = async (db) => {
+    if (!db) return [];
+
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+
+    const teams = [];
+
+    snapshot.forEach((userDoc) => {
+        const userData = userDoc.data() || {};
+        const userTeams = userData.teams;
+
+        if (!userTeams || typeof userTeams !== 'object') return;
+
+        Object.entries(userTeams).forEach(([categoryName, teamArray]) => {
+            if (!Array.isArray(teamArray)) return;
+
+            teamArray.forEach((team) => {
+                if (!team?.teamName) return;
+
+                teams.push({
+                    uid: userDoc.id,
+                    id: team.id || `${userDoc.id}-${team.teamName}`,
+                    teamName: team.teamName,
+                    category: categoryName,
+                });
+            });
+        });
+    });
+
+    // Zoradíme podľa kategórie a názvu tímu
+    teams.sort((a, b) => {
+        const catCompare = (a.category || '').localeCompare(b.category || '');
+        if (catCompare !== 0) return catCompare;
+        return (a.teamName || '').localeCompare(b.teamName || '');
+    });
+
+    return teams;
+};
+
 const cateringApp = ({ userProfileData }) => {
     const [tournamentDays, setTournamentDays] = useState([]);
+    const [userTeams, setUserTeams] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
-            console.warn('cateringApp: window.db nie je dostupné, nedá sa načítať nastavenia turnaja.');
+            console.warn('cateringApp: window.db nie je dostupné.');
             setLoading(false);
             return;
         }
@@ -107,7 +155,6 @@ const cateringApp = ({ userProfileData }) => {
                     const days = buildTournamentDays(arrivalDate, tournamentEnd);
                     setTournamentDays(days);
                 } else {
-                    console.warn('cateringApp: Dokument settings/registration neexistuje.');
                     setTournamentDays([]);
                 }
                 setLoading(false);
@@ -122,6 +169,31 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    // Načítanie používateľských tímov z kolekcie 'users'
+    useEffect(() => {
+        if (!window.db) return;
+
+        const usersRef = collection(window.db, 'users');
+
+        const unsubscribe = onSnapshot(
+            usersRef,
+            async () => {
+                try {
+                    const teams = await loadUserTeams(window.db);
+                    setUserTeams(teams);
+                } catch (err) {
+                    console.error('cateringApp: Chyba pri načítaní tímov:', err);
+                    window.showGlobalNotification('Nepodarilo sa načítať tímy.', 'error');
+                }
+            },
+            (error) => {
+                console.error('cateringApp: Chyba pri sledovaní používateľov:', error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
     if (loading) {
         return React.createElement(
             'div',
@@ -130,97 +202,177 @@ const cateringApp = ({ userProfileData }) => {
         );
     }
 
+    if (tournamentDays.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'flex-grow flex justify-center items-start p-6' },
+            React.createElement(
+                'div',
+                { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-6' }, 'Stravovanie'),
+                React.createElement(
+                    'p',
+                    { className: 'text-center text-gray-500' },
+                    'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
+                )
+            )
+        );
+    }
+
+    // ============================================================
+    // TABUĽKA STRAVOVANIA
+    // ============================================================
+    // Štruktúra:
+    //   Prvý stĺpec: Názov tímu
+    //   Pre každý deň: dva podstĺpce (Obed, Večera)
+    // ============================================================
+
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-start p-6' },
         React.createElement(
             'div',
-            { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
+            { className: 'w-full max-w-full bg-white rounded-xl shadow-xl p-8' },
             React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Stravovanie')
             ),
-            tournamentDays.length === 0
-                ? React.createElement(
-                      'p',
-                      { className: 'text-center text-gray-500' },
-                      'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
-                  )
-                : React.createElement(
-                      // Horizontálny layout – dni v jednom riadku, scrollovateľné
-                      'div',
-                      {
-                          className: 'overflow-x-auto pb-4',
-                      },
-                      React.createElement(
-                          'div',
-                          {
-                              className: 'flex flex-nowrap gap-6 items-stretch min-w-max',
-                          },
-                          tournamentDays.map((day, index) =>
-                              React.createElement(
-                                  // Stĺpec pre jeden deň
-                                  'div',
-                                  {
-                                      key: index,
-                                      className:
-                                          'flex flex-col w-64 flex-shrink-0 border border-gray-200 rounded-lg p-4 shadow-sm bg-gray-50',
-                                  },
-                                  // Hlavička dňa
-                                  React.createElement(
-                                      'h3',
-                                      {
-                                          className:
-                                              'text-lg font-semibold text-gray-700 mb-4 capitalize text-center border-b border-gray-300 pb-2',
-                                      },
-                                      day.label
-                                  ),
-                                  // Dva stĺpce pod sebou: Obed a Večera
-                                  React.createElement(
-                                      'div',
-                                      { className: 'flex flex-col gap-3 flex-grow' },
-                                      // Stĺpec: Obed
-                                      React.createElement(
-                                          'div',
-                                          {
-                                              className:
-                                                  'bg-blue-50 border border-blue-200 rounded-lg p-3 flex-grow flex flex-col',
-                                          },
+            // Horizontálne scrollovateľný kontajner pre tabuľku
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto pb-4' },
+                React.createElement(
+                    'table',
+                    {
+                        className: 'min-w-max border-collapse text-sm',
+                    },
+                    // HLAVIČKA TABUĽKY
+                    React.createElement(
+                        'thead',
+                        null,
+                        // Prvý riadok hlavičky: názvy dní (colspan=2 pre každý deň)
+                        React.createElement(
+                            'tr',
+                            null,
+                            // Prvý stĺpec - prázdny (alebo "Tím") s rowspan=2
+                            React.createElement(
+                                'th',
+                                {
+                                    rowSpan: 2,
+                                    className:
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-10 min-w-[180px]',
+                                },
+                                'Tím'
+                            ),
+                            // Za každý deň jeden th s colspan=2
+                            tournamentDays.map((day, index) =>
+                                React.createElement(
+                                    'th',
+                                    {
+                                        key: `day-header-${index}`,
+                                        colSpan: 2,
+                                        className:
+                                            'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap',
+                                        title: day.fullLabel,
+                                    },
+                                    day.label
+                                )
+                            )
+                        ),
+                        // Druhý riadok hlavičky: Obed / Večera pre každý deň
+                        React.createElement(
+                            'tr',
+                            null,
+                            tournamentDays.map((day, index) =>
+                                React.Fragment
+                                    ? React.createElement(
+                                          React.Fragment,
+                                          { key: `sub-header-${index}` },
                                           React.createElement(
-                                              'h4',
-                                              { className: 'text-md font-bold text-blue-700 mb-2 text-center' },
+                                              'th',
+                                              {
+                                                  className:
+                                                      'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                              },
                                               'Obed'
                                           ),
                                           React.createElement(
-                                              'p',
-                                              { className: 'text-gray-500 text-sm text-center mt-auto' },
-                                              'Zatiaľ žiadne údaje.'
+                                              'th',
+                                              {
+                                                  className:
+                                                      'border border-gray-300 bg-purple-50 px-2 py-1 text-center font-semibold text-purple-700 text-xs',
+                                              },
+                                              'Večera'
                                           )
-                                      ),
-                                      // Stĺpec: Večera
+                                      )
+                                    : null
+                            )
+                        )
+                    ),
+                    // TELO TABUĽKY - jeden riadok pre každý tím
+                    React.createElement(
+                        'tbody',
+                        null,
+                        userTeams.length === 0
+                            ? React.createElement(
+                                  'tr',
+                                  null,
+                                  React.createElement(
+                                      'td',
+                                      {
+                                          colSpan: 1 + tournamentDays.length * 2,
+                                          className: 'border border-gray-300 px-3 py-4 text-center text-gray-500',
+                                      },
+                                      'Žiadne tímy neboli nájdené v kolekcii users.'
+                                  )
+                              )
+                            : userTeams.map((team, rowIndex) =>
+                                  React.createElement(
+                                      'tr',
+                                      {
+                                          key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
+                                          className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                      },
+                                      // Prvý stĺpec - názov tímu
                                       React.createElement(
-                                          'div',
+                                          'td',
                                           {
                                               className:
-                                                  'bg-purple-50 border border-purple-200 rounded-lg p-3 flex-grow flex flex-col',
+                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 sticky left-0 bg-inherit z-10 whitespace-nowrap',
                                           },
+                                          team.teamName
+                                      ),
+                                      // Pre každý deň dva podstĺpce
+                                      tournamentDays.map((day, dayIndex) =>
                                           React.createElement(
-                                              'h4',
-                                              { className: 'text-md font-bold text-purple-700 mb-2 text-center' },
-                                              'Večera'
-                                          ),
-                                          React.createElement(
-                                              'p',
-                                              { className: 'text-gray-500 text-sm text-center mt-auto' },
-                                              'Zatiaľ žiadne údaje.'
+                                              React.Fragment,
+                                              { key: `cell-${rowIndex}-${dayIndex}` },
+                                              // Obed
+                                              React.createElement(
+                                                  'td',
+                                                  {
+                                                      className:
+                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[90px]',
+                                                  },
+                                                  '—'
+                                              ),
+                                              // Večera
+                                              React.createElement(
+                                                  'td',
+                                                  {
+                                                      className:
+                                                          'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[90px]',
+                                                  },
+                                                  '—'
+                                              )
                                           )
                                       )
                                   )
                               )
-                          )
-                      )
-                  )
+                    )
+                )
+            )
         )
     );
 };
@@ -262,9 +414,6 @@ const handleDataUpdateAndRender = (event) => {
                                 });
 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-catering.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-                            } else {
-                                console.log("logged-in-catering.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
                         }
                     } catch (error) {
@@ -279,7 +428,6 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(cateringApp, { userProfileData }));
-            console.log("logged-in-catering.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-catering.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
@@ -294,16 +442,12 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
-        console.error("logged-in-catering.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
-console.log("logged-in-catering.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-console.log("logged-in-catering.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-catering.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     const rootElement = document.getElementById('root');
