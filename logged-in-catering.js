@@ -92,6 +92,11 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     return days;
 };
 
+const cleanCategory = (cat) => String(cat || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 const loadUserTeams = async (db) => {
     if (!db) return [];
 
@@ -122,7 +127,7 @@ const loadUserTeams = async (db) => {
                     uid: userDoc.id,
                     id: team.id || `${userDoc.id}-${team.teamName}`,
                     teamName: team.teamName,
-                    category: categoryName,
+                    category: cleanCategory(categoryName),
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
                     accommodationName: team.accommodation?.name || null,
@@ -508,11 +513,10 @@ const cateringApp = ({ userProfileData }) => {
         return count;
     };
 
-    // Zoznam dostupných kategórií – presné názvy, bez normalizácie
     const availableCategories = Array.from(
         new Set(
             userTeams
-                .map((t) => (t.category || '').trim())
+                .map((t) => cleanCategory(t.category))
                 .filter(Boolean)
         )
     ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
@@ -528,8 +532,8 @@ const cateringApp = ({ userProfileData }) => {
     const filteredTeams = (filterCategory
         ? userTeams.filter(
               (t) =>
-                  (t.category || '').trim() ===
-                  filterCategory.trim()
+                  cleanCategory(t.category) ===
+                  cleanCategory(filterCategory)
           )
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
