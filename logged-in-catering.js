@@ -458,9 +458,7 @@ const cateringApp = ({ userProfileData }) => {
                 }
                 setSuperstructureTeams(teams);
             },
-            (error) => {
-                console.error('Chyba pri načítaní superstructure tímov:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -487,7 +485,6 @@ const cateringApp = ({ userProfileData }) => {
                     window.categoriesData = categoriesMap;
                 }
             } catch (err) {
-                console.error('Chyba pri načítaní kategórií:', err);
             } finally {
                 setCategoriesReady(true);
             }
@@ -555,14 +552,6 @@ const cateringApp = ({ userProfileData }) => {
                             displayName = identifierFromMatch;
                         }
                     
-                        console.log('🔍 addTeam:', {
-                            identifierFromMatch,
-                            teamNameFromMatch,
-                            categoryName,
-                            resolvedByTeamManager: displayName,
-                            usedFallback: displayName === identifierFromMatch,
-                        });
-                    
                         // 🔥 Očistíme od medzier
                         displayName = String(displayName).trim();
                         if (!displayName) return;
@@ -601,7 +590,6 @@ const cateringApp = ({ userProfileData }) => {
                 setMatchTeams(Array.from(teamsMap.values()));
             },
             (error) => {
-                console.error('Chyba pri načítaní tímov z matches:', error);
             }
         );
     
