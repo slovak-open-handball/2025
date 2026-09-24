@@ -493,15 +493,7 @@ const cateringApp = ({ userProfileData }) => {
         : visibleDays
     ).filter((d) => visibleColumnCountForDay(d.key) > 0);
 
-    // Pomocná funkcia: má daná kategória aspoň jeden viditeľný stĺpec?
-    const categoryHasVisibleColumns = (category) => {
-        // Ak nie je aktívny žiadny filter typu jedla ani dňa, kategória je vždy viditeľná
-        if (!filterMealType && !filterDayKey) return true;
-
-        // Prejdi všetky filtrované dni a skontroluj, či niektorý má aspoň jeden
-        // viditeľný stĺpec pre zvolený typ jedla
-        return filteredDays.some((day) => visibleColumnCountForDay(day.key) > 0);
-    };
+    const categoryHasVisibleColumns = () => true;
 
     // 🔥 AŽ POTOM filteredTeams (používa filteredDays nepriamo cez categoryHasVisibleColumns)
     const filteredTeams = (filterCategory
