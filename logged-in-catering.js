@@ -707,11 +707,11 @@ const cateringApp = ({ userProfileData }) => {
 
     // 🔥 NOVÉ: Zistí, či superstructure tím už má priradené stravovanie
     // pre daný deň + typ jedla (v hociktorom slote a hociktorou bunkou).
-    const isSuperstructureTeamAlreadyAssigned = (placeTeamId, dayKey, mealType) => {
+    const isSuperstructureTeamAlreadyAssigned = (placeTeamName, dayKey, mealType) => {
         return cateringAssignments.some(
             (a) =>
                 a.isSuperstructure === true &&
-                a.teamIndex === placeTeamId &&
+                a.teamName === placeTeamName &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType
         );
@@ -916,13 +916,13 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 4) 🔥 Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
-        //    "Priradiť podľa umiestnenia" (superstructure tím).
+        // 4) Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
         if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
-
+        
+            const cleanCat = cleanCategory(team.category);
             const teamsInCategory = matchTeams.filter(
-                (t) => t.category === team.category
+                (t) => cleanCategory(t.category) === cleanCat
             );
             setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
             setPlaceAssignmentSearch('');
@@ -931,13 +931,13 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 5) 🔥 Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku →
-        //    otvoríme ROVNO modálne okno "Priradiť podľa umiestnenia".
+        // 5) Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku
         if (!teamHasMealInPackage(team, day.key, mealType)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
-
+        
+            const cleanCat = cleanCategory(team.category);
             const teamsInCategory = matchTeams.filter(
-                (t) => t.category === team.category
+                (t) => cleanCategory(t.category) === cleanCat
             );
             setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
             setPlaceAssignmentSearch('');
@@ -1394,7 +1394,7 @@ const cateringApp = ({ userProfileData }) => {
         const { team, day, mealType, slot } = pendingAssignmentCell;
     
         // 🔥 ZMENA: hľadáme v matchTeams (id je unikátne, netreba porovnávať kategóriu)
-        const placeTeam = matchTeams.find((t) => t.id === selectedPlaceTeamId);
+        const placeTeam = matchTeams.find((t) => t.teamName === selectedPlaceTeamId);
         if (!placeTeam) {
             window.showGlobalNotification('Vybraný tím sa nenašiel.', 'error');
             return;
@@ -2347,7 +2347,7 @@ const cateringApp = ({ userProfileData }) => {
                     
                         const filtered = matchTeams
                             .filter((t) => cleanCategory(t.category) === categoryName)
-                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.id, dayKey, mealType))
+                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType))
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
                                 return t.teamName
