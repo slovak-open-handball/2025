@@ -556,10 +556,14 @@ const cateringApp = ({ userProfileData }) => {
                         displayName = String(displayName).trim();
                         if (!displayName) return;
                     
+                        // 🔥 NOVÉ: Názov tímu MUSÍ obsahovať názov kategórie.
+                        // Ak neobsahuje, tím sa do zoznamu nepridá.
+                        if (!displayName.includes(categoryName)) return;
+                    
                         teamsMap.set(key, {
-                            id: identifierFromMatch,          // 🔥 id zostáva identifier
-                            teamName: displayName,            // 🔥 teamName je pekný názov z teamManager
-                            identifier: identifierFromMatch,  // 🔥 pre istotu uložíme aj identifier
+                            id: identifierFromMatch,
+                            teamName: displayName,
+                            identifier: identifierFromMatch,
                             category: categoryName,
                             groupName: groupName,
                         });
