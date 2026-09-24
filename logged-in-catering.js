@@ -1002,7 +1002,7 @@ const cateringApp = ({ userProfileData }) => {
                                       'tr',
                                       {
                                           key: team.id || `${team.uid}-${team.teamName}-${rowIndex}`,
-                                          className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                          className: 'bg-white',
                                       },
                                       React.createElement(
                                           'td',
