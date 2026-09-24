@@ -1062,20 +1062,13 @@ const cateringApp = ({ userProfileData }) => {
                 for (const id of oldIds) {
                     await deleteDoc(doc(window.db, 'catering', id));
                 }
-                await addDoc(collection(window.db, 'catering'), payload);
-                window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
     
-                // 🔥 NOVÉ: Ak nové priradenie NIE je prioritné, musí sa priorita
-                // nastaviť inému (existujúcemu) superstructure priradeniu v tom istom riadku.
-                const isNewPriority = payload.isPriority === true;
-                const isSuperstructure = payload.isSuperstructure === true;
+                // Nový záznam – najprv pridáme s pôvodnou prioritou
+                let newPayload = { ...payload };
     
-                if (isSuperstructure && !isNewPriority) {
-                    // Nájdeme ostatné superstructure priradenia v tom istom riadku
-                    // (rovnaký kliknutý tím + deň + typ jedla), ktoré nie sú nové.
-                    // Pozor: cateringAssignments ešte neobsahuje nový záznam (snapshot),
-                    // takže ostatné nájdeme v aktuálnom stave.
-                    const siblingAssignments = cateringAssignments.filter(
+                // Ak nový NEMÁ prioritu, zistíme, či existuje sibling v riadku.
+                if (!newPayload.isPriority) {
+                    const siblings = cateringAssignments.filter(
                         (a) =>
                             a.isSuperstructure === true &&
                             a.clickedTeamUid === payload.clickedTeamUid &&
@@ -1083,21 +1076,23 @@ const cateringApp = ({ userProfileData }) => {
                             a.clickedTeamCategory === payload.clickedTeamCategory &&
                             a.dayKey === payload.dayKey &&
                             a.mealType === payload.mealType &&
-                            !oldIds.includes(a.id) // vylúčime tie, ktoré sme práve vymazali
+                            !oldIds.includes(a.id)
                     );
     
-                    // Ak existuje iný tím v riadku, označíme ho ako prioritný.
-                    if (siblingAssignments.length > 0) {
-                        const sibling = siblingAssignments[0];
-                        await updateDoc(doc(window.db, 'catering', sibling.id), {
+                    if (siblings.length > 0) {
+                        // Existuje iný tím v riadku → nastavíme mu prioritu
+                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
                             isPriority: true,
                         });
-                        window.showGlobalNotification(
-                            'Priorita bola nastavená pôvodnému tímu.',
-                            'success'
-                        );
+                        // Nový záznam zostane bez priority
+                    } else {
+                        // Žiadny iný tím v riadku → nový záznam bude prioritný
+                        newPayload.isPriority = true;
                     }
                 }
+    
+                await addDoc(collection(window.db, 'catering'), newPayload);
+                window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
             } else {
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
