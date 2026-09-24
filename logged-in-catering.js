@@ -240,9 +240,9 @@ const cateringApp = ({ userProfileData }) => {
     const [selectedPlaceTeamId, setSelectedPlaceTeamId] = useState('');
     const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
     const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');    
-
     const [showSuperstructureReplanPickerModal, setShowSuperstructureReplanPickerModal] = useState(false);
     const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
+    const [cateringModalIsPriority, setCateringModalIsPriority] = useState(false);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -998,7 +998,7 @@ const cateringApp = ({ userProfileData }) => {
                 groupName: cell.placeTeam.groupName || null,
                 isSuperstructure: true,
                 // 🔥 NOVÉ: príznak prioritného priradenia
-                isPriority: !!cell.isPriority,
+                isPriority: !!cateringModalIsPriority,
     
                 // Časové údaje
                 dayKey: cell.dayKey,
@@ -1045,6 +1045,7 @@ const cateringApp = ({ userProfileData }) => {
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
+            setCateringModalIsPriority(false);
         } catch (err) {
             window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
         } finally {
@@ -1088,8 +1089,10 @@ const cateringApp = ({ userProfileData }) => {
                 existingId: existingId,
                 isSuperstructure: true,
                 placeTeam,
-                isPriority: false,
+                isPriority: false, // bude sa brať z checkboxu
             });
+            // 🔥 Predvyplníme checkbox podľa pôvodnej priority
+            setCateringModalIsPriority(existingAssignment?.isPriority === true);
             setSelectedCateringPlaceId(existingAssignment?.placeId || '');
             setShowSuperstructureDecisionModal(false);
             setPendingSuperstructureDecision(null);
@@ -1134,8 +1137,10 @@ const cateringApp = ({ userProfileData }) => {
             existingId: assignment.id || null,
             isSuperstructure: true,
             placeTeam,
-            isPriority: false,
+            isPriority: false, // bude sa brať z checkboxu
         });
+        // 🔥 Predvyplníme checkbox podľa pôvodnej priority
+        setCateringModalIsPriority(assignment.isPriority === true);
         setSelectedCateringPlaceId(assignment.placeId || '');
         setShowSuperstructureReplanPickerModal(false);
         setSuperstructureReplanPickerItems([]);
@@ -1228,6 +1233,7 @@ const cateringApp = ({ userProfileData }) => {
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
+            setCateringModalIsPriority(false);
             return;
         }
 
@@ -1281,9 +1287,11 @@ const cateringApp = ({ userProfileData }) => {
             existingId: null,
             isSuperstructure: true,
             placeTeam,
-            isPriority: true,
+            isPriority: false, // bude sa brať z checkboxu
         });
-    
+
+        // 🔥 Pri novom prioritnom priradení predvyplníme checkbox na true
+        setCateringModalIsPriority(true);
         setSelectedCateringPlaceId('');
         setShowPlaceAssignmentModal(false);
         setShowCateringModal(true);
@@ -2359,6 +2367,7 @@ const cateringApp = ({ userProfileData }) => {
                             setShowCateringModal(false);
                             setSelectedCateringCell(null);
                             setSelectedCateringPlaceId('');
+                            setCateringModalIsPriority(false);
                         }
                     },
                 },
@@ -2443,6 +2452,33 @@ const cateringApp = ({ userProfileData }) => {
                             )
                         )
                     ),
+                    // 🔥 NOVÉ: Checkbox pre prioritné priradenie (len pri superstructure)
+                    selectedCateringCell.isSuperstructure && React.createElement(
+                        'div',
+                        { className: 'mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg' },
+                        React.createElement(
+                            'label',
+                            { className: 'flex items-center gap-2 cursor-pointer' },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked: cateringModalIsPriority,
+                                onChange: (e) => setCateringModalIsPriority(e.target.checked),
+                                className: 'w-4 h-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded',
+                            }),
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm font-medium text-gray-800' },
+                                'Prioritné priradenie (zvýrazní sa hrubým čiernym orámovaním)'
+                            )
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-amber-700 mt-1 ml-6' },
+                            cateringModalIsPriority
+                                ? 'Toto priradenie bude prioritné.'
+                                : 'Priorita zostane pôvodnému tímu (ak nejakú mal).'
+                        )
+                    ),
                     React.createElement(
                         'div',
                         { className: 'flex justify-end gap-3' },
@@ -2464,6 +2500,7 @@ const cateringApp = ({ userProfileData }) => {
                                     setShowCateringModal(false);
                                     setSelectedCateringCell(null);
                                     setSelectedCateringPlaceId('');
+                                    setCateringModalIsPriority(false);
                                 },
                                 disabled: savingCatering,
                                 className:
