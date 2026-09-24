@@ -391,10 +391,10 @@ const cateringApp = ({ userProfileData }) => {
 
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-start p-6' },
+        { className: 'flex-grow flex justify-center items-start p-6 w-full min-w-0' },
         React.createElement(
             'div',
-            { className: 'w-full max-w-full bg-white rounded-xl shadow-xl p-8' },
+            { className: 'w-full min-w-0 bg-white rounded-xl shadow-xl p-8' },
             React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
@@ -402,7 +402,7 @@ const cateringApp = ({ userProfileData }) => {
             ),
             React.createElement(
                 'div',
-                { className: 'overflow-x-auto pb-4' },
+                { className: 'overflow-x-auto pb-4 w-full min-w-0' },
                 React.createElement(
                     'table',
                     { className: 'min-w-max border-collapse text-sm' },
