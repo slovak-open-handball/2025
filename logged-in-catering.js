@@ -241,6 +241,9 @@ const cateringApp = ({ userProfileData }) => {
     const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
     const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');    
 
+    const [showSuperstructureReplanPickerModal, setShowSuperstructureReplanPickerModal] = useState(false);
+    const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
+
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
@@ -677,6 +680,20 @@ const cateringApp = ({ userProfileData }) => {
         );
     };    
 
+    // 🔥 NOVÉ: Nájde VŠETKY superstructure priradenia pre daný riadok
+    // (kliknutý tím + deň + typ jedla), bez ohľadu na slot.
+    const findAllSuperstructureAssignmentsForRow = (team, dayKey, mealType) => {
+        return cateringAssignments.filter(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.clickedTeamUid === team.uid &&
+                a.clickedTeamIndex === team.teamIndex &&
+                a.clickedTeamCategory === team.category &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType
+        );
+    };
+
     // 🔥 NOVÉ: Odstráni názov kategórie z názvu superstructure tímu
     // napr. "U12 CH Skupina A 1. 1A" → "Skupina A 1. 1A"
     const getPlaceTeamDisplayName = (teamName, category) => {
@@ -1035,29 +1052,101 @@ const cateringApp = ({ userProfileData }) => {
         }
     };
 
-    // 🔥 NOVÉ: Používateľ zvolil "Preplánovať existujúce miesto a čas"
+    // 🔥 UPRAVENÉ: Používateľ zvolil "Preplánovať existujúce miesto a čas"
     const handleSuperstructureReplan = () => {
         if (!pendingSuperstructureDecision) return;
-        const { team, day, mealType, slot, existingId, placeTeam } = pendingSuperstructureDecision;
+    
+        const { team, day, mealType, slot } = pendingSuperstructureDecision;
+    
+        // Nájdeme VŠETKY superstructure priradenia pre tento riadok
+        const allInRow = findAllSuperstructureAssignmentsForRow(
+            team, day.key, mealType
+        );
+    
+        // Ak existuje len jedno (alebo žiadne) → rovno otvoríme showCateringModal
+        if (allInRow.length <= 1) {
+            const existingAssignment = allInRow[0] || null;
+            const existingId = existingAssignment?.id || null;
+            const teamIndex = existingAssignment?.teamIndex || null;
+    
+            const placeTeam = teamIndex
+                ? (superstructureTeams.find((t) => t.id === teamIndex) || {
+                      id: teamIndex,
+                      teamName: existingAssignment.teamName,
+                      category: existingAssignment.category,
+                      groupName: existingAssignment.groupName || null,
+                  })
+                : null;
+    
+            setSelectedCateringCell({
+                team,
+                dayKey: day.key,
+                dayLabel: day.fullLabelNumeric,
+                mealType,
+                slotFrom: existingAssignment?.slotFrom || slot.from,
+                slotTo: existingAssignment?.slotTo || slot.to,
+                existingId: existingId,
+                isSuperstructure: true,
+                placeTeam,
+                isPriority: false,
+            });
+            setSelectedCateringPlaceId(existingAssignment?.placeId || '');
+            setShowSuperstructureDecisionModal(false);
+            setPendingSuperstructureDecision(null);
+            setShowCateringModal(true);
+            return;
+        }
+    
+        // 🔥 Ak existujú 2+ superstructure priradenia v tomto riadku →
+        //    otvoríme nové modálne okno na výber konkrétneho superstructure tímu
+        const items = allInRow.map((a) => {
+            const placeTeam = superstructureTeams.find((t) => t.id === a.teamIndex) || {
+                id: a.teamIndex,
+                teamName: a.teamName,
+                category: a.category,
+                groupName: a.groupName || null,
+            };
+            return {
+                assignment: a,
+                placeTeam,
+            };
+        });
+    
+        setSuperstructureReplanPickerItems(items);
+        setShowSuperstructureDecisionModal(false);
+        setShowSuperstructureReplanPickerModal(true);
+    };
+
+    // 🔥 NOVÉ: Používateľ vybral konkrétne superstructure priradenie na preplánovanie
+    const handlePickSuperstructureReplan = (item) => {
+        if (!pendingSuperstructureDecision || !item) return;
+    
+        const { team, day, mealType } = pendingSuperstructureDecision;
+        const { assignment, placeTeam } = item;
     
         setSelectedCateringCell({
             team,
             dayKey: day.key,
             dayLabel: day.fullLabelNumeric,
             mealType,
-            slotFrom: slot.from,
-            slotTo: slot.to,
-            existingId: existingId || null,
+            slotFrom: assignment.slotFrom,
+            slotTo: assignment.slotTo,
+            existingId: assignment.id || null,
             isSuperstructure: true,
             placeTeam,
             isPriority: false,
         });
-        setSelectedCateringPlaceId(
-            pendingSuperstructureDecision.existingAssignment?.placeId || ''
-        );
-        setShowSuperstructureDecisionModal(false);
+        setSelectedCateringPlaceId(assignment.placeId || '');
+        setShowSuperstructureReplanPickerModal(false);
+        setSuperstructureReplanPickerItems([]);
         setPendingSuperstructureDecision(null);
         setShowCateringModal(true);
+    };
+    
+    const cancelSuperstructureReplanPicker = () => {
+        setShowSuperstructureReplanPickerModal(false);
+        setSuperstructureReplanPickerItems([]);
+        setPendingSuperstructureDecision(null);
     };
     
     // 🔥 NOVÉ: Používateľ zvolil "Naplánovať prioritnejšie miesto a čas pre iný tím"
@@ -2173,6 +2262,86 @@ const cateringApp = ({ userProfileData }) => {
                                 onClick: cancelSuperstructureDecision,
                                 className:
                                     'w-full py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition',
+                            },
+                            'Zrušiť'
+                        )
+                    )
+                )
+            ),
+            // 🔥 NOVÉ: Modálne okno na výber konkrétneho superstructure tímu na preplánovanie
+            showSuperstructureReplanPickerModal && superstructureReplanPickerItems.length > 0 && React.createElement(
+                'div',
+                {
+                    className:
+                        'fixed inset-0 z-[3050] flex items-center justify-center bg-black/60 backdrop-blur-sm',
+                    onClick: () => {
+                        cancelSuperstructureReplanPicker();
+                    },
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className:
+                            'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[85vh] overflow-y-auto',
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-4 text-gray-800 text-center' },
+                        'Vyberte tím na preplánovanie'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-600 text-sm mb-4 text-center' },
+                        'V tomto riadku (tím, deň a typ jedla) existuje viac superstructure priradení. Ktoré chcete preplánovať?'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col gap-2' },
+                        ...superstructureReplanPickerItems.map((item, idx) => {
+                            const { assignment, placeTeam } = item;
+                            const placeName =
+                                cateringPlaces.find((p) => p.id === assignment.placeId)?.name ||
+                                assignment.placeName ||
+                                '—';
+            
+                            return React.createElement(
+                                'button',
+                                {
+                                    key: assignment.id || idx,
+                                    onClick: () => handlePickSuperstructureReplan(item),
+                                    className:
+                                        'w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-400 transition',
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex flex-col gap-1' },
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-sm font-semibold text-gray-800' },
+                                        getPlaceTeamDisplayName(
+                                            placeTeam?.teamName,
+                                            placeTeam?.category
+                                        ) || '—'
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-gray-500' },
+                                        `Čas: ${assignment.slotFrom} – ${assignment.slotTo} | Miesto: ${placeName}`
+                                    )
+                                )
+                            );
+                        })
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end mt-6' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: cancelSuperstructureReplanPicker,
+                                className:
+                                    'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition',
                             },
                             'Zrušiť'
                         )
