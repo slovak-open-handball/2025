@@ -234,6 +234,10 @@ const cateringApp = ({ userProfileData }) => {
     const [selectedCateringPlaceId, setSelectedCateringPlaceId] = useState('');
     const [savingCatering, setSavingCatering] = useState(false);
 
+    // 🔥 NOVÉ: potvrdenie zmeny priradenia (ak už existuje)
+    const [showChangeConfirm, setShowChangeConfirm] = useState(false);
+    const [pendingChange, setPendingChange] = useState(null);
+
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
@@ -534,29 +538,37 @@ const cateringApp = ({ userProfileData }) => {
         setShowCateringModal(true);
     };
 
-    // 🔥 Uloží priradenie stravovacieho miesta do DB
-    const saveCateringAssignment = async () => {
-        if (!selectedCateringCell || !selectedCateringPlaceId || !window.db) return;
-        setSavingCatering(true);
+    // 🔥 Pomocná funkcia: vytvorí payload pre priradenie
+    const buildCateringPayload = (placeId) => {
+        const place = cateringPlaces.find((p) => p.id === placeId);
+        return {
+            teamId: selectedCateringCell.team.id,
+            teamName: selectedCateringCell.team.teamName,
+            category: selectedCateringCell.team.category,
+            uid: selectedCateringCell.team.uid,
+            dayKey: selectedCateringCell.dayKey,
+            dayLabel: selectedCateringCell.dayLabel,
+            mealType: selectedCateringCell.mealType,
+            slotFrom: selectedCateringCell.slotFrom,
+            slotTo: selectedCateringCell.slotTo,
+            placeId: placeId,
+            placeName: place?.name || '',
+            updatedAt: Timestamp.now(),
+        };
+    };
 
+    // 🔥 Vykoná samotné uloženie (vytvorenie alebo zmenu)
+    const performSaveCateringAssignment = async (payload, isChange, oldId) => {
         try {
-            const place = cateringPlaces.find((p) => p.id === selectedCateringPlaceId);
-            const payload = {
-                teamId: selectedCateringCell.team.id,
-                teamName: selectedCateringCell.team.teamName,
-                category: selectedCateringCell.team.category,
-                uid: selectedCateringCell.team.uid,
-                dayKey: selectedCateringCell.dayKey,
-                dayLabel: selectedCateringCell.dayLabel,
-                mealType: selectedCateringCell.mealType,
-                slotFrom: selectedCateringCell.slotFrom,
-                slotTo: selectedCateringCell.slotTo,
-                placeId: selectedCateringPlaceId,
-                placeName: place?.name || '',
-                updatedAt: Timestamp.now(),
-            };
-
-            if (selectedCateringCell.existingId) {
+            if (isChange && oldId) {
+                // 1) vymaž staré
+                await deleteDoc(doc(window.db, 'catering', oldId));
+                // 2) vytvor nové
+                payload.createdAt = Timestamp.now();
+                await addDoc(collection(window.db, 'catering'), payload);
+                window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
+            } else if (selectedCateringCell.existingId) {
+                // bez zmeny miesta – iba update (ak by sa niekedy hodilo)
                 await updateDoc(
                     doc(window.db, 'catering', selectedCateringCell.existingId),
                     payload
@@ -577,6 +589,63 @@ const cateringApp = ({ userProfileData }) => {
         } finally {
             setSavingCatering(false);
         }
+    };
+
+    // 🔥 Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
+    const saveCateringAssignment = async () => {
+        if (!selectedCateringCell || !selectedCateringPlaceId || !window.db) return;
+
+        const payload = buildCateringPayload(selectedCateringPlaceId);
+
+        // Ak už existuje priradenie pre túto bunku
+        if (selectedCateringCell.existingId) {
+            // Nájdi staré priradenie a zisti, či sa mení miesto
+            const oldAssignment = cateringAssignments.find(
+                (a) => a.id === selectedCateringCell.existingId
+            );
+            const oldPlaceId = oldAssignment?.placeId || null;
+
+            // Ak sa placeId nemení → len update (napr. rovnaké miesto)
+            if (oldPlaceId === selectedCateringPlaceId) {
+                setSavingCatering(true);
+                await performSaveCateringAssignment(payload, false, null);
+                return;
+            }
+
+            // Ak sa placeId MENÍ → zobraz potvrdenie
+            setPendingChange({
+                payload,
+                oldId: selectedCateringCell.existingId,
+            });
+            setShowChangeConfirm(true);
+            return;
+        }
+
+        // Ak neexistuje → rovno ulož
+        setSavingCatering(true);
+        await performSaveCateringAssignment(payload, false, null);
+    };
+
+    // 🔥 Potvrdenie zmeny – vymaž staré a ulož nové
+    const confirmChangeAssignment = async () => {
+        if (!pendingChange || !window.db) return;
+        setSavingCatering(true);
+        setShowChangeConfirm(false);
+
+        await performSaveCateringAssignment(
+            pendingChange.payload,
+            true,
+            pendingChange.oldId
+        );
+
+        setPendingChange(null);
+    };
+
+    // 🔥 Zrušenie zmeny – nič sa neukladá
+    const cancelChangeAssignment = () => {
+        setShowChangeConfirm(false);
+        setPendingChange(null);
+        setSavingCatering(false);
     };
 
     // 🔥 Odstráni priradenie stravovacieho miesta
@@ -1055,7 +1124,56 @@ const cateringApp = ({ userProfileData }) => {
                         )
                     )
                 )
-            )
+            )            ,
+            // 🔥 Potvrdzovacie okno pri zmene priradenia
+            showChangeConfirm && pendingChange && React.createElement(
+                'div',
+                {
+                    className:
+                        'fixed inset-0 z-[3100] flex items-center justify-center bg-black/60 backdrop-blur-sm',
+                },
+                React.createElement(
+                    'div',
+                    {
+                        className:
+                            'bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6',
+                    },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-bold mb-4 text-gray-800' },
+                        'Zmeniť priradenie?'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-700 mb-6' },
+                        'Pre tento tím, deň a čas už existuje priradené stravovacie miesto. Prajete si ho nahradiť novým? Pôvodné priradenie bude odstránené.'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-end gap-3' },
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: cancelChangeAssignment,
+                                disabled: savingCatering,
+                                className:
+                                    'px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition',
+                            },
+                            'Nie'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: confirmChangeAssignment,
+                                disabled: savingCatering,
+                                className:
+                                    'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition font-medium',
+                            },
+                            savingCatering ? 'Ukladám...' : 'Áno, zmeniť'
+                        )
+                    )
+                )
+            )            
         )
     );
 };
