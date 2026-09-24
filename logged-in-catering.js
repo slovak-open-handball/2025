@@ -655,9 +655,9 @@ const cateringApp = ({ userProfileData }) => {
         return total;
     };
 
-    // Otvorí modálne okno pre priradenie (najprv výber typu)
+    // Otvorí modálne okno pre priradenie
     const openCateringModal = (team, day, mealType, slot) => {
-        // Skontrolujeme, či pre túto bunku už existuje priradenie
+        // Skontrolujeme, či pre túto bunku už existuje klasické priradenie
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
 
         // Ak áno → otvoríme ROVNO modálne okno na priradenie pre tím
@@ -676,7 +676,24 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // Ak nie → otvoríme modálne okno s výberom typu priradenia
+        // 🔥 Ak tím NEMÁ daný typ stravovania v balíku → otvoríme ROVNO
+        // modálne okno "Priradiť podľa umiestnenia" (superstructure tím).
+        const hasMealInPackage = teamHasMealInPackage(team, day.key, mealType);
+        if (!hasMealInPackage) {
+            setPendingAssignmentCell({ team, day, mealType, slot });
+
+            // Predvolíme prvý superstructure tím z rovnakej kategórie
+            const teamsInCategory = superstructureTeams.filter(
+                (t) => t.category === team.category
+            );
+            setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+            setPlaceAssignmentSearch('');
+            setShowAssignmentTypeModal(false);
+            setShowPlaceAssignmentModal(true);
+            return;
+        }
+
+        // Ak má tím stravovanie v balíku → otvoríme modálne okno s výberom typu
         setPendingAssignmentCell({ team, day, mealType, slot });
         setShowAssignmentTypeModal(true);
     };
@@ -1268,7 +1285,9 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
-                                              const canClick = teamHasMealInPackage(team, day.key, 'lunch');
+                                              const hasMealInPackage = teamHasMealInPackage(team, day.key, 'lunch');
+                                              // 🔥 Klik je povolený vždy (aj keď tím nemá stravovanie v balíku)
+                                              const canClick = true;
 
                                               // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
                                               const displaySuperstructureName = superstructureAssignment?.teamName || null;
@@ -1277,13 +1296,14 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
 
                                               let cellClass =
-                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
+                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition cursor-pointer ';
                                               if (existing && colors) {
-                                                  cellClass += 'cursor-pointer ';
-                                              } else if (canClick) {
-                                                  cellClass += 'cursor-pointer text-gray-400 hover:bg-blue-50 ';
+                                                  // klasické priradenie – bez zmeny
+                                              } else if (hasMealInPackage) {
+                                                  cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                               } else {
-                                                  cellClass += 'bg-gray-100 text-gray-300 cursor-not-allowed ';
+                                                  // 🔥 Tím nemá stravovanie v balíku – stále klikateľné, ale odlíšené
+                                                  cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                               }
                                               cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
 
@@ -1307,19 +1327,19 @@ const cateringApp = ({ userProfileData }) => {
                                                                         color: superstructureColors.text,
                                                                     }
                                                                   : {},
-                                                          title: !canClick
-                                                              ? `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}`
-                                                              : existing
-                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : superstructureAssignment
-                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
-                                                                      : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                          title: existing
+                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                              : superstructureAssignment
+                                                                  ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : hasMealInPackage
+                                                                      ? `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`
+                                                                      : `Tím nemá v balíku '${team.packageName}' obed pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`,
                                                       },
                                                       existing
                                                           ? teamTotal
                                                           : displaySuperstructureName
                                                               ? displaySuperstructureName
-                                                              : (canClick ? '' : '–')
+                                                              : (hasMealInPackage ? '' : '–')
                                                   )
                                               );
                                           }
@@ -1335,7 +1355,9 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
-                                              const canClick = teamHasMealInPackage(team, day.key, 'dinner');
+                                              const hasMealInPackage = teamHasMealInPackage(team, day.key, 'dinner');
+                                              // 🔥 Klik je povolený vždy
+                                              const canClick = true;
 
                                               // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
                                               const displaySuperstructureName = superstructureAssignment?.teamName || null;
@@ -1344,13 +1366,14 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
 
                                               let cellClass =
-                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
+                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition cursor-pointer ';
                                               if (existing && colors) {
-                                                  cellClass += 'cursor-pointer ';
-                                              } else if (canClick) {
-                                                  cellClass += 'cursor-pointer text-gray-400 hover:bg-blue-50 ';
+                                                  // klasické priradenie – bez zmeny
+                                              } else if (hasMealInPackage) {
+                                                  cellClass += 'text-gray-400 hover:bg-blue-50 ';
                                               } else {
-                                                  cellClass += 'bg-gray-100 text-gray-300 cursor-not-allowed ';
+                                                  // 🔥 Tím nemá stravovanie v balíku – stále klikateľné
+                                                  cellClass += 'bg-gray-100 text-gray-500 hover:bg-green-50 ';
                                               }
                                               cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
 
@@ -1374,19 +1397,19 @@ const cateringApp = ({ userProfileData }) => {
                                                                         color: superstructureColors.text,
                                                                     }
                                                                   : {},
-                                                          title: !canClick
-                                                              ? `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}`
-                                                              : existing
-                                                                  ? `${existing.placeName} (${slot.from} – ${slot.to})`
-                                                                  : superstructureAssignment
-                                                                      ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
-                                                                      : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
+                                                          title: existing
+                                                              ? `${existing.placeName} (${slot.from} – ${slot.to})`
+                                                              : superstructureAssignment
+                                                                  ? `${superstructureAssignment.teamName} (${slot.from} – ${slot.to})`
+                                                                  : hasMealInPackage
+                                                                      ? `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`
+                                                                      : `Tím nemá v balíku '${team.packageName}' večeru pre ${day.fullLabelNumeric}. Kliknutím priradíte podľa umiestnenia.`,
                                                       },
                                                       existing
                                                           ? teamTotal
                                                           : displaySuperstructureName
                                                               ? displaySuperstructureName
-                                                              : (canClick ? '' : '–')
+                                                              : (hasMealInPackage ? '' : '–')
                                                   )
                                               );
                                           }                                          
