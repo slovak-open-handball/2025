@@ -174,6 +174,10 @@ const parseExportHash = () => {
     }
 
     if (parts[0] === 'zapasy-playoff') {
+        if (parts.length >= 2) {
+            const categoryName = dashesToSpaces(decodeURIComponent(parts[1]));
+            return { type: 'zapasy-playoff', categoryName };
+        }
         return { type: 'zapasy-playoff' };
     }
 
@@ -892,17 +896,17 @@ const ExportApp = ({ userProfileData }) => {
         
             // Playoff a zápasy o umiestnenie
             if (selectedGroupType === 'playoff-a-zapasy-o-umiestnenie') {
-                const hash = `zapasy-playoff`;
-        
+                const hash = `zapasy-playoff/${encodeURIComponent(categoryNameSafe)}`;
+
                 try {
-                    sessionStorage.removeItem('matchesPdfAutoDownloaded_playoff');
+                    sessionStorage.removeItem(`matchesPdfAutoDownloaded_playoff_${categoryNameSafe}`);
                     sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { }
-        
+            
                 if (showPreview) {
                     window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                 } else {
-                    downloadMatchesPdfViaHiddenIframe(hash, 'Playoff a zápasy o umiestnenie');
+                    downloadMatchesPdfViaHiddenIframe(hash, `Playoff a zápasy o umiestnenie – ${categoryName}`);
                 }
                 return;
             }
@@ -1072,7 +1076,8 @@ const ExportApp = ({ userProfileData }) => {
     if (exportHash && exportHash.type === 'zapasy-playoff') {
         return React.createElement(MatchesExportView, {
             hallName: null,
-            mode: 'playoff'
+            mode: 'playoff',
+            categoryName: exportHash.categoryName || null
         });
     }
     
@@ -1279,7 +1284,7 @@ const ExportApp = ({ userProfileData }) => {
     );
 };
 
-const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
+const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryName: categoryNameFromUrl = null }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [hallName, setHallName] = useState(hallNameFromUrl || '');
@@ -1411,9 +1416,18 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
                 } else if (mode === 'playoff') {
                     const isPlayoff = isEliminationMatch(match);
                     const isPlacement = match.isPlacementMatch === true;
-                    if (isPlayoff || isPlacement) {
-                        filteredMatches.push(match);
+                    if (!isPlayoff && !isPlacement) return;
+
+                    // Ak je zadaná kategória, filtruj len zápasy tejto kategórie
+                    if (categoryNameFromUrl) {
+                        const matchCategoryName = match.categoryName
+                            || (match.categoryId && categoriesData[match.categoryId])
+                            || null;
+                        if (!matchCategoryName) return;
+                        if (normalizeName(matchCategoryName) !== normalizeName(categoryNameFromUrl)) return;
                     }
+                
+                    filteredMatches.push(match);
                 }
             });
 
@@ -1435,7 +1449,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
         });
 
         return () => unsubscribe();
-    }, [hallId, mode]);
+    }, [hallId, mode, categoryNameFromUrl, categoriesData]);
 
     const getDisplayTeamNameForMatch = (match, rawTeamName) => {
         if (!rawTeamName) return '';
@@ -1606,7 +1620,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
         if (loading) return;
 
         const storageKey = mode === 'playoff'
-            ? 'matchesPdfAutoDownloaded_playoff'
+            ? `matchesPdfAutoDownloaded_playoff_${categoryNameFromUrl || 'all'}`
             : `matchesPdfAutoDownloaded_${hallNameFromUrl || 'unknown'}`;
 
         let alreadyDownloaded = false;
@@ -1634,7 +1648,7 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
 
         const timer = setTimeout(() => {
             const title = mode === 'playoff'
-                ? 'Playoff-a-zapasy-o-umiestnenie'
+                ? `Playoff-a-zapasy-o-umiestnenie${categoryNameFromUrl ? '-' + categoryNameFromUrl.replace(/\s+/g, '-') : ''}`
                 : (hallName || hallNameFromUrl);
 
             exportMatchesToPdf(title, matchesByDay, formatDateHeader, formatTime, fixedDpr);
@@ -1683,6 +1697,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
                     { className: 'text-2xl font-bold text-gray-800' },
                     mode === 'playoff' ? 'Playoff a zápasy o umiestnenie' : 'Zápasy v športovej hale'
                 ),
+                mode === 'playoff' && categoryNameFromUrl && React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-center gap-2 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-trophy text-blue-500 text-sm' }),
+                    React.createElement('span', { className: 'text-gray-600' }, categoryNameFromUrl)
+                ),
                 mode === 'hall' && React.createElement(
                     'div',
                     { className: 'flex items-center justify-center gap-2 mt-1' },
@@ -1700,7 +1720,9 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall' }) => {
                         'p',
                         { className: 'text-lg' },
                         mode === 'playoff'
-                            ? 'Nie sú naplánované žiadne playoff ani zápasy o umiestnenie.'
+                            ? (categoryNameFromUrl
+                                ? `Pre kategóriu ${categoryNameFromUrl} nie sú naplánované žiadne playoff ani zápasy o umiestnenie.`
+                                : 'Nie sú naplánované žiadne playoff ani zápasy o umiestnenie.')
                             : 'Pre túto halu nie sú naplánované žiadne zápasy.'
                     )
                 ) :
