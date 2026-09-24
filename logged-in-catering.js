@@ -952,6 +952,7 @@ const cateringApp = ({ userProfileData }) => {
             slotFrom: slot.from,
             slotTo: slot.to,
             existingId: existing?.id || null,
+            showPriorityCheckbox: false,
         });
         setSelectedCateringPlaceId(existing?.placeId || '');
         setCateringModalIsPriority(false);
@@ -1093,7 +1094,8 @@ const cateringApp = ({ userProfileData }) => {
                 existingId: existingId,
                 isSuperstructure: true,
                 placeTeam,
-                isPriority: false, // bude sa brať z checkboxu
+                isPriority: false,
+                showPriorityCheckbox: true,
             });
             // 🔥 Predvyplníme checkbox podľa pôvodnej priority
             setCateringModalIsPriority(existingAssignment?.isPriority === true);
@@ -1291,7 +1293,8 @@ const cateringApp = ({ userProfileData }) => {
             existingId: null,
             isSuperstructure: true,
             placeTeam,
-            isPriority: false, // bude sa brať z checkboxu
+            isPriority: false,
+            showPriorityCheckbox: true,
         });
 
         // 🔥 Pri novom prioritnom priradení predvyplníme checkbox na true
@@ -2460,7 +2463,7 @@ const cateringApp = ({ userProfileData }) => {
                         )
                     ),
                     // 🔥 NOVÉ: Checkbox pre prioritné priradenie (len pri superstructure)
-                    selectedCateringCell.isSuperstructure && React.createElement(
+                    selectedCateringCell.isSuperstructure && selectedCateringCell.showPriorityCheckbox && React.createElement(
                         'div',
                         { className: 'mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg' },
                         React.createElement(
