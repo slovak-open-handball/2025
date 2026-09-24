@@ -665,6 +665,12 @@ const MapApp = ({ userProfileData }) => {
                 placeData.headerTextColor = newHeaderTextColor || '#000000';
             }
 
+            // NOVÉ: Farby pre stravovanie
+            if (newPlaceType === 'stravovanie') {
+                placeData.headerColor = newHeaderColor || '#1e40af';
+                placeData.headerTextColor = newHeaderTextColor || '#000000';
+            }
+
             if (newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0) {
                 const prices = {};
                 tournamentDates.days.forEach(date => {
@@ -1175,6 +1181,16 @@ const MapApp = ({ userProfileData }) => {
             updates.accommodationType = null;
             updates.pricePerNight = null;
             updates.costPerNight = null;
+        }
+
+        // NOVÉ: Farby pre stravovanie
+        if (editType === 'stravovanie') {
+            if (editHeaderColor) {
+                updates.headerColor = editHeaderColor;
+            }
+            if (editHeaderTextColor) {
+                updates.headerTextColor = editHeaderTextColor;
+            }
         }
     
         if (editType === 'sportova_hala' && tournamentDates.days.length > 0) {
@@ -2852,8 +2868,8 @@ const MapApp = ({ userProfileData }) => {
               priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
             ),
 
-            // Farba pozadia pre ubytovanie
-            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+            // Farba pozadia pre ubytovanie a stravovanie
+            (editType === 'ubytovanie' || editType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
               React.createElement('div', { className: 'flex gap-3 items-center' },
                 React.createElement('input', {
@@ -2872,8 +2888,8 @@ const MapApp = ({ userProfileData }) => {
               )
             ),
 
-            // Farba textu pre ubytovanie
-            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+            // Farba textu pre ubytovanie a stravovanie
+            (editType === 'ubytovanie' || editType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
               React.createElement('div', { className: 'flex gap-3 items-center' },
                 React.createElement('input', {
@@ -3165,8 +3181,8 @@ const MapApp = ({ userProfileData }) => {
               )
             ),
 
-            // FARBY PRE UBYTOVANIE (PRIDAJ TOTO)
-            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+            // FARBY PRE UBYTOVANIE A STRAVOVANIE
+            (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba pozadia štítku'),
               React.createElement('div', { className: 'flex gap-3 items-center' },
                 React.createElement('input', {
@@ -3185,7 +3201,7 @@ const MapApp = ({ userProfileData }) => {
               )
             ),
 
-            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+            (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Farba textu štítku'),
               React.createElement('div', { className: 'flex gap-3 items-center' },
                 React.createElement('input', {
