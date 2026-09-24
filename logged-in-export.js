@@ -906,7 +906,7 @@ const ExportApp = ({ userProfileData }) => {
                 if (showPreview) {
                     window.open(`logged-in-export.html?download=1#${hash}`, '_blank');
                 } else {
-                    downloadMatchesPdfViaHiddenIframe(hash, `Playoff a zápasy o umiestnenie – ${categoryName}`);
+                    downloadMatchesPdfViaHiddenIframe(hash, `${categoryName} - Playoff a zápasy o umiestnenie`);
                 }
                 return;
             }
