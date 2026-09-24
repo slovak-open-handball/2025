@@ -258,13 +258,17 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     tournamentDays
                 );
 
+                console.log('CateringSettings: zmeny na odoslanie:', changesList);
+                console.log('CateringSettings: sendAdminNotification typ:', typeof sendAdminNotification);
+
                 if (typeof sendAdminNotification === 'function' && changesList.length > 0) {
-                    sendAdminNotification({
+                    await sendAdminNotification({
                         type: 'updateCateringSettings',
-                        data: {
-                            changes: changesList,
-                        },
+                        data: { changes: changesList },
                     });
+                    console.log('CateringSettings: notifikácia odoslaná.');
+                } else {
+                    console.log('CateringSettings: notifikácia sa neposiela (prázdne zmeny alebo chýba funkcia).');
                 }
             } catch (notifErr) {
                 console.error('CateringSettings: chyba pri vytváraní notifikácie:', notifErr);
