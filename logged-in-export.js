@@ -1201,7 +1201,6 @@ const ExportApp = ({ userProfileData }) => {
                             availableGroupTypes.map((type, idx) =>
                                 React.createElement('option', { key: `${type}-${idx}`, value: type }, formatGroupType(type))
                             ),
-                            // Pridaná nová možnosť
                             React.createElement('option', { key: 'playoff-a-zapasy-o-umiestnenie', value: 'playoff-a-zapasy-o-umiestnenie' }, 'Playoff a zápasy o umiestnenie')
                         )
                     ),
@@ -1895,7 +1894,6 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryN
                 mode === 'playoff' && categoryNameFromUrl && React.createElement(
                     'div',
                     { className: 'flex items-center justify-center gap-2 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-trophy text-blue-500 text-sm' }),
                     React.createElement('span', { className: 'text-gray-600' }, categoryNameFromUrl)
                 ),
                 mode === 'hall' && React.createElement(
