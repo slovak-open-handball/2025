@@ -478,7 +478,9 @@ const cateringApp = ({ userProfileData }) => {
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                    const categoryName = data.categoryName || '';
+                    // 🔥 OPRAVA: očistíme categoryName rovnako ako v userTeams,
+                    // aby sa dali kategórie spoľahlivo porovnávať.
+                    const categoryName = cleanCategory(data.categoryName || '');
                     const groupName = data.groupName || null;
     
                     const addTeam = (identifier) => {
@@ -986,12 +988,15 @@ const cateringApp = ({ userProfileData }) => {
 
     const handleAssignByPlace = () => {
         if (!pendingAssignmentCell) return;
-
+    
         const { team } = pendingAssignmentCell;
 
+        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
+        const cleanCat = cleanCategory(team.category);
+    
         // 🔥 ZMENA: použijeme matchTeams namiesto superstructureTeams
         const teamsInCategory = matchTeams.filter(
-            (t) => t.category === team.category
+            (t) => cleanCategory(t.category) === cleanCat
         );
     
         setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
@@ -1223,8 +1228,11 @@ const cateringApp = ({ userProfileData }) => {
     
         setPendingAssignmentCell({ team, day, mealType, slot });
     
+        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
+        const cleanCat = cleanCategory(team.category);
+    
         const teamsInCategory = matchTeams.filter(
-            (t) => t.category === team.category
+            (t) => cleanCategory(t.category) === cleanCat
         );
         setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
         setPlaceAssignmentSearch('');
@@ -1398,7 +1406,7 @@ const cateringApp = ({ userProfileData }) => {
     
         const { team, day, mealType, slot } = pendingAssignmentCell;
     
-        // 🔥 ZMENA: hľadáme v matchTeams
+        // 🔥 ZMENA: hľadáme v matchTeams (id je unikátne, netreba porovnávať kategóriu)
         const placeTeam = matchTeams.find((t) => t.id === selectedPlaceTeamId);
         if (!placeTeam) {
             window.showGlobalNotification('Vybraný tím sa nenašiel.', 'error');
@@ -1419,7 +1427,7 @@ const cateringApp = ({ userProfileData }) => {
             isPriority: false,
             showPriorityCheckbox: true,
         });
-
+    
         // 🔥 Pri novom prioritnom priradení predvyplníme checkbox na true
         setCateringModalIsPriority(true);
         setSelectedCateringPlaceId('');
@@ -2345,12 +2353,13 @@ const cateringApp = ({ userProfileData }) => {
                     ),
 
                     (() => {
-                        const categoryName = pendingAssignmentCell.team.category;
+                        // 🔥 OPRAVA: očistíme kategóriu pred porovnaním
+                        const categoryName = cleanCategory(pendingAssignmentCell.team.category);
                         const dayKey = pendingAssignmentCell.day.key;
                         const mealType = pendingAssignmentCell.mealType;
-
+                    
                         const filtered = matchTeams
-                            .filter((t) => t.category === categoryName)
+                            .filter((t) => cleanCategory(t.category) === categoryName)
                             .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.id, dayKey, mealType))
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
@@ -2365,7 +2374,7 @@ const cateringApp = ({ userProfileData }) => {
                                 if (gcmp !== 0) return gcmp;
                                 return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
                             });
-
+                    
                         if (filtered.length === 0) {
                             return React.createElement(
                                 'p',
@@ -2373,7 +2382,7 @@ const cateringApp = ({ userProfileData }) => {
                                 'Pre túto kategóriu neboli nájdené žiadne tímy.'
                             );
                         }
-
+                    
                         return React.createElement(
                             'div',
                             {
