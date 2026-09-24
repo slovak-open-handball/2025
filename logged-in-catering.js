@@ -1450,16 +1450,26 @@ const cateringApp = ({ userProfileData }) => {
 
     const savePlaceAssignment = async () => {
         if (!pendingAssignmentCell || !selectedPlaceTeamId) return;
-
+    
         const { team, day, mealType, slot } = pendingAssignmentCell;
-
+    
         // 🔥 Hľadáme podľa id (identifier), NIE podľa teamName
         const placeTeam = matchTeams.find((t) => t.id === selectedPlaceTeamId);
         if (!placeTeam) {
             window.showGlobalNotification('Vybraný tím sa nenašiel.', 'error');
             return;
         }
-
+    
+        // 🔥 ZISTÍME, či v riadku (kliknutý tím + deň + typ jedla) už existuje
+        // nejaké superstructure priradenie (okrem tohto nového).
+        const existingInRow = findAllSuperstructureAssignmentsForRow(
+            team, day.key, mealType
+        );
+    
+        // 🔥 Ak v riadku NEEXISTUJE iné superstructure priradenie →
+        //    checkbox sa nezobrazí a priorita sa nenastaví.
+        const hasOtherAssignmentInRow = existingInRow.length > 0;
+    
         setSelectedCateringCell({
             team,
             dayKey: day.key,
@@ -1471,10 +1481,12 @@ const cateringApp = ({ userProfileData }) => {
             isSuperstructure: true,
             placeTeam,
             isPriority: false,
-            showPriorityCheckbox: true,
+            // 🔥 Checkbox zobrazíme LEN ak v riadku existuje iné priradenie
+            showPriorityCheckbox: hasOtherAssignmentInRow,
         });
     
-        setCateringModalIsPriority(true);
+        // 🔥 Predvyplníme checkbox na true LEN ak je čo prioritizovať
+        setCateringModalIsPriority(hasOtherAssignmentInRow);
         setSelectedCateringPlaceId('');
         setShowPlaceAssignmentModal(false);
         setShowCateringModal(true);
