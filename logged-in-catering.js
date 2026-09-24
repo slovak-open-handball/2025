@@ -1251,30 +1251,19 @@ const cateringApp = ({ userProfileData }) => {
                 selectedCateringCell.existingId &&
                 selectedCateringCell._originalPlaceId === selectedCateringPlaceId;
 
-            // (Voliteľné – ak nechceš riešiť „bez zmeny", môžeš túto kontrolu vynechať.)
-
             if (selectedCateringCell.existingId) {
-                // Zistí pôvodnú prioritu
-                const oldAssignment = cateringAssignments.find(
-                    (a) => a.id === selectedCateringCell.existingId
-                );
-                const oldWasPriority = oldAssignment?.isPriority === true;
-            
                 // Vymažeme staré
                 await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
             
                 // Nové priority
                 const newIsPriority = !!cateringModalIsPriority;
-            
-                // Nový záznam
                 const payloadForNew = { ...payload, isPriority: newIsPriority };
-                await addDoc(collection(window.db, 'catering'), payloadForNew);
             
-                // Ak nový NEMÁ prioritu a starý MAL prioritu alebo v riadku existuje iný záznam,
-                // nastav prioritu inému záznamu v riadku (sibling).
+                // Pridáme nový záznam a získame jeho referenciu
+                const newDocRef = await addDoc(collection(window.db, 'catering'), payloadForNew);
+            
+                // Ak nový NEMÁ prioritu, musíme niekomu inému nastaviť prioritu
                 if (!newIsPriority) {
-                    // Hľadaj sibling – superstructure priradenie v tom istom riadku
-                    // (rovnaký clickedTeam*, dayKey, mealType), ktorý nie je ten, čo sme práve vymazali.
                     const siblings = cateringAssignments.filter(
                         (a) =>
                             a.isSuperstructure === true &&
@@ -1287,12 +1276,19 @@ const cateringApp = ({ userProfileData }) => {
                     );
             
                     if (siblings.length > 0) {
-                        // Nastav prioritu prvému siblingovi
+                        // 🔥 Existuje iný tím v riadku → priorita pôvodnému tímu
                         await updateDoc(doc(window.db, 'catering', siblings[0].id), {
                             isPriority: true,
                         });
                         window.showGlobalNotification(
                             'Priorita bola nastavená pôvodnému tímu v riadku.',
+                            'success'
+                        );
+                    } else {
+                        // 🔥 Žiadny iný tím v riadku → nový záznam bude prioritný
+                        await updateDoc(newDocRef, { isPriority: true });
+                        window.showGlobalNotification(
+                            'Priorita bola nastavená novému tímu.',
                             'success'
                         );
                     }
