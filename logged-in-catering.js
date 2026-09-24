@@ -523,26 +523,39 @@ const cateringApp = ({ userProfileData }) => {
                     // 🔥 POUŽIJEME IDENTIFIER + namapujeme cez teamManager
                     const addTeam = (identifierFromMatch) => {
                         if (!identifierFromMatch) return;
-    
+                    
                         const key = `${categoryName}||${identifierFromMatch}`;
                         if (teamsMap.has(key)) return;
-    
+                    
                         // 🔥 Získame pekný názov tímu z teamManager
-                        let displayName = identifierFromMatch;
+                        let displayName = null;
                         if (
                             window.teamManager &&
                             typeof window.teamManager.getTeamNameByDisplayIdSync === 'function'
                         ) {
                             try {
                                 const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifierFromMatch);
-                                if (resolved && resolved !== identifierFromMatch) {
+                                if (resolved) {
                                     displayName = resolved;
                                 }
                             } catch (e) {
                                 /* ignore */
                             }
                         }
-    
+                    
+                        // 🔥 AK teamManager NEVRÁTIL NÁZOV → tím preskočíme (nedostane sa do zoznamu)
+                        if (!displayName) return;
+                    
+                        // 🔥 AK teamManager vrátil rovnaký identifier → tím nebol nájdený → preskočíme
+                        if (displayName === identifierFromMatch) return;
+                    
+                        // 🔥 AK teamManager vrátil 'null' alebo 'undefined' ako string → preskočíme
+                        if (displayName === 'null' || displayName === 'undefined') return;
+                    
+                        // 🔥 Očistíme od medzier
+                        displayName = String(displayName).trim();
+                        if (!displayName) return;
+                    
                         teamsMap.set(key, {
                             id: identifierFromMatch,          // 🔥 id zostáva identifier
                             teamName: displayName,            // 🔥 teamName je pekný názov z teamManager
