@@ -450,7 +450,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     value: unitMinutes,
                     onChange: (e) => setUnitMinutes(e.target.value),
                     placeholder: 'napr. 30',
-                    className: 'border border-gray-300 rounded px-3 py-2 text-sm w-48 focus:outline-none focus:border-blue-500',
+                    className: 'border border-gray-300 rounded px-3 py-2 text-sm w-56 focus:outline-none focus:border-blue-500',
                 })
             ),
             React.createElement(
