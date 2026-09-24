@@ -1907,7 +1907,12 @@ const MatchesExportView = ({ hallName: hallNameFromUrl, mode = 'hall', categoryN
             ),
 
             mode === 'playoff' && spiderCategoryId && matchesByDay.length > 0 && React.createElement(PlayoffSpider, {
-                matches: matches,
+                matches: matches.map(m => ({
+                    ...m,
+                    status: 'scheduled',
+                    homeScore: 0,
+                    awayScore: 0
+                })),
                 selectedCategory: spiderCategoryId,
                 teamNames: {},
                 hallNames: {}, 
