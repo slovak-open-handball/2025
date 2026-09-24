@@ -505,7 +505,7 @@ const cateringApp = ({ userProfileData }) => {
         return cateringAssignments.find(
             (a) =>
                 a.teamId === team.id &&
-                a.category === team.category &&
+                (a.category === team.category || a.categoryName === team.category) &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
                 a.slotFrom === slotFrom
@@ -538,14 +538,13 @@ const cateringApp = ({ userProfileData }) => {
         setShowCateringModal(true);
     };
 
-    // 🔥 Pomocná funkcia: vytvorí payload pre priradenie
     const buildCateringPayload = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
         return {
             teamId: selectedCateringCell.team.id,
-            teamName: selectedCateringCell.team.teamName,
-            category: selectedCateringCell.team.category,
-            categoryName: selectedCateringCell.team.category,
+            teamName: selectedCateringCell.team.teamName, 
+            category: selectedCateringCell.team.category, 
+            categoryName: selectedCateringCell.team.category, 
             uid: selectedCateringCell.team.uid,
             dayKey: selectedCateringCell.dayKey,
             dayLabel: selectedCateringCell.dayLabel,
@@ -597,7 +596,8 @@ const cateringApp = ({ userProfileData }) => {
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
                 a.teamId === selectedCateringCell.team.id &&
-                a.category === selectedCateringCell.team.category &&
+                (a.category === selectedCateringCell.team.category ||
+                 a.categoryName === selectedCateringCell.team.category) &&
                 a.dayKey === selectedCateringCell.dayKey &&
                 a.mealType === selectedCateringCell.mealType
         );
@@ -1038,11 +1038,14 @@ const cateringApp = ({ userProfileData }) => {
                         React.createElement(
                             'p',
                             null,
+                            React.createElement('strong', null, 'Kategória: '),
+                            selectedCateringCell.team.category || '—'
+                        ),
+                        React.createElement(
+                            'p',
+                            null,
                             React.createElement('strong', null, 'Tím: '),
-                            selectedCateringCell.team.teamName,
-                            ' (',
-                            selectedCateringCell.team.category,
-                            ')'
+                            selectedCateringCell.team.teamName
                         ),
                         React.createElement(
                             'p',
