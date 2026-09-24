@@ -237,6 +237,11 @@ const cateringApp = ({ userProfileData }) => {
     const [showChangeConfirm, setShowChangeConfirm] = useState(false);
     const [pendingChange, setPendingChange] = useState(null);
 
+    // 🔥 NOVÉ: filtre pre tabuľku stravovania
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterDayKey, setFilterDayKey] = useState('');
+    const [filterMealType, setFilterMealType] = useState(''); 
+
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
@@ -485,6 +490,27 @@ const cateringApp = ({ userProfileData }) => {
         0
     );
 
+    // 🔥 NOVÉ: zoznam dostupných kategórií pre filter
+    const availableCategories = Array.from(
+        new Set(userTeams.map((t) => t.category).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
+
+    // 🔥 NOVÉ: filtrované tímy (podľa kategórie)
+    const filteredTeams = filterCategory
+        ? userTeams.filter((t) => t.category === filterCategory)
+        : userTeams;
+
+    // 🔥 NOVÉ: filtrované dni (podľa dňa)
+    const filteredDays = filterDayKey
+        ? visibleDays.filter((d) => d.key === filterDayKey)
+        : visibleDays;
+
+    // 🔥 NOVÉ: pomocná funkcia, ktorá vráti, či sa má daný typ jedla zobraziť
+    const shouldShowMealType = (mealType) => {
+        if (!filterMealType) return true;
+        return filterMealType === mealType;
+    };
+
     // 🔥 Získanie farby ubytovne pre tím (bez ubytovne = žltá #FFFF00)
     const getTeamAccommodationColor = (team) => {
         if (!team.accommodationName) return '#FFFF00';
@@ -675,10 +701,83 @@ const cateringApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'w-full min-w-0 bg-white rounded-xl shadow-xl p-8' },
-            React.createElement(
+                        React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Stravovanie')
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center mb-4' }, 'Stravovanie'),
+
+                // 🔥 NOVÉ: filtre (kategória, dátum, typ jedla)
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap items-center justify-center gap-4 w-full' },
+
+                    // Filter kategórie
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Kategória:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: filterCategory,
+                                onChange: (e) => setFilterCategory(e.target.value),
+                                className:
+                                    'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky'),
+                            availableCategories.map((cat) =>
+                                React.createElement(
+                                    'option',
+                                    { key: cat, value: cat },
+                                    cat
+                                )
+                            )
+                        )
+                    ),
+
+                    // Filter dňa
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Dátum:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: filterDayKey,
+                                onChange: (e) => setFilterDayKey(e.target.value),
+                                className:
+                                    'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky'),
+                            visibleDays.map((day) =>
+                                React.createElement(
+                                    'option',
+                                    { key: day.key, value: day.key },
+                                    day.label
+                                )
+                            )
+                        )
+                    ),
+
+                    // Filter typu jedla
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, 'Typ jedla:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: filterMealType,
+                                onChange: (e) => setFilterMealType(e.target.value),
+                                className:
+                                    'px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition',
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky'),
+                            React.createElement('option', { value: 'lunch' }, 'Obed'),
+                            React.createElement('option', { value: 'dinner' }, 'Večera')
+                        )
+                    )
+                )
             ),
             React.createElement(
                 'div',
@@ -729,7 +828,7 @@ const cateringApp = ({ userProfileData }) => {
                                 },
                                 'RT'
                             ),
-                            visibleDays.map((day, index) => {
+                            filteredDays.map((day, index) => {
                                 const total = dayColumnCount(day.key);
                                 const isLastDay = index === visibleDays.length - 1;
                                 return React.createElement(
@@ -749,49 +848,57 @@ const cateringApp = ({ userProfileData }) => {
                         React.createElement(
                             'tr',
                             null,
-                            visibleDays.map((day, index) => {
-                                const lunchCount = slotCountFor(day.key, 'lunch');
-                                const dinnerCount = slotCountFor(day.key, 'dinner');
-                                const isLastDay = index === visibleDays.length - 1;
+                            filteredDays.map((day, dayIndex) => {
+                                const lunchSlots = shouldShowMealType('lunch')
+                                    ? (daySlots[day.key]?.lunch || [])
+                                    : [];
+                                const dinnerSlots = shouldShowMealType('dinner')
+                                    ? (daySlots[day.key]?.dinner || [])
+                                    : [];
+                                const isLastDay = dayIndex === filteredDays.length - 1;
                                 const parts = [];
 
-                                if (lunchCount > 0) {
-                                    const lunchHasThickRight =
-                                        (dinnerCount > 0) || (!isLastDay);
+                                lunchSlots.forEach((slot, i) => {
+                                    const isLastLunchSlot = i === lunchSlots.length - 1;
+                                    const hasThickRight =
+                                        isLastLunchSlot &&
+                                        ((dinnerSlots.length > 0) || !isLastDay);
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
-                                                key: `lunch-header-${index}`,
-                                                colSpan: lunchCount,
+                                                key: `lunch-slot-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
-                                                    (lunchHasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
                                             },
-                                            'Obed'
+                                            slot.label
                                         )
                                     );
-                                }
+                                });
 
-                                if (dinnerCount > 0) {
+                                dinnerSlots.forEach((slot, i) => {
+                                    const isLastDinnerSlot = i === dinnerSlots.length - 1;
+                                    const hasThickRight = isLastDinnerSlot && !isLastDay;
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
-                                                key: `dinner-header-${index}`,
-                                                colSpan: dinnerCount,
+                                                key: `dinner-slot-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
-                                                    (!isLastDay ? ' border-r-4 border-r-gray-500' : ''),
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
                                             },
-                                            'Večera'
+                                            slot.label
                                         )
                                     );
-                                }
+                                });
 
                                 return React.createElement(
                                     React.Fragment,
-                                    { key: `meal-header-${index}` },
+                                    { key: `slot-headers-${dayIndex}` },
                                     ...parts
                                 );
                             })
@@ -868,7 +975,7 @@ const cateringApp = ({ userProfileData }) => {
                                       'Žiadne tímy neboli nájdené v kolekcii users.'
                                   )
                               )
-                            : userTeams.map((team, rowIndex) =>
+                            : filteredTeams.map((team, rowIndex) =>
                                   React.createElement(
                                       'tr',
                                       {
@@ -915,10 +1022,14 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.othersCount
                                       ),
-                                      visibleDays.map((day, dayIndex) => {
-                                          const lunchCount = slotCountFor(day.key, 'lunch');
-                                          const dinnerCount = slotCountFor(day.key, 'dinner');
-                                          const isLastDay = dayIndex === visibleDays.length - 1;
+                                      filteredDays.map((day, dayIndex) => {
+                                          const lunchCount = shouldShowMealType('lunch')
+                                              ? slotCountFor(day.key, 'lunch')
+                                              : 0;
+                                          const dinnerCount = shouldShowMealType('dinner')
+                                              ? slotCountFor(day.key, 'dinner')
+                                              : 0;
+                                          const isLastDay = dayIndex === filteredDays.length - 1;
                                           const cells = [];
 
                                           for (let i = 0; i < lunchCount; i++) {
