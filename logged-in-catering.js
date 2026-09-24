@@ -643,6 +643,16 @@ const cateringApp = ({ userProfileData }) => {
         return val === 1 || val === true;
     };
 
+    // 🔥 NOVÉ: Zistí, či tím má vôbec nejaký balík priradený
+    const teamHasAnyPackage = (team) => {
+        if (!team) return false;
+        if (!team.packageName) return false;
+
+        // Skontrolujeme, či balík existuje v packagesList
+        const pkg = packagesList.find(p => p.name === team.packageName);
+        return !!pkg;
+    };
+
     // Spočíta počet členov VŠETKÝCH tímov priradených na dané miesto + deň + jedlo + slot
     const getAssignedCountForPlace = (placeId, dayKey, mealType, slotFrom) => {
         let total = 0;
@@ -655,12 +665,11 @@ const cateringApp = ({ userProfileData }) => {
         return total;
     };
 
-    // Otvorí modálne okno pre priradenie
+        // Otvorí modálne okno pre priradenie
     const openCateringModal = (team, day, mealType, slot) => {
-        // Skontrolujeme, či pre túto bunku už existuje klasické priradenie
+        // 1) Ak pre túto bunku už existuje klasické priradenie → otvoríme ROVNO
+        //    modálne okno "Priradiť stravovacie miesto" (existujúce správanie).
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
-
-        // Ak áno → otvoríme ROVNO modálne okno na priradenie pre tím
         if (existing) {
             setSelectedCateringCell({
                 team,
@@ -676,13 +685,11 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 🔥 Ak tím NEMÁ daný typ stravovania v balíku → otvoríme ROVNO
-        // modálne okno "Priradiť podľa umiestnenia" (superstructure tím).
-        const hasMealInPackage = teamHasMealInPackage(team, day.key, mealType);
-        if (!hasMealInPackage) {
+        // 2) 🔥 Ak tím NEMÁ ŽIADNY balík → otvoríme ROVNO modálne okno
+        //    "Priradiť podľa umiestnenia" (superstructure tím).
+        if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
 
-            // Predvolíme prvý superstructure tím z rovnakej kategórie
             const teamsInCategory = superstructureTeams.filter(
                 (t) => t.category === team.category
             );
@@ -693,7 +700,8 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // Ak má tím stravovanie v balíku → otvoríme modálne okno s výberom typu
+        // 3) 🔥 Tím MÁ balík → VŽDY otvoríme modálne okno s výberom typu
+        //    (bez ohľadu na to, či má v balíku daný typ stravovania).
         setPendingAssignmentCell({ team, day, mealType, slot });
         setShowAssignmentTypeModal(true);
     };
