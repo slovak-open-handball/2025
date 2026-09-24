@@ -480,13 +480,32 @@ const cateringApp = ({ userProfileData }) => {
 
     // Zoznam dostupných kategórií pre filter
     const availableCategories = Array.from(
-        new Set(userTeams.map((t) => t.category).filter(Boolean))
+        new Set(
+            userTeams
+                .map((t) => (t.category || '').trim())
+                .filter(Boolean)
+        )
     ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
 
     // Filtrované tímy podľa kategórie
-    const filteredTeams = filterCategory
-        ? userTeams.filter((t) => t.category === filterCategory)
-        : userTeams;
+    const categoryHasVisibleColumns = (category) => {
+        // Ak nie je aktívny žiadny filter typu jedla ani dňa, kategória je vždy viditeľná
+        if (!filterMealType && !filterDayKey) return true;
+
+        // Prejdi všetky viditeľné dni a skontroluj, či niektorý má aspoň jeden
+        // viditeľný stĺpec pre zvolený typ jedla
+        return filteredDays.some((day) => visibleColumnCountForDay(day.key) > 0);
+    };
+
+    // Filtrované tímy podľa kategórie (trim + case-insensitive)
+    const filteredTeams = (filterCategory
+        ? userTeams.filter(
+              (t) =>
+                  (t.category || '').trim().toLowerCase() ===
+                  filterCategory.trim().toLowerCase()
+          )
+        : userTeams
+    ).filter((t) => categoryHasVisibleColumns(t.category));
 
     // Filtrované dni podľa dňa
     const filteredDays = (filterDayKey
