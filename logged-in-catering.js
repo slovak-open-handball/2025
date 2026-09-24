@@ -691,7 +691,6 @@ const cateringApp = ({ userProfileData }) => {
                 slotFrom: slot.from,
                 slotTo: slot.to,
                 existingId: superstructureExisting.id || null,
-                // 🔥 príznak superstructure priradenia
                 isSuperstructure: true,
                 placeTeam,
             });
@@ -733,7 +732,23 @@ const cateringApp = ({ userProfileData }) => {
             return;
         }
 
-        // 4) 🔥 Tím MÁ balík → otvoríme modálne okno s výberom typu.
+        // 4) 🔥 Tím MÁ balík, ale NEMÁ daný typ stravovania v balíku →
+        //    otvoríme ROVNO modálne okno "Priradiť podľa umiestnenia".
+        if (!teamHasMealInPackage(team, day.key, mealType)) {
+            setPendingAssignmentCell({ team, day, mealType, slot });
+
+            const teamsInCategory = superstructureTeams.filter(
+                (t) => t.category === team.category
+            );
+            setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
+            setPlaceAssignmentSearch('');
+            setShowAssignmentTypeModal(false);
+            setShowPlaceAssignmentModal(true);
+            return;
+        }
+
+        // 5) 🔥 Tím MÁ balík AJ daný typ stravovania →
+        //    otvoríme modálne okno s výberom typu.
         setPendingAssignmentCell({ team, day, mealType, slot });
         setShowAssignmentTypeModal(true);
     };
