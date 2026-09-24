@@ -231,7 +231,6 @@ const cateringApp = ({ userProfileData }) => {
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
         if (!window.db) {
-            console.warn('cateringApp: window.db nie je dostupné.');
             setLoading(false);
             return;
         }
@@ -255,7 +254,6 @@ const cateringApp = ({ userProfileData }) => {
                 setLoading(false);
             },
             (error) => {
-                console.error('cateringApp: Chyba pri načítaní nastavení turnaja:', error);
                 window.showGlobalNotification('Nepodarilo sa načítať nastavenia turnaja.', 'error');
                 setLoading(false);
             }
@@ -283,7 +281,6 @@ const cateringApp = ({ userProfileData }) => {
                 }
             },
             (error) => {
-                console.error('cateringApp: Chyba pri načítaní nastavení stravovania:', error);
                 window.showGlobalNotification('Nepodarilo sa načítať nastavenia stravovania.', 'error');
             }
         );
@@ -304,13 +301,10 @@ const cateringApp = ({ userProfileData }) => {
                     const teams = await loadUserTeams(window.db);
                     setUserTeams(teams);
                 } catch (err) {
-                    console.error('cateringApp: Chyba pri načítaní tímov:', err);
                     window.showGlobalNotification('Nepodarilo sa načítať tímy.', 'error');
                 }
             },
-            (error) => {
-                console.error('cateringApp: Chyba pri sledovaní používateľov:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -336,9 +330,7 @@ const cateringApp = ({ userProfileData }) => {
                 });
                 setAccommodations(places);
             },
-            (error) => {
-                console.error('cateringApp: Chyba pri načítaní ubytovní:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -365,9 +357,7 @@ const cateringApp = ({ userProfileData }) => {
                 places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
                 setCateringPlaces(places);
             },
-            (error) => {
-                console.error('cateringApp: Chyba pri načítaní stravovacích miest:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -390,9 +380,7 @@ const cateringApp = ({ userProfileData }) => {
                 });
                 setCateringAssignments(items);
             },
-            (error) => {
-                console.error('cateringApp: Chyba pri načítaní priradení stravovania:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -419,9 +407,7 @@ const cateringApp = ({ userProfileData }) => {
                 });
                 setPackagesList(items);
             },
-            (error) => {
-                console.error('cateringApp: Chyba pri načítaní balíkov:', error);
-            }
+            (error) => { }
         );
 
         return () => unsubscribe();
@@ -530,18 +516,7 @@ const cateringApp = ({ userProfileData }) => {
     const categoryHasVisibleColumns = () => true;
 
     const filteredTeams = (filterCategory
-        ? userTeams.filter((t) => {
-              const match = t.category === filterCategory;
-              if (!match && (t.category || '').toLowerCase() === (filterCategory || '').toLowerCase()) {
-                  console.warn('[DEBUG] ZHODA IBA CASE-INSENSITIVE:', {
-                      teamCategory: JSON.stringify(t.category),
-                      teamCategoryCodes: Array.from(t.category || '').map(c => c.charCodeAt(0)),
-                      filterCategory: JSON.stringify(filterCategory),
-                      filterCategoryCodes: Array.from(filterCategory || '').map(c => c.charCodeAt(0)),
-                  });
-              }
-              return match;
-          })
+        ? userTeams.filter((t) => t.category === filterCategory)
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
 
@@ -652,7 +627,6 @@ const cateringApp = ({ userProfileData }) => {
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
         } catch (err) {
-            console.error('cateringApp: Chyba pri ukladaní priradenia stravovania:', err);
             window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
         } finally {
             setSavingCatering(false);
@@ -729,7 +703,6 @@ const cateringApp = ({ userProfileData }) => {
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
         } catch (err) {
-            console.error('cateringApp: Chyba pri odstraňovaní priradenia:', err);
             window.showGlobalNotification('Nepodarilo sa odstrániť priradenie.', 'error');
         } finally {
             setSavingCatering(false);
@@ -1093,8 +1066,21 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
-                                              // NOVÉ: kontrola, či má tím v balíku obed pre daný deň
                                               const canClick = teamHasMealInPackage(team, day.key, 'lunch');
+
+                                              // Ak má priradenie → farba z miesta, bez hoveru.
+                                              // Ak nemá priradenie a môže kliknúť → hover:bg-blue-50.
+                                              // Ak nemôže kliknúť → sivá.
+                                              let cellClass =
+                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
+                                              if (existing && colors) {
+                                                  cellClass += 'cursor-pointer ';
+                                              } else if (canClick) {
+                                                  cellClass += 'cursor-pointer text-gray-400 hover:bg-blue-50 ';
+                                              } else {
+                                                  cellClass += 'bg-gray-100 text-gray-300 cursor-not-allowed ';
+                                              }
+                                              cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
 
                                               cells.push(
                                                   React.createElement(
@@ -1104,12 +1090,7 @@ const cateringApp = ({ userProfileData }) => {
                                                           onClick: canClick
                                                               ? () => openCateringModal(team, day, 'lunch', slot)
                                                               : undefined,
-                                                          className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ' +
-                                                              (canClick
-                                                                  ? 'cursor-pointer ' + (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ')
-                                                                  : 'bg-gray-100 text-gray-300 cursor-not-allowed ') +
-                                                              (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
+                                                          className: cellClass,
                                                           style: existing && colors
                                                               ? {
                                                                     backgroundColor: colors.bg,
@@ -1122,12 +1103,12 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                                   : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : '—'
+                                                      existing ? teamTotal : ''
                                                   )
                                               );
                                           }
 
-                                                                                    for (let i = 0; i < dinnerCount; i++) {
+                                          for (let i = 0; i < dinnerCount; i++) {
                                               const slot = daySlots[day.key].dinner[i];
                                               const isLastDinnerCell = i === dinnerCount - 1;
                                               const hasThickRight = isLastDinnerCell && !isLastDay;
@@ -1137,8 +1118,18 @@ const cateringApp = ({ userProfileData }) => {
                                                   : null;
                                               const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
 
-                                              // NOVÉ: kontrola, či má tím v balíku večeru pre daný deň
                                               const canClick = teamHasMealInPackage(team, day.key, 'dinner');
+
+                                              let cellClass =
+                                                  'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ';
+                                              if (existing && colors) {
+                                                  cellClass += 'cursor-pointer ';
+                                              } else if (canClick) {
+                                                  cellClass += 'cursor-pointer text-gray-400 hover:bg-blue-50 ';
+                                              } else {
+                                                  cellClass += 'bg-gray-100 text-gray-300 cursor-not-allowed ';
+                                              }
+                                              cellClass += (hasThickRight ? 'border-r-4 border-r-gray-500' : '');
 
                                               cells.push(
                                                   React.createElement(
@@ -1148,12 +1139,7 @@ const cateringApp = ({ userProfileData }) => {
                                                           onClick: canClick
                                                               ? () => openCateringModal(team, day, 'dinner', slot)
                                                               : undefined,
-                                                          className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] transition ' +
-                                                              (canClick
-                                                                  ? 'cursor-pointer ' + (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ')
-                                                                  : 'bg-gray-100 text-gray-300 cursor-not-allowed ') +
-                                                              (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
+                                                          className: cellClass,
                                                           style: existing && colors
                                                               ? {
                                                                     backgroundColor: colors.bg,
@@ -1166,7 +1152,7 @@ const cateringApp = ({ userProfileData }) => {
                                                                   ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                                   : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? teamTotal : '—'
+                                                      existing ? teamTotal : ''
                                                   )
                                               );
                                           }
@@ -1398,7 +1384,6 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-catering.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
@@ -1409,8 +1394,6 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(cateringApp, { userProfileData }));
-        } else {
-            console.error("logged-in-catering.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
