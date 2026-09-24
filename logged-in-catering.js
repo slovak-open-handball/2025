@@ -1227,7 +1227,7 @@ const cateringApp = ({ userProfileData }) => {
                                     'td',
                                     {
                                         colSpan: 2,
-                                        className: 'border border-gray-300 px-3 py-2 text-left font-semibold whitespace-nowrap border-r-4 border-r-gray-500',
+                                        className: 'border border-gray-300 px-3 py-2 text-right font-semibold whitespace-nowrap border-r-4 border-r-gray-500',
                                         style: {
                                             backgroundColor: colors.bg,
                                             color: colors.text,
