@@ -735,7 +735,9 @@ const cateringApp = ({ userProfileData }) => {
             );
 
             // Priemer na jeden tím v kategórii
-            const averagePerTeam = totalMembersInCategory / teamsInCategory.length;
+            const averagePerTeam = Math.ceil(
+                totalMembersInCategory / teamsInCategory.length
+            );
 
             total += averagePerTeam;
         });
