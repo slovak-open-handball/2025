@@ -2,10 +2,6 @@
 
 import { doc, onSnapshot, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-/**
- * Pomocná funkcia: vráti zoznam všetkých dní medzi arrivalDate a tournamentEnd.
- * Každý deň: { date: Date, key: 'YYYY-MM-DD', label, fullLabel }
- */
 const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     if (!arrivalDate || !tournamentEnd) return [];
 
@@ -49,9 +45,6 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
     return days;
 };
 
-/**
- * Prázdna štruktúra pre jeden deň – žiadne predvolené hodnoty.
- */
 const EMPTY_DAY_TIMES = {
     lunch:  { from: '', to: '' },
     dinner: { from: '', to: '' },
@@ -59,7 +52,8 @@ const EMPTY_DAY_TIMES = {
 
 export function CateringSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [tournamentDays, setTournamentDays] = React.useState([]);
-    const [cateringTimes, setCateringTimes] = React.useState({});
+    const [cateringTimes, setCateringTimes] = React.useState({});          // aktuálne v UI
+    const [originalCateringTimes, setOriginalCateringTimes] = React.useState({}); // pôvodné z DB
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
 
@@ -97,6 +91,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
     }, [db, showNotification]);
 
     // 2) Načítame existujúce časy stravovania zo settings/catering
+    //    POZOR: naplníme AJ cateringTimes AJ originalCateringTimes
     React.useEffect(() => {
         if (!db) return;
 
@@ -107,9 +102,12 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             (snap) => {
                 if (snap.exists()) {
                     const data = snap.data() || {};
-                    setCateringTimes(data.times || {});
+                    const loaded = data.times || {};
+                    setCateringTimes(loaded);
+                    setOriginalCateringTimes(loaded); // 🔥 kópia pre porovnanie
                 } else {
                     setCateringTimes({});
+                    setOriginalCateringTimes({});
                 }
             },
             (error) => {
@@ -121,7 +119,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         return () => unsubscribe();
     }, [db, showNotification]);
 
-    // Pomocná funkcia: vráti časy pre daný deň (prázdne, ak nie sú uložené)
     const getDayTimes = (dayKey) => {
         return cateringTimes[dayKey] || {
             lunch:  { ...EMPTY_DAY_TIMES.lunch },
@@ -129,7 +126,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         };
     };
 
-    // Zmena jednej hodnoty (from/to) pre daný deň a typ jedla
     const handleTimeChange = (dayKey, mealType, field, value) => {
         setCateringTimes((prev) => {
             const day = prev[dayKey] || {
@@ -149,9 +145,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         });
     };
 
-    /**
-     * Pomocná funkcia: vytvorí zoznam zmien medzi pôvodnými a novými časmi stravovania.
-     */
     const buildCateringChanges = (original, updated, days) => {
         const changes = [];
         const mealLabel = (m) => (m === 'lunch' ? 'Obed' : 'Večera');
@@ -199,14 +192,12 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         return changes;
     };
 
-    // Uloženie do Firestore
     const handleSave = async () => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') {
             showNotification?.('Nemáte oprávnenie na zmenu nastavení stravovania.', 'error');
             return;
         }
 
-        // Validácia: ak sú obe hodnoty vyplnené, from musí byť pred to
         for (const day of tournamentDays) {
             const t = cateringTimes[day.key];
             if (!t) continue;
@@ -224,7 +215,8 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         try {
             setSaving(true);
 
-            const originalTimes = { ...cateringTimes };
+            // 🔥 PÔVODNÉ hodnoty berieme z originalCateringTimes (načítané z DB)
+            const originalTimes = originalCateringTimes;
 
             const normalized = {};
             tournamentDays.forEach((day) => {
@@ -251,6 +243,10 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 updatedBy: userProfileData.email || null,
             }, { merge: true });
 
+            // 🔥 Po úspešnom zápise aktualizujeme originalCateringTimes,
+            // aby pri ďalšom uložení porovnávanie sedelo
+            setOriginalCateringTimes(normalized);
+
             try {
                 const changesList = buildCateringChanges(
                     originalTimes,
@@ -259,7 +255,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 );
 
                 console.log('CateringSettings: zmeny na odoslanie:', changesList);
-                console.log('CateringSettings: sendAdminNotification typ:', typeof sendAdminNotification);
 
                 if (typeof sendAdminNotification === 'function' && changesList.length > 0) {
                     await sendAdminNotification({
@@ -302,7 +297,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         );
     }
 
-    // Renderovanie tabuľky
     return React.createElement(
         'div',
         { className: 'p-6 border border-gray-200 rounded-lg shadow-sm' },
@@ -327,12 +321,10 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                             rowSpan: 2,
                             className: 'border border-gray-300 bg-gray-100 px-2 py-2 text-left font-bold text-gray-700 min-w-[110px] w-[110px]',
                         }, 'Deň'),
-                        // 🔥 Obed – bledomodrá
                         React.createElement('th', {
                             colSpan: 2,
                             className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
                         }, 'Obed'),
-                        // 🔥 Večera – bledomodrá (rovnaká ako Obed)
                         React.createElement('th', {
                             colSpan: 2,
                             className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
@@ -341,10 +333,8 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     React.createElement(
                         'tr',
                         null,
-                        // Obed – Od / Do
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do'),
-                        // Večera – Od / Do (rovnaká farba)
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
                         React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do')
                     )
@@ -364,7 +354,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                 className: 'border border-gray-300 px-2 py-2 font-medium text-gray-800 whitespace-nowrap w-[110px]',
                                 title: day.fullLabel,
                             }, day.label),
-                            // Obed – od
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
@@ -373,7 +362,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
-                            // Obed – do
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
@@ -382,7 +370,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
-                            // Večera – od
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
@@ -391,7 +378,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
-                            // Večera – do
                             React.createElement('td', { className: 'border border-gray-300 px-2 py-2 text-center' },
                                 React.createElement('input', {
                                     type: 'time',
