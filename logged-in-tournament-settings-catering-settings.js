@@ -270,7 +270,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 console.error('CateringSettings: chyba pri vytváraní notifikácie:', notifErr);
             }
 
-            showNotification?.('Nastavenia stravovania boli úspešne uložené.', 'success');
+            showNotification?.('Nastavenia stravovania boli uložené.', 'success');
         } catch (e) {
             console.error('CateringSettings: chyba pri ukladaní:', e);
             showNotification?.(`Chyba pri ukladaní nastavení stravovania: ${e.message}`, 'error');
