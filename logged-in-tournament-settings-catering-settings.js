@@ -62,12 +62,74 @@ const timeToMinutes = (t) => {
     return h * 60 + m;
 };
 
+/**
+ * Vypočíta všetky validačné chyby pre aktuálny stav.
+ * Vracia pole reťazcov (prázdne = žiadne chyby).
+ */
+const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) => {
+    const errors = [];
+
+    const unit = parseInt(unitMinutesRaw, 10);
+    const hasValidUnit = !isNaN(unit) && unit > 0;
+
+    if (unitMinutesRaw !== '' && !hasValidUnit) {
+        errors.push('Trvanie stravovacej jednotky musí byť kladné číslo v minútach.');
+    }
+
+    for (const day of tournamentDays) {
+        const t = cateringTimes[day.key];
+        if (!t) continue;
+
+        const dayLabel = day.fullLabelNumeric || day.fullLabel;
+
+        // from < to pre Obed
+        if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
+            errors.push(`Deň ${dayLabel}: čas Obeda "od" musí byť pred časom "do".`);
+        }
+        // from < to pre Večeru
+        if (t.dinner?.from && t.dinner?.to && t.dinner.from >= t.dinner.to) {
+            errors.push(`Deň ${dayLabel}: čas Večere "od" musí byť pred časom "do".`);
+        }
+
+        // Deliteľnosť jednotkou
+        if (hasValidUnit) {
+            const meals = [
+                { key: 'lunch',  label: 'Obed'  },
+                { key: 'dinner', label: 'Večera' },
+            ];
+
+            for (const meal of meals) {
+                const from = t[meal.key]?.from;
+                const to   = t[meal.key]?.to;
+                if (!from || !to) continue;
+
+                const fromMin = timeToMinutes(from);
+                const toMin   = timeToMinutes(to);
+                if (fromMin == null || toMin == null) continue;
+
+                const total = toMin - fromMin;
+                if (total <= 0) {
+                    errors.push(`Deň ${dayLabel}: ${meal.label} – neplatný časový rozsah.`);
+                    continue;
+                }
+                if (total % unit !== 0) {
+                    errors.push(
+                        `Deň ${dayLabel}: ${meal.label} (${from} – ${to}) nie je možné presne rozdeliť na ${unit} minútové jednotky (celkovo ${total} min).`
+                    );
+                }
+            }
+        }
+    }
+
+    return errors;
+};
+
 export function CateringSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [tournamentDays, setTournamentDays] = React.useState([]);
     const [cateringTimes, setCateringTimes] = React.useState({});
     const [originalCateringTimes, setOriginalCateringTimes] = React.useState({});
-    const [unitMinutes, setUnitMinutes] = React.useState('');              // 🔥 nové
-    const [originalUnitMinutes, setOriginalUnitMinutes] = React.useState(''); // 🔥 nové
+    const [unitMinutes, setUnitMinutes] = React.useState('');
+    const [originalUnitMinutes, setOriginalUnitMinutes] = React.useState('');
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
 
@@ -165,7 +227,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         const changes = [];
         const mealLabel = (m) => (m === 'lunch' ? 'Obed' : 'Večera');
 
-        // 🔥 Zmena jednotky
         if (String(origUnit || '') !== String(newUnit || '')) {
             const o = origUnit ? `${origUnit} min` : '(nezadané)';
             const n = newUnit ? `${newUnit} min` : '(nezadané)';
@@ -217,67 +278,23 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
         return changes;
     };
 
+    // 🔥 Vypočítame chyby pri každom renderi (na základe aktuálnych hodnôt)
+    const validationErrors = computeValidationErrors(tournamentDays, cateringTimes, unitMinutes);
+    const hasErrors = validationErrors.length > 0;
+
     const handleSave = async () => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') {
             showNotification?.('Nemáte oprávnenie na zmenu nastavení stravovania.', 'error');
             return;
         }
 
-        // 🔥 Validácia jednotky
-        const unit = parseInt(unitMinutes, 10);
-        const hasValidUnit = !isNaN(unit) && unit > 0;
-
-        if (unitMinutes !== '' && !hasValidUnit) {
-            showNotification?.('Trvanie stravovacej jednotky musí byť kladné číslo v minútach.', 'error');
+        // Ak sú chyby, neukladáme (tlačidlo je aj tak disabled)
+        if (hasErrors) {
             return;
         }
 
-        // Validácia časov
-        for (const day of tournamentDays) {
-            const t = cateringTimes[day.key];
-            if (!t) continue;
-
-            // from < to
-            if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
-                showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Obeda "od" musí byť pred časom "do".`, 'error');
-                return;
-            }
-            if (t.dinner?.from && t.dinner?.to && t.dinner.from >= t.dinner.to) {
-                showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: čas Večere "od" musí byť pred časom "do".`, 'error');
-                return;
-            }
-
-            // 🔥 Deliteľnosť jednotkou
-            if (hasValidUnit) {
-                const meals = [
-                    { key: 'lunch',  label: 'Obed'  },
-                    { key: 'dinner', label: 'Večera' },
-                ];
-
-                for (const meal of meals) {
-                    const from = t[meal.key]?.from;
-                    const to   = t[meal.key]?.to;
-                    if (!from || !to) continue;
-
-                    const fromMin = timeToMinutes(from);
-                    const toMin   = timeToMinutes(to);
-                    if (fromMin == null || toMin == null) continue;
-
-                    const total = toMin - fromMin;
-                    if (total <= 0) {
-                        showNotification?.(`Deň ${day.fullLabelNumeric || day.fullLabel}: ${meal.label} – neplatný časový rozsah.`, 'error');
-                        return;
-                    }
-                    if (total % unit !== 0) {
-                        showNotification?.(
-                            `Deň ${day.fullLabelNumeric || day.fullLabel}: ${meal.label} (${from} – ${to}) nie je možné presne rozdeliť na ${unit} minútové jednotky (celkovo ${total} min).`,
-                            'error'
-                        );
-                        return;
-                    }
-                }
-            }
-        }
+        const unit = parseInt(unitMinutes, 10);
+        const hasValidUnit = !isNaN(unit) && unit > 0;
 
         try {
             setSaving(true);
@@ -357,6 +374,16 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             )
         );
     }
+
+    // Štýly tlačidla Uložiť
+    const saveButtonBase = 'font-bold py-2 px-6 rounded-lg transition-colors duration-200 border-2';
+    const saveButtonEnabled = `${saveButtonBase} bg-blue-500 hover:bg-blue-700 text-white border-transparent`;
+    const saveButtonDisabled = `${saveButtonBase} bg-white text-blue-500 border-blue-500 cursor-not-allowed`;
+    const saveButtonSaving = `${saveButtonBase} bg-blue-300 text-white border-transparent cursor-wait`;
+
+    const saveButtonClass = saving
+        ? saveButtonSaving
+        : (hasErrors ? saveButtonDisabled : saveButtonEnabled);
 
     return React.createElement(
         'div',
@@ -482,6 +509,27 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
             )
         ),
 
+        // 🔥 CHYBOVÉ VETY POD TABUĽKOU, NAD TLAČIDLOM
+        hasErrors && React.createElement(
+            'div',
+            {
+                className: 'mb-4 p-3 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700 space-y-1',
+            },
+            React.createElement(
+                'p',
+                { className: 'font-semibold mb-1' },
+                'Nasledujúce chyby bránia uloženiu:'
+            ),
+            ...validationErrors.map((err, i) =>
+                React.createElement(
+                    'p',
+                    { key: i, className: 'flex items-start gap-2' },
+                    React.createElement('span', { className: 'text-red-500' }, '•'),
+                    React.createElement('span', null, err)
+                )
+            )
+        ),
+
         React.createElement(
             'div',
             { className: 'flex flex-wrap justify-end items-center gap-3' },
@@ -490,12 +538,11 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 {
                     type: 'button',
                     onClick: handleSave,
-                    disabled: saving,
-                    className: `font-bold py-2 px-6 rounded-lg transition-colors duration-200 text-white ${
-                        saving ? 'bg-blue-300 cursor-wait' : 'bg-blue-500 hover:bg-blue-700'
-                    }`,
+                    disabled: saving || hasErrors,
+                    className: saveButtonClass,
+                    title: hasErrors ? 'Nie je možné uložiť, kým existujú chyby.' : '',
                 },
-                saving ? 'Ukladám...' : 'Uložiť nastavenia stravovania'
+                saving ? 'Ukladám...' : 'Uložiť'
             )
         )
     );
