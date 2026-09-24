@@ -434,30 +434,26 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
 
         React.createElement(
             'div',
-            { className: 'mb-6 flex flex-col sm:flex-row sm:items-end gap-3' },
+            { className: 'mb-6 flex flex-col gap-1' },
             React.createElement(
-                'div',
-                { className: 'flex flex-col' },
-                React.createElement(
-                    'label',
-                    { className: 'text-sm font-medium text-gray-700 mb-1' },
-                    'Trvanie stravovacej jednotky (minúty):'
-                ),
-                React.createElement('input', {
-                    type: 'number',
-                    min: '1',
-                    step: '1',
-                    value: unitMinutes,
-                    onChange: (e) => setUnitMinutes(e.target.value),
-                    placeholder: 'napr. 30',
-                    className: 'border border-gray-300 rounded px-3 py-2 text-sm w-56 focus:outline-none focus:border-blue-500',
-                })
+                'label',
+                { className: 'text-sm font-medium text-gray-700' },
+                'Trvanie stravovacej jednotky (minúty):'
             ),
             React.createElement(
                 'p',
-                { className: 'text-xs text-gray-500 sm:mb-2' },
+                { className: 'text-xs text-gray-500' },
                 'Celkový čas Obeda a Večere musí byť deliteľný touto jednotkou bez zvyšku.'
-            )
+            ),
+            React.createElement('input', {
+                type: 'number',
+                min: '1',
+                step: '1',
+                value: unitMinutes,
+                onChange: (e) => setUnitMinutes(e.target.value),
+                placeholder: 'napr. 30',
+                className: 'border border-gray-300 rounded px-3 py-2 text-sm w-48 focus:outline-none focus:border-blue-500',
+            })
         ),
 
         React.createElement(
