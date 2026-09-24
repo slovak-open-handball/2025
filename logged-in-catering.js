@@ -125,7 +125,6 @@ const loadUserTeams = async (db) => {
                     category: categoryName,
                     playersCount,
                     othersCount: menTeamMembersCount + womenTeamMembersCount + menDriversCount + womenDriversCount,
-                    // 🔥 NOVÉ: názov ubytovne tímu pre farbu
                     accommodationName: team.accommodation?.name || null,
                 });
             });
@@ -506,6 +505,7 @@ const cateringApp = ({ userProfileData }) => {
         return cateringAssignments.find(
             (a) =>
                 a.teamId === team.id &&
+                a.category === team.category &&
                 a.dayKey === dayKey &&
                 a.mealType === mealType &&
                 a.slotFrom === slotFrom
@@ -545,6 +545,7 @@ const cateringApp = ({ userProfileData }) => {
             teamId: selectedCateringCell.team.id,
             teamName: selectedCateringCell.team.teamName,
             category: selectedCateringCell.team.category,
+            categoryName: selectedCateringCell.team.category,
             uid: selectedCateringCell.team.uid,
             dayKey: selectedCateringCell.dayKey,
             dayLabel: selectedCateringCell.dayLabel,
@@ -596,6 +597,7 @@ const cateringApp = ({ userProfileData }) => {
         const existingForTeamDayMeal = cateringAssignments.filter(
             (a) =>
                 a.teamId === selectedCateringCell.team.id &&
+                a.category === selectedCateringCell.team.category &&
                 a.dayKey === selectedCateringCell.dayKey &&
                 a.mealType === selectedCateringCell.mealType
         );
