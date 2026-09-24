@@ -471,52 +471,31 @@ const cateringApp = ({ userProfileData }) => {
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
             (snapshot) => {
-                const teamsMap = new Map(); // kľúč = `${category}||${identifier}`
+                const teamsMap = new Map(); // kľúč = `${category}||${teamName}`
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
                     const categoryName = cleanCategory(data.categoryName || '');
                     const groupName = data.groupName || null;
     
-                    const addTeam = (identifier, teamNameFromMatch) => {
-                        if (!identifier) return;
-                        const key = `${categoryName}||${identifier}`;
+                    const addTeam = (teamNameFromMatch, identifierFromMatch) => {
+                        if (!teamNameFromMatch) return;
+                        const key = `${categoryName}||${teamNameFromMatch}`;
                         if (teamsMap.has(key)) return;
     
-                        // 🔥 Priorita:
-                        // 1) teamName priamo z dokumentu zápasu (homeTeamName / awayTeamName)
-                        // 2) fallback cez teamManager.getTeamNameByDisplayIdSync
-                        // 3) fallback samotný identifier
-                        let teamName = teamNameFromMatch || null;
-    
-                        if (!teamName && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                            try {
-                                const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-                                if (resolved) teamName = resolved;
-                            } catch (e) { /* ignore */ }
-                        }
-    
-                        if (!teamName) teamName = identifier;
-    
+                        // 🔥 teamName priamo z dokumentu zápasu (homeTeamName / awayTeamName)
                         teamsMap.set(key, {
-                            id: identifier,
-                            teamName: teamName,
-                            identifier: identifier,
+                            id: identifierFromMatch || teamNameFromMatch,
+                            teamName: teamNameFromMatch,
+                            identifier: identifierFromMatch || teamNameFromMatch,
                             category: categoryName,
                             groupName: groupName,
                         });
                     };
     
-                    // 🔥 Skúsime použiť teamName priamo z dokumentu zápasu.
-                    // (Použi tie polia, ktoré máš v Firestore – uprav podľa schémy.)
-                    addTeam(
-                        data.homeTeamIdentifier,
-                        data.homeTeamName || data.homeTeam || null
-                    );
-                    addTeam(
-                        data.awayTeamIdentifier,
-                        data.awayTeamName || data.awayTeam || null
-                    );
+                    // 🔥 Použijeme homeTeamName / awayTeamName priamo z dokumentu zápasu
+                    addTeam(data.homeTeamName, data.homeTeamIdentifier);
+                    addTeam(data.awayTeamName, data.awayTeamIdentifier);
                 });
     
                 setMatchTeams(Array.from(teamsMap.values()));
