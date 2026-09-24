@@ -429,17 +429,87 @@ const cateringApp = ({ userProfileData }) => {
 
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
 
+        // 🔥 Pomocná funkcia: prevedie window.__teamNameMapping na pole superstructure tímov
+        const buildTeamsFromMapping = () => {
+            const teams = [];
+            const mapping = window.__teamNameMapping || {};
+
+            Object.entries(mapping).forEach(([displayId, data]) => {
+                if (!data || !data.teamName) return;
+
+                // Extrahujeme kategóriu, pozíciu a písmeno skupiny z displayId
+                // Formát: "U12 CH 1A" alebo "U12 D 3B" atď.
+                const parts = displayId.trim().split(' ');
+                if (parts.length < 2) return;
+
+                const lastPart = parts[parts.length - 1];
+                const category = data.category || parts.slice(0, -1).join(' ');
+
+                // Extrahujeme pozíciu a písmeno skupiny z poslednej časti (napr. "1A" → 1, "A")
+                let position = '';
+                let groupLetter = '';
+                for (let i = 0; i < lastPart.length; i++) {
+                    const ch = lastPart[i];
+                    if (ch >= '0' && ch <= '9') position += ch;
+                    else if (/[A-Za-z]/.test(ch)) groupLetter += ch;
+                }
+
+                const order = position ? parseInt(position, 10) : null;
+                const groupName = groupLetter ? `skupina ${groupLetter.toUpperCase()}` : null;
+
+                // ID pre superstructure tím – použijeme displayId, aby bolo unikátne
+                const id = displayId;
+
+                teams.push({
+                    id,
+                    teamName: data.teamName,
+                    category: category,
+                    groupName: groupName,
+                    order: order,
+                    // označenie, že tím pochádza z mapping systému
+                    fromMapping: true,
+                });
+            });
+
+            return teams;
+        };
+
+        // 🔥 Pomocná funkcia: skombinuje Firestore tímy s mapping tímami bez duplicít
+        const mergeTeams = (firestoreTeams, mappingTeams) => {
+            const seen = new Set();
+            const result = [];
+
+            // Najprv Firestore tímy (majú prednosť, obsahujú reálne ID z DB)
+            firestoreTeams.forEach((t) => {
+                const key = `${t.category}|${t.teamName}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                result.push(t);
+            });
+
+            // Potom mapping tímy, ktoré ešte neboli pridané
+            mappingTeams.forEach((t) => {
+                const key = `${t.category}|${t.teamName}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                result.push(t);
+            });
+
+            return result;
+        };
+
         const unsubscribe = onSnapshot(
             superstructureDocRef,
             (docSnap) => {
-                const teams = [];
+                // 1) Firestore tímy
+                const firestoreTeams = [];
                 if (docSnap.exists()) {
                     const data = docSnap.data() || {};
                     Object.entries(data).forEach(([categoryName, teamArray]) => {
                         if (!Array.isArray(teamArray)) return;
                         teamArray.forEach((team, idx) => {
                             if (!team?.teamName) return;
-                            teams.push({
+                            firestoreTeams.push({
                                 id: team.id || `${categoryName}-${idx}`,
                                 teamName: team.teamName,
                                 category: categoryName,
@@ -449,14 +519,43 @@ const cateringApp = ({ userProfileData }) => {
                         });
                     });
                 }
-                setSuperstructureTeams(teams);
+
+                // 2) Mapping tímy
+                const mappingTeams = buildTeamsFromMapping();
+
+                // 3) Zlúčenie
+                const merged = mergeTeams(firestoreTeams, mappingTeams);
+                setSuperstructureTeams(merged);
             },
             (error) => {
-                console.error('Chyba pri načítaní superstructure tímov:', error);
+                console.error('Chyba pri načítaní superstructure tímov z Firestore:', error);
+                // Aj pri chybe načítame aspoň mapping tímy
+                setSuperstructureTeams(buildTeamsFromMapping());
             }
         );
 
-        return () => unsubscribe();
+        // 🔥 DODATOČNÉ NAČÍTANIE Z MAPPINGU PO JEHO PRIPRAVENOSTI
+        // Mapping sa v druhom kóde inicializuje asynchrónne, preto sledujeme udalosť.
+        const handleMappingReady = () => {
+            const mappingTeams = buildTeamsFromMapping();
+            setSuperstructureTeams((prev) => mergeTeams(prev, mappingTeams));
+        };
+
+        window.addEventListener('teamNameMappingReady', handleMappingReady);
+
+        // Ak už mapping existuje pri mountovaní, rovno ho použijeme
+        if (
+            window.__teamNameMapping &&
+            Object.keys(window.__teamNameMapping).length > 0
+        ) {
+            const mappingTeams = buildTeamsFromMapping();
+            setSuperstructureTeams((prev) => mergeTeams(prev, mappingTeams));
+        }
+
+        return () => {
+            unsubscribe();
+            window.removeEventListener('teamNameMappingReady', handleMappingReady);
+        };
     }, []);
 
     if (loading) {
