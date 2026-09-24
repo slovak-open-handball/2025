@@ -465,37 +465,38 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 ZMENA: Načítanie všetkých tímov z kolekcie 'matches'
-    // (domáci aj hostia z každého zápasu), aby sa dali použiť
-    // v modálnom okne "Priradiť stravovanie podľa umiestnenia".
     useEffect(() => {
         if (!window.db) return;
     
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
             (snapshot) => {
-                const teamsMap = new Map(); // kľúč = `${category}||${teamIdentifier}`
+                const teamsMap = new Map(); // kľúč = `${category}||${identifier}`
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-                    // 🔥 OPRAVA: očistíme categoryName rovnako ako v userTeams,
-                    // aby sa dali kategórie spoľahlivo porovnávať.
                     const categoryName = cleanCategory(data.categoryName || '');
                     const groupName = data.groupName || null;
     
-                    const addTeam = (identifier) => {
+                    const addTeam = (identifier, teamNameFromMatch) => {
                         if (!identifier) return;
                         const key = `${categoryName}||${identifier}`;
                         if (teamsMap.has(key)) return;
     
-                        // Skúsime získať "pekný" názov tímu (rovnaká logika ako inde)
-                        let teamName = identifier;
-                        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        // 🔥 Priorita:
+                        // 1) teamName priamo z dokumentu zápasu (homeTeamName / awayTeamName)
+                        // 2) fallback cez teamManager.getTeamNameByDisplayIdSync
+                        // 3) fallback samotný identifier
+                        let teamName = teamNameFromMatch || null;
+    
+                        if (!teamName && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
                             try {
                                 const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
                                 if (resolved) teamName = resolved;
                             } catch (e) { /* ignore */ }
                         }
+    
+                        if (!teamName) teamName = identifier;
     
                         teamsMap.set(key, {
                             id: identifier,
@@ -506,8 +507,16 @@ const cateringApp = ({ userProfileData }) => {
                         });
                     };
     
-                    addTeam(data.homeTeamIdentifier);
-                    addTeam(data.awayTeamIdentifier);
+                    // 🔥 Skúsime použiť teamName priamo z dokumentu zápasu.
+                    // (Použi tie polia, ktoré máš v Firestore – uprav podľa schémy.)
+                    addTeam(
+                        data.homeTeamIdentifier,
+                        data.homeTeamName || data.homeTeam || null
+                    );
+                    addTeam(
+                        data.awayTeamIdentifier,
+                        data.awayTeamName || data.awayTeam || null
+                    );
                 });
     
                 setMatchTeams(Array.from(teamsMap.values()));
