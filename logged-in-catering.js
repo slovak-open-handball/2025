@@ -507,27 +507,48 @@ const cateringApp = ({ userProfileData }) => {
     
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
-    
-                    // 🔥 Fallback categoryId → categoryName
+                
+                    // 🧪 DEBUG – vypíšeme raw dáta
+                    console.log('🔍 MATCH DOC:', {
+                        id: docSnap.id,
+                        categoryName_raw: data.categoryName,
+                        categoryId: data.categoryId,
+                        homeTeamName: data.homeTeamName,
+                        awayTeamName: data.awayTeamName,
+                        homeTeamIdentifier: data.homeTeamIdentifier,
+                        awayTeamIdentifier: data.awayTeamIdentifier,
+                        matchType: data.matchType,
+                        isPlacementMatch: data.isPlacementMatch,
+                        groupName: data.groupName,
+                    });
+                
                     let categoryName = data.categoryName || '';
                     if (!categoryName && data.categoryId && window.categoriesData) {
                         categoryName = window.categoriesData[data.categoryId] || '';
                     }
                     categoryName = cleanCategory(categoryName);
-    
-                    // 🔥 Ak nemáme kategóriu, tím preskočíme
-                    // (nemal by sa ako spárovať s userTeams)
+                
+                    // 🧪 DEBUG – kategória
+                    console.log('🔍 CATEGORY:', {
+                        categoryName_clean: categoryName,
+                        willSkip: !categoryName,
+                    });
+                
                     if (!categoryName) return;
-    
+                
                     const groupName = data.groupName || null;
-    
+                
                     const addTeam = (teamNameFromMatch) => {
-                        // 🔥 ŽIADNE mapovanie – použijeme priamo homeTeamName / awayTeamName
-                        if (!teamNameFromMatch) return;
-    
+                        if (!teamNameFromMatch) {
+                            console.log('  ⏭️ addTeam SKIP – prázdny teamName');
+                            return;
+                        }
                         const key = `${categoryName}||${teamNameFromMatch}`;
-                        if (teamsMap.has(key)) return;
-    
+                        if (teamsMap.has(key)) {
+                            console.log('  ⏭️ addTeam SKIP – duplicitný kľúč:', key);
+                            return;
+                        }
+                        console.log('  ✅ addTeam:', teamNameFromMatch, '| category:', categoryName);
                         teamsMap.set(key, {
                             id: teamNameFromMatch,
                             teamName: teamNameFromMatch,
@@ -535,11 +556,13 @@ const cateringApp = ({ userProfileData }) => {
                             groupName: groupName,
                         });
                     };
-    
-                    // 🔥 Výhradne homeTeamName / awayTeamName z dokumentu zápasu
+                
                     addTeam(data.homeTeamName);
                     addTeam(data.awayTeamName);
                 });
+                
+                console.log('matchTeams loaded:', Array.from(teamsMap.values()));
+                setMatchTeams(Array.from(teamsMap.values()));
 
                 console.log('matchTeams loaded:', Array.from(teamsMap.values()));
     
