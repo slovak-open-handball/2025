@@ -350,7 +350,7 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // 🔥 NOVÉ: Načítanie stravovacích miest (places typu "stravovanie")
+    // 🔥 NOVÉ: Načítanie stravovacích miest (places typu "stravovanie") – aj s farbami
     useEffect(() => {
         if (!window.db) return;
 
@@ -364,6 +364,8 @@ const cateringApp = ({ userProfileData }) => {
                     places.push({
                         id: docSnap.id,
                         name: data.name || '(bez názvu)',
+                        headerColor: data.headerColor || '#1e40af',
+                        headerTextColor: data.headerTextColor || '#000000',
                     });
                 });
                 places.sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
@@ -506,6 +508,16 @@ const cateringApp = ({ userProfileData }) => {
         );
     };
 
+    // 🔥 Nájde stravovacie miesto podľa placeId a vráti jeho farby
+    const getCateringPlaceColors = (placeId) => {
+        const place = cateringPlaces.find((p) => p.id === placeId);
+        if (!place) return { bg: '#1e40af', text: '#000000' };
+        return {
+            bg: place.headerColor || '#1e40af',
+            text: place.headerTextColor || '#000000',
+        };
+    };    
+    
     // 🔥 Otvorí modálne okno pre priradenie stravovacieho miesta
     const openCateringModal = (team, day, mealType, slot) => {
         const existing = findCateringAssignment(team, day.key, mealType, slot.from);
@@ -844,6 +856,11 @@ const cateringApp = ({ userProfileData }) => {
                                                   isLastLunchCell &&
                                                   ((dinnerCount > 0) || !isLastDay);
                                               const existing = findCateringAssignment(team, day.key, 'lunch', slot.from);
+                                              const colors = existing
+                                                  ? getCateringPlaceColors(existing.placeId)
+                                                  : null;
+                                              const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
+
                                               cells.push(
                                                   React.createElement(
                                                       'td',
@@ -851,14 +868,20 @@ const cateringApp = ({ userProfileData }) => {
                                                           key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
                                                           onClick: () => openCateringModal(team, day, 'lunch', slot),
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer hover:bg-blue-50 transition ' +
-                                                              (existing ? 'font-semibold text-blue-800 bg-blue-100 ' : 'text-gray-400 ') +
+                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer transition ' +
+                                                              (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ') +
                                                               (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
+                                                          style: existing && colors
+                                                              ? {
+                                                                    backgroundColor: colors.bg,
+                                                                    color: colors.text,
+                                                                }
+                                                              : {},
                                                           title: existing
                                                               ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                               : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? existing.placeName : '—'
+                                                      existing ? teamTotal : '—'
                                                   )
                                               );
                                           }
@@ -868,6 +891,11 @@ const cateringApp = ({ userProfileData }) => {
                                               const isLastDinnerCell = i === dinnerCount - 1;
                                               const hasThickRight = isLastDinnerCell && !isLastDay;
                                               const existing = findCateringAssignment(team, day.key, 'dinner', slot.from);
+                                              const colors = existing
+                                                  ? getCateringPlaceColors(existing.placeId)
+                                                  : null;
+                                              const teamTotal = (team.playersCount || 0) + (team.othersCount || 0);
+
                                               cells.push(
                                                   React.createElement(
                                                       'td',
@@ -875,14 +903,20 @@ const cateringApp = ({ userProfileData }) => {
                                                           key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
                                                           onClick: () => openCateringModal(team, day, 'dinner', slot),
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer hover:bg-blue-50 transition ' +
-                                                              (existing ? 'font-semibold text-blue-800 bg-blue-100 ' : 'text-gray-400 ') +
+                                                              'border border-gray-300 px-2 py-2 text-center text-xs min-w-[70px] cursor-pointer transition ' +
+                                                              (existing ? 'font-semibold ' : 'text-gray-400 hover:bg-blue-50 ') +
                                                               (hasThickRight ? 'border-r-4 border-r-gray-500' : ''),
+                                                          style: existing && colors
+                                                              ? {
+                                                                    backgroundColor: colors.bg,
+                                                                    color: colors.text,
+                                                                }
+                                                              : {},
                                                           title: existing
                                                               ? `${existing.placeName} (${slot.from} – ${slot.to})`
                                                               : `Kliknutím priradíte miesto (${slot.from} – ${slot.to})`,
                                                       },
-                                                      existing ? existing.placeName : '—'
+                                                      existing ? teamTotal : '—'
                                                   )
                                               );
                                           }
