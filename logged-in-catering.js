@@ -35,77 +35,212 @@ window.showGlobalNotification = (message, type = 'success') => {
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
 
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
 
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
 
+/**
+ * Pomocná funkcia: vráti zoznam všetkých dní medzi arrivalDate a tournamentEnd.
+ * Každý deň je reprezentovaný ako objekt { date: Date, label: string }.
+ */
+const buildTournamentDays = (arrivalDate, tournamentEnd) => {
+    if (!arrivalDate || !tournamentEnd) return [];
+
+    const start = new Date(arrivalDate);
+    const end = new Date(tournamentEnd);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return [];
+
+    // Normalizujeme na polnoc, aby sme predišli problémom s časovými zónami
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (start > end) return [];
+
+    const days = [];
+    const current = new Date(start);
+
+    while (current <= end) {
+        days.push({
+            date: new Date(current),
+            label: current.toLocaleDateString('sk-SK', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+            }),
+        });
+        current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+};
+
 const cateringApp = ({ userProfileData }) => {
+    const [tournamentDays, setTournamentDays] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Načítanie nastavení turnaja z Firestore
+    useEffect(() => {
+        if (!window.db) {
+            console.warn('cateringApp: window.db nie je dostupné, nedá sa načítať nastavenia turnaja.');
+            setLoading(false);
+            return;
+        }
+
+        const settingsDocRef = doc(window.db, 'settings', 'registration');
+
+        const unsubscribe = onSnapshot(
+            settingsDocRef,
+            (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+
+                    const arrivalDate = data.arrivalDate ? data.arrivalDate.toDate() : null;
+                    const tournamentEnd = data.tournamentEnd ? data.tournamentEnd.toDate() : null;
+
+                    const days = buildTournamentDays(arrivalDate, tournamentEnd);
+                    setTournamentDays(days);
+                } else {
+                    console.warn('cateringApp: Dokument settings/registration neexistuje.');
+                    setTournamentDays([]);
+                }
+                setLoading(false);
+            },
+            (error) => {
+                console.error('cateringApp: Chyba pri načítaní nastavení turnaja:', error);
+                window.showGlobalNotification('Nepodarilo sa načítať nastavenia turnaja.', 'error');
+                setLoading(false);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        );
+    }
+
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-center' },
+        { className: 'flex-grow flex justify-center items-start p-6' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: 'w-full max-w-5xl bg-white rounded-xl shadow-xl p-8' },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
+                { className: 'flex flex-col items-center justify-center mb-6' },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Stravovanie')
-            )
+            ),
+            tournamentDays.length === 0
+                ? React.createElement(
+                      'p',
+                      { className: 'text-center text-gray-500' },
+                      'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
+                  )
+                : React.createElement(
+                      'div',
+                      { className: 'space-y-6' },
+                      tournamentDays.map((day, index) =>
+                          React.createElement(
+                              'div',
+                              {
+                                  key: index,
+                                  className: 'border border-gray-200 rounded-lg p-4 shadow-sm',
+                              },
+                              React.createElement(
+                                  'h3',
+                                  { className: 'text-xl font-semibold text-gray-700 mb-4 capitalize' },
+                                  day.label
+                              ),
+                              React.createElement(
+                                  'div',
+                                  { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                                  // Stĺpec: Obed
+                                  React.createElement(
+                                      'div',
+                                      { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4' },
+                                      React.createElement(
+                                          'h4',
+                                          { className: 'text-lg font-bold text-blue-700 mb-2' },
+                                          'Obed'
+                                      ),
+                                      React.createElement(
+                                          'p',
+                                          { className: 'text-gray-500 text-sm' },
+                                          'Zatiaľ žiadne údaje.'
+                                      )
+                                  ),
+                                  // Stĺpec: Večera
+                                  React.createElement(
+                                      'div',
+                                      { className: 'bg-purple-50 border border-purple-200 rounded-lg p-4' },
+                                      React.createElement(
+                                          'h4',
+                                          { className: 'text-lg font-bold text-purple-700 mb-2' },
+                                          'Večera'
+                                      ),
+                                      React.createElement(
+                                          'p',
+                                          { className: 'text-gray-500 text-sm' },
+                                          'Zatiaľ žiadne údaje.'
+                                      )
+                                  )
+                              )
+                          )
+                      )
+                  )
         )
     );
 };
-
 
 // Premenná na sledovanie, či bol poslucháč už nastavený
 let isEmailSyncListenerSetup = false;
 
 /**
  * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
  */
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
-        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
             console.log("logged-in-catering.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
+
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
                         const userProfileRef = doc(window.db, 'users', user.uid);
                         const docSnap = await getDoc(userProfileRef);
-            
+
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
                                 console.log(`logged-in-catering.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
+
                                 await updateDoc(userProfileRef, {
                                     email: user.email
                                 });
-            
-                                // Vytvorenie notifikácie v databáze s novou štruktúrou
+
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
+                                    timestamp: new Date(),
                                 });
-                                
+
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
                                 console.log("logged-in-catering.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-            
                             } else {
                                 console.log("logged-in-catering.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
@@ -116,7 +251,7 @@ const handleDataUpdateAndRender = (event) => {
                     }
                 }
             });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+            isEmailSyncListenerSetup = true;
         }
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -127,7 +262,6 @@ const handleDataUpdateAndRender = (event) => {
             console.error("logged-in-catering.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        // Ak dáta nie sú dostupné, zobrazíme loader
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -142,18 +276,14 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 console.log("logged-in-catering.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
 console.log("logged-in-catering.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
     console.log("logged-in-catering.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
