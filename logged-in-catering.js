@@ -243,6 +243,7 @@ const cateringApp = ({ userProfileData }) => {
     const [showSuperstructureReplanPickerModal, setShowSuperstructureReplanPickerModal] = useState(false);
     const [superstructureReplanPickerItems, setSuperstructureReplanPickerItems] = useState([]);
     const [cateringModalIsPriority, setCateringModalIsPriority] = useState(false);
+    const [categoriesReady, setCategoriesReady] = useState(false);
 
     // Načítanie nastavení turnaja z Firestore
     useEffect(() => {
@@ -466,16 +467,17 @@ const cateringApp = ({ userProfileData }) => {
     }, []);
 
     // 🔥 NOVÉ: Načítanie kategórií (pre fallback categoryId → categoryName)
+    // 🔥 DÔLEŽITÉ: Používame getDoc (nie onSnapshot), aby boli kategórie
+    // načítané PRED spracovaním matches. A nastavíme categoriesReady = true.
     useEffect(() => {
         if (!window.db) return;
-
-        const categoriesDocRef = doc(window.db, 'settings', 'categories');
-
-        const unsubscribe = onSnapshot(
-            categoriesDocRef,
-            (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data() || {};
+    
+        const loadCategories = async () => {
+            try {
+                const categoriesDocRef = doc(window.db, 'settings', 'categories');
+                const snap = await getDoc(categoriesDocRef);
+                if (snap.exists()) {
+                    const data = snap.data() || {};
                     const categoriesMap = {};
                     Object.entries(data).forEach(([catId, catData]) => {
                         if (catData?.name) {
@@ -484,17 +486,19 @@ const cateringApp = ({ userProfileData }) => {
                     });
                     window.categoriesData = categoriesMap;
                 }
-            },
-            (error) => {
-                console.error('Chyba pri načítaní kategórií:', error);
+            } catch (err) {
+                console.error('Chyba pri načítaní kategórií:', err);
+            } finally {
+                setCategoriesReady(true);
             }
-        );
+        };
     
-        return () => unsubscribe();
+        loadCategories();
     }, []);
 
     useEffect(() => {
-        if (!window.db) return;
+        // 🔥 DÔLEŽITÉ: Čakáme, kým sú kategórie načítané (categoriesReady)
+        if (!window.db || !categoriesReady) return;
     
         const unsubscribe = onSnapshot(
             collection(window.db, 'matches'),
@@ -504,13 +508,16 @@ const cateringApp = ({ userProfileData }) => {
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() || {};
     
-                    // 🔥 OPRAVA: fallback categoryId → categoryName (bez tohto by
-                    // sa tímy z playoff zápasov, ktoré majú len categoryId, vôbec nenačítali)
+                    // 🔥 Fallback categoryId → categoryName
                     let categoryName = data.categoryName || '';
                     if (!categoryName && data.categoryId && window.categoriesData) {
                         categoryName = window.categoriesData[data.categoryId] || '';
                     }
                     categoryName = cleanCategory(categoryName);
+    
+                    // 🔥 Ak nemáme kategóriu, tím preskočíme
+                    // (nemal by sa ako spárovať s userTeams)
+                    if (!categoryName) return;
     
                     const groupName = data.groupName || null;
     
@@ -542,7 +549,7 @@ const cateringApp = ({ userProfileData }) => {
         );
     
         return () => unsubscribe();
-    }, []);
+    }, [categoriesReady]);   // 🔥 ZÁVISLOSŤ NA categoriesReady
 
     if (loading) {
         return React.createElement(
