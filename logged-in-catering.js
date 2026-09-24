@@ -553,7 +553,6 @@ const cateringApp = ({ userProfileData }) => {
             slotTo: selectedCateringCell.slotTo,
             placeId: placeId,
             placeName: place?.name || '',
-            updatedAt: Timestamp.now(),
         };
     };
 
@@ -564,12 +563,11 @@ const cateringApp = ({ userProfileData }) => {
                 for (const id of oldIds) {
                     await deleteDoc(doc(window.db, 'catering', id));
                 }
-                // 2) vytvor nové
-                payload.createdAt = Timestamp.now();
+                // 2) vytvor nové (bez createdAt / updatedAt)
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
             } else {
-                payload.createdAt = Timestamp.now();
+                // bez createdAt / updatedAt
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
