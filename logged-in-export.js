@@ -899,7 +899,7 @@ const ExportApp = ({ userProfileData }) => {
                 const hash = `zapasy-playoff/${encodeURIComponent(categoryNameSafe)}`;
 
                 try {
-                    sessionStorage.removeItem(`matchesPdfAutoDownloaded_playoff_${categoryNameSafe}`);
+                    sessionStorage.removeItem(`matchesPdfAutoDownloaded_playoff_${categoryName}`);
                     sessionStorage.removeItem('pdfAutoDownloaded');
                 } catch (e) { }
             
