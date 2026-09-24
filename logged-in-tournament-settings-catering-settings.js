@@ -83,7 +83,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 setLoading(false);
             },
             (error) => {
-                console.error('CateringSettings: chyba pri načítaní dátumov turnaja:', error);
                 showNotification?.(`Chyba pri načítaní dátumov turnaja: ${error.message}`, 'error');
                 setLoading(false);
             }
@@ -112,7 +111,6 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 }
             },
             (error) => {
-                console.error('CateringSettings: chyba pri načítaní časov stravovania:', error);
                 showNotification?.(`Chyba pri načítaní časov stravovania: ${error.message}`, 'error');
             }
         );
@@ -255,24 +253,16 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                     tournamentDays
                 );
 
-                console.log('CateringSettings: zmeny na odoslanie:', changesList);
-
                 if (typeof sendAdminNotification === 'function' && changesList.length > 0) {
                     await sendAdminNotification({
                         type: 'updateCateringSettings',
                         data: { changes: changesList },
                     });
-                    console.log('CateringSettings: notifikácia odoslaná.');
-                } else {
-                    console.log('CateringSettings: notifikácia sa neposiela (prázdne zmeny alebo chýba funkcia).');
                 }
-            } catch (notifErr) {
-                console.error('CateringSettings: chyba pri vytváraní notifikácie:', notifErr);
-            }
+            } catch (notifErr) { }
 
             showNotification?.('Nastavenia stravovania boli uložené.', 'success');
         } catch (e) {
-            console.error('CateringSettings: chyba pri ukladaní:', e);
             showNotification?.(`Chyba pri ukladaní nastavení stravovania: ${e.message}`, 'error');
         } finally {
             setSaving(false);
