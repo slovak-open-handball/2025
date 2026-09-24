@@ -1065,7 +1065,9 @@ const cateringApp = ({ userProfileData }) => {
                                       'Žiadne tímy neboli nájdené.'
                                   )
                               )
-                            : filteredTeams.map((team, rowIndex) =>
+                            : (console.log('[DEBUG RENDER] Počet riadkov na render:', filteredTeams.length,
+                                'Kategórie:', Array.from(new Set(filteredTeams.map(t => t.category)))),
+                               filteredTeams.map((team, rowIndex) =>
                                   React.createElement(
                                       'tr',
                                       {
