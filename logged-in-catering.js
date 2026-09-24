@@ -1625,29 +1625,22 @@ const cateringApp = ({ userProfileData }) => {
 
                                 // Večerové sloty
                                 dinnerSlots.forEach((slot, i) => {
-                                    const isLastDinnerCell = i === dinnerSlots.length - 1;
-                                    // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY
-                                    const hasThickRight = isLastDinnerCell;
-                                    const count = getAssignedCountForPlace(place.id, day.key, 'dinner', slot.from);
-                                    const overCapacity = placeCapacity != null && count > placeCapacity;
-                                
-                                    cells.push(React.createElement(
-                                        'td',
-                                        {
-                                            key: `summary-${place.id}-dinner-${dayIndex}-${i}`,
-                                            className:
-                                                'border border-gray-300 px-2 py-2 text-center text-xs font-semibold min-w-[70px]' +
-                                                (hasThickRight ? ' border-r-4 border-r-gray-500' : '') +
-                                                (overCapacity ? ' font-bold text-red-600' : ''),
-                                            style: count > 0
-                                                ? {
-                                                    backgroundColor: colors.bg,
-                                                    color: overCapacity ? '#dc2626' : colors.text,
-                                                }
-                                                : {},
-                                        },
-                                        count > 0 ? count : ''
-                                    ));
+                                    const isLastDinnerSlot = i === dinnerSlots.length - 1;
+                                    // 🔥 Hrubá čiara za posledným večerovým slotom VŽDY (ak nie je „∑ Večera")
+                                    const hasThickRight = isLastDinnerSlot && !hasDinnerSummary;
+                                    parts.push(
+                                        React.createElement(
+                                            'th',
+                                            {
+                                                key: `dinner-slot-${dayIndex}-${i}`,
+                                                className:
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
+                                                    (hasThickRight ? ' border-r-4 border-r-gray-500' : ''),
+                                                title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
+                                            },
+                                            slot.label
+                                        )
+                                    );
                                 });
 
                                 // Stĺpec „∑ Večera" (denný súčet)
