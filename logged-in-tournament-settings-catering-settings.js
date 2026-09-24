@@ -1,6 +1,6 @@
 // logged-in-tournament-settings-catering-settings.js
 
-import { doc, onSnapshot, setDoc, Timestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Pomocná funkcia: vráti zoznam všetkých dní medzi arrivalDate a tournamentEnd.
@@ -50,15 +50,15 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
 };
 
 /**
- * Predvolená štruktúra pre jeden deň:
+ * Prázdna štruktúra pre jeden deň – žiadne predvolené hodnoty.
  * {
- *   lunch:  { from: '11:30', to: '14:00' },
- *   dinner: { from: '17:30', to: '20:00' }
+ *   lunch:  { from: '', to: '' },
+ *   dinner: { from: '', to: '' }
  * }
  */
-const DEFAULT_DAY_TIMES = {
-    lunch:  { from: '11:30', to: '14:00' },
-    dinner: { from: '17:30', to: '20:00' },
+const EMPTY_DAY_TIMES = {
+    lunch:  { from: '', to: '' },
+    dinner: { from: '', to: '' },
 };
 
 export function CateringSettings({ db, userProfileData, showNotification }) {
@@ -111,7 +111,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
             (snap) => {
                 if (snap.exists()) {
                     const data = snap.data() || {};
-                    // Očakávame štruktúru { times: { 'YYYY-MM-DD': { lunch:{from,to}, dinner:{from,to} } } }
                     setCateringTimes(data.times || {});
                 } else {
                     setCateringTimes({});
@@ -126,11 +125,11 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
         return () => unsubscribe();
     }, [db, showNotification]);
 
-    // Pomocná funkcia: vráti časy pre daný deň (s fallbackom na default)
+    // Pomocná funkcia: vráti časy pre daný deň (prázdne, ak nie sú uložené)
     const getDayTimes = (dayKey) => {
         return cateringTimes[dayKey] || {
-            lunch:  { ...DEFAULT_DAY_TIMES.lunch },
-            dinner: { ...DEFAULT_DAY_TIMES.dinner },
+            lunch:  { ...EMPTY_DAY_TIMES.lunch },
+            dinner: { ...EMPTY_DAY_TIMES.dinner },
         };
     };
 
@@ -138,8 +137,8 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
     const handleTimeChange = (dayKey, mealType, field, value) => {
         setCateringTimes((prev) => {
             const day = prev[dayKey] || {
-                lunch:  { ...DEFAULT_DAY_TIMES.lunch },
-                dinner: { ...DEFAULT_DAY_TIMES.dinner },
+                lunch:  { ...EMPTY_DAY_TIMES.lunch },
+                dinner: { ...EMPTY_DAY_TIMES.dinner },
             };
             return {
                 ...prev,
@@ -161,7 +160,7 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
             return;
         }
 
-        // Validácia: from musí byť pred to
+        // Validácia: ak sú obe hodnoty vyplnené, from musí byť pred to
         for (const day of tournamentDays) {
             const t = cateringTimes[day.key];
             if (!t) continue;
@@ -179,19 +178,31 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
         try {
             setSaving(true);
 
-            // Zabezpečíme, aby každý deň mal uložené hodnoty (aj default)
+            // Uložíme iba to, čo je reálne vyplnené (žiadne defaulty)
             const normalized = {};
             tournamentDays.forEach((day) => {
-                const t = getDayTimes(day.key);
-                normalized[day.key] = {
-                    lunch:  { from: t.lunch.from || '',  to: t.lunch.to || '' },
-                    dinner: { from: t.dinner.from || '', to: t.dinner.to || '' },
-                };
+                const t = cateringTimes[day.key];
+                if (!t) return;
+
+                const lunchFrom  = t.lunch?.from  || '';
+                const lunchTo    = t.lunch?.to    || '';
+                const dinnerFrom = t.dinner?.from || '';
+                const dinnerTo   = t.dinner?.to   || '';
+
+                // Uložíme deň iba ak má aspoň jednu vyplnenú hodnotu
+                if (lunchFrom || lunchTo || dinnerFrom || dinnerTo) {
+                    normalized[day.key] = {
+                        lunch:  { from: lunchFrom,  to: lunchTo },
+                        dinner: { from: dinnerFrom, to: dinnerTo },
+                    };
+                }
             });
 
             const cateringDocRef = doc(db, 'settings', 'catering');
             await setDoc(cateringDocRef, {
                 times: normalized,
+                updatedAt: Timestamp.fromDate(new Date()),
+                updatedBy: userProfileData.email || null,
             }, { merge: true });
 
             showNotification?.('Nastavenia stravovania boli úspešne uložené.', 'success');
@@ -201,19 +212,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
         } finally {
             setSaving(false);
         }
-    };
-
-    // Reset na default hodnoty (len v UI, uloží sa až po kliknutí na Uložiť)
-    const handleResetDefaults = () => {
-        const reset = {};
-        tournamentDays.forEach((day) => {
-            reset[day.key] = {
-                lunch:  { ...DEFAULT_DAY_TIMES.lunch },
-                dinner: { ...DEFAULT_DAY_TIMES.dinner },
-            };
-        });
-        setCateringTimes(reset);
-        showNotification?.('Hodnoty boli obnovené na predvolené. Nezabudnite ich uložiť.', 'info');
     };
 
     if (loading) {
@@ -258,7 +256,8 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                         null,
                         React.createElement('th', {
                             rowSpan: 2,
-                            className: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[160px]',
+                            // 🔥 Zmenšená šírka stĺpca "Deň"
+                            className: 'border border-gray-300 bg-gray-100 px-2 py-2 text-left font-bold text-gray-700 min-w-[110px] w-[110px]',
                         }, 'Deň'),
                         React.createElement('th', {
                             colSpan: 2,
@@ -290,7 +289,8 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                                 className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                             },
                             React.createElement('td', {
-                                className: 'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap',
+                                // 🔥 Zmenšená šírka aj paddingu
+                                className: 'border border-gray-300 px-2 py-2 font-medium text-gray-800 whitespace-nowrap w-[110px]',
                                 title: day.fullLabel,
                             }, day.label),
                             // Obed – od
@@ -337,16 +337,7 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
 
         React.createElement(
             'div',
-            { className: 'flex flex-wrap justify-between items-center gap-3' },
-            React.createElement(
-                'button',
-                {
-                    type: 'button',
-                    onClick: handleResetDefaults,
-                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200',
-                },
-                'Obnoviť predvolené'
-            ),
+            { className: 'flex flex-wrap justify-end items-center gap-3' },
             React.createElement(
                 'button',
                 {
