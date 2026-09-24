@@ -1064,11 +1064,45 @@ const cateringApp = ({ userProfileData }) => {
                 }
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo zmenené.', 'success');
+    
+                // 🔥 NOVÉ: Ak nové priradenie NIE je prioritné, musí sa priorita
+                // nastaviť inému (existujúcemu) superstructure priradeniu v tom istom riadku.
+                const isNewPriority = payload.isPriority === true;
+                const isSuperstructure = payload.isSuperstructure === true;
+    
+                if (isSuperstructure && !isNewPriority) {
+                    // Nájdeme ostatné superstructure priradenia v tom istom riadku
+                    // (rovnaký kliknutý tím + deň + typ jedla), ktoré nie sú nové.
+                    // Pozor: cateringAssignments ešte neobsahuje nový záznam (snapshot),
+                    // takže ostatné nájdeme v aktuálnom stave.
+                    const siblingAssignments = cateringAssignments.filter(
+                        (a) =>
+                            a.isSuperstructure === true &&
+                            a.clickedTeamUid === payload.clickedTeamUid &&
+                            a.clickedTeamIndex === payload.clickedTeamIndex &&
+                            a.clickedTeamCategory === payload.clickedTeamCategory &&
+                            a.dayKey === payload.dayKey &&
+                            a.mealType === payload.mealType &&
+                            !oldIds.includes(a.id) // vylúčime tie, ktoré sme práve vymazali
+                    );
+    
+                    // Ak existuje iný tím v riadku, označíme ho ako prioritný.
+                    if (siblingAssignments.length > 0) {
+                        const sibling = siblingAssignments[0];
+                        await updateDoc(doc(window.db, 'catering', sibling.id), {
+                            isPriority: true,
+                        });
+                        window.showGlobalNotification(
+                            'Priorita bola nastavená pôvodnému tímu.',
+                            'success'
+                        );
+                    }
+                }
             } else {
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
-
+    
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
