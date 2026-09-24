@@ -1282,9 +1282,57 @@ const cateringApp = ({ userProfileData }) => {
                     setSavingCatering(false);
                     return;
                 } else {
-                // Nové superstructure priradenie
-                await performSaveCateringAssignment(payload, false, null);
-            }
+                    // 🔥 NOVÉ: Nové superstructure priradenie (bez existingId).
+                    // Ak je to nový tím do riadku, kde už existuje iný superstructure tím,
+                    // a nový NEMÁ prioritu → prioritu dostane existujúci (pôvodný) tím.
+                    const newIsPriority = !!cateringModalIsPriority;
+                
+                    // Pridáme nový záznam (s prioritou, ak ju má)
+                    const newDocRef = await addDoc(collection(window.db, 'catering'), {
+                        ...payload,
+                        isPriority: newIsPriority,
+                    });
+                
+                    // Ak nový NEMÁ prioritu, skontrolujeme, či v riadku existuje iný superstructure tím.
+                    if (!newIsPriority) {
+                        const siblings = cateringAssignments.filter(
+                            (a) =>
+                                a.isSuperstructure === true &&
+                                a.clickedTeamUid === payload.clickedTeamUid &&
+                                a.clickedTeamIndex === payload.clickedTeamIndex &&
+                                a.clickedTeamCategory === payload.clickedTeamCategory &&
+                                a.dayKey === payload.dayKey &&
+                                a.mealType === payload.mealType
+                        );
+                
+                        if (siblings.length > 0) {
+                            // Existuje pôvodný tím v riadku → nastavíme mu prioritu
+                            await updateDoc(doc(window.db, 'catering', siblings[0].id), {
+                                isPriority: true,
+                            });
+                            window.showGlobalNotification(
+                                'Priorita bola nastavená pôvodnému tímu v riadku.',
+                                'success'
+                            );
+                        } else {
+                            // Žiadny iný tím v riadku → nový záznam bude prioritný
+                            await updateDoc(newDocRef, { isPriority: true });
+                            window.showGlobalNotification(
+                                'Priorita bola nastavená novému tímu.',
+                                'success'
+                            );
+                        }
+                    } else {
+                        window.showGlobalNotification('Priradenie bolo uložené.', 'success');
+                    }
+                
+                    setShowCateringModal(false);
+                    setSelectedCateringCell(null);
+                    setSelectedCateringPlaceId('');
+                    setCateringModalIsPriority(false);
+                    setSavingCatering(false);
+                    return;
+                }
             return;
         }
 
