@@ -607,6 +607,28 @@ const cateringApp = ({ userProfileData }) => {
         );
     };
 
+        // 🔥 NOVÉ: Odstráni názov kategórie z názvu superstructure tímu
+    // napr. "U12 CH Skupina A 1. 1A" → "Skupina A 1. 1A"
+    const getPlaceTeamDisplayName = (teamName, category) => {
+        if (!teamName) return '';
+        if (category && teamName.startsWith(category + ' ')) {
+            return teamName.substring(category.length + 1).trim();
+        }
+        return teamName;
+    };
+
+    // 🔥 NOVÉ: Zistí, či superstructure tím už má priradené stravovanie
+    // pre daný deň + typ jedla (v hociktorom slote a hociktorou bunkou).
+    const isSuperstructureTeamAlreadyAssigned = (placeTeamId, dayKey, mealType) => {
+        return cateringAssignments.some(
+            (a) =>
+                a.isSuperstructure === true &&
+                a.teamIndex === placeTeamId &&
+                a.dayKey === dayKey &&
+                a.mealType === mealType
+        );
+    };
+
     // Farby stravovacieho miesta
     const getCateringPlaceColors = (placeId) => {
         const place = cateringPlaces.find((p) => p.id === placeId);
@@ -1383,10 +1405,12 @@ const cateringApp = ({ userProfileData }) => {
                                               // 🔥 Klik je povolený vždy (aj keď tím nemá stravovanie v balíku)
                                               const canClick = true;
 
-                                              // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
-                                              const displaySuperstructureName = superstructureAssignment?.teamName || null;
-                                              const superstructureColors = superstructureAssignment
-                                                  ? getCateringPlaceColors(superstructureAssignment.placeId)
+                                              // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu bez kategórie
+                                              const displaySuperstructureName = superstructureAssignment
+                                                  ? getPlaceTeamDisplayName(
+                                                        superstructureAssignment.teamName,
+                                                        superstructureAssignment.category
+                                                    )
                                                   : null;
 
                                               let cellClass =
@@ -1454,7 +1478,12 @@ const cateringApp = ({ userProfileData }) => {
                                               const canClick = true;
 
                                               // 🔥 Ak existuje superstructure priradenie, zobrazíme názov tímu
-                                              const displaySuperstructureName = superstructureAssignment?.teamName || null;
+                                              const displaySuperstructureName = superstructureAssignment
+                                                  ? getPlaceTeamDisplayName(
+                                                        superstructureAssignment.teamName,
+                                                        superstructureAssignment.category
+                                                    )
+                                                  : null;
                                               const superstructureColors = superstructureAssignment
                                                   ? getCateringPlaceColors(superstructureAssignment.placeId)
                                                   : null;
@@ -1782,8 +1811,13 @@ const cateringApp = ({ userProfileData }) => {
                     // Zoznam superstructure tímov filtrovaný podľa kategórie kliknutej bunky
                     (() => {
                         const categoryName = pendingAssignmentCell.team.category;
+                        const dayKey = pendingAssignmentCell.day.key;
+                        const mealType = pendingAssignmentCell.mealType;
+
                         const filtered = superstructureTeams
                             .filter((t) => t.category === categoryName)
+                            // 🔥 Vylúčime tímy, ktoré už majú priradené stravovanie pre daný deň + typ jedla
+                            .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.id, dayKey, mealType))
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
                                 return t.teamName
@@ -1837,8 +1871,8 @@ const cateringApp = ({ userProfileData }) => {
                                             'span',
                                             { className: 'text-sm font-medium text-gray-800' },
                                             t.groupName
-                                                ? `${t.groupName} ${t.order != null ? t.order + '. ' : ''}${t.teamName}`
-                                                : t.teamName
+                                                ? `${t.groupName} ${t.order != null ? t.order + '. ' : ''}${getPlaceTeamDisplayName(t.teamName, t.category)}`
+                                                : getPlaceTeamDisplayName(t.teamName, t.category)
                                         ),
                                         React.createElement(
                                             'span',
@@ -1927,9 +1961,13 @@ const cateringApp = ({ userProfileData }) => {
                                 selectedCateringCell.isSuperstructure ? 'Superstructure tím: ' : 'Tím: '
                             ),
                             selectedCateringCell.isSuperstructure
-                                ? (selectedCateringCell.placeTeam?.teamName || '—')
+                                ? getPlaceTeamDisplayName(
+                                      selectedCateringCell.placeTeam?.teamName,
+                                      selectedCateringCell.placeTeam?.category
+                                  ) || '—'
                                 : selectedCateringCell.team.teamName
                         ),
+
                         React.createElement(
                             'p',
                             null,
