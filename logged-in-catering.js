@@ -434,13 +434,15 @@ const cateringApp = ({ userProfileData }) => {
                             ),
                             visibleDays.map((day, index) => {
                                 const total = dayColumnCount(day.key);
+                                const isLastDay = index === visibleDays.length - 1;
                                 return React.createElement(
                                     'th',
                                     {
                                         key: `day-header-${index}`,
                                         colSpan: total,
                                         className:
-                                            'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap',
+                                            'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap' +
+                                            (isLastDay ? '' : ' border-r-4 border-r-gray-500'),
                                         title: day.fullLabel,
                                     },
                                     day.label
@@ -454,6 +456,7 @@ const cateringApp = ({ userProfileData }) => {
                             visibleDays.map((day, index) => {
                                 const lunchCount = slotCountFor(day.key, 'lunch');
                                 const dinnerCount = slotCountFor(day.key, 'dinner');
+                                const isLastDay = index === visibleDays.length - 1;
                                 const parts = [];
 
                                 if (lunchCount > 0) {
@@ -464,7 +467,8 @@ const cateringApp = ({ userProfileData }) => {
                                                 key: `lunch-header-${index}`,
                                                 colSpan: lunchCount,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
+                                                    ((dinnerCount === 0 && !isLastDay) ? ' border-r-4 border-r-gray-500' : ''),
                                             },
                                             'Obed'
                                         )
@@ -479,7 +483,8 @@ const cateringApp = ({ userProfileData }) => {
                                                 key: `dinner-header-${index}`,
                                                 colSpan: dinnerCount,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs',
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center font-semibold text-blue-700 text-xs' +
+                                                    (!isLastDay ? ' border-r-4 border-r-gray-500' : ''),
                                             },
                                             'Večera'
                                         )
@@ -500,16 +505,20 @@ const cateringApp = ({ userProfileData }) => {
                             visibleDays.map((day, dayIndex) => {
                                 const lunchSlots = daySlots[day.key]?.lunch || [];
                                 const dinnerSlots = daySlots[day.key]?.dinner || [];
+                                const isLastDay = dayIndex === visibleDays.length - 1;
+                                const totalSlots = lunchSlots.length + dinnerSlots.length;
                                 const parts = [];
 
                                 lunchSlots.forEach((slot, i) => {
+                                    const isLastSlotOfDay = (i === lunchSlots.length - 1) && dinnerSlots.length === 0;
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
                                                 key: `lunch-slot-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
+                                                    ((isLastSlotOfDay && !isLastDay) ? ' border-r-4 border-r-gray-500' : ''),
                                                 title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
                                             },
                                             slot.label
@@ -518,13 +527,15 @@ const cateringApp = ({ userProfileData }) => {
                                 });
 
                                 dinnerSlots.forEach((slot, i) => {
+                                    const isLastSlotOfDay = i === dinnerSlots.length - 1;
                                     parts.push(
                                         React.createElement(
                                             'th',
                                             {
                                                 key: `dinner-slot-${dayIndex}-${i}`,
                                                 className:
-                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]',
+                                                    'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-[11px] text-blue-700 whitespace-nowrap min-w-[70px]' +
+                                                    ((isLastSlotOfDay && !isLastDay) ? ' border-r-4 border-r-gray-500' : ''),
                                                 title: slot.from && slot.to ? `${slot.from} – ${slot.to}` : '',
                                             },
                                             slot.label
@@ -583,16 +594,19 @@ const cateringApp = ({ userProfileData }) => {
                                       visibleDays.map((day, dayIndex) => {
                                           const lunchCount = slotCountFor(day.key, 'lunch');
                                           const dinnerCount = slotCountFor(day.key, 'dinner');
+                                          const isLastDay = dayIndex === visibleDays.length - 1;
                                           const cells = [];
 
                                           for (let i = 0; i < lunchCount; i++) {
+                                              const isLastCellOfDay = (i === lunchCount - 1) && dinnerCount === 0;
                                               cells.push(
                                                   React.createElement(
                                                       'td',
                                                       {
                                                           key: `cell-lunch-${rowIndex}-${dayIndex}-${i}`,
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
+                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]' +
+                                                              ((isLastCellOfDay && !isLastDay) ? ' border-r-4 border-r-gray-500' : ''),
                                                       },
                                                       '—'
                                                   )
@@ -600,13 +614,15 @@ const cateringApp = ({ userProfileData }) => {
                                           }
 
                                           for (let i = 0; i < dinnerCount; i++) {
+                                              const isLastCellOfDay = i === dinnerCount - 1;
                                               cells.push(
                                                   React.createElement(
                                                       'td',
                                                       {
                                                           key: `cell-dinner-${rowIndex}-${dayIndex}-${i}`,
                                                           className:
-                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]',
+                                                              'border border-gray-300 px-2 py-2 text-center text-gray-400 text-xs min-w-[70px]' +
+                                                              ((isLastCellOfDay && !isLastDay) ? ' border-r-4 border-r-gray-500' : ''),
                                                       },
                                                       '—'
                                                   )
