@@ -411,7 +411,6 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'thead',
                         null,
-                        // Riadok 1: Kategória (rowspan=3), Tím (rowspan=3), Hráči (počet), Ostatní (počet), Deň (colspan=počet slotov), ...
                         React.createElement(
                             'tr',
                             null,
@@ -440,9 +439,8 @@ const cateringApp = ({ userProfileData }) => {
                                     rowSpan: 3,
                                     className:
                                         'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[80px]',
-                                    title: 'Počet členov v poli playerDetails',
                                 },
-                                'Hráči (počet)'
+                                'Hráči'
                             ),
                             // 🔥 NOVÉ: počet ostatných členov
                             React.createElement(
@@ -451,9 +449,8 @@ const cateringApp = ({ userProfileData }) => {
                                     rowSpan: 3,
                                     className:
                                         'border border-gray-300 bg-gray-100 px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap min-w-[100px] border-r-4 border-r-gray-500',
-                                    title: 'Súčet členov: realizačný tím (ž) + realizačný tím (m) + šofér (ž) + šofér (m)',
                                 },
-                                'Ostatní (počet)'
+                                'RT'
                             ),
                             visibleDays.map((day, index) => {
                                 const total = dayColumnCount(day.key);
@@ -472,7 +469,6 @@ const cateringApp = ({ userProfileData }) => {
                                 );
                             })
                         ),
-                        // Riadok 2: Obed / Večera s colspan = počet slotov (len ak existujú)
                         React.createElement(
                             'tr',
                             null,
