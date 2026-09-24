@@ -419,7 +419,7 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-20 min-w-[70px]',
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 sticky left-0 z-20 min-w-[140px]',
                                 },
                                 'Kategória'
                             ),
