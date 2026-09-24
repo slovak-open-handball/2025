@@ -540,6 +540,8 @@ const cateringApp = ({ userProfileData }) => {
                     addTeam(data.homeTeamName);
                     addTeam(data.awayTeamName);
                 });
+
+                console.log('matchTeams loaded:', Array.from(teamsMap.values()));
     
                 setMatchTeams(Array.from(teamsMap.values()));
             },
