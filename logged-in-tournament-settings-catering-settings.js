@@ -84,11 +84,11 @@ const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) 
 
         // from < to pre Obed
         if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
-            errors.push(`Deň ${dayLabel}: čas Obeda "od" musí byť pred časom "do".`);
+            errors.push(`Deň ${dayLabel}: čas Obeda od musí byť pred časom do.`);
         }
         // from < to pre Večeru
         if (t.dinner?.from && t.dinner?.to && t.dinner.from >= t.dinner.to) {
-            errors.push(`Deň ${dayLabel}: čas Večere "od" musí byť pred časom "do".`);
+            errors.push(`Deň ${dayLabel}: čas Večere od musí byť pred časom do.`);
         }
 
         // Deliteľnosť jednotkou
@@ -265,8 +265,8 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                 }
 
                 if (oFrom !== nFrom || oTo !== nTo) {
-                    const fromChanged = oFrom !== nFrom ? `"od" z '${oFrom || '-'}' na '${nFrom || '-'}'` : '';
-                    const toChanged   = oTo   !== nTo   ? `"do" z '${oTo || '-'}' na '${nTo || '-'}'` : '';
+                    const fromChanged = oFrom !== nFrom ? `od z '${oFrom || '-'}' na '${nFrom || '-'}'` : '';
+                    const toChanged   = oTo   !== nTo   ? `do z '${oTo || '-'}' na '${nTo || '-'}'` : '';
                     const parts = [fromChanged, toChanged].filter(Boolean).join(', ');
                     changes.push(
                         `Deň ${dayLabel}: ${mealLabel(mealType)} – zmena ${parts}`
