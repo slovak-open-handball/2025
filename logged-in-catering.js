@@ -135,7 +135,7 @@ const cateringApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-start p-6' },
         React.createElement(
             'div',
-            { className: 'w-full max-w-5xl bg-white rounded-xl shadow-xl p-8' },
+            { className: 'w-full max-w-7xl bg-white rounded-xl shadow-xl p-8' },
             React.createElement(
                 'div',
                 { className: 'flex flex-col items-center justify-center mb-6' },
@@ -148,50 +148,66 @@ const cateringApp = ({ userProfileData }) => {
                       'Nie sú dostupné žiadne dátumy turnaja. Nastavte prosím dátum príchodu a koniec turnaja.'
                   )
                 : React.createElement(
+                      // Horizontálny layout – každý deň je samostatný stĺpec
                       'div',
-                      { className: 'space-y-6' },
+                      {
+                          className: 'flex flex-wrap gap-6 justify-center items-stretch',
+                      },
                       tournamentDays.map((day, index) =>
                           React.createElement(
+                              // Stĺpec pre jeden deň
                               'div',
                               {
                                   key: index,
-                                  className: 'border border-gray-200 rounded-lg p-4 shadow-sm',
+                                  className:
+                                      'flex flex-col w-64 border border-gray-200 rounded-lg p-4 shadow-sm bg-gray-50',
                               },
+                              // Hlavička dňa
                               React.createElement(
                                   'h3',
-                                  { className: 'text-xl font-semibold text-gray-700 mb-4 capitalize' },
+                                  {
+                                      className:
+                                          'text-lg font-semibold text-gray-700 mb-4 capitalize text-center border-b border-gray-300 pb-2',
+                                  },
                                   day.label
                               ),
+                              // Dva stĺpce pod sebou: Obed a Večera
                               React.createElement(
                                   'div',
-                                  { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                                  { className: 'flex flex-col gap-3 flex-grow' },
                                   // Stĺpec: Obed
                                   React.createElement(
                                       'div',
-                                      { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4' },
+                                      {
+                                          className:
+                                              'bg-blue-50 border border-blue-200 rounded-lg p-3 flex-grow flex flex-col',
+                                      },
                                       React.createElement(
                                           'h4',
-                                          { className: 'text-lg font-bold text-blue-700 mb-2' },
+                                          { className: 'text-md font-bold text-blue-700 mb-2 text-center' },
                                           'Obed'
                                       ),
                                       React.createElement(
                                           'p',
-                                          { className: 'text-gray-500 text-sm' },
+                                          { className: 'text-gray-500 text-sm text-center mt-auto' },
                                           'Zatiaľ žiadne údaje.'
                                       )
                                   ),
                                   // Stĺpec: Večera
                                   React.createElement(
                                       'div',
-                                      { className: 'bg-purple-50 border border-purple-200 rounded-lg p-4' },
+                                      {
+                                          className:
+                                              'bg-purple-50 border border-purple-200 rounded-lg p-3 flex-grow flex flex-col',
+                                      },
                                       React.createElement(
                                           'h4',
-                                          { className: 'text-lg font-bold text-purple-700 mb-2' },
+                                          { className: 'text-md font-bold text-purple-700 mb-2 text-center' },
                                           'Večera'
                                       ),
                                       React.createElement(
                                           'p',
-                                          { className: 'text-gray-500 text-sm' },
+                                          { className: 'text-gray-500 text-sm text-center mt-auto' },
                                           'Zatiaľ žiadne údaje.'
                                       )
                                   )
