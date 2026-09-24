@@ -234,6 +234,7 @@ const cateringApp = ({ userProfileData }) => {
     const [pendingAssignmentCell, setPendingAssignmentCell] = useState(null);
     const [showPlaceAssignmentModal, setShowPlaceAssignmentModal] = useState(false);
     const [superstructureTeams, setSuperstructureTeams] = useState([]);
+    const [matchTeams, setMatchTeams] = useState([]);    
     const [selectedPlaceTeamId, setSelectedPlaceTeamId] = useState('');
     const [savingPlaceAssignment, setSavingPlaceAssignment] = useState(false);
     const [placeAssignmentSearch, setPlaceAssignmentSearch] = useState('');    
@@ -456,6 +457,59 @@ const cateringApp = ({ userProfileData }) => {
             }
         );
 
+        return () => unsubscribe();
+    }, []);
+
+    // 🔥 ZMENA: Načítanie všetkých tímov z kolekcie 'matches'
+    // (domáci aj hostia z každého zápasu), aby sa dali použiť
+    // v modálnom okne "Priradiť stravovanie podľa umiestnenia".
+    useEffect(() => {
+        if (!window.db) return;
+    
+        const unsubscribe = onSnapshot(
+            collection(window.db, 'matches'),
+            (snapshot) => {
+                const teamsMap = new Map(); // kľúč = `${category}||${teamIdentifier}`
+    
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data() || {};
+                    const categoryName = data.categoryName || '';
+                    const groupName = data.groupName || null;
+    
+                    const addTeam = (identifier) => {
+                        if (!identifier) return;
+                        const key = `${categoryName}||${identifier}`;
+                        if (teamsMap.has(key)) return;
+    
+                        // Skúsime získať "pekný" názov tímu (rovnaká logika ako inde)
+                        let teamName = identifier;
+                        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                            try {
+                                const resolved = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                                if (resolved) teamName = resolved;
+                            } catch (e) { /* ignore */ }
+                        }
+    
+                        teamsMap.set(key, {
+                            id: identifier,
+                            teamName: teamName,
+                            identifier: identifier,
+                            category: categoryName,
+                            groupName: groupName,
+                        });
+                    };
+    
+                    addTeam(data.homeTeamIdentifier);
+                    addTeam(data.awayTeamIdentifier);
+                });
+    
+                setMatchTeams(Array.from(teamsMap.values()));
+            },
+            (error) => {
+                console.error('Chyba pri načítaní tímov z matches:', error);
+            }
+        );
+    
         return () => unsubscribe();
     }, []);
 
@@ -837,7 +891,7 @@ const cateringApp = ({ userProfileData }) => {
         if (!teamHasAnyPackage(team)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
 
-            const teamsInCategory = superstructureTeams.filter(
+            const teamsInCategory = matchTeams.filter(
                 (t) => t.category === team.category
             );
             setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
@@ -852,7 +906,7 @@ const cateringApp = ({ userProfileData }) => {
         if (!teamHasMealInPackage(team, day.key, mealType)) {
             setPendingAssignmentCell({ team, day, mealType, slot });
 
-            const teamsInCategory = superstructureTeams.filter(
+            const teamsInCategory = matchTeams.filter(
                 (t) => t.category === team.category
             );
             setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
@@ -892,10 +946,11 @@ const cateringApp = ({ userProfileData }) => {
 
         const { team } = pendingAssignmentCell;
 
-        const teamsInCategory = superstructureTeams.filter(
+        // 🔥 ZMENA: použijeme matchTeams namiesto superstructureTeams
+        const teamsInCategory = matchTeams.filter(
             (t) => t.category === team.category
         );
-
+    
         setSelectedPlaceTeamId(teamsInCategory[0]?.id || '');
         setPlaceAssignmentSearch('');
         setShowAssignmentTypeModal(false);
@@ -1066,33 +1121,31 @@ const cateringApp = ({ userProfileData }) => {
         setSavingCatering(false);
     };
 
-    // 🔥 NOVÉ: Po výbere superstructure tímu otvorí modálne okno na výber stravovacieho miesta
     const savePlaceAssignment = async () => {
         if (!pendingAssignmentCell || !selectedPlaceTeamId) return;
-
+    
         const { team, day, mealType, slot } = pendingAssignmentCell;
-
-        const placeTeam = superstructureTeams.find((t) => t.id === selectedPlaceTeamId);
+    
+        // 🔥 ZMENA: hľadáme v matchTeams
+        const placeTeam = matchTeams.find((t) => t.id === selectedPlaceTeamId);
         if (!placeTeam) {
-            window.showGlobalNotification('Vybraný superstructure tím sa nenašiel.', 'error');
+            window.showGlobalNotification('Vybraný tím sa nenašiel.', 'error');
             return;
         }
-
+    
         // Pripravíme "selectedCateringCell" pre superstructure priradenie.
-        // Otvoríme existujúce modálne okno na výber stravovacieho miesta.
         setSelectedCateringCell({
-            team,                       // kliknutý používateľský tím (kvôli kontextu bunky)
+            team,
             dayKey: day.key,
             dayLabel: day.fullLabelNumeric,
             mealType,
             slotFrom: slot.from,
             slotTo: slot.to,
-            existingId: null,           // žiadne existujúce priradenie
-            // 🔥 príznak, že ide o superstructure priradenie
+            existingId: null,
             isSuperstructure: true,
-            placeTeam,                  // vybraný superstructure tím
+            placeTeam,
         });
-
+    
         setSelectedCateringPlaceId('');
         setShowPlaceAssignmentModal(false);
         setShowCateringModal(true);
@@ -1906,15 +1959,17 @@ const cateringApp = ({ userProfileData }) => {
                         })
                     ),
 
-                    // Zoznam superstructure tímov filtrovaný podľa kategórie kliknutej bunky
+                    // 🔥 ZMENA: Zoznam tímov načítaných z kolekcie 'matches' (domáci + hostia),
+                    // filtrovaný podľa názvu kategórie kliknutej bunky.
                     (() => {
                         const categoryName = pendingAssignmentCell.team.category;
                         const dayKey = pendingAssignmentCell.day.key;
                         const mealType = pendingAssignmentCell.mealType;
-
-                        const filtered = superstructureTeams
+                    
+                        // 🔥 ZMENA: použijeme matchTeams namiesto superstructureTeams
+                        const filtered = matchTeams
                             .filter((t) => t.category === categoryName)
-                            // 🔥 Vylúčime tímy, ktoré už majú priradené stravovanie pre daný deň + typ jedla
+                            // Vylúčime tímy, ktoré už majú priradené stravovanie pre daný deň + typ jedla
                             .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.id, dayKey, mealType))
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
@@ -1927,17 +1982,17 @@ const cateringApp = ({ userProfileData }) => {
                                 const gb = b.groupName || '';
                                 const gcmp = ga.localeCompare(gb, 'sk', { sensitivity: 'base' });
                                 if (gcmp !== 0) return gcmp;
-                                return (a.order || 0) - (b.order || 0);
+                                return (a.teamName || '').localeCompare(b.teamName || '', 'sk', { sensitivity: 'base' });
                             });
-
+                    
                         if (filtered.length === 0) {
                             return React.createElement(
                                 'p',
                                 { className: 'text-sm text-gray-500 italic text-center py-4' },
-                                'Pre túto kategóriu neboli nájdené žiadne superstructure tímy.'
+                                'Pre túto kategóriu neboli nájdené žiadne tímy.'
                             );
                         }
-
+                    
                         return React.createElement(
                             'div',
                             {
