@@ -912,6 +912,15 @@ const cateringApp = ({ userProfileData }) => {
                                 },
                                 'RT'
                             ),
+                            React.createElement(
+                                'th',
+                                {
+                                    rowSpan: 3,
+                                    className:
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap min-w-[140px] border-r-4 border-r-gray-500',
+                                },
+                                'Balík'
+                            ),
                             filteredDays.map((day, index) => {
                                 const total = visibleColumnCountForDay(day.key);
                                 const isLastDay = index === filteredDays.length - 1;
@@ -1110,6 +1119,14 @@ const cateringApp = ({ userProfileData }) => {
                                           },
                                           team.othersCount
                                       ),
+                                      React.createElement(
+                                          'td',
+                                          {
+                                              className:
+                                                  'border border-gray-300 px-3 py-2 text-left whitespace-nowrap text-xs font-medium border-r-4 border-r-gray-500',
+                                          },
+                                          team.packageName || '–'
+                                      ),
                                       filteredDays.map((day, dayIndex) => {
                                           const lunchCount = shouldShowMealType('lunch')
                                               ? slotCountFor(day.key, 'lunch')
@@ -1272,7 +1289,7 @@ const cateringApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'td',
                                     {
-                                        colSpan: 2,
+                                        colSpan: 3,
                                         className: 'border border-gray-300 px-3 py-2 text-right font-semibold whitespace-nowrap border-r-4 border-r-gray-500',
                                         style: {
                                             backgroundColor: colors.bg,
