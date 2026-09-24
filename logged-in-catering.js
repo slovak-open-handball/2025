@@ -1252,46 +1252,42 @@ const cateringApp = ({ userProfileData }) => {
                 selectedCateringCell._originalPlaceId === selectedCateringPlaceId;
 
             if (selectedCateringCell.existingId) {
-                // Vymažeme staré
-                await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
-            
-                // Nové priority
+                // Zistí, či nový tím má mať prioritu
                 const newIsPriority = !!cateringModalIsPriority;
-                const payloadForNew = { ...payload, isPriority: newIsPriority };
             
-                // Pridáme nový záznam a získame jeho referenciu
-                const newDocRef = await addDoc(collection(window.db, 'catering'), payloadForNew);
+                if (newIsPriority) {
+                    // 🔥 Nový tím MÁ prioritu → vymažeme pôvodný záznam a pridáme nový s prioritou
+                    await deleteDoc(doc(window.db, 'catering', selectedCateringCell.existingId));
             
-                // Ak nový NEMÁ prioritu, musíme niekomu inému nastaviť prioritu
-                if (!newIsPriority) {
-                    const siblings = cateringAssignments.filter(
-                        (a) =>
-                            a.isSuperstructure === true &&
-                            a.clickedTeamUid === payload.clickedTeamUid &&
-                            a.clickedTeamIndex === payload.clickedTeamIndex &&
-                            a.clickedTeamCategory === payload.clickedTeamCategory &&
-                            a.dayKey === payload.dayKey &&
-                            a.mealType === payload.mealType &&
-                            a.id !== selectedCateringCell.existingId
+                    const payloadForNew = { ...payload, isPriority: true };
+                    await addDoc(collection(window.db, 'catering'), payloadForNew);
+            
+                    window.showGlobalNotification(
+                        'Priradenie bolo zmenené (priorita novému tímu).',
+                        'success'
                     );
+                } else {
+                    // 🔥 Nový tím NEMÁ prioritu → pôvodný záznam ponecháme a nastavíme mu prioritu.
+                    // Nový záznam pridáme s isPriority: false.
             
-                    if (siblings.length > 0) {
-                        // 🔥 Existuje iný tím v riadku → priorita pôvodnému tímu
-                        await updateDoc(doc(window.db, 'catering', siblings[0].id), {
+                    // 1) Pôvodnému záznamu nastavíme prioritu (ak ju ešte nemá)
+                    const oldAssignment = cateringAssignments.find(
+                        (a) => a.id === selectedCateringCell.existingId
+                    );
+                    if (oldAssignment && oldAssignment.isPriority !== true) {
+                        await updateDoc(doc(window.db, 'catering', selectedCateringCell.existingId), {
                             isPriority: true,
                         });
-                        window.showGlobalNotification(
-                            'Priorita bola nastavená pôvodnému tímu v riadku.',
-                            'success'
-                        );
-                    } else {
-                        // 🔥 Žiadny iný tím v riadku → nový záznam bude prioritný
-                        await updateDoc(newDocRef, { isPriority: true });
-                        window.showGlobalNotification(
-                            'Priorita bola nastavená novému tímu.',
-                            'success'
-                        );
                     }
+            
+                    // 2) Pridáme nový záznam bez priority
+                    const payloadForNew = { ...payload, isPriority: false };
+                    await addDoc(collection(window.db, 'catering'), payloadForNew);
+            
+                    window.showGlobalNotification(
+                        'Priorita zostala pôvodnému tímu, nový tím bol pridaný.',
+                        'success'
+                    );
                 }
             
                 setShowCateringModal(false);
