@@ -63,6 +63,26 @@ const timeToMinutes = (t) => {
 };
 
 /**
+ * Overí, či časový reťazec obsahuje kompletný čas – teda hodiny AJ minúty.
+ * Prijme formát "HH:MM" alebo "HH:MM:SS" (sekundy ignorujeme).
+ * Vráti true iba ak sú hodiny aj minúty vyplnené a sú to čísla.
+ */
+const isCompleteTime = (t) => {
+    if (!t || typeof t !== 'string') return false;
+    const parts = t.split(':');
+    if (parts.length < 2) return false;
+    const h = parts[0];
+    const m = parts[1];
+    if (h === '' || m === '') return false;
+    const hNum = parseInt(h, 10);
+    const mNum = parseInt(m, 10);
+    if (isNaN(hNum) || isNaN(mNum)) return false;
+    if (hNum < 0 || hNum > 23) return false;
+    if (mNum < 0 || mNum > 59) return false;
+    return true;
+};
+
+/**
  * Vypočíta všetky validačné chyby pre aktuálny stav.
  * Vracia pole reťazcov (prázdne = žiadne chyby).
  */
@@ -82,26 +102,56 @@ const computeValidationErrors = (tournamentDays, cateringTimes, unitMinutesRaw) 
 
         const dayLabel = day.fullLabelNumeric || day.fullLabel;
 
+        const meals = [
+            { key: 'lunch',  label: 'Obed'  },
+            { key: 'dinner', label: 'Večera' },
+        ];
+
+        for (const meal of meals) {
+            const from = t[meal.key]?.from || '';
+            const to   = t[meal.key]?.to   || '';
+
+            // 🔥 NOVÉ: ak je niečo vyplnené, musí to byť kompletný čas (hodiny + minúty)
+            const fromFilled = from !== '';
+            const toFilled   = to   !== '';
+
+            if (fromFilled && !isCompleteTime(from)) {
+                errors.push(
+                    `Deň ${dayLabel}: ${meal.label} – čas "Od" nemá zadané hodiny aj minúty.`
+                );
+            }
+            if (toFilled && !isCompleteTime(to)) {
+                errors.push(
+                    `Deň ${dayLabel}: ${meal.label} – čas "Do" nemá zadané hodiny aj minúty.`
+                );
+            }
+        }
+
         // from < to pre Obed
-        if (t.lunch?.from && t.lunch?.to && t.lunch.from >= t.lunch.to) {
+        if (
+            isCompleteTime(t.lunch?.from) &&
+            isCompleteTime(t.lunch?.to) &&
+            t.lunch.from >= t.lunch.to
+        ) {
             errors.push(`Deň ${dayLabel}: čas Obeda od musí byť pred časom do.`);
         }
         // from < to pre Večeru
-        if (t.dinner?.from && t.dinner?.to && t.dinner.from >= t.dinner.to) {
+        if (
+            isCompleteTime(t.dinner?.from) &&
+            isCompleteTime(t.dinner?.to) &&
+            t.dinner.from >= t.dinner.to
+        ) {
             errors.push(`Deň ${dayLabel}: čas Večere od musí byť pred časom do.`);
         }
 
         // Deliteľnosť jednotkou
         if (hasValidUnit) {
-            const meals = [
-                { key: 'lunch',  label: 'Obed'  },
-                { key: 'dinner', label: 'Večera' },
-            ];
-
             for (const meal of meals) {
                 const from = t[meal.key]?.from;
                 const to   = t[meal.key]?.to;
-                if (!from || !to) continue;
+
+                // Kontrolu deliteľnosti robíme len ak sú oba časy kompletné
+                if (!isCompleteTime(from) || !isCompleteTime(to)) continue;
 
                 const fromMin = timeToMinutes(from);
                 const toMin   = timeToMinutes(to);
