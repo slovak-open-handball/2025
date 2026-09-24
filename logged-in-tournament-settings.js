@@ -90,6 +90,13 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         changesContent = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
         changesContent = notificationData.data.changesMade.split(';').map(change => change.trim()).filter(change => change !== ''); 
+      } else if (notificationData.type === 'updateCateringSettings') { 
+        const changes = Array.isArray(notificationData.data.changes)
+          ? notificationData.data.changes
+          : [];
+        changesContent = changes.length > 0
+          ? changes
+          : ['Aktualizácia nastavení stravovania (bez konkrétnych zmien).'];
       } else if (notificationData.type === 'createAccommodation') { 
         changesContent = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
       } else if (notificationData.type === 'editAccommodation') { 
