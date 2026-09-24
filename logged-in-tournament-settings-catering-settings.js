@@ -326,23 +326,23 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                         // 🔥 Obed – bledomodrá
                         React.createElement('th', {
                             colSpan: 2,
-                            className: 'border border-gray-300 bg-sky-50 px-3 py-2 text-center font-bold text-sky-700',
+                            className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
                         }, 'Obed'),
                         // 🔥 Večera – bledomodrá (rovnaká ako Obed)
                         React.createElement('th', {
                             colSpan: 2,
-                            className: 'border border-gray-300 bg-sky-50 px-3 py-2 text-center font-bold text-sky-700',
+                            className: 'border border-gray-300 bg-blue-50 px-3 py-2 text-center font-bold text-blue-700',
                         }, 'Večera')
                     ),
                     React.createElement(
                         'tr',
                         null,
                         // Obed – Od / Do
-                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Od'),
-                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Do'),
+                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
+                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do'),
                         // Večera – Od / Do (rovnaká farba)
-                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Od'),
-                        React.createElement('th', { className: 'border border-gray-300 bg-sky-50 px-2 py-1 text-center text-xs text-sky-700' }, 'Do')
+                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Od'),
+                        React.createElement('th', { className: 'border border-gray-300 bg-blue-50 px-2 py-1 text-center text-xs text-blue-700' }, 'Do')
                     )
                 ),
                 React.createElement(
@@ -366,7 +366,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.lunch?.from || '',
                                     onChange: (e) => handleTimeChange(day.key, 'lunch', 'from', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
                             // Obed – do
@@ -375,7 +375,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.lunch?.to || '',
                                     onChange: (e) => handleTimeChange(day.key, 'lunch', 'to', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
                             // Večera – od
@@ -384,7 +384,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.dinner?.from || '',
                                     onChange: (e) => handleTimeChange(day.key, 'dinner', 'from', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             ),
                             // Večera – do
@@ -393,7 +393,7 @@ export function CateringSettings({ db, userProfileData, showNotification, sendAd
                                     type: 'time',
                                     value: t.dinner?.to || '',
                                     onChange: (e) => handleTimeChange(day.key, 'dinner', 'to', e.target.value),
-                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500',
+                                    className: 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500',
                                 })
                             )
                         );
