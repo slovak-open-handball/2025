@@ -1870,14 +1870,7 @@ const cateringApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'span',
                                             { className: 'text-sm font-medium text-gray-800' },
-                                            t.groupName
-                                                ? `${t.groupName} ${t.order != null ? t.order + '. ' : ''}${getPlaceTeamDisplayName(t.teamName, t.category)}`
-                                                : getPlaceTeamDisplayName(t.teamName, t.category)
-                                        ),
-                                        React.createElement(
-                                            'span',
-                                            { className: 'text-xs text-gray-500' },
-                                            t.category
+                                            getPlaceTeamDisplayName(t.teamName, t.category)
                                         )
                                     )
                                 )
