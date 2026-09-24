@@ -508,34 +508,14 @@ const cateringApp = ({ userProfileData }) => {
         return count;
     };
 
-    // Normalizácia názvu kategórie (medzery, NBSP, diakritika)
-    const normalizeCategory = (cat) => {
-        if (!cat) return '';
-        return String(cat)
-            .replace(/\u00A0/g, ' ')        // NBSP → obyčajná medzera
-            .replace(/\s+/g, ' ')           // viac medzier → jedna
-            .trim()
-            .toLowerCase()
-            .normalize('NFD')               // rozlož diakritiku
-            .replace(/[\u0300-\u036f]/g, ''); // odstráň diakritiku
-    };
-
-    // Zoznam dostupných kategórií – v option value bude normalizovaná hodnota,
-    // v option label pôvodný (pekný) text.
+    // Zoznam dostupných kategórií – presné názvy, bez normalizácie
     const availableCategories = Array.from(
-        new Map(
+        new Set(
             userTeams
-                .map((t) => {
-                    const raw = (t.category || '').trim();
-                    if (!raw) return null;
-                    const key = normalizeCategory(raw);
-                    return [key, raw];
-                })
+                .map((t) => (t.category || '').trim())
                 .filter(Boolean)
         )
-    )
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => a.label.localeCompare(b.label, 'sk', { sensitivity: 'base' }));
+    ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
 
     // 🔥 NAJPRV vypočítame filteredDays (potrebné pre categoryHasVisibleColumns)
     const filteredDays = (filterDayKey
@@ -548,8 +528,8 @@ const cateringApp = ({ userProfileData }) => {
     const filteredTeams = (filterCategory
         ? userTeams.filter(
               (t) =>
-                  normalizeCategory(t.category) ===
-                  normalizeCategory(filterCategory)
+                  (t.category || '').trim() ===
+                  filterCategory.trim()
           )
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
@@ -778,8 +758,8 @@ const cateringApp = ({ userProfileData }) => {
                             availableCategories.map((cat) =>
                                 React.createElement(
                                     'option',
-                                    { key: cat.value, value: cat.value },
-                                    cat.label
+                                    { key: cat, value: cat },
+                                    cat
                                 )
                             )
                         )
