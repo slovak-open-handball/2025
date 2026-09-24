@@ -51,17 +51,13 @@ const buildTournamentDays = (arrivalDate, tournamentEnd) => {
 
 /**
  * Prázdna štruktúra pre jeden deň – žiadne predvolené hodnoty.
- * {
- *   lunch:  { from: '', to: '' },
- *   dinner: { from: '', to: '' }
- * }
  */
 const EMPTY_DAY_TIMES = {
     lunch:  { from: '', to: '' },
     dinner: { from: '', to: '' },
 };
 
-export function CateringSettings({ db, userProfileData, showNotification }) {
+export function CateringSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
     const [tournamentDays, setTournamentDays] = React.useState([]);
     const [cateringTimes, setCateringTimes] = React.useState({}); // { 'YYYY-MM-DD': { lunch:{from,to}, dinner:{from,to} } }
     const [loading, setLoading] = React.useState(true);
@@ -153,6 +149,61 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
         });
     };
 
+    /**
+     * Pomocná funkcia: vytvorí zoznam zmien medzi pôvodnými a novými časmi stravovania.
+     * Vracia pole reťazcov, ktoré sa pošlú do sendAdminNotification.
+     */
+    const buildCateringChanges = (original, updated, days) => {
+        const changes = [];
+        const mealLabel = (m) => (m === 'lunch' ? 'Obed' : 'Večera');
+
+        days.forEach((day) => {
+            const orig = original?.[day.key] || {};
+            const upd  = updated?.[day.key]  || {};
+
+            ['lunch', 'dinner'].forEach((mealType) => {
+                const oFrom = orig?.[mealType]?.from || '';
+                const oTo   = orig?.[mealType]?.to   || '';
+                const nFrom = upd?.[mealType]?.from  || '';
+                const nTo   = upd?.[mealType]?.to    || '';
+
+                const oEmpty = !oFrom && !oTo;
+                const nEmpty = !nFrom && !nTo;
+
+                // Ak bolo predtým aj teraz prázdne, nič nemeniť
+                if (oEmpty && nEmpty) return;
+
+                // Ak bolo prázdne a teraz je vyplnené => pridanie
+                if (oEmpty && !nEmpty) {
+                    changes.push(
+                        `Deň ${day.fullLabel}: pridané ${mealLabel(mealType)} ${nFrom || '?'} – ${nTo || '?'}`
+                    );
+                    return;
+                }
+
+                // Ak bolo vyplnené a teraz je prázdne => odobratie
+                if (!oEmpty && nEmpty) {
+                    changes.push(
+                        `Deň ${day.fullLabel}: odobrané ${mealLabel(mealType)} (bolo ${oFrom || '?'} – ${oTo || '?'})`
+                    );
+                    return;
+                }
+
+                // Ak sa zmenili hodnoty
+                if (oFrom !== nFrom || oTo !== nTo) {
+                    const fromChanged = oFrom !== nFrom ? `"od" z '${oFrom || '-'}' na '${nFrom || '-'}'` : '';
+                    const toChanged   = oTo   !== nTo   ? `"do" z '${oTo || '-'}' na '${nTo || '-'}'` : '';
+                    const parts = [fromChanged, toChanged].filter(Boolean).join(', ');
+                    changes.push(
+                        `Deň ${day.fullLabel}: ${mealLabel(mealType)} – zmena ${parts}`
+                    );
+                }
+            });
+        });
+
+        return changes;
+    };
+
     // Uloženie do Firestore
     const handleSave = async () => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') {
@@ -178,6 +229,9 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
         try {
             setSaving(true);
 
+            // Pôvodné hodnoty (pred uložením) pre výpočet zmien
+            const originalTimes = { ...cateringTimes };
+
             // Uložíme iba to, čo je reálne vyplnené (žiadne defaulty)
             const normalized = {};
             tournamentDays.forEach((day) => {
@@ -189,7 +243,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                 const dinnerFrom = t.dinner?.from || '';
                 const dinnerTo   = t.dinner?.to   || '';
 
-                // Uložíme deň iba ak má aspoň jednu vyplnenú hodnotu
                 if (lunchFrom || lunchTo || dinnerFrom || dinnerTo) {
                     normalized[day.key] = {
                         lunch:  { from: lunchFrom,  to: lunchTo },
@@ -204,6 +257,26 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                 updatedAt: Timestamp.fromDate(new Date()),
                 updatedBy: userProfileData.email || null,
             }, { merge: true });
+
+            // 🔥 Vytvoríme notifikáciu pre adminov
+            try {
+                const changesList = buildCateringChanges(
+                    originalTimes,
+                    normalized,
+                    tournamentDays
+                );
+
+                if (typeof sendAdminNotification === 'function' && changesList.length > 0) {
+                    sendAdminNotification({
+                        type: 'updateCateringSettings',
+                        data: {
+                            changes: changesList,
+                        },
+                    });
+                }
+            } catch (notifErr) {
+                console.error('CateringSettings: chyba pri vytváraní notifikácie:', notifErr);
+            }
 
             showNotification?.('Nastavenia stravovania boli úspešne uložené.', 'success');
         } catch (e) {
@@ -256,7 +329,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                         null,
                         React.createElement('th', {
                             rowSpan: 2,
-                            // 🔥 Zmenšená šírka stĺpca "Deň"
                             className: 'border border-gray-300 bg-gray-100 px-2 py-2 text-left font-bold text-gray-700 min-w-[110px] w-[110px]',
                         }, 'Deň'),
                         React.createElement('th', {
@@ -289,7 +361,6 @@ export function CateringSettings({ db, userProfileData, showNotification }) {
                                 className: idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                             },
                             React.createElement('td', {
-                                // 🔥 Zmenšená šírka aj paddingu
                                 className: 'border border-gray-300 px-2 py-2 font-medium text-gray-800 whitespace-nowrap w-[110px]',
                                 title: day.fullLabel,
                             }, day.label),
