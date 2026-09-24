@@ -487,17 +487,23 @@ const cateringApp = ({ userProfileData }) => {
         )
     ).sort((a, b) => a.localeCompare(b, 'sk', { sensitivity: 'base' }));
 
-    // Filtrované tímy podľa kategórie
+    // 🔥 NAJPRV vypočítame filteredDays (potrebné pre categoryHasVisibleColumns)
+    const filteredDays = (filterDayKey
+        ? visibleDays.filter((d) => d.key === filterDayKey)
+        : visibleDays
+    ).filter((d) => visibleColumnCountForDay(d.key) > 0);
+
+    // Pomocná funkcia: má daná kategória aspoň jeden viditeľný stĺpec?
     const categoryHasVisibleColumns = (category) => {
         // Ak nie je aktívny žiadny filter typu jedla ani dňa, kategória je vždy viditeľná
         if (!filterMealType && !filterDayKey) return true;
 
-        // Prejdi všetky viditeľné dni a skontroluj, či niektorý má aspoň jeden
+        // Prejdi všetky filtrované dni a skontroluj, či niektorý má aspoň jeden
         // viditeľný stĺpec pre zvolený typ jedla
         return filteredDays.some((day) => visibleColumnCountForDay(day.key) > 0);
     };
 
-    // Filtrované tímy podľa kategórie (trim + case-insensitive)
+    // 🔥 AŽ POTOM filteredTeams (používa filteredDays nepriamo cez categoryHasVisibleColumns)
     const filteredTeams = (filterCategory
         ? userTeams.filter(
               (t) =>
@@ -506,12 +512,6 @@ const cateringApp = ({ userProfileData }) => {
           )
         : userTeams
     ).filter((t) => categoryHasVisibleColumns(t.category));
-
-    // Filtrované dni podľa dňa
-    const filteredDays = (filterDayKey
-        ? visibleDays.filter((d) => d.key === filterDayKey)
-        : visibleDays
-    ).filter((d) => visibleColumnCountForDay(d.key) > 0);
 
     // Farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
