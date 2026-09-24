@@ -482,18 +482,18 @@ const cateringApp = ({ userProfileData }) => {
                         if (!teamNameFromMatch) return;
                         const key = `${categoryName}||${teamNameFromMatch}`;
                         if (teamsMap.has(key)) return;
-    
-                        // 🔥 teamName priamo z dokumentu zápasu (homeTeamName / awayTeamName)
+
                         teamsMap.set(key, {
-                            id: identifierFromMatch || teamNameFromMatch,
+                            // 🔥 id = identifier ak existuje, inak teamName
+                            // (id slúži len ako kľúč v rámci matchTeams a ukladá sa do DB ako teamIndex)
+                            id: teamNameFromMatch,
                             teamName: teamNameFromMatch,
-                            identifier: identifierFromMatch || teamNameFromMatch,
+                            identifier: teamNameFromMatch,
                             category: categoryName,
                             groupName: groupName,
                         });
                     };
-    
-                    // 🔥 Použijeme homeTeamName / awayTeamName priamo z dokumentu zápasu
+                    
                     addTeam(data.homeTeamName, data.homeTeamIdentifier);
                     addTeam(data.awayTeamName, data.awayTeamIdentifier);
                 });
