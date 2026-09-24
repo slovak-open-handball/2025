@@ -2536,9 +2536,9 @@ const MapApp = ({ userProfileData }) => {
                           if (selectedPlace?.type === 'ubytovanie') {
                               return isPlaceAssigned 
                                   ? 'Upraviť názov/kapacitu/cenu/farbu/poznámku'
-                                  : 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                                  : 'Upraviť názov/typ/kapacitu/cenu/farbu/poznámku';
                           } else if (selectedPlace?.type === 'stravovanie') {
-                              return 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                              return 'Upraviť názov/typ/kapacitu/cenu/farbu/poznámku';
                           } else if (selectedPlace?.type === 'sportova_hala') {
                               return 'Upraviť názov/typ/cenu/poznámku';
                           } else {
