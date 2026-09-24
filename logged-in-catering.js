@@ -573,7 +573,17 @@ const cateringApp = ({ userProfileData }) => {
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
-            ...
+
+            setShowCateringModal(false);
+            setSelectedCateringCell(null);
+            setSelectedCateringPlaceId('');
+        } catch (err) {
+            console.error('cateringApp: Chyba pri ukladaní priradenia stravovania:', err);
+            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
+        } finally {
+            setSavingCatering(false);
+        }
+    };
 
     // 🔥 Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
     const saveCateringAssignment = async () => {
