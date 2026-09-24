@@ -465,6 +465,34 @@ const cateringApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
+    // 🔥 NOVÉ: Načítanie kategórií (pre fallback categoryId → categoryName)
+    useEffect(() => {
+        if (!window.db) return;
+
+        const categoriesDocRef = doc(window.db, 'settings', 'categories');
+
+        const unsubscribe = onSnapshot(
+            categoriesDocRef,
+            (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data() || {};
+                    const categoriesMap = {};
+                    Object.entries(data).forEach(([catId, catData]) => {
+                        if (catData?.name) {
+                            categoriesMap[catId] = catData.name;
+                        }
+                    });
+                    window.categoriesData = categoriesMap;
+                }
+            },
+            (error) => {
+                console.error('Chyba pri načítaní kategórií:', error);
+            }
+        );
+    
+        return () => unsubscribe();
+    }, []);
+
     useEffect(() => {
         if (!window.db) return;
     
@@ -2347,6 +2375,8 @@ const cateringApp = ({ userProfileData }) => {
                     
                         const filtered = matchTeams
                             .filter((t) => cleanCategory(t.category) === categoryName)
+                            // 🔥 VOLITEĽNÉ: ak chceš filtrovať aj podľa skupiny
+                            // .filter((t) => !pendingAssignmentCell.team.groupName || t.groupName === pendingAssignmentCell.team.groupName)
                             .filter((t) => !isSuperstructureTeamAlreadyAssigned(t.teamName, dayKey, mealType))
                             .filter((t) => {
                                 if (!placeAssignmentSearch.trim()) return true;
