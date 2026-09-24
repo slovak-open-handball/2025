@@ -557,12 +557,10 @@ const cateringApp = ({ userProfileData }) => {
         };
     };
 
-    // 🔥 Vykoná samotné uloženie (vytvorenie alebo zmenu)
-    // oldIds = pole ID dokumentov, ktoré treba pred vytvorením nového zmazať
     const performSaveCateringAssignment = async (payload, isChange, oldIds) => {
         try {
             if (isChange && Array.isArray(oldIds) && oldIds.length > 0) {
-                // 1) vymaž všetky staré priradenia daného tímu
+                // 1) vymaž staré priradenia pre daný tím + deň + typ jedla
                 for (const id of oldIds) {
                     await deleteDoc(doc(window.db, 'catering', id));
                 }
@@ -575,17 +573,7 @@ const cateringApp = ({ userProfileData }) => {
                 await addDoc(collection(window.db, 'catering'), payload);
                 window.showGlobalNotification('Priradenie bolo uložené.', 'success');
             }
-
-            setShowCateringModal(false);
-            setSelectedCateringCell(null);
-            setSelectedCateringPlaceId('');
-        } catch (err) {
-            console.error('cateringApp: Chyba pri ukladaní priradenia stravovania:', err);
-            window.showGlobalNotification('Nepodarilo sa uložiť priradenie.', 'error');
-        } finally {
-            setSavingCatering(false);
-        }
-    };
+            ...
 
     // 🔥 Uloží priradenie stravovacieho miesta do DB (s potvrdením pri zmene)
     const saveCateringAssignment = async () => {
@@ -593,40 +581,40 @@ const cateringApp = ({ userProfileData }) => {
 
         const payload = buildCateringPayload(selectedCateringPlaceId);
 
-        // Zisti, či pre tento tím už existuje AKÉKOĽVEK priradenie v kolekcii catering
-        const existingForTeam = cateringAssignments.filter(
-            (a) => a.teamId === selectedCateringCell.team.id
+        // Zisti, či pre tento tím, tento deň a tento typ jedla už existuje priradenie.
+        // Podľa pravidla: každý tím má pre každý deň a typ jedla PRÁVE JEDNO priradenie.
+        const existingForTeamDayMeal = cateringAssignments.filter(
+            (a) =>
+                a.teamId === selectedCateringCell.team.id &&
+                a.dayKey === selectedCateringCell.dayKey &&
+                a.mealType === selectedCateringCell.mealType
         );
 
-        // Ak pre tím neexistuje žiadne priradenie → rovno ulož
-        if (existingForTeam.length === 0) {
+        // Ak neexistuje žiadne priradenie pre daný deň + typ jedla → rovno ulož
+        if (existingForTeamDayMeal.length === 0) {
             setSavingCatering(true);
             await performSaveCateringAssignment(payload, false, null);
             return;
         }
 
-        // Existuje aspoň jedno priradenie pre tím.
-        // Skontroluj, či niektoré z nich je presne tá istá bunka a rovnaké miesto
-        // (v takom prípade nie je čo riešiť – je to identické)
-        const identical = existingForTeam.find(
+        // Ak existuje a je úplne identické (rovnaký slot aj miesto) → nič sa nemení
+        const identical = existingForTeamDayMeal.find(
             (a) =>
-                a.dayKey === selectedCateringCell.dayKey &&
-                a.mealType === selectedCateringCell.mealType &&
                 a.slotFrom === selectedCateringCell.slotFrom &&
                 a.placeId === selectedCateringPlaceId
         );
         if (identical) {
-            // Nič sa nemení
             setShowCateringModal(false);
             setSelectedCateringCell(null);
             setSelectedCateringPlaceId('');
             return;
         }
 
-        // Inak → zobraz potvrdenie o zmene (vymažú sa VŠETKY existujúce priradenia tímu)
+        // Inak → zobraz potvrdenie o zmene.
+        // Vymažú sa len priradenia pre daný deň + typ jedla (nie celý tím).
         setPendingChange({
             payload,
-            oldIds: existingForTeam.map((a) => a.id),
+            oldIds: existingForTeamDayMeal.map((a) => a.id),
         });
         setShowChangeConfirm(true);
     };
@@ -1151,7 +1139,7 @@ const cateringApp = ({ userProfileData }) => {
                     React.createElement(
                         'p',
                         { className: 'text-gray-700 mb-6' },
-                        'Tento tím už má priradené stravovanie. Prajete si ho nahradiť novým? Všetky pôvodné priradenia tímu budú odstránené.'
+                        'Pre tento tím, deň a typ jedla už existuje priradené stravovacie miesto. Prajete si ho nahradiť novým? Pôvodné priradenie pre tento deň a typ jedla bude odstránené.'
                     ),
                     React.createElement(
                         'div',
