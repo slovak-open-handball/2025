@@ -428,7 +428,8 @@ const cateringApp = ({ userProfileData }) => {
                                 {
                                     rowSpan: 3,
                                     className:
-                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px]',
+                                        // 🔥 Hrubá čiara na pravom okraji "Tím" → oddeľuje Tím od prvého dňa
+                                        'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-bold text-gray-700 min-w-[180px] border-r-4 border-r-gray-500',
                                 },
                                 'Tím'
                             ),
@@ -460,8 +461,6 @@ const cateringApp = ({ userProfileData }) => {
                                 const parts = [];
 
                                 if (lunchCount > 0) {
-                                    // Ak existuje aj večera → hrubá čiara medzi obedom a večerou.
-                                    // Ak neexistuje večera a nie je posledný deň → hrubá čiara ako oddeľovač dní.
                                     const lunchHasThickRight =
                                         (dinnerCount > 0) || (!isLastDay);
                                     parts.push(
@@ -480,7 +479,6 @@ const cateringApp = ({ userProfileData }) => {
                                 }
 
                                 if (dinnerCount > 0) {
-                                    // Posledný typ jedla v dni → hrubá čiara len ak nie je posledný deň.
                                     parts.push(
                                         React.createElement(
                                             'th',
@@ -515,9 +513,6 @@ const cateringApp = ({ userProfileData }) => {
 
                                 lunchSlots.forEach((slot, i) => {
                                     const isLastLunchSlot = i === lunchSlots.length - 1;
-                                    // Hrubá čiara na pravom okraji posledného obedového slotu:
-                                    //  - vždy, ak existuje večera (oddeľovač Obed | Večera)
-                                    //  - inak len ak nie je posledný deň (oddeľovač dní)
                                     const hasThickRight =
                                         isLastLunchSlot &&
                                         ((dinnerSlots.length > 0) || !isLastDay);
@@ -538,7 +533,6 @@ const cateringApp = ({ userProfileData }) => {
 
                                 dinnerSlots.forEach((slot, i) => {
                                     const isLastDinnerSlot = i === dinnerSlots.length - 1;
-                                    // Posledný večerový slot → hrubá čiara len ak nie je posledný deň.
                                     const hasThickRight = isLastDinnerSlot && !isLastDay;
                                     parts.push(
                                         React.createElement(
@@ -599,7 +593,8 @@ const cateringApp = ({ userProfileData }) => {
                                           'td',
                                           {
                                               className:
-                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap',
+                                                  // 🔥 Hrubá čiara na pravom okraji bunky "Tím" → oddeľuje Tím od prvého dňa
+                                                  'border border-gray-300 px-3 py-2 font-medium text-gray-800 whitespace-nowrap border-r-4 border-r-gray-500',
                                           },
                                           team.teamName
                                       ),
@@ -611,9 +606,6 @@ const cateringApp = ({ userProfileData }) => {
 
                                           for (let i = 0; i < lunchCount; i++) {
                                               const isLastLunchCell = i === lunchCount - 1;
-                                              // Hrubá čiara na pravom okraji poslednej obedovej bunky:
-                                              //  - vždy, ak existuje večera (oddeľovač Obed | Večera)
-                                              //  - inak len ak nie je posledný deň (oddeľovač dní)
                                               const hasThickRight =
                                                   isLastLunchCell &&
                                                   ((dinnerCount > 0) || !isLastDay);
@@ -633,7 +625,6 @@ const cateringApp = ({ userProfileData }) => {
 
                                           for (let i = 0; i < dinnerCount; i++) {
                                               const isLastDinnerCell = i === dinnerCount - 1;
-                                              // Posledná večerová bunka → hrubá čiara len ak nie je posledný deň.
                                               const hasThickRight = isLastDinnerCell && !isLastDay;
                                               cells.push(
                                                   React.createElement(
