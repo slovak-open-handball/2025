@@ -848,7 +848,7 @@ const ExportApp = ({ userProfileData }) => {
         })
         : [];
 
-    const availableGroups = (selectedCategoryId && selectedGroupType)
+    const availableGroups = (selectedCategoryId && selectedGroupType && (selectedGroupType === 'základná skupina' || selectedGroupType === 'nadstavbová skupina'))
         ? (groups[selectedCategoryId] || [])
             .filter(g => g.type === selectedGroupType)
             .slice()
@@ -875,17 +875,23 @@ const ExportApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Prosím, vyberte kategóriu a typ skupiny.', 'error');
                 return;
             }
-    
+        
             try {
                 sessionStorage.removeItem('pdfAutoDownloaded');
             } catch (e) { }
-    
+
             const selectedCategory = categories.find(c => c.id === selectedCategoryId);
             const categoryName = selectedCategory ? selectedCategory.name : selectedCategoryId;
             const categoryNameSafe = spacesToDashes(categoryName);
-    
+        
+            // Ak je zvolený typ "playoff-a-zapasy-o-umiestnenie", nespracúvaj skupiny
+            if (selectedGroupType === 'playoff-a-zapasy-o-umiestnenie') {
+                window.showGlobalNotification('Pre tento typ export zatiaľ nie je implementovaný.', 'info');
+                return;
+            }
+        
             let groupsToProcess = [];
-    
+
             if (selectedGroupName) {
                 groupsToProcess = [selectedGroupName];
             } else {
@@ -1170,7 +1176,7 @@ const ExportApp = ({ userProfileData }) => {
                             React.createElement('option', { key: 'playoff-a-zapasy-o-umiestnenie', value: 'playoff-a-zapasy-o-umiestnenie' }, 'Playoff a zápasy o umiestnenie')
                         )
                     ),
-                    React.createElement(
+                    selectedOption === 'tabulky' && selectedCategoryId && (selectedGroupType === 'základná skupina' || selectedGroupType === 'nadstavbová skupina') && React.createElement(
                         'div',
                         { className: 'flex flex-col gap-2' },
                         React.createElement('label', { htmlFor: 'group-option', className: 'text-sm font-medium text-gray-700' }, 'Vyberte skupinu'),
@@ -1191,10 +1197,12 @@ const ExportApp = ({ userProfileData }) => {
                                 React.createElement('option', { key: `${group.name}-${idx}`, value: group.name }, group.name)
                             )
                         )
-                    )
+                    ),
                 ),
 
-                selectedOption === 'tabulky' && selectedCategoryId && selectedGroupType && !selectedGroupName && React.createElement(
+                selectedOption === 'tabulky' && selectedCategoryId && selectedGroupType && !selectedGroupName &&
+                (selectedGroupType === 'základná skupina' || selectedGroupType === 'nadstavbová skupina') &&
+                React.createElement(
                     'div',
                     { className: 'p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700' },
                     React.createElement('span', { className: 'font-semibold' }, 'Hromadné generovanie:'),
